@@ -105,7 +105,7 @@ export default async function LandingPage() {
             {/* Right: live listing cards */}
             <div className="grid grid-cols-2 gap-3 sm:gap-4 max-w-sm mx-auto lg:max-w-none">
               {heroCards.map((l, i) => (
-                <Link key={"id" in l ? l.id : l.name + i} href={l.href} className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
+                <Link key={l.name} href={l.href} className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
                   <div className={cn("relative flex items-center justify-center h-24 sm:h-28 overflow-hidden", "image" in l && l.image ? "" : l.bg)}>
                     {"image" in l && l.image ? (
                       <img src={l.image} alt={l.name} className="w-full h-full object-cover" />
