@@ -70,7 +70,7 @@ export default function LandingPage() {
                 <Link href="/signup" className={cn(buttonVariants({ size: "lg" }), "bg-white text-green-800 hover:bg-green-50 font-semibold px-8 text-base")}>
                   Start Selling Free
                 </Link>
-                <Link href="/shop" className={cn(buttonVariants({ variant: "outline", size: "lg" }), "border-white/60 text-white hover:bg-white/10 font-semibold px-8 text-base")}>
+                <Link href="/shop" className={cn(buttonVariants({ size: "lg" }), "bg-white/20 text-white border border-white/40 hover:bg-white/30 font-semibold px-8 text-base")}>
                   Browse Plants
                 </Link>
               </div>
