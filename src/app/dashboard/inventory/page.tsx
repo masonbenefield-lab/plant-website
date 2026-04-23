@@ -8,29 +8,36 @@ export default async function InventoryPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
   const [
-    { data: inventoryItems },
+    { data: activeInventory },
+    { data: archivedInventory },
     { data: listings },
     { data: auctions },
   ] = await Promise.all([
-    supabase.from("inventory").select("*").eq("seller_id", user.id).order("created_at", { ascending: false }),
+    supabase.from("inventory").select("*").eq("seller_id", user.id).is("archived_at", null).order("created_at", { ascending: false }),
+    supabase.from("inventory").select("*").eq("seller_id", user.id).not("archived_at", "is", null).gte("archived_at", sevenDaysAgo).order("archived_at", { ascending: false }),
     supabase.from("listings").select("*").eq("seller_id", user.id).order("created_at", { ascending: false }),
     supabase.from("auctions").select("*").eq("seller_id", user.id).order("created_at", { ascending: false }),
   ]);
 
-  const rows = [
-    ...(inventoryItems ?? []).map((item) => ({
+  const activeRows = [
+    ...(activeInventory ?? []).map((item) => ({
       id: item.id,
+      source: "inventory" as const,
       plant_name: item.plant_name,
       variety: item.variety ?? "",
       quantity: item.quantity,
       description: item.description ?? "",
-      status: "Draft" as const,
+      status: "Draft",
       price: "",
       created_at: item.created_at,
+      archived_at: null as string | null,
     })),
     ...(listings ?? []).map((l) => ({
       id: l.id,
+      source: "listing" as const,
       plant_name: l.plant_name,
       variety: l.variety ?? "",
       quantity: l.quantity,
@@ -38,9 +45,11 @@ export default async function InventoryPage() {
       status: l.status === "active" ? "In Shop" : l.status === "paused" ? "Paused" : "Sold Out",
       price: centsToDisplay(l.price_cents),
       created_at: l.created_at,
+      archived_at: null as string | null,
     })),
     ...(auctions ?? []).map((a) => ({
       id: a.id,
+      source: "auction" as const,
       plant_name: a.plant_name,
       variety: a.variety ?? "",
       quantity: a.quantity,
@@ -48,8 +57,22 @@ export default async function InventoryPage() {
       status: a.status === "active" ? "Live Auction" : a.status === "ended" ? "Auction Ended" : "Cancelled",
       price: `${centsToDisplay(a.current_bid_cents)} bid`,
       created_at: a.created_at,
+      archived_at: null as string | null,
     })),
   ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-  return <InventoryClient rows={rows} />;
+  const archivedRows = (archivedInventory ?? []).map((item) => ({
+    id: item.id,
+    source: "inventory" as const,
+    plant_name: item.plant_name,
+    variety: item.variety ?? "",
+    quantity: item.quantity,
+    description: item.description ?? "",
+    status: "Archived",
+    price: "",
+    created_at: item.created_at,
+    archived_at: item.archived_at,
+  }));
+
+  return <InventoryClient activeRows={activeRows} archivedRows={archivedRows} />;
 }

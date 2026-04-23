@@ -196,6 +196,7 @@ export interface Database {
           description: string | null;
           images: string[];
           notes: string | null;
+          archived_at: string | null;
           created_at: string;
         };
         Insert: {
@@ -207,6 +208,7 @@ export interface Database {
           description?: string | null;
           images?: string[];
           notes?: string | null;
+          archived_at?: string | null;
           created_at?: string;
         };
         Update: {
@@ -216,6 +218,7 @@ export interface Database {
           description?: string | null;
           images?: string[];
           notes?: string | null;
+          archived_at?: string | null;
         };
         Relationships: [];
       };
