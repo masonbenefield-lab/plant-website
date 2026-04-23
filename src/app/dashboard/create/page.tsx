@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,14 @@ export default function CreateInventoryPage() {
   const [uploading, setUploading] = useState(false);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [dragging, setDragging] = useState(false);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragging(false);
+    const files = e.dataTransfer.files;
+    if (files.length) uploadImages(files);
+  }, []);  // eslint-disable-line react-hooks/exhaustive-deps
 
   // shared fields
   const [plantName, setPlantName] = useState("");
@@ -174,18 +182,28 @@ export default function CreateInventoryPage() {
 
             <div className="space-y-2">
               <Label>Photos</Label>
-              <div className="flex items-center gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={uploading}
-                  onClick={() => fileRef.current?.click()}
-                >
-                  {uploading ? "Uploading…" : "Add photos"}
-                </Button>
-                {imageUrls.length > 0 && (
-                  <span className="text-sm text-muted-foreground">{imageUrls.length} photo{imageUrls.length !== 1 ? "s" : ""} added</span>
+              <div
+                onClick={() => !uploading && fileRef.current?.click()}
+                onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+                onDragLeave={() => setDragging(false)}
+                onDrop={handleDrop}
+                className={`relative flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-6 py-8 text-center cursor-pointer transition-colors ${
+                  dragging
+                    ? "border-green-500 bg-green-50"
+                    : "border-muted-foreground/25 hover:border-green-400 hover:bg-muted/40"
+                } ${uploading ? "pointer-events-none opacity-60" : ""}`}
+              >
+                {uploading ? (
+                  <>
+                    <span className="text-2xl">⏳</span>
+                    <p className="text-sm text-muted-foreground">Uploading…</p>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-3xl">📷</span>
+                    <p className="text-sm font-medium">Drag & drop photos here</p>
+                    <p className="text-xs text-muted-foreground">or click to browse</p>
+                  </>
                 )}
               </div>
               <input
@@ -197,9 +215,18 @@ export default function CreateInventoryPage() {
                 onChange={(e) => { if (e.target.files) uploadImages(e.target.files); }}
               />
               {imageUrls.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
+                <div className="flex flex-wrap gap-2 mt-1">
                   {imageUrls.map((url, i) => (
-                    <img key={i} src={url} alt="" className="w-16 h-16 object-cover rounded border" />
+                    <div key={i} className="relative group">
+                      <img src={url} alt="" className="w-20 h-20 object-cover rounded border" />
+                      <button
+                        type="button"
+                        onClick={() => setImageUrls((prev) => prev.filter((_, idx) => idx !== i))}
+                        className="absolute -top-1.5 -right-1.5 hidden group-hover:flex items-center justify-center w-5 h-5 rounded-full bg-red-500 text-white text-xs leading-none"
+                      >
+                        ×
+                      </button>
+                    </div>
                   ))}
                 </div>
               )}
