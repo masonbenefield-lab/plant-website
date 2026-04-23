@@ -186,6 +186,39 @@ export interface Database {
         };
         Relationships: [];
       };
+      inventory: {
+        Row: {
+          id: string;
+          seller_id: string;
+          plant_name: string;
+          variety: string | null;
+          quantity: number;
+          description: string | null;
+          images: string[];
+          notes: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          seller_id: string;
+          plant_name: string;
+          variety?: string | null;
+          quantity: number;
+          description?: string | null;
+          images?: string[];
+          notes?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          plant_name?: string;
+          variety?: string | null;
+          quantity?: number;
+          description?: string | null;
+          images?: string[];
+          notes?: string | null;
+        };
+        Relationships: [];
+      };
       ratings: {
         Row: {
           id: string;

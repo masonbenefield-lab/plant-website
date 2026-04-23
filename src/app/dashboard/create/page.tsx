@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { toast } from "sonner";
 import { dollarsToCents } from "@/lib/stripe";
 
-type Mode = null | "listing" | "auction";
+type Mode = null | "listing" | "auction" | "inventory";
 
 export default function CreateInventoryPage() {
   const router = useRouter();
@@ -60,6 +60,22 @@ export default function CreateInventoryPage() {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { toast.error("Not logged in"); setSaving(false); return; }
+
+    if (mode === "inventory") {
+      const { error } = await supabase.from("inventory").insert({
+        seller_id: user.id,
+        plant_name: plantName,
+        variety: variety || null,
+        quantity: Number(quantity),
+        description: description || null,
+        images: imageUrls,
+      });
+      setSaving(false);
+      if (error) { toast.error(error.message); return; }
+      toast.success("Saved to inventory!");
+      router.push("/dashboard/inventory");
+      return;
+    }
 
     if (mode === "listing") {
       const { error } = await supabase.from("listings").insert({
@@ -194,8 +210,8 @@ export default function CreateInventoryPage() {
         {/* Mode picker */}
         {!mode && (
           <div className="space-y-3">
-            <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">How do you want to sell it?</p>
-            <div className="grid grid-cols-2 gap-4">
+            <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">What do you want to do with it?</p>
+            <div className="grid grid-cols-3 gap-4">
               <button
                 type="button"
                 disabled={!sharedFieldsFilled}
@@ -216,11 +232,39 @@ export default function CreateInventoryPage() {
                 <span className="font-semibold">Create Auction</span>
                 <span className="text-xs text-muted-foreground">Set a starting bid and end time</span>
               </button>
+              <button
+                type="button"
+                disabled={!sharedFieldsFilled}
+                onClick={() => setMode("inventory")}
+                className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-muted p-8 text-center transition hover:border-green-600 hover:bg-green-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <span className="text-3xl">📦</span>
+                <span className="font-semibold">Save to Inventory</span>
+                <span className="text-xs text-muted-foreground">Store for later, list or auction anytime</span>
+              </button>
             </div>
             {!sharedFieldsFilled && (
-              <p className="text-xs text-muted-foreground text-center">Fill in plant name and quantity above to continue.</p>
+              <p className="text-xs text-muted-foreground text-center">Fill in plant name and quantity above to unlock these options.</p>
             )}
           </div>
+        )}
+
+        {/* Inventory save confirm */}
+        {mode === "inventory" && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Save to Inventory</CardTitle>
+              <CardDescription>This item will be stored in your inventory. You can list it or auction it any time from your inventory page.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-3">
+                <Button type="button" variant="outline" onClick={() => setMode(null)}>Back</Button>
+                <Button type="submit" disabled={saving} className="bg-green-700 hover:bg-green-800">
+                  {saving ? "Saving…" : "Save to Inventory"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {/* Listing details */}

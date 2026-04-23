@@ -56,10 +56,16 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Link
+          href="/dashboard/inventory"
+          className={cn(buttonVariants(), "bg-green-700 hover:bg-green-800 h-14 text-base")}
+        >
+          Inventory
+        </Link>
         <Link
           href="/dashboard/listings"
-          className={cn(buttonVariants(), "bg-green-700 hover:bg-green-800 h-14 text-base")}
+          className={cn(buttonVariants({ variant: "outline" }), "h-14 text-base")}
         >
           Manage Listings
         </Link>
