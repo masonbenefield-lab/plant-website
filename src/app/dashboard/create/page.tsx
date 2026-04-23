@@ -46,15 +46,18 @@ export default function CreateInventoryPage() {
     setUploading(true);
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) { setUploading(false); return; }
     const urls: string[] = [];
     for (const file of Array.from(files)) {
       const path = `${user.id}/${Date.now()}-${file.name}`;
       const { error } = await supabase.storage.from("listings").upload(path, file, { upsert: true });
-      if (!error) {
-        const { data } = supabase.storage.from("listings").getPublicUrl(path);
-        urls.push(data.publicUrl);
+      if (error) {
+        toast.error(`Upload failed: ${error.message}`);
+        setUploading(false);
+        return;
       }
+      const { data } = supabase.storage.from("listings").getPublicUrl(path);
+      urls.push(data.publicUrl);
     }
     setImageUrls((prev) => [...prev, ...urls]);
     setUploading(false);
