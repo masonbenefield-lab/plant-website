@@ -57,6 +57,16 @@ export default function InventoryClient({ activeRows, archivedRows }: { activeRo
     router.refresh();
   }
 
+  async function deleteAuction(id: string) {
+    setLoadingId(id);
+    const supabase = createClient();
+    const { error } = await supabase.from("auctions").delete().eq("id", id);
+    setLoadingId(null);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Auction removed.");
+    router.refresh();
+  }
+
   async function restoreItem(id: string) {
     setLoadingId(id);
     const supabase = createClient();
@@ -235,6 +245,14 @@ export default function InventoryClient({ activeRows, archivedRows }: { activeRo
                     ) : row.source === "inventory" ? (
                       <button
                         onClick={() => archiveItem(row.id)}
+                        disabled={loadingId === row.id}
+                        className="text-xs text-red-500 hover:underline disabled:opacity-50"
+                      >
+                        {loadingId === row.id ? "Deleting…" : "Delete"}
+                      </button>
+                    ) : row.source === "auction" && row.status === "Cancelled" ? (
+                      <button
+                        onClick={() => deleteAuction(row.id)}
                         disabled={loadingId === row.id}
                         className="text-xs text-red-500 hover:underline disabled:opacity-50"
                       >
