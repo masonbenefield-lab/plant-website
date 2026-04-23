@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { centsToDisplay } from "@/lib/stripe";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import ListingActions from "./listing-actions";
 import NewListingDialog from "./new-listing-dialog";
@@ -32,8 +31,20 @@ export default async function DashboardListingsPage() {
           {listings.map((listing) => (
             <Card key={listing.id}>
               <CardContent className="p-4 flex items-center gap-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
+                {/* Photo thumbnail */}
+                <div className="w-16 h-16 rounded-lg overflow-hidden shrink-0 bg-green-50 border">
+                  {listing.images?.[0] ? (
+                    <img
+                      src={listing.images[0]}
+                      alt={listing.plant_name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-2xl">🌿</div>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-semibold">{listing.plant_name}</span>
                     {listing.variety && (
                       <span className="text-sm text-muted-foreground">— {listing.variety}</span>
@@ -48,6 +59,9 @@ export default async function DashboardListingsPage() {
                   <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
                     <span>{centsToDisplay(listing.price_cents)}</span>
                     <span>{listing.quantity} in stock</span>
+                    {listing.images?.length > 0 && (
+                      <span>{listing.images.length} photo{listing.images.length !== 1 ? "s" : ""}</span>
+                    )}
                   </div>
                 </div>
                 <ListingActions listing={listing} />
