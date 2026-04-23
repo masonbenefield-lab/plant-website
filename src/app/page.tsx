@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/server";
+import { centsToDisplay } from "@/lib/stripe";
 
-const sampleListings = [
-  { emoji: "🌿", name: "Monstera Deliciosa", price: "$24", tag: "In Shop",    bg: "bg-green-100"  },
-  { emoji: "🌸", name: "Pink Princess",      price: "$85", tag: "Auction",    bg: "bg-pink-100"   },
-  { emoji: "🌵", name: "Blue Torch Cactus",  price: "$18", tag: "In Shop",    bg: "bg-amber-100"  },
-  { emoji: "🪴", name: "Golden Pothos",       price: "$12", tag: "In Shop",   bg: "bg-emerald-100"},
+const fallbackListings = [
+  { emoji: "🌿", name: "Monstera Deliciosa", price: "$24", tag: "In Shop", bg: "bg-green-100",   href: "/shop" },
+  { emoji: "🌸", name: "Pink Princess",      price: "$85", tag: "Auction", bg: "bg-pink-100",    href: "/auctions" },
+  { emoji: "🌵", name: "Blue Torch Cactus",  price: "$18", tag: "In Shop", bg: "bg-amber-100",   href: "/shop" },
+  { emoji: "🪴", name: "Golden Pothos",       price: "$12", tag: "In Shop", bg: "bg-emerald-100", href: "/shop" },
 ];
 
 const features = [
@@ -45,7 +47,31 @@ const steps = [
   { step: "3", title: "List your plants",     desc: "Add fixed-price listings or kick off a timed auction." },
 ];
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const supabase = await createClient();
+  const { data: liveListings } = await supabase
+    .from("listings")
+    .select("id, plant_name, variety, price_cents, images")
+    .eq("status", "active")
+    .order("created_at", { ascending: false })
+    .limit(4);
+
+  const bgCycle = ["bg-green-100", "bg-pink-100", "bg-amber-100", "bg-emerald-100"];
+  const emojiCycle = ["🌿", "🌸", "🌵", "🪴"];
+
+  const heroCards = liveListings && liveListings.length >= 2
+    ? liveListings.map((l, i) => ({
+        id: l.id,
+        name: l.plant_name + (l.variety ? ` ${l.variety}` : ""),
+        price: centsToDisplay(l.price_cents),
+        tag: "In Shop",
+        bg: bgCycle[i % bgCycle.length],
+        emoji: emojiCycle[i % emojiCycle.length],
+        image: l.images?.[0] ?? null,
+        href: `/shop/${l.id}`,
+      }))
+    : fallbackListings;
+
   return (
     <div className="flex flex-col">
 
@@ -76,15 +102,19 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Right: sample listing cards */}
+            {/* Right: live listing cards */}
             <div className="grid grid-cols-2 gap-3 sm:gap-4 max-w-sm mx-auto lg:max-w-none">
-              {sampleListings.map((l) => (
-                <div key={l.name} className="bg-white rounded-2xl overflow-hidden shadow-lg">
-                  <div className={cn("flex items-center justify-center h-24 sm:h-28 text-4xl sm:text-5xl", l.bg)}>
-                    {l.emoji}
+              {heroCards.map((l, i) => (
+                <Link key={"id" in l ? l.id : l.name + i} href={l.href} className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
+                  <div className={cn("relative flex items-center justify-center h-24 sm:h-28 overflow-hidden", "image" in l && l.image ? "" : l.bg)}>
+                    {"image" in l && l.image ? (
+                      <img src={l.image} alt={l.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-4xl sm:text-5xl">{l.emoji}</span>
+                    )}
                   </div>
                   <div className="p-3">
-                    <p className="font-semibold text-gray-800 text-sm leading-tight">{l.name}</p>
+                    <p className="font-semibold text-gray-800 text-sm leading-tight truncate">{l.name}</p>
                     <div className="flex items-center justify-between mt-1.5">
                       <span className="text-green-700 font-bold text-sm">{l.price}</span>
                       <span className={cn("text-xs px-2 py-0.5 rounded-full font-medium", l.tag === "Auction" ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700")}>
@@ -92,7 +122,7 @@ export default function LandingPage() {
                       </span>
                     </div>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
 
