@@ -103,12 +103,15 @@ export default function InventoryClient({
     setEditingCell(null);
     if (num !== null && isNaN(num)) return;
     const supabase = createClient();
-    const update = field === "quantity"
-      ? { quantity: num ?? 0 }
-      : { listing_quantity: num };
-    const { error } = await supabase.from("inventory").update(update).eq("id", rowId);
-    if (error) toast.error(error.message);
-    else router.refresh();
+    if (field === "quantity") {
+      const { error } = await supabase.from("inventory").update({ quantity: num ?? 0 }).eq("id", rowId);
+      if (error) toast.error(error.message);
+      else router.refresh();
+    } else {
+      const { error } = await supabase.from("inventory").update({ listing_quantity: num }).eq("id", rowId);
+      if (error) toast.error(error.message);
+      else router.refresh();
+    }
   }
 
   function cancelEdit() {
