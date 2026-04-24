@@ -48,10 +48,10 @@ export default async function AdminReportsPage({
   ]);
 
   // Gather IDs to resolve names
-  const reporterIds = [...new Set((reports ?? []).map(r => r.reporter_id).filter(Boolean))];
-  const listingIds  = [...new Set((reports ?? []).map(r => r.listing_id).filter(Boolean))];
-  const auctionIds  = [...new Set((reports ?? []).map(r => r.auction_id).filter(Boolean))];
-  const userIds     = [...new Set((reports ?? []).map(r => r.reported_user_id).filter(Boolean))];
+  const reporterIds = [...new Set((reports ?? []).map(r => r.reporter_id).filter((x): x is string => x !== null))];
+  const listingIds  = [...new Set((reports ?? []).map(r => r.listing_id).filter((x): x is string => x !== null))];
+  const auctionIds  = [...new Set((reports ?? []).map(r => r.auction_id).filter((x): x is string => x !== null))];
+  const userIds     = [...new Set((reports ?? []).map(r => r.reported_user_id).filter((x): x is string => x !== null))];
 
   const [{ data: reporters }, { data: listings }, { data: auctions }, { data: reportedUsers }] =
     await Promise.all([
