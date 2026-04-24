@@ -20,6 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { dollarsToCents } from "@/lib/stripe";
@@ -34,6 +35,7 @@ type Row = {
   listing_quantity: number | null;
   linked_listing_id: string | null;
   description: string;
+  notes: string;
   status: string;
   price: string;
   created_at: string;
@@ -50,6 +52,7 @@ type ActionModal =
   | { type: "listing"; row: Row }
   | { type: "auction"; row: Row }
   | { type: "link"; row: Row }
+  | { type: "edit"; row: Row }
   | null;
 
 const statusColor: Record<string, string> = {
@@ -88,6 +91,11 @@ export default function InventoryClient({
   const [linkListingId, setLinkListingId] = useState("");
   const [linkQty, setLinkQty] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [editPlantName, setEditPlantName] = useState("");
+  const [editVariety, setEditVariety] = useState("");
+  const [editQuantity, setEditQuantity] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editNotes, setEditNotes] = useState("");
   const [editingCell, setEditingCell] = useState<{ rowId: string; field: "quantity" | "listing_quantity" } | null>(null);
   const [editingValue, setEditingValue] = useState("");
 
@@ -118,13 +126,18 @@ export default function InventoryClient({
     setEditingCell(null);
   }
 
-  function openModal(type: "listing" | "auction" | "link", row: Row) {
+  function openModal(type: "listing" | "auction" | "link" | "edit", row: Row) {
     setPrice("");
     setListQty(String(row.quantity));
     setStartingBid("");
     setEndsAt("");
     setLinkListingId(row.linked_listing_id ?? "");
     setLinkQty(row.listing_quantity !== null ? String(row.listing_quantity) : "");
+    setEditPlantName(row.plant_name);
+    setEditVariety(row.variety);
+    setEditQuantity(String(row.quantity));
+    setEditDescription(row.description);
+    setEditNotes(row.notes);
     setModal({ type, row });
   }
 
@@ -189,6 +202,25 @@ export default function InventoryClient({
     setSubmitting(false);
     if (error) { toast.error(error.message); return; }
     toast.success("Linked to listing.");
+    setModal(null);
+    router.refresh();
+  }
+
+  async function submitEdit() {
+    if (!modal || modal.type !== "edit") return;
+    if (!editPlantName.trim()) { toast.error("Plant name is required"); return; }
+    setSubmitting(true);
+    const supabase = createClient();
+    const { error } = await supabase.from("inventory").update({
+      plant_name: editPlantName.trim(),
+      variety: editVariety.trim() || null,
+      quantity: Number(editQuantity) || 0,
+      description: editDescription.trim() || null,
+      notes: editNotes.trim() || null,
+    }).eq("id", modal.row.id);
+    setSubmitting(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Item updated.");
     setModal(null);
     router.refresh();
   }
@@ -414,6 +446,9 @@ export default function InventoryClient({
                         </div>
                       ) : row.source === "inventory" ? (
                         <div className="flex items-center gap-3 flex-wrap">
+                          <button onClick={() => openModal("edit", row)} className="text-xs text-foreground hover:underline font-medium">
+                            Edit
+                          </button>
                           {row.linked_listing_id ? (
                             <>
                               <button onClick={() => openModal("link", row)} className="text-xs text-blue-600 hover:underline font-medium">
@@ -594,6 +629,73 @@ export default function InventoryClient({
                 <Button variant="outline" onClick={() => setModal(null)} className="flex-1">Cancel</Button>
                 <Button onClick={submitAuction} disabled={submitting || !startingBid || !endsAt} className="flex-1 bg-green-700 hover:bg-green-800">
                   {submitting ? "Starting…" : "Start Auction"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit inventory item modal */}
+      <Dialog open={modal?.type === "edit"} onOpenChange={(o) => !o && setModal(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Edit Item</DialogTitle>
+          </DialogHeader>
+          {modal && (
+            <div className="space-y-4 mt-1">
+              <div className="space-y-1">
+                <Label htmlFor="edit-name">Plant name *</Label>
+                <Input
+                  id="edit-name"
+                  value={editPlantName}
+                  onChange={(e) => setEditPlantName(e.target.value)}
+                  autoFocus
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="edit-variety">Variety <span className="font-normal text-muted-foreground">(optional)</span></Label>
+                <Input
+                  id="edit-variety"
+                  value={editVariety}
+                  onChange={(e) => setEditVariety(e.target.value)}
+                  placeholder="e.g. Thai Constellation"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="edit-qty">Quantity</Label>
+                <Input
+                  id="edit-qty"
+                  type="number"
+                  min={0}
+                  value={editQuantity}
+                  onChange={(e) => setEditQuantity(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="edit-desc">Description <span className="font-normal text-muted-foreground">(optional)</span></Label>
+                <Textarea
+                  id="edit-desc"
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  rows={3}
+                  placeholder="Describe the plant…"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="edit-notes">Private notes <span className="font-normal text-muted-foreground">(optional)</span></Label>
+                <Textarea
+                  id="edit-notes"
+                  value={editNotes}
+                  onChange={(e) => setEditNotes(e.target.value)}
+                  rows={2}
+                  placeholder="Internal notes, not visible to buyers…"
+                />
+              </div>
+              <div className="flex gap-2 pt-1">
+                <Button variant="outline" onClick={() => setModal(null)} className="flex-1">Cancel</Button>
+                <Button onClick={submitEdit} disabled={submitting || !editPlantName.trim()} className="flex-1 bg-green-700 hover:bg-green-800">
+                  {submitting ? "Saving…" : "Save Changes"}
                 </Button>
               </div>
             </div>
