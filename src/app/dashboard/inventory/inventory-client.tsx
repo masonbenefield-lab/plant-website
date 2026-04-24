@@ -111,9 +111,13 @@ export default function InventoryClient({
     setEditingCell(null);
     if (num !== null && isNaN(num)) return;
     const supabase = createClient();
-    if (field === "quantity") {
-      const table = source === "listing" ? "listings" : "inventory";
-      const { error } = await supabase.from(table).update({ quantity: num ?? 0 }).eq("id", rowId);
+    if (source === "listing") {
+      // Both "quantity" (In Stock) and "listing_quantity" (Listed Qty) update listings.quantity
+      const { error } = await supabase.from("listings").update({ quantity: num ?? 0 }).eq("id", rowId);
+      if (error) toast.error(error.message);
+      else router.refresh();
+    } else if (field === "quantity") {
+      const { error } = await supabase.from("inventory").update({ quantity: num ?? 0 }).eq("id", rowId);
       if (error) toast.error(error.message);
       else router.refresh();
     } else {
@@ -451,7 +455,7 @@ export default function InventoryClient({
                           </div>
                         )
                       ) : row.source === "listing" ? (
-                        editingCell?.rowId === row.id && editingCell?.field === "quantity" ? (
+                        editingCell?.rowId === row.id && editingCell?.field === "listing_quantity" ? (
                           <input
                             type="number"
                             min={0}
@@ -464,7 +468,7 @@ export default function InventoryClient({
                           />
                         ) : (
                           <button
-                            onClick={() => startEdit(row.id, "quantity", row.quantity, row.source)}
+                            onClick={() => startEdit(row.id, "listing_quantity", row.quantity, row.source)}
                             className="hover:text-green-700 hover:underline tabular-nums"
                             title="Click to edit"
                           >
