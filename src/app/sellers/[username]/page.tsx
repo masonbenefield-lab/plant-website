@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Star } from "lucide-react";
 import { centsToDisplay } from "@/lib/stripe";
+import FollowButton from "@/components/follow-button";
 
 export default async function SellerStorefront({
   params,
@@ -25,25 +26,14 @@ export default async function SellerStorefront({
 
   if (!profile) notFound();
 
-  const [{ data: listings }, { data: auctions }, { data: ratings }] =
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const [{ data: listings }, { data: auctions }, { data: ratings }, { count: followerCount }] =
     await Promise.all([
-      supabase
-        .from("listings")
-        .select("*")
-        .eq("seller_id", profile.id)
-        .eq("status", "active")
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("auctions")
-        .select("*")
-        .eq("seller_id", profile.id)
-        .eq("status", "active")
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("ratings")
-        .select("*")
-        .eq("seller_id", profile.id)
-        .order("created_at", { ascending: false }),
+      supabase.from("listings").select("*").eq("seller_id", profile.id).eq("status", "active").order("created_at", { ascending: false }),
+      supabase.from("auctions").select("*").eq("seller_id", profile.id).eq("status", "active").order("created_at", { ascending: false }),
+      supabase.from("ratings").select("*").eq("seller_id", profile.id).order("created_at", { ascending: false }),
+      supabase.from("follows").select("*", { count: "exact", head: true }).eq("seller_id", profile.id),
     ]);
 
   const reviewerIds = [...new Set(ratings?.map((r) => r.reviewer_id) ?? [])];
@@ -51,6 +41,10 @@ export default async function SellerStorefront({
     ? await supabase.from("profiles").select("id, username, avatar_url").in("id", reviewerIds)
     : { data: [] };
   const reviewerMap = Object.fromEntries((reviewers ?? []).map((r) => [r.id, r]));
+
+  const isFollowing = user
+    ? !!(await supabase.from("follows").select("id").eq("follower_id", user.id).eq("seller_id", profile.id).maybeSingle()).data
+    : false;
 
   const avgScore =
     ratings && ratings.length > 0
@@ -67,17 +61,30 @@ export default async function SellerStorefront({
             {profile.username.slice(0, 1).toUpperCase()}
           </AvatarFallback>
         </Avatar>
-        <div>
-          <h1 className="text-2xl font-bold">{profile.username}</h1>
+        <div className="flex-1">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <h1 className="text-2xl font-bold">{profile.username}</h1>
+              {followerCount != null && followerCount > 0 && (
+                <p className="text-xs text-muted-foreground mt-0.5">{followerCount} follower{followerCount !== 1 ? "s" : ""}</p>
+              )}
+            </div>
+            <FollowButton
+              userId={user?.id ?? null}
+              sellerId={profile.id}
+              initialFollowing={isFollowing}
+              initialCount={followerCount ?? 0}
+            />
+          </div>
           {profile.bio && (
-            <p className="text-muted-foreground mt-1 max-w-lg">{profile.bio}</p>
+            <p className="text-muted-foreground mt-2 max-w-lg">{profile.bio}</p>
           )}
           {avgScore !== null && (
             <div className="flex items-center gap-1 mt-2">
               {[1, 2, 3, 4, 5].map((n) => (
                 <Star
                   key={n}
-                  className={`h-4 w-4 ${n <= Math.round(avgScore) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`}
+                  className={`h-4 w-4 ${n <= Math.round(avgScore) ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30"}`}
                 />
               ))}
               <span className="text-sm text-muted-foreground ml-1">
@@ -105,15 +112,15 @@ export default async function SellerStorefront({
                   <Card className="hover:shadow-md transition-shadow cursor-pointer">
                     {listing.images[0] && (
                       <div className="relative h-48 w-full overflow-hidden rounded-t-lg">
-                        <Image
-                          src={listing.images[0]}
-                          alt={listing.plant_name}
-                          fill
-                          className="object-cover"
-                        />
+                        <Image src={listing.images[0]} alt={listing.plant_name} fill className="object-cover" />
                       </div>
                     )}
                     <CardContent className="p-4">
+                      {"category" in listing && listing.category && (
+                        <span className="inline-block text-xs font-medium text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/40 px-2 py-0.5 rounded-full mb-1.5">
+                          {listing.category}
+                        </span>
+                      )}
                       <p className="font-semibold">{listing.plant_name}</p>
                       {listing.variety && (
                         <p className="text-sm text-muted-foreground">{listing.variety}</p>
@@ -142,15 +149,15 @@ export default async function SellerStorefront({
                   <Card className="hover:shadow-md transition-shadow cursor-pointer">
                     {auction.images[0] && (
                       <div className="relative h-48 w-full overflow-hidden rounded-t-lg">
-                        <Image
-                          src={auction.images[0]}
-                          alt={auction.plant_name}
-                          fill
-                          className="object-cover"
-                        />
+                        <Image src={auction.images[0]} alt={auction.plant_name} fill className="object-cover" />
                       </div>
                     )}
                     <CardContent className="p-4">
+                      {"category" in auction && auction.category && (
+                        <span className="inline-block text-xs font-medium text-blue-700 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/40 px-2 py-0.5 rounded-full mb-1.5">
+                          {auction.category}
+                        </span>
+                      )}
                       <p className="font-semibold">{auction.plant_name}</p>
                       {auction.variety && (
                         <p className="text-sm text-muted-foreground">{auction.variety}</p>
@@ -191,7 +198,7 @@ export default async function SellerStorefront({
                           {[1, 2, 3, 4, 5].map((n) => (
                             <Star
                               key={n}
-                              className={`h-3.5 w-3.5 ${n <= rating.score ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`}
+                              className={`h-3.5 w-3.5 ${n <= rating.score ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30"}`}
                             />
                           ))}
                         </div>

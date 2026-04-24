@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { centsToDisplay } from "@/lib/stripe";
 import AuctionBidPanel from "./auction-bid-panel";
+import WishlistButton from "@/components/wishlist-button";
 
 export default async function AuctionPage({
   params,
@@ -35,6 +36,14 @@ export default async function AuctionPage({
     : { data: [] };
   const bidderMap = Object.fromEntries((bidders ?? []).map((b) => [b.id, b]));
 
+  const wishlistRow = user ? await supabase
+    .from("wishlists")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("auction_id", auction.id)
+    .maybeSingle() : null;
+  const isWishlisted = !!wishlistRow?.data;
+
   return (
     <div className="max-w-5xl mx-auto px-4 py-10">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
@@ -60,20 +69,31 @@ export default async function AuctionPage({
 
         {/* Details */}
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-2xl font-bold">{auction.plant_name}</h1>
-            <Badge
-              variant={auction.status === "active" ? "default" : "secondary"}
-              className={auction.status === "active" ? "bg-green-700" : ""}
-            >
-              {auction.status}
-            </Badge>
+          <div className="flex items-start justify-between gap-3 mb-1">
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-bold">{auction.plant_name}</h1>
+                <Badge
+                  variant={auction.status === "active" ? "default" : "secondary"}
+                  className={auction.status === "active" ? "bg-green-700" : ""}
+                >
+                  {auction.status}
+                </Badge>
+              </div>
+              {auction.variety && (
+                <p className="text-muted-foreground mt-1">{auction.variety}</p>
+              )}
+              {auction.category && (
+                <span className="inline-block mt-2 text-xs font-medium text-blue-700 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/40 px-2 py-0.5 rounded-full">
+                  {auction.category}
+                </span>
+              )}
+            </div>
+            <WishlistButton userId={user?.id ?? null} auctionId={auction.id} initialWishlisted={isWishlisted} />
           </div>
-          {auction.variety && (
-            <p className="text-muted-foreground mb-3">{auction.variety}</p>
-          )}
+
           {auction.description && (
-            <p className="text-sm text-muted-foreground leading-relaxed mb-5">
+            <p className="text-sm text-muted-foreground leading-relaxed mb-5 mt-3">
               {auction.description}
             </p>
           )}

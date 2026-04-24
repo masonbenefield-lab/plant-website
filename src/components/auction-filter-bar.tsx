@@ -4,6 +4,7 @@ import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useCallback, useTransition } from "react";
 import { X } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { PLANT_CATEGORIES } from "@/lib/categories";
 
 const SORT_OPTIONS = [
   { value: "ending_soon", label: "Ending Soon" },
@@ -18,11 +19,12 @@ export default function AuctionFilterBar() {
   const params = useSearchParams();
   const [, startTransition] = useTransition();
 
-  const q       = params.get("q") ?? "";
-  const sort    = params.get("sort") ?? "ending_soon";
-  const maxBid  = params.get("max_bid") ?? "";
+  const q        = params.get("q") ?? "";
+  const sort     = params.get("sort") ?? "ending_soon";
+  const maxBid   = params.get("max_bid") ?? "";
+  const category = params.get("category") ?? "";
 
-  const hasFilters = q || sort !== "ending_soon" || maxBid;
+  const hasFilters = q || sort !== "ending_soon" || maxBid || category;
 
   const update = useCallback(
     (patch: Record<string, string>) => {
@@ -66,6 +68,18 @@ export default function AuctionFilterBar() {
           ))}
         </select>
 
+        {/* Category */}
+        <select
+          value={category}
+          onChange={(e) => update({ category: e.target.value })}
+          className="h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <option value="">All Categories</option>
+          {PLANT_CATEGORIES.map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
+
         {/* Max bid */}
         <div className="flex items-center gap-2">
           <Input
@@ -90,6 +104,9 @@ export default function AuctionFilterBar() {
           )}
           {maxBid && (
             <Chip label={`Max bid $${maxBid}`} onRemove={() => update({ max_bid: "" })} />
+          )}
+          {category && (
+            <Chip label={category} onRemove={() => update({ category: "" })} />
           )}
           <button
             onClick={() => router.replace(pathname)}

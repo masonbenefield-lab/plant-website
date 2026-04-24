@@ -10,9 +10,9 @@ import ShopFilterBar from "@/components/shop-filter-bar";
 export default async function ShopPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; sort?: string; min?: string; max?: string }>;
+  searchParams: Promise<{ q?: string; sort?: string; min?: string; max?: string; category?: string }>;
 }) {
-  const { q, sort, min, max } = await searchParams;
+  const { q, sort, min, max, category } = await searchParams;
   const supabase = await createClient();
 
   let query = supabase
@@ -22,6 +22,9 @@ export default async function ShopPage({
 
   // Search plant_name and variety
   if (q) query = query.or(`plant_name.ilike.%${q}%,variety.ilike.%${q}%`);
+
+  // Category
+  if (category) query = query.eq("category", category);
 
   // Price range
   if (min) query = query.gte("price_cents", Math.round(Number(min) * 100));
@@ -72,6 +75,11 @@ export default async function ShopPage({
                     )}
                   </div>
                   <CardContent className="relative p-4">
+                    {listing.category && (
+                      <span className="inline-block text-xs font-medium text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/40 px-2 py-0.5 rounded-full mb-1.5">
+                        {listing.category}
+                      </span>
+                    )}
                     <p className="font-semibold truncate">{listing.plant_name}</p>
                     {listing.variety && (
                       <p className="text-sm text-muted-foreground truncate">{listing.variety}</p>

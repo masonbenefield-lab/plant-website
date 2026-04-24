@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { centsToDisplay } from "@/lib/stripe";
 import { cn } from "@/lib/utils";
 import BuyButton from "./buy-button";
+import WishlistButton from "@/components/wishlist-button";
 
 export default async function ListingPage({
   params,
@@ -30,6 +31,14 @@ export default async function ListingPage({
     supabase.from("profiles").select("id, username, avatar_url, stripe_onboarded").eq("id", listing.seller_id).single(),
     supabase.auth.getUser(),
   ]);
+
+  const wishlistRow = user ? await supabase
+    .from("wishlists")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("listing_id", listing.id)
+    .maybeSingle() : null;
+  const isWishlisted = !!wishlistRow?.data;
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-10">
@@ -56,10 +65,20 @@ export default async function ListingPage({
 
         {/* Details */}
         <div>
-          <h1 className="text-2xl font-bold">{listing.plant_name}</h1>
-          {listing.variety && (
-            <p className="text-muted-foreground mt-1">{listing.variety}</p>
-          )}
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h1 className="text-2xl font-bold">{listing.plant_name}</h1>
+              {listing.variety && (
+                <p className="text-muted-foreground mt-1">{listing.variety}</p>
+              )}
+              {listing.category && (
+                <span className="inline-block mt-2 text-xs font-medium text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/40 px-2 py-0.5 rounded-full">
+                  {listing.category}
+                </span>
+              )}
+            </div>
+            <WishlistButton userId={user?.id ?? null} listingId={listing.id} initialWishlisted={isWishlisted} />
+          </div>
           <div className="flex items-center gap-3 mt-4">
             <span className="text-3xl font-bold text-green-700">
               {centsToDisplay(listing.price_cents)}

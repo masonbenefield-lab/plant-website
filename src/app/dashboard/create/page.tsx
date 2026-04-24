@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
 import { dollarsToCents } from "@/lib/stripe";
+import { PLANT_CATEGORIES } from "@/lib/categories";
 
 type Mode = null | "listing" | "auction" | "inventory";
 
@@ -34,6 +35,7 @@ export default function CreateInventoryPage() {
   const [variety, setVariety] = useState("");
   const [quantity, setQuantity] = useState("1");
   const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("");
 
   // listing-specific
   const [price, setPrice] = useState("");
@@ -97,6 +99,7 @@ export default function CreateInventoryPage() {
         price_cents: dollarsToCents(price),
         description: description || null,
         images: imageUrls,
+        category: category || null,
       });
       setSaving(false);
       if (error) { toast.error(error.message); return; }
@@ -113,6 +116,7 @@ export default function CreateInventoryPage() {
         description: description || null,
         images: imageUrls,
         ends_at: new Date(endsAt).toISOString(),
+        category: category || null,
       });
       setSaving(false);
       if (error) { toast.error(error.message); return; }
@@ -181,6 +185,21 @@ export default function CreateInventoryPage() {
                 rows={4}
                 maxLength={1000}
               />
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="category">Category</Label>
+              <select
+                id="category"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="">Select a category…</option>
+                {PLANT_CATEGORIES.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
             </div>
 
             <div className="space-y-2">

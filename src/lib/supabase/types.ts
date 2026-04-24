@@ -48,6 +48,7 @@ export interface Database {
           price_cents: number;
           images: string[];
           status: ListingStatus;
+          category: string | null;
           created_at: string;
         };
         Insert: {
@@ -60,6 +61,7 @@ export interface Database {
           price_cents: number;
           images?: string[];
           status?: ListingStatus;
+          category?: string | null;
           created_at?: string;
         };
         Update: {
@@ -71,6 +73,7 @@ export interface Database {
           price_cents?: number;
           images?: string[];
           status?: ListingStatus;
+          category?: string | null;
         };
         Relationships: [];
       };
@@ -88,6 +91,7 @@ export interface Database {
           current_bidder_id: string | null;
           ends_at: string;
           status: AuctionStatus;
+          category: string | null;
           created_at: string;
         };
         Insert: {
@@ -103,6 +107,7 @@ export interface Database {
           current_bidder_id?: string | null;
           ends_at: string;
           status?: AuctionStatus;
+          category?: string | null;
           created_at?: string;
         };
         Update: {
@@ -117,6 +122,7 @@ export interface Database {
           current_bidder_id?: string | null;
           ends_at?: string;
           status?: AuctionStatus;
+          category?: string | null;
         };
         Relationships: [];
       };
@@ -239,6 +245,40 @@ export interface Database {
           order_id: string;
           score: number;
           comment?: string | null;
+          created_at?: string;
+        };
+        Update: Record<string, never>;
+        Relationships: [];
+      };
+      wishlists: {
+        Row: {
+          id: string;
+          user_id: string;
+          listing_id: string | null;
+          auction_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          listing_id?: string | null;
+          auction_id?: string | null;
+          created_at?: string;
+        };
+        Update: Record<string, never>;
+        Relationships: [];
+      };
+      follows: {
+        Row: {
+          id: string;
+          follower_id: string;
+          seller_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          follower_id: string;
+          seller_id: string;
           created_at?: string;
         };
         Update: Record<string, never>;

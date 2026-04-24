@@ -10,9 +10,9 @@ import AuctionFilterBar from "@/components/auction-filter-bar";
 export default async function AuctionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; sort?: string; max_bid?: string }>;
+  searchParams: Promise<{ q?: string; sort?: string; max_bid?: string; category?: string }>;
 }) {
-  const { q, sort, max_bid } = await searchParams;
+  const { q, sort, max_bid, category } = await searchParams;
   const supabase = await createClient();
 
   let query = supabase
@@ -23,6 +23,9 @@ export default async function AuctionsPage({
 
   // Search plant_name and variety
   if (q) query = query.or(`plant_name.ilike.%${q}%,variety.ilike.%${q}%`);
+
+  // Category
+  if (category) query = query.eq("category", category);
 
   // Max bid filter
   if (max_bid) query = query.lte("current_bid_cents", Math.round(Number(max_bid) * 100));
@@ -81,6 +84,11 @@ export default async function AuctionsPage({
                     </Badge>
                   </div>
                   <CardContent className="relative p-4">
+                    {auction.category && (
+                      <span className="inline-block text-xs font-medium text-blue-700 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/40 px-2 py-0.5 rounded-full mb-1.5">
+                        {auction.category}
+                      </span>
+                    )}
                     <p className="font-semibold truncate">{auction.plant_name}</p>
                     {auction.variety && (
                       <p className="text-sm text-muted-foreground truncate">{auction.variety}</p>
