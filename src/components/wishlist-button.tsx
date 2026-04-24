@@ -11,13 +11,17 @@ interface WishlistButtonProps {
   listingId?: string;
   auctionId?: string;
   initialWishlisted: boolean;
+  compact?: boolean;
+  className?: string;
 }
 
-export default function WishlistButton({ userId, listingId, auctionId, initialWishlisted }: WishlistButtonProps) {
+export default function WishlistButton({ userId, listingId, auctionId, initialWishlisted, compact, className }: WishlistButtonProps) {
   const [wishlisted, setWishlisted] = useState(initialWishlisted);
   const [loading, setLoading] = useState(false);
 
-  async function toggle() {
+  async function toggle(e: React.MouseEvent) {
+    e.stopPropagation();
+    e.preventDefault();
     if (!userId) {
       window.location.href = "/login";
       return;
@@ -44,6 +48,25 @@ export default function WishlistButton({ userId, listingId, auctionId, initialWi
       toast.success("Saved to wishlist");
     }
     setLoading(false);
+  }
+
+  if (compact) {
+    return (
+      <button
+        onClick={toggle}
+        disabled={loading}
+        aria-label={wishlisted ? "Remove from wishlist" : "Save to wishlist"}
+        className={cn(
+          "h-8 w-8 rounded-full flex items-center justify-center transition-colors shadow border",
+          wishlisted
+            ? "bg-red-500 border-red-500 text-white hover:bg-red-600"
+            : "bg-background/80 border-border text-muted-foreground hover:bg-red-50 hover:text-red-500 hover:border-red-300",
+          className
+        )}
+      >
+        <Heart size={14} className={wishlisted ? "fill-current" : ""} />
+      </button>
+    );
   }
 
   return (

@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { centsToDisplay } from "@/lib/stripe";
 import AuctionFilterBar from "@/components/auction-filter-bar";
+import WishlistButton from "@/components/wishlist-button";
 
 export default async function AuctionsPage({
   searchParams,
@@ -21,20 +22,14 @@ export default async function AuctionsPage({
     .eq("status", "active")
     .gt("ends_at", new Date().toISOString());
 
-  // Search plant_name and variety
   if (q) query = query.or(`plant_name.ilike.%${q}%,variety.ilike.%${q}%`);
-
-  // Category
   if (category) query = query.eq("category", category);
-
-  // Max bid filter
   if (max_bid) query = query.lte("current_bid_cents", Math.round(Number(max_bid) * 100));
 
-  // Sort
-  if (sort === "bid_asc")   query = query.order("current_bid_cents", { ascending: true });
+  if (sort === "bid_asc")        query = query.order("current_bid_cents", { ascending: true });
   else if (sort === "bid_desc")  query = query.order("current_bid_cents", { ascending: false });
   else if (sort === "newest")    query = query.order("created_at", { ascending: false });
-  else query = query.order("ends_at", { ascending: true }); // default: ending soon
+  else                           query = query.order("ends_at", { ascending: true });
 
   const { data: auctions } = await query;
 
@@ -44,6 +39,18 @@ export default async function AuctionsPage({
     : { data: [] };
 
   const sellerMap = Object.fromEntries((sellers ?? []).map((s) => [s.id, s]));
+
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const wishlistedSet = new Set<string>();
+  if (user && auctions?.length) {
+    const { data: wRows } = await supabase
+      .from("wishlists")
+      .select("auction_id")
+      .eq("user_id", user.id)
+      .not("auction_id", "is", null);
+    (wRows ?? []).forEach((r) => { if (r.auction_id) wishlistedSet.add(r.auction_id); });
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-10">
@@ -70,44 +77,53 @@ export default async function AuctionsPage({
               const minutesLeft = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
 
               return (
-                <Card key={auction.id} className="relative hover:shadow-md transition-shadow overflow-hidden">
-                  {/* Stretched link covers the whole card */}
-                  <Link href={`/auctions/${auction.id}`} className="absolute inset-0 z-0" aria-label={auction.plant_name} />
-                  <div className="relative h-48 bg-muted">
-                    {auction.images[0] ? (
-                      <Image src={auction.images[0]} alt={auction.plant_name} fill className="object-cover" />
-                    ) : (
-                      <div className="flex items-center justify-center h-full text-4xl">🌿</div>
-                    )}
-                    <Badge className="absolute top-2 right-2 bg-red-600">
-                      {hoursLeft > 0 ? `${hoursLeft}h ${minutesLeft}m` : `${minutesLeft}m`} left
-                    </Badge>
-                  </div>
-                  <CardContent className="relative p-4">
-                    {auction.category && (
-                      <span className="inline-block text-xs font-medium text-blue-700 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/40 px-2 py-0.5 rounded-full mb-1.5">
-                        {auction.category}
-                      </span>
-                    )}
-                    <p className="font-semibold truncate">{auction.plant_name}</p>
-                    {auction.variety && (
-                      <p className="text-sm text-muted-foreground truncate">{auction.variety}</p>
-                    )}
-                    <div className="mt-2">
-                      <p className="text-xs text-muted-foreground">Current bid</p>
-                      <span className="font-bold text-green-700">
-                        {centsToDisplay(auction.current_bid_cents)}
-                      </span>
+                <Card key={auction.id} className="overflow-hidden hover:shadow-md transition-shadow">
+                  <Link href={`/auctions/${auction.id}`} className="block">
+                    <div className="relative h-48 bg-muted">
+                      {auction.images[0] ? (
+                        <Image src={auction.images[0]} alt={auction.plant_name} fill className="object-cover" />
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-4xl">🌿</div>
+                      )}
+                      <WishlistButton
+                        userId={user?.id ?? null}
+                        auctionId={auction.id}
+                        initialWishlisted={wishlistedSet.has(auction.id)}
+                        compact
+                        className="absolute top-2 left-2 z-10"
+                      />
+                      <Badge className="absolute top-2 right-2 bg-red-600">
+                        {hoursLeft > 0 ? `${hoursLeft}h ${minutesLeft}m` : `${minutesLeft}m`} left
+                      </Badge>
                     </div>
-                    {seller && (
+                    <CardContent className="p-4">
+                      {auction.category && (
+                        <span className="inline-block text-xs font-medium text-blue-700 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/40 px-2 py-0.5 rounded-full mb-1.5">
+                          {auction.category}
+                        </span>
+                      )}
+                      <p className="font-semibold truncate">{auction.plant_name}</p>
+                      {auction.variety && (
+                        <p className="text-sm text-muted-foreground truncate">{auction.variety}</p>
+                      )}
+                      <div className="mt-2">
+                        <p className="text-xs text-muted-foreground">Current bid</p>
+                        <span className="font-bold text-green-700">
+                          {centsToDisplay(auction.current_bid_cents)}
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Link>
+                  {seller && (
+                    <div className="px-4 pb-3">
                       <Link
                         href={`/sellers/${seller.username}`}
-                        className="relative z-10 text-xs text-muted-foreground hover:text-green-700 hover:underline transition-colors mt-1 inline-block"
+                        className="text-xs text-muted-foreground hover:text-green-700 hover:underline transition-colors"
                       >
                         by {seller.username}
                       </Link>
-                    )}
-                  </CardContent>
+                    </div>
+                  )}
                 </Card>
               );
             })}
