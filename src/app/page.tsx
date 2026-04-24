@@ -242,7 +242,7 @@ export default async function LandingPage() {
             <Link href="/signup" className={cn(buttonVariants({ size: "lg" }), "bg-white text-green-800 hover:bg-green-50 font-semibold px-10 text-base")}>
               Create Free Account
             </Link>
-            <Link href="/shop" className={cn(buttonVariants({ variant: "outline", size: "lg" }), "border-white/60 text-white hover:bg-white/10 font-semibold px-10 text-base")}>
+            <Link href="/shop" className={cn(buttonVariants({ variant: "outline", size: "lg" }), "bg-transparent border-white/60 text-white hover:bg-white/10 font-semibold px-10 text-base")}>
               Browse Plants
             </Link>
           </div>
