@@ -290,6 +290,43 @@ export interface Database {
         Update: Record<string, never>;
         Relationships: [];
       };
+      reports: {
+        Row: {
+          id: string;
+          reporter_id: string | null;
+          listing_id: string | null;
+          auction_id: string | null;
+          reported_user_id: string | null;
+          reason: string;
+          details: string | null;
+          status: string;
+          admin_note: string | null;
+          resolved_by: string | null;
+          resolved_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          reporter_id: string;
+          listing_id?: string | null;
+          auction_id?: string | null;
+          reported_user_id?: string | null;
+          reason: string;
+          details?: string | null;
+          status?: string;
+          admin_note?: string | null;
+          resolved_by?: string | null;
+          resolved_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          status?: string;
+          admin_note?: string | null;
+          resolved_by?: string | null;
+          resolved_at?: string | null;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
