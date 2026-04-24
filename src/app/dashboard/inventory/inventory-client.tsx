@@ -395,8 +395,29 @@ export default function InventoryClient({
                             {row.quantity}
                           </button>
                         )
+                      ) : row.source === "listing" ? (
+                        editingCell?.rowId === row.id && editingCell?.field === "quantity" ? (
+                          <input
+                            type="number"
+                            min={0}
+                            value={editingValue}
+                            onChange={(e) => setEditingValue(e.target.value)}
+                            onBlur={saveEdit}
+                            onKeyDown={(e) => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") cancelEdit(); }}
+                            autoFocus
+                            className="w-16 px-1.5 py-0.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-green-600"
+                          />
+                        ) : (
+                          <button
+                            onClick={() => startEdit(row.id, "quantity", row.quantity, row.source)}
+                            className="hover:text-green-700 hover:underline tabular-nums"
+                            title="Click to edit"
+                          >
+                            {row.quantity}
+                          </button>
+                        )
                       ) : (
-                        <span className="text-muted-foreground">{row.source === "auction" ? row.quantity : "—"}</span>
+                        <span className="text-muted-foreground">{row.quantity}</span>
                       )}
                     </td>
                     {/* Listed Qty — editable for inventory drafts (listing_quantity) and listings (quantity) */}
