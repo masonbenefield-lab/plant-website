@@ -55,6 +55,9 @@ export default function Navbar({ user, avatarUrl, username }: NavbarProps) {
             <Link href="/auctions" className="text-muted-foreground hover:text-foreground transition-colors">
               Auctions
             </Link>
+            <Link href="/pricing" className="text-muted-foreground hover:text-foreground transition-colors">
+              Pricing
+            </Link>
           </nav>
         </div>
 
@@ -119,6 +122,7 @@ export default function Navbar({ user, avatarUrl, username }: NavbarProps) {
         <div className="md:hidden border-t bg-background px-4 py-4 space-y-1">
           <MobileLink href="/shop" onClick={closeMenu}>Shop</MobileLink>
           <MobileLink href="/auctions" onClick={closeMenu}>Auctions</MobileLink>
+          <MobileLink href="/pricing" onClick={closeMenu}>Pricing</MobileLink>
 
           {user ? (
             <>

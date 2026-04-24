@@ -256,6 +256,7 @@ export default async function LandingPage() {
           <nav className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
             <Link href="/shop" className="hover:text-foreground transition-colors">Shop</Link>
             <Link href="/auctions" className="hover:text-foreground transition-colors">Auctions</Link>
+            <Link href="/pricing" className="hover:text-foreground transition-colors">Pricing</Link>
             <Link href="/signup" className="hover:text-foreground transition-colors">Sell</Link>
             <Link href="/login" className="hover:text-foreground transition-colors">Sign in</Link>
           </nav>
