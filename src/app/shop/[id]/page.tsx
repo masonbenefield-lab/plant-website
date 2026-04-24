@@ -36,7 +36,7 @@ export default async function ListingPage({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
         {/* Images */}
         <div className="space-y-3">
-          <div className="relative h-96 rounded-xl overflow-hidden bg-gray-100">
+          <div className="relative h-96 rounded-xl overflow-hidden bg-muted">
             {listing.images[0] ? (
               <Image src={listing.images[0]} alt={listing.plant_name} fill className="object-cover" />
             ) : (
@@ -97,7 +97,7 @@ export default async function ListingPage({
           {seller && (
             <Link
               href={`/sellers/${seller.username}`}
-              className="flex items-center gap-3 mt-8 p-4 rounded-lg border hover:bg-gray-50 transition-colors"
+              className="flex items-center gap-3 mt-8 p-4 rounded-lg border hover:bg-muted transition-colors"
             >
               <Avatar className="h-10 w-10">
                 <AvatarImage src={seller.avatar_url ?? undefined} />

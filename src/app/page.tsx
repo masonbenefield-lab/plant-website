@@ -105,7 +105,7 @@ export default async function LandingPage() {
             {/* Right: live listing cards */}
             <div className="grid grid-cols-2 gap-3 sm:gap-4 max-w-sm mx-auto lg:max-w-none">
               {heroCards.map((l, i) => (
-                <Link key={l.name} href={l.href} className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
+                <Link key={l.name} href={l.href} className="bg-card rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
                   <div className={cn("relative flex items-center justify-center h-24 sm:h-28 overflow-hidden", "image" in l && l.image ? "" : l.bg)}>
                     {"image" in l && l.image ? (
                       <img src={l.image as string} alt={l.name} className="w-full h-full object-cover" />
@@ -114,10 +114,10 @@ export default async function LandingPage() {
                     )}
                   </div>
                   <div className="p-3">
-                    <p className="font-semibold text-gray-800 text-sm leading-tight truncate">{l.name}</p>
+                    <p className="font-semibold text-card-foreground text-sm leading-tight truncate">{l.name}</p>
                     <div className="flex items-center justify-between mt-1.5">
-                      <span className="text-green-700 font-bold text-sm">{l.price}</span>
-                      <span className={cn("text-xs px-2 py-0.5 rounded-full font-medium", l.tag === "Auction" ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700")}>
+                      <span className="text-green-600 dark:text-green-400 font-bold text-sm">{l.price}</span>
+                      <span className={cn("text-xs px-2 py-0.5 rounded-full font-medium", l.tag === "Auction" ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300" : "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300")}>
                         {l.tag}
                       </span>
                     </div>
@@ -131,7 +131,7 @@ export default async function LandingPage() {
       </section>
 
       {/* ── Trust bar ─────────────────────────────────────────────── */}
-      <section className="border-y bg-white py-5 px-4">
+      <section className="border-y bg-background py-5 px-4">
         <div className="max-w-4xl mx-auto">
           <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-muted-foreground">
             <span className="flex items-center gap-2"><span className="text-green-600 font-bold text-base">2,400+</span> plants listed</span>
@@ -146,15 +146,15 @@ export default async function LandingPage() {
       </section>
 
       {/* ── Who it's for ──────────────────────────────────────────── */}
-      <section className="py-16 sm:py-20 px-4 bg-stone-50">
+      <section className="py-16 sm:py-20 px-4 bg-muted">
         <div className="max-w-5xl mx-auto">
           <h2 className="text-2xl sm:text-3xl font-bold text-center mb-3">Who it&apos;s for</h2>
           <p className="text-muted-foreground text-center mb-10 max-w-xl mx-auto">Whether you&apos;re moving nursery stock or trading rare cuttings, PlantMarket was built for you.</p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             {audiences.map((a) => (
-              <div key={a.label} className="bg-white rounded-2xl border border-green-100 p-6 shadow-sm hover:shadow-md transition-shadow">
+              <div key={a.label} className="bg-card rounded-2xl border p-6 shadow-sm hover:shadow-md transition-shadow">
                 <span className="text-3xl mb-4 block">{a.emoji}</span>
-                <p className="font-bold text-gray-900 mb-2">{a.label}</p>
+                <p className="font-bold text-foreground mb-2">{a.label}</p>
                 <p className="text-sm text-muted-foreground leading-relaxed">{a.desc}</p>
               </div>
             ))}
@@ -163,17 +163,17 @@ export default async function LandingPage() {
       </section>
 
       {/* ── Features ──────────────────────────────────────────────── */}
-      <section className="py-16 sm:py-20 px-4 bg-white">
+      <section className="py-16 sm:py-20 px-4 bg-background">
         <div className="max-w-5xl mx-auto">
           <h2 className="text-2xl sm:text-3xl font-bold text-center mb-3">Everything you need</h2>
           <p className="text-muted-foreground text-center mb-10 max-w-xl mx-auto">One platform handles your storefront, payments, orders, and reputation — so you can focus on growing.</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {features.map((f) => (
-              <div key={f.title} className="group rounded-2xl border bg-white p-6 hover:border-green-300 hover:shadow-md transition-all">
-                <div className="w-11 h-11 rounded-xl bg-green-50 flex items-center justify-center text-2xl mb-4 group-hover:bg-green-100 transition-colors">
+              <div key={f.title} className="group rounded-2xl border bg-card p-6 hover:border-green-300 hover:shadow-md transition-all">
+                <div className="w-11 h-11 rounded-xl bg-green-50 dark:bg-green-900/30 flex items-center justify-center text-2xl mb-4 group-hover:bg-green-100 dark:group-hover:bg-green-900/50 transition-colors">
                   {f.icon}
                 </div>
-                <p className="font-semibold text-gray-900 mb-1.5">{f.title}</p>
+                <p className="font-semibold text-foreground mb-1.5">{f.title}</p>
                 <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
               </div>
             ))}
@@ -203,24 +203,24 @@ export default async function LandingPage() {
       </section>
 
       {/* ── Testimonials ──────────────────────────────────────────── */}
-      <section className="py-16 sm:py-20 px-4 bg-stone-50">
+      <section className="py-16 sm:py-20 px-4 bg-muted">
         <div className="max-w-5xl mx-auto">
           <h2 className="text-2xl sm:text-3xl font-bold text-center mb-3">Sellers love it</h2>
           <p className="text-muted-foreground text-center mb-10 max-w-xl mx-auto">Real stories from nurseries and hobbyists who&apos;ve found their plant community.</p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             {testimonials.map((t) => (
-              <div key={t.name} className="bg-white rounded-2xl border p-6 shadow-sm flex flex-col gap-4">
+              <div key={t.name} className="bg-card rounded-2xl border p-6 shadow-sm flex flex-col gap-4">
                 {/* Stars */}
                 <div className="flex gap-0.5 text-amber-400 text-sm">{"★★★★★"}</div>
                 {/* Quote */}
-                <p className="text-sm text-gray-700 leading-relaxed flex-1">&ldquo;{t.quote}&rdquo;</p>
+                <p className="text-sm text-muted-foreground leading-relaxed flex-1">&ldquo;{t.quote}&rdquo;</p>
                 {/* Author */}
                 <div className="flex items-center gap-3 pt-2 border-t">
-                  <div className="w-9 h-9 rounded-full bg-green-100 text-green-700 font-bold text-xs flex items-center justify-center shrink-0">
+                  <div className="w-9 h-9 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 font-bold text-xs flex items-center justify-center shrink-0">
                     {t.initials}
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-gray-900">{t.name}</p>
+                    <p className="text-sm font-semibold text-foreground">{t.name}</p>
                     <p className="text-xs text-muted-foreground">{t.role}</p>
                   </div>
                 </div>
@@ -250,7 +250,7 @@ export default async function LandingPage() {
       </section>
 
       {/* ── Footer ────────────────────────────────────────────────── */}
-      <footer className="bg-white border-t py-10 px-4">
+      <footer className="bg-background border-t py-10 px-4">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="font-bold text-green-700 text-lg">PlantMarket</p>
           <nav className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">

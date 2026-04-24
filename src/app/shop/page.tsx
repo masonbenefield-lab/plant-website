@@ -49,7 +49,7 @@ export default async function ShopPage({
             return (
               <Link key={listing.id} href={`/shop/${listing.id}`}>
                 <Card className="hover:shadow-md transition-shadow cursor-pointer overflow-hidden">
-                  <div className="relative h-48 bg-gray-100">
+                  <div className="relative h-48 bg-muted">
                     {listing.images[0] ? (
                       <Image src={listing.images[0]} alt={listing.plant_name} fill className="object-cover" />
                     ) : (

@@ -55,7 +55,7 @@ export default async function AuctionsPage({
             return (
               <Link key={auction.id} href={`/auctions/${auction.id}`}>
                 <Card className="hover:shadow-md transition-shadow cursor-pointer overflow-hidden">
-                  <div className="relative h-48 bg-gray-100">
+                  <div className="relative h-48 bg-muted">
                     {auction.images[0] ? (
                       <Image src={auction.images[0]} alt={auction.plant_name} fill className="object-cover" />
                     ) : (

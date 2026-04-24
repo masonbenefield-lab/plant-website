@@ -183,7 +183,7 @@ export default async function DashboardPage() {
 
 function StatCard({ label, value, highlight, sub }: { label: string; value: number | string; highlight?: boolean; sub?: string }) {
   return (
-    <Card className={highlight ? "border-blue-300 bg-blue-50" : ""}>
+    <Card className={highlight ? "border-blue-300 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-800" : ""}>
       <CardHeader className="pb-1">
         <CardTitle className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{label}</CardTitle>
       </CardHeader>
@@ -217,7 +217,7 @@ function NavLink({ href, label, badge, badgeColor = "blue" }: { href: string; la
   return (
     <Link
       href={href}
-      className="flex items-center justify-between rounded-lg border bg-white px-4 py-3 text-sm font-medium hover:bg-muted/40 transition-colors"
+      className="flex items-center justify-between rounded-lg border bg-card px-4 py-3 text-sm font-medium hover:bg-muted/40 transition-colors"
     >
       {label}
       {badge !== undefined && (

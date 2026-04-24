@@ -89,7 +89,7 @@ export default async function OrdersDashboardPage() {
                     <p className="text-sm text-muted-foreground mb-3">
                       Buyer: <strong>{buyer?.username}</strong> · {centsToDisplay(order.amount_cents)}
                     </p>
-                    <div className="bg-gray-50 rounded-lg p-3 text-sm">
+                    <div className="bg-muted rounded-lg p-3 text-sm">
                       <p className="font-medium mb-1">Ship to:</p>
                       <p>{addr.name}</p>
                       <p>{addr.line1}</p>

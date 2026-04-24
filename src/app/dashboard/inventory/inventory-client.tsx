@@ -37,14 +37,14 @@ type ActionModal =
   | null;
 
 const statusColor: Record<string, string> = {
-  "Draft":         "bg-gray-100 text-gray-600",
-  "In Shop":       "bg-green-100 text-green-700",
-  "Paused":        "bg-yellow-100 text-yellow-700",
-  "Sold Out":      "bg-red-100 text-red-600",
-  "Live Auction":  "bg-blue-100 text-blue-700",
-  "Auction Ended": "bg-purple-100 text-purple-700",
-  "Cancelled":     "bg-gray-100 text-gray-500",
-  "Archived":      "bg-orange-100 text-orange-600",
+  "Draft":         "bg-muted text-muted-foreground",
+  "In Shop":       "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400",
+  "Paused":        "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400",
+  "Sold Out":      "bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400",
+  "Live Auction":  "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400",
+  "Auction Ended": "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400",
+  "Cancelled":     "bg-muted text-muted-foreground",
+  "Archived":      "bg-orange-100 text-orange-600 dark:bg-orange-900/40 dark:text-orange-400",
 };
 
 function daysUntilPurge(archivedAt: string) {
@@ -234,7 +234,7 @@ export default function InventoryClient({ activeRows, archivedRows }: { activeRo
             </thead>
             <tbody>
               {rows.map((row, i) => (
-                <tr key={row.id} className={i % 2 === 0 ? "bg-white" : "bg-muted/20"}>
+                <tr key={row.id} className={i % 2 === 0 ? "bg-card" : "bg-muted/20"}>
                   <td className="px-4 py-3 font-medium">{row.plant_name}</td>
                   <td className="px-4 py-3 text-muted-foreground">{row.variety || "—"}</td>
                   <td className="px-4 py-3">{row.quantity}</td>
