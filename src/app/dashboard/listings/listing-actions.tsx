@@ -4,6 +4,15 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
+import { dollarsToCents, centsToDisplay } from "@/lib/stripe";
 import type { Database } from "@/lib/supabase/types";
 
 type Listing = Database["public"]["Tables"]["listings"]["Row"];
@@ -20,6 +30,45 @@ export default function ListingActions({ listing }: { listing: Listing }) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // Edit form state — pre-filled from listing
+  const [plantName, setPlantName] = useState(listing.plant_name);
+  const [variety, setVariety] = useState(listing.variety ?? "");
+  const [quantity, setQuantity] = useState(String(listing.quantity));
+  const [price, setPrice] = useState(String(listing.price_cents / 100));
+  const [description, setDescription] = useState(listing.description ?? "");
+
+  function openEdit() {
+    // Reset to current values each time dialog opens
+    setPlantName(listing.plant_name);
+    setVariety(listing.variety ?? "");
+    setQuantity(String(listing.quantity));
+    setPrice(String(listing.price_cents / 100));
+    setDescription(listing.description ?? "");
+    setEditOpen(true);
+  }
+
+  async function saveEdit() {
+    setSaving(true);
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("listings")
+      .update({
+        plant_name: plantName.trim(),
+        variety: variety.trim() || null,
+        quantity: Number(quantity),
+        price_cents: dollarsToCents(price),
+        description: description.trim() || null,
+      })
+      .eq("id", listing.id);
+    setSaving(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Listing updated");
+    setEditOpen(false);
+    router.refresh();
+  }
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
@@ -51,13 +100,9 @@ export default function ListingActions({ listing }: { listing: Listing }) {
 
     setUploading(false);
     e.target.value = "";
-
-    if (updateError) {
-      toast.error(updateError.message);
-    } else {
-      toast.success(`${newUrls.length} photo${newUrls.length !== 1 ? "s" : ""} added`);
-      router.refresh();
-    }
+    if (updateError) { toast.error(updateError.message); return; }
+    toast.success(`${newUrls.length} photo${newUrls.length !== 1 ? "s" : ""} added`);
+    router.refresh();
   }
 
   async function toggleStatus() {
@@ -78,31 +123,67 @@ export default function ListingActions({ listing }: { listing: Listing }) {
 
   return (
     <>
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/*"
-        multiple
-        className="hidden"
-        onChange={handleFileChange}
-      />
+      <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileChange} />
+
       <DropdownMenu>
         <DropdownMenuTrigger render={<Button variant="outline" size="sm" disabled={uploading} />}>
           {uploading ? "Uploading…" : "Actions"}
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => fileRef.current?.click()}>
-            Add Photo
-          </DropdownMenuItem>
+          <DropdownMenuItem onClick={openEdit}>Edit</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => fileRef.current?.click()}>Add Photo</DropdownMenuItem>
           <DropdownMenuItem onClick={toggleStatus}>
             {listing.status === "active" ? "Pause" : "Activate"}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={deleteListing} className="text-red-600">
-            Delete
-          </DropdownMenuItem>
+          <DropdownMenuItem onClick={deleteListing} className="text-red-600">Delete</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      {/* Edit dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit Listing</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <Label htmlFor="edit-plant-name">Plant Name *</Label>
+                <Input id="edit-plant-name" value={plantName} onChange={(e) => setPlantName(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="edit-variety">Variety</Label>
+                <Input id="edit-variety" value={variety} onChange={(e) => setVariety(e.target.value)} placeholder="Optional" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <Label htmlFor="edit-quantity">Quantity</Label>
+                <Input id="edit-quantity" type="number" min={0} value={quantity} onChange={(e) => setQuantity(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="edit-price">Price ($)</Label>
+                <Input id="edit-price" type="number" min={0.01} step={0.01} value={price} onChange={(e) => setPrice(e.target.value)} />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="edit-description">Description</Label>
+              <Textarea id="edit-description" value={description} onChange={(e) => setDescription(e.target.value)} rows={3} maxLength={1000} />
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
+              <Button
+                onClick={saveEdit}
+                disabled={saving || !plantName.trim()}
+                className="bg-green-700 hover:bg-green-800"
+              >
+                {saving ? "Saving…" : "Save Changes"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
