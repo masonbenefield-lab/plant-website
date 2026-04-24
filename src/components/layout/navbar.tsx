@@ -21,9 +21,10 @@ interface NavbarProps {
   user: User | null;
   avatarUrl?: string | null;
   username?: string | null;
+  isAdmin?: boolean;
 }
 
-export default function Navbar({ user, avatarUrl, username }: NavbarProps) {
+export default function Navbar({ user, avatarUrl, username, isAdmin }: NavbarProps) {
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -82,6 +83,12 @@ export default function Navbar({ user, avatarUrl, username }: NavbarProps) {
                   <DropdownMenuItem><Link href="/orders" className="block w-full">My Orders</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href={`/sellers/${username}`} className="block w-full">My Storefront</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href="/account" className="block w-full">Account Settings</Link></DropdownMenuItem>
+                  {isAdmin && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem><Link href="/admin" className="block w-full font-medium text-orange-600">Admin Panel</Link></DropdownMenuItem>
+                    </>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={signOut} className="text-red-600">Sign out</DropdownMenuItem>
                 </DropdownMenuContent>
@@ -144,6 +151,7 @@ export default function Navbar({ user, avatarUrl, username }: NavbarProps) {
               <MobileLink href="/orders" onClick={closeMenu}>My Orders</MobileLink>
               <MobileLink href={`/sellers/${username}`} onClick={closeMenu}>My Storefront</MobileLink>
               <MobileLink href="/account" onClick={closeMenu}>Account Settings</MobileLink>
+              {isAdmin && <MobileLink href="/admin" onClick={closeMenu}>Admin Panel</MobileLink>}
               <div className="border-t my-3" />
               <button
                 onClick={signOut}

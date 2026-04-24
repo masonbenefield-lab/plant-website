@@ -16,6 +16,7 @@ export interface Database {
           avatar_url: string | null;
           stripe_account_id: string | null;
           stripe_onboarded: boolean;
+          is_admin: boolean;
           created_at: string;
         };
         Insert: {
@@ -25,6 +26,7 @@ export interface Database {
           avatar_url?: string | null;
           stripe_account_id?: string | null;
           stripe_onboarded?: boolean;
+          is_admin?: boolean;
           created_at?: string;
         };
         Update: {
@@ -34,6 +36,7 @@ export interface Database {
           avatar_url?: string | null;
           stripe_account_id?: string | null;
           stripe_onboarded?: boolean;
+          is_admin?: boolean;
         };
         Relationships: [];
       };

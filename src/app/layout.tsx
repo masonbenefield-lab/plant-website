@@ -31,7 +31,7 @@ export default async function RootLayout({
   if (user) {
     const { data } = await supabase
       .from("profiles")
-      .select("username, avatar_url")
+      .select("username, avatar_url, is_admin")
       .eq("id", user.id)
       .single();
     profile = data;
@@ -45,6 +45,7 @@ export default async function RootLayout({
             user={user}
             avatarUrl={profile?.avatar_url}
             username={profile?.username}
+            isAdmin={profile?.is_admin ?? false}
           />
           <main className="flex-1">{children}</main>
           <Toaster richColors />
