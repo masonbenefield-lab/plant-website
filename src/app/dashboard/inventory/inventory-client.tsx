@@ -8,6 +8,13 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -24,6 +31,8 @@ type Row = {
   plant_name: string;
   variety: string;
   quantity: number;
+  listing_quantity: number | null;
+  linked_listing_id: string | null;
   description: string;
   status: string;
   price: string;
@@ -31,9 +40,16 @@ type Row = {
   archived_at: string | null;
 };
 
+type ListingOption = {
+  id: string;
+  plant_name: string;
+  variety: string | null;
+};
+
 type ActionModal =
   | { type: "listing"; row: Row }
   | { type: "auction"; row: Row }
+  | { type: "link"; row: Row }
   | null;
 
 const statusColor: Record<string, string> = {
@@ -52,20 +68,34 @@ function daysUntilPurge(archivedAt: string) {
   return Math.max(0, Math.ceil((purgeDate - Date.now()) / (1000 * 60 * 60 * 24)));
 }
 
-export default function InventoryClient({ activeRows, archivedRows }: { activeRows: Row[]; archivedRows: Row[] }) {
+export default function InventoryClient({
+  activeRows,
+  archivedRows,
+  listingOptions,
+}: {
+  activeRows: Row[];
+  archivedRows: Row[];
+  listingOptions: ListingOption[];
+}) {
   const router = useRouter();
   const [tab, setTab] = useState<"active" | "archived">("active");
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [modal, setModal] = useState<ActionModal>(null);
   const [price, setPrice] = useState("");
+  const [listQty, setListQty] = useState("");
   const [startingBid, setStartingBid] = useState("");
   const [endsAt, setEndsAt] = useState("");
+  const [linkListingId, setLinkListingId] = useState("");
+  const [linkQty, setLinkQty] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  function openModal(type: "listing" | "auction", row: Row) {
+  function openModal(type: "listing" | "auction" | "link", row: Row) {
     setPrice("");
+    setListQty(String(row.quantity));
     setStartingBid("");
     setEndsAt("");
+    setLinkListingId(row.linked_listing_id ?? "");
+    setLinkQty(row.listing_quantity !== null ? String(row.listing_quantity) : "");
     setModal({ type, row });
   }
 
@@ -75,16 +105,21 @@ export default function InventoryClient({ activeRows, archivedRows }: { activeRo
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { toast.error("Not logged in"); setSubmitting(false); return; }
-    const { error } = await supabase.from("listings").insert({
+    const qty = Number(listQty) || modal.row.quantity;
+    const { data: newListing, error } = await supabase.from("listings").insert({
       seller_id: user.id,
       plant_name: modal.row.plant_name,
       variety: modal.row.variety || null,
-      quantity: modal.row.quantity,
+      quantity: qty,
       description: modal.row.description || null,
       price_cents: dollarsToCents(price),
-    });
+    }).select("id").single();
+    if (error) { toast.error(error.message); setSubmitting(false); return; }
+    await supabase.from("inventory").update({
+      listing_id: newListing.id,
+      listing_quantity: qty,
+    }).eq("id", modal.row.id);
     setSubmitting(false);
-    if (error) { toast.error(error.message); return; }
     toast.success(`${modal.row.plant_name} is now live in your shop!`);
     setModal(null);
     router.refresh();
@@ -110,6 +145,35 @@ export default function InventoryClient({ activeRows, archivedRows }: { activeRo
     if (error) { toast.error(error.message); return; }
     toast.success(`Auction started for ${modal.row.plant_name}!`);
     setModal(null);
+    router.refresh();
+  }
+
+  async function submitLink() {
+    if (!modal || modal.type !== "link") return;
+    if (!linkListingId) { toast.error("Select a listing to link"); return; }
+    setSubmitting(true);
+    const supabase = createClient();
+    const { error } = await supabase.from("inventory").update({
+      listing_id: linkListingId,
+      listing_quantity: linkQty ? Number(linkQty) : null,
+    }).eq("id", modal.row.id);
+    setSubmitting(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Linked to listing.");
+    setModal(null);
+    router.refresh();
+  }
+
+  async function unlinkItem(id: string) {
+    setLoadingId(id);
+    const supabase = createClient();
+    const { error } = await supabase.from("inventory").update({
+      listing_id: null,
+      listing_quantity: null,
+    }).eq("id", id);
+    setLoadingId(null);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Unlinked from listing.");
     router.refresh();
   }
 
@@ -145,8 +209,13 @@ export default function InventoryClient({ activeRows, archivedRows }: { activeRo
 
   function exportExcel(rows: Row[]) {
     const data = rows.map((r) => ({
-      "Plant Name": r.plant_name, "Variety": r.variety, "Quantity": r.quantity,
-      "Status": r.status, "Price / Bid": r.price, "Description": r.description,
+      "Plant Name": r.plant_name,
+      "Variety": r.variety,
+      "In Stock": r.quantity,
+      "Listed Qty": r.listing_quantity ?? "",
+      "Status": r.status,
+      "Price / Bid": r.price,
+      "Description": r.description,
       "Date Added": new Date(r.created_at).toLocaleDateString(),
     }));
     const ws = XLSX.utils.json_to_sheet(data);
@@ -166,8 +235,8 @@ export default function InventoryClient({ activeRows, archivedRows }: { activeRo
       tr:nth-child(even) td{background:#f9fafb}</style></head><body>
       <h1>PlantMarket — Inventory Report</h1>
       <p>Generated ${new Date().toLocaleDateString()} · ${rows.length} item${rows.length !== 1 ? "s" : ""}</p>
-      <table><thead><tr><th>Plant Name</th><th>Variety</th><th>Qty</th><th>Status</th><th>Price / Bid</th><th>Description</th></tr></thead>
-      <tbody>${rows.map((r) => `<tr><td>${r.plant_name}</td><td>${r.variety||"—"}</td><td>${r.quantity}</td><td>${r.status}</td><td>${r.price||"—"}</td><td>${r.description||"—"}</td></tr>`).join("")}</tbody>
+      <table><thead><tr><th>Plant Name</th><th>Variety</th><th>In Stock</th><th>Listed Qty</th><th>Status</th><th>Price / Bid</th><th>Description</th></tr></thead>
+      <tbody>${rows.map((r) => `<tr><td>${r.plant_name}</td><td>${r.variety || "—"}</td><td>${r.quantity}</td><td>${r.listing_quantity ?? "—"}</td><td>${r.status}</td><td>${r.price || "—"}</td><td>${r.description || "—"}</td></tr>`).join("")}</tbody>
       </table><script>window.onload=()=>{window.print();window.onafterprint=()=>window.close()}<\/script></body></html>`);
     printWindow.document.close();
   }
@@ -219,66 +288,156 @@ export default function InventoryClient({ activeRows, archivedRows }: { activeRo
           )}
         </div>
       ) : (
-        <div className="rounded-lg border overflow-hidden">
+        <div className="rounded-lg border overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-muted-foreground">
               <tr>
                 <th className="text-left px-4 py-3 font-medium">Plant</th>
                 <th className="text-left px-4 py-3 font-medium">Variety</th>
-                <th className="text-left px-4 py-3 font-medium">Qty</th>
+                <th className="text-left px-4 py-3 font-medium">In Stock</th>
+                <th className="text-left px-4 py-3 font-medium">Listed Qty</th>
                 <th className="text-left px-4 py-3 font-medium">Status</th>
-                <th className="text-left px-4 py-3 font-medium">Price / Bid</th>
-                <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Description</th>
+                <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Price / Bid</th>
                 <th className="text-left px-4 py-3 font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((row, i) => (
-                <tr key={row.id} className={i % 2 === 0 ? "bg-card" : "bg-muted/20"}>
-                  <td className="px-4 py-3 font-medium">{row.plant_name}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{row.variety || "—"}</td>
-                  <td className="px-4 py-3">{row.quantity}</td>
-                  <td className="px-4 py-3">
-                    <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium", statusColor[row.status] ?? "bg-gray-100 text-gray-600")}>
-                      {row.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">{row.price || "—"}</td>
-                  <td className="px-4 py-3 text-muted-foreground hidden md:table-cell max-w-xs truncate">{row.description || "—"}</td>
-                  <td className="px-4 py-3">
-                    {tab === "archived" && row.archived_at ? (
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs text-orange-600">{daysUntilPurge(row.archived_at)}d left</span>
-                        <button onClick={() => restoreItem(row.id)} disabled={loadingId === row.id} className="text-xs text-green-700 hover:underline disabled:opacity-50">
-                          {loadingId === row.id ? "Restoring…" : "Restore"}
+              {rows.map((row, i) => {
+                const linkedListing = row.linked_listing_id
+                  ? listingOptions.find((l) => l.id === row.linked_listing_id)
+                  : null;
+                return (
+                  <tr key={row.id} className={i % 2 === 0 ? "bg-card" : "bg-muted/20"}>
+                    <td className="px-4 py-3 font-medium">{row.plant_name}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{row.variety || "—"}</td>
+                    <td className="px-4 py-3">{row.quantity}</td>
+                    <td className="px-4 py-3">
+                      {row.source === "inventory" ? (
+                        row.listing_quantity !== null ? (
+                          <div>
+                            <span className="font-medium">{row.listing_quantity}</span>
+                            {linkedListing && (
+                              <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-[120px]">
+                                {linkedListing.plant_name}{linkedListing.variety ? ` · ${linkedListing.variety}` : ""}
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium", statusColor[row.status] ?? "bg-gray-100 text-gray-600")}>
+                        {row.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{row.price || "—"}</td>
+                    <td className="px-4 py-3">
+                      {tab === "archived" && row.archived_at ? (
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs text-orange-600">{daysUntilPurge(row.archived_at)}d left</span>
+                          <button onClick={() => restoreItem(row.id)} disabled={loadingId === row.id} className="text-xs text-green-700 hover:underline disabled:opacity-50">
+                            {loadingId === row.id ? "Restoring…" : "Restore"}
+                          </button>
+                        </div>
+                      ) : row.source === "inventory" ? (
+                        <div className="flex items-center gap-3 flex-wrap">
+                          {row.linked_listing_id ? (
+                            <>
+                              <button onClick={() => openModal("link", row)} className="text-xs text-blue-600 hover:underline font-medium">
+                                Edit Link
+                              </button>
+                              <button onClick={() => unlinkItem(row.id)} disabled={loadingId === row.id} className="text-xs text-muted-foreground hover:underline disabled:opacity-50">
+                                {loadingId === row.id ? "…" : "Unlink"}
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button onClick={() => openModal("link", row)} className="text-xs text-blue-600 hover:underline font-medium">
+                                Link
+                              </button>
+                              <button onClick={() => openModal("listing", row)} className="text-xs text-green-700 hover:underline font-medium">
+                                List in Shop
+                              </button>
+                            </>
+                          )}
+                          <button onClick={() => openModal("auction", row)} className="text-xs text-purple-600 hover:underline font-medium">
+                            Auction
+                          </button>
+                          <button onClick={() => archiveItem(row.id)} disabled={loadingId === row.id} className="text-xs text-red-500 hover:underline disabled:opacity-50">
+                            {loadingId === row.id ? "…" : "Delete"}
+                          </button>
+                        </div>
+                      ) : row.source === "auction" && row.status === "Cancelled" ? (
+                        <button onClick={() => deleteAuction(row.id)} disabled={loadingId === row.id} className="text-xs text-red-500 hover:underline disabled:opacity-50">
+                          {loadingId === row.id ? "Deleting…" : "Delete"}
                         </button>
-                      </div>
-                    ) : row.source === "inventory" ? (
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <button onClick={() => openModal("listing", row)} className="text-xs text-green-700 hover:underline font-medium">
-                          List in Shop
-                        </button>
-                        <button onClick={() => openModal("auction", row)} className="text-xs text-blue-600 hover:underline font-medium">
-                          Auction
-                        </button>
-                        <button onClick={() => archiveItem(row.id)} disabled={loadingId === row.id} className="text-xs text-red-500 hover:underline disabled:opacity-50">
-                          {loadingId === row.id ? "…" : "Delete"}
-                        </button>
-                      </div>
-                    ) : row.source === "auction" && row.status === "Cancelled" ? (
-                      <button onClick={() => deleteAuction(row.id)} disabled={loadingId === row.id} className="text-xs text-red-500 hover:underline disabled:opacity-50">
-                        {loadingId === row.id ? "Deleting…" : "Delete"}
-                      </button>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       )}
+
+      {/* Link to Listing modal */}
+      <Dialog open={modal?.type === "link"} onOpenChange={(o) => !o && setModal(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{modal?.row.linked_listing_id ? "Edit Listing Link" : "Link to Listing"}</DialogTitle>
+          </DialogHeader>
+          {modal && (
+            <div className="space-y-4 mt-1">
+              <p className="text-sm text-muted-foreground">
+                Connect <span className="font-medium text-foreground">{modal.row.plant_name}</span> to an existing listing and set how many to show buyers.
+              </p>
+              <div className="space-y-1">
+                <Label>Listing *</Label>
+                <Select value={linkListingId} onValueChange={setLinkListingId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a listing…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {listingOptions.map((l) => (
+                      <SelectItem key={l.id} value={l.id}>
+                        {l.plant_name}{l.variety ? ` · ${l.variety}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="link-qty">
+                  Listed quantity <span className="font-normal text-muted-foreground">(optional)</span>
+                </Label>
+                <Input
+                  id="link-qty"
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={linkQty}
+                  onChange={(e) => setLinkQty(e.target.value)}
+                  placeholder={`e.g. ${modal.row.quantity}`}
+                />
+                <p className="text-xs text-muted-foreground">How many to show available on the listing. Your full stock ({modal.row.quantity}) stays private.</p>
+              </div>
+              <div className="flex gap-2 pt-1">
+                <Button variant="outline" onClick={() => setModal(null)} className="flex-1">Cancel</Button>
+                <Button onClick={submitLink} disabled={submitting || !linkListingId} className="flex-1 bg-green-700 hover:bg-green-800">
+                  {submitting ? "Saving…" : "Save Link"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* List in Shop modal */}
       <Dialog open={modal?.type === "listing"} onOpenChange={(o) => !o && setModal(null)}>
@@ -289,7 +448,7 @@ export default function InventoryClient({ activeRows, archivedRows }: { activeRo
           {modal && (
             <div className="space-y-4 mt-1">
               <p className="text-sm text-muted-foreground">
-                Setting a price for <span className="font-medium text-foreground">{modal.row.plant_name}</span>{modal.row.variety ? ` — ${modal.row.variety}` : ""}.
+                Listing <span className="font-medium text-foreground">{modal.row.plant_name}</span>{modal.row.variety ? ` — ${modal.row.variety}` : ""} in your shop.
               </p>
               <div className="space-y-1">
                 <Label htmlFor="modal-price">Price per item ($) *</Label>
@@ -304,9 +463,22 @@ export default function InventoryClient({ activeRows, archivedRows }: { activeRo
                   autoFocus
                 />
               </div>
+              <div className="space-y-1">
+                <Label htmlFor="modal-list-qty">Quantity to list *</Label>
+                <Input
+                  id="modal-list-qty"
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={listQty}
+                  onChange={(e) => setListQty(e.target.value)}
+                  placeholder={String(modal.row.quantity)}
+                />
+                <p className="text-xs text-muted-foreground">Buyers see this number. Your full stock ({modal.row.quantity}) stays in inventory.</p>
+              </div>
               <div className="flex gap-2 pt-1">
                 <Button variant="outline" onClick={() => setModal(null)} className="flex-1">Cancel</Button>
-                <Button onClick={submitListing} disabled={submitting || !price} className="flex-1 bg-green-700 hover:bg-green-800">
+                <Button onClick={submitListing} disabled={submitting || !price || !listQty} className="flex-1 bg-green-700 hover:bg-green-800">
                   {submitting ? "Publishing…" : "Go Live"}
                 </Button>
               </div>

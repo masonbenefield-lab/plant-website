@@ -18,7 +18,7 @@ export default async function InventoryPage() {
   ] = await Promise.all([
     supabase.from("inventory").select("*").eq("seller_id", user.id).is("archived_at", null).order("created_at", { ascending: false }),
     supabase.from("inventory").select("*").eq("seller_id", user.id).not("archived_at", "is", null).gte("archived_at", sevenDaysAgo).order("archived_at", { ascending: false }),
-    supabase.from("listings").select("*").eq("seller_id", user.id).order("created_at", { ascending: false }),
+    supabase.from("listings").select("id, plant_name, variety, status, quantity, price_cents, description, images, seller_id, created_at").eq("seller_id", user.id).order("created_at", { ascending: false }),
     supabase.from("auctions").select("*").eq("seller_id", user.id).order("created_at", { ascending: false }),
   ]);
 
@@ -29,6 +29,8 @@ export default async function InventoryPage() {
       plant_name: item.plant_name,
       variety: item.variety ?? "",
       quantity: item.quantity,
+      listing_quantity: item.listing_quantity ?? null,
+      linked_listing_id: item.listing_id ?? null,
       description: item.description ?? "",
       status: "Draft",
       price: "",
@@ -41,6 +43,8 @@ export default async function InventoryPage() {
       plant_name: l.plant_name,
       variety: l.variety ?? "",
       quantity: l.quantity,
+      listing_quantity: null as number | null,
+      linked_listing_id: null as string | null,
       description: l.description ?? "",
       status: l.status === "active" ? "In Shop" : l.status === "paused" ? "Paused" : "Sold Out",
       price: centsToDisplay(l.price_cents),
@@ -53,6 +57,8 @@ export default async function InventoryPage() {
       plant_name: a.plant_name,
       variety: a.variety ?? "",
       quantity: a.quantity,
+      listing_quantity: null as number | null,
+      linked_listing_id: null as string | null,
       description: a.description ?? "",
       status: a.status === "active" ? "Live Auction" : a.status === "ended" ? "Auction Ended" : "Cancelled",
       price: `${centsToDisplay(a.current_bid_cents)} bid`,
@@ -67,6 +73,8 @@ export default async function InventoryPage() {
     plant_name: item.plant_name,
     variety: item.variety ?? "",
     quantity: item.quantity,
+    listing_quantity: item.listing_quantity ?? null,
+    linked_listing_id: item.listing_id ?? null,
     description: item.description ?? "",
     status: "Archived",
     price: "",
@@ -74,5 +82,11 @@ export default async function InventoryPage() {
     archived_at: item.archived_at,
   }));
 
-  return <InventoryClient activeRows={activeRows} archivedRows={archivedRows} />;
+  const listingOptions = (listings ?? []).map((l) => ({
+    id: l.id,
+    plant_name: l.plant_name,
+    variety: l.variety ?? null,
+  }));
+
+  return <InventoryClient activeRows={activeRows} archivedRows={archivedRows} listingOptions={listingOptions} />;
 }

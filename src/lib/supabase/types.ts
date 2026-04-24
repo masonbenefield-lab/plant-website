@@ -205,6 +205,8 @@ export interface Database {
           plant_name: string;
           variety: string | null;
           quantity: number;
+          listing_quantity: number | null;
+          listing_id: string | null;
           description: string | null;
           images: string[];
           notes: string | null;
@@ -217,6 +219,8 @@ export interface Database {
           plant_name: string;
           variety?: string | null;
           quantity: number;
+          listing_quantity?: number | null;
+          listing_id?: string | null;
           description?: string | null;
           images?: string[];
           notes?: string | null;
@@ -227,6 +231,8 @@ export interface Database {
           plant_name?: string;
           variety?: string | null;
           quantity?: number;
+          listing_quantity?: number | null;
+          listing_id?: string | null;
           description?: string | null;
           images?: string[];
           notes?: string | null;
