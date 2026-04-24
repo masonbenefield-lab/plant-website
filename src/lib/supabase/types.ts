@@ -17,6 +17,7 @@ export interface Database {
           stripe_account_id: string | null;
           stripe_onboarded: boolean;
           is_admin: boolean;
+          deleted_at: string | null;
           created_at: string;
         };
         Insert: {
@@ -27,6 +28,7 @@ export interface Database {
           stripe_account_id?: string | null;
           stripe_onboarded?: boolean;
           is_admin?: boolean;
+          deleted_at?: string | null;
           created_at?: string;
         };
         Update: {
@@ -37,6 +39,7 @@ export interface Database {
           stripe_account_id?: string | null;
           stripe_onboarded?: boolean;
           is_admin?: boolean;
+          deleted_at?: string | null;
         };
         Relationships: [];
       };
