@@ -61,34 +61,39 @@ export default async function ShopPage({
             {listings.map((listing) => {
               const seller = sellerMap[listing.seller_id];
               return (
-                <Link key={listing.id} href={`/shop/${listing.id}`}>
-                  <Card className="hover:shadow-md transition-shadow cursor-pointer overflow-hidden">
-                    <div className="relative h-48 bg-muted">
-                      {listing.images[0] ? (
-                        <Image src={listing.images[0]} alt={listing.plant_name} fill className="object-cover" />
-                      ) : (
-                        <div className="flex items-center justify-center h-full text-4xl">🌿</div>
-                      )}
+                <Card key={listing.id} className="relative hover:shadow-md transition-shadow overflow-hidden">
+                  {/* Stretched link covers the whole card */}
+                  <Link href={`/shop/${listing.id}`} className="absolute inset-0 z-0" aria-label={listing.plant_name} />
+                  <div className="relative h-48 bg-muted">
+                    {listing.images[0] ? (
+                      <Image src={listing.images[0]} alt={listing.plant_name} fill className="object-cover" />
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-4xl">🌿</div>
+                    )}
+                  </div>
+                  <CardContent className="relative p-4">
+                    <p className="font-semibold truncate">{listing.plant_name}</p>
+                    {listing.variety && (
+                      <p className="text-sm text-muted-foreground truncate">{listing.variety}</p>
+                    )}
+                    <div className="flex items-center justify-between mt-2">
+                      <span className="font-bold text-green-700">
+                        {centsToDisplay(listing.price_cents)}
+                      </span>
+                      <Badge variant="secondary" className="text-xs">
+                        {listing.quantity} left
+                      </Badge>
                     </div>
-                    <CardContent className="p-4">
-                      <p className="font-semibold truncate">{listing.plant_name}</p>
-                      {listing.variety && (
-                        <p className="text-sm text-muted-foreground truncate">{listing.variety}</p>
-                      )}
-                      <div className="flex items-center justify-between mt-2">
-                        <span className="font-bold text-green-700">
-                          {centsToDisplay(listing.price_cents)}
-                        </span>
-                        <Badge variant="secondary" className="text-xs">
-                          {listing.quantity} left
-                        </Badge>
-                      </div>
-                      {seller && (
-                        <p className="text-xs text-muted-foreground mt-1">by {seller.username}</p>
-                      )}
-                    </CardContent>
-                  </Card>
-                </Link>
+                    {seller && (
+                      <Link
+                        href={`/sellers/${seller.username}`}
+                        className="relative z-10 text-xs text-muted-foreground hover:text-green-700 hover:underline transition-colors mt-1 inline-block"
+                      >
+                        by {seller.username}
+                      </Link>
+                    )}
+                  </CardContent>
+                </Card>
               );
             })}
           </div>

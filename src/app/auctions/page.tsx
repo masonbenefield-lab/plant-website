@@ -67,35 +67,40 @@ export default async function AuctionsPage({
               const minutesLeft = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
 
               return (
-                <Link key={auction.id} href={`/auctions/${auction.id}`}>
-                  <Card className="hover:shadow-md transition-shadow cursor-pointer overflow-hidden">
-                    <div className="relative h-48 bg-muted">
-                      {auction.images[0] ? (
-                        <Image src={auction.images[0]} alt={auction.plant_name} fill className="object-cover" />
-                      ) : (
-                        <div className="flex items-center justify-center h-full text-4xl">🌿</div>
-                      )}
-                      <Badge className="absolute top-2 right-2 bg-red-600">
-                        {hoursLeft > 0 ? `${hoursLeft}h ${minutesLeft}m` : `${minutesLeft}m`} left
-                      </Badge>
+                <Card key={auction.id} className="relative hover:shadow-md transition-shadow overflow-hidden">
+                  {/* Stretched link covers the whole card */}
+                  <Link href={`/auctions/${auction.id}`} className="absolute inset-0 z-0" aria-label={auction.plant_name} />
+                  <div className="relative h-48 bg-muted">
+                    {auction.images[0] ? (
+                      <Image src={auction.images[0]} alt={auction.plant_name} fill className="object-cover" />
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-4xl">🌿</div>
+                    )}
+                    <Badge className="absolute top-2 right-2 bg-red-600">
+                      {hoursLeft > 0 ? `${hoursLeft}h ${minutesLeft}m` : `${minutesLeft}m`} left
+                    </Badge>
+                  </div>
+                  <CardContent className="relative p-4">
+                    <p className="font-semibold truncate">{auction.plant_name}</p>
+                    {auction.variety && (
+                      <p className="text-sm text-muted-foreground truncate">{auction.variety}</p>
+                    )}
+                    <div className="mt-2">
+                      <p className="text-xs text-muted-foreground">Current bid</p>
+                      <span className="font-bold text-green-700">
+                        {centsToDisplay(auction.current_bid_cents)}
+                      </span>
                     </div>
-                    <CardContent className="p-4">
-                      <p className="font-semibold truncate">{auction.plant_name}</p>
-                      {auction.variety && (
-                        <p className="text-sm text-muted-foreground truncate">{auction.variety}</p>
-                      )}
-                      <div className="mt-2">
-                        <p className="text-xs text-muted-foreground">Current bid</p>
-                        <span className="font-bold text-green-700">
-                          {centsToDisplay(auction.current_bid_cents)}
-                        </span>
-                      </div>
-                      {seller && (
-                        <p className="text-xs text-muted-foreground mt-1">by {seller.username}</p>
-                      )}
-                    </CardContent>
-                  </Card>
-                </Link>
+                    {seller && (
+                      <Link
+                        href={`/sellers/${seller.username}`}
+                        className="relative z-10 text-xs text-muted-foreground hover:text-green-700 hover:underline transition-colors mt-1 inline-block"
+                      >
+                        by {seller.username}
+                      </Link>
+                    )}
+                  </CardContent>
+                </Card>
               );
             })}
           </div>
