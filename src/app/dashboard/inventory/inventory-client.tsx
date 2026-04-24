@@ -32,6 +32,7 @@ type Row = {
   plant_name: string;
   variety: string;
   quantity: number;
+  in_stock: number | null;
   listing_quantity: number | null;
   linked_listing_id: string | null;
   description: string;
@@ -96,10 +97,10 @@ export default function InventoryClient({
   const [editQuantity, setEditQuantity] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [editNotes, setEditNotes] = useState("");
-  const [editingCell, setEditingCell] = useState<{ rowId: string; field: "quantity" | "listing_quantity"; source: Row["source"] } | null>(null);
+  const [editingCell, setEditingCell] = useState<{ rowId: string; field: "quantity" | "listing_quantity" | "in_stock"; source: Row["source"] } | null>(null);
   const [editingValue, setEditingValue] = useState("");
 
-  function startEdit(rowId: string, field: "quantity" | "listing_quantity", current: number | null, source: Row["source"]) {
+  function startEdit(rowId: string, field: "quantity" | "listing_quantity" | "in_stock", current: number | null, source: Row["source"]) {
     setEditingCell({ rowId, field, source });
     setEditingValue(current !== null ? String(current) : "");
   }
@@ -111,8 +112,11 @@ export default function InventoryClient({
     setEditingCell(null);
     if (num !== null && isNaN(num)) return;
     const supabase = createClient();
-    if (source === "listing") {
-      // Both "quantity" (In Stock) and "listing_quantity" (Listed Qty) update listings.quantity
+    if (source === "listing" && field === "in_stock") {
+      const { error } = await supabase.from("listings").update({ in_stock: num }).eq("id", rowId);
+      if (error) toast.error(error.message);
+      else router.refresh();
+    } else if (source === "listing") {
       const { error } = await supabase.from("listings").update({ quantity: num ?? 0 }).eq("id", rowId);
       if (error) toast.error(error.message);
       else router.refresh();
@@ -400,7 +404,7 @@ export default function InventoryClient({
                           </button>
                         )
                       ) : row.source === "listing" ? (
-                        editingCell?.rowId === row.id && editingCell?.field === "quantity" ? (
+                        editingCell?.rowId === row.id && editingCell?.field === "in_stock" ? (
                           <input
                             type="number"
                             min={0}
@@ -413,11 +417,11 @@ export default function InventoryClient({
                           />
                         ) : (
                           <button
-                            onClick={() => startEdit(row.id, "quantity", row.quantity, row.source)}
-                            className="hover:text-green-700 hover:underline tabular-nums"
+                            onClick={() => startEdit(row.id, "in_stock", row.in_stock, row.source)}
+                            className={cn("hover:text-green-700 hover:underline tabular-nums", row.in_stock === null && "text-muted-foreground")}
                             title="Click to edit"
                           >
-                            {row.quantity}
+                            {row.in_stock ?? "—"}
                           </button>
                         )
                       ) : (

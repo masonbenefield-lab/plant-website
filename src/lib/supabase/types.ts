@@ -50,6 +50,7 @@ export interface Database {
           plant_name: string;
           variety: string | null;
           quantity: number;
+          in_stock: number | null;
           description: string | null;
           price_cents: number;
           images: string[];
@@ -63,6 +64,7 @@ export interface Database {
           plant_name: string;
           variety?: string | null;
           quantity: number;
+          in_stock?: number | null;
           description?: string | null;
           price_cents: number;
           images?: string[];
@@ -75,6 +77,7 @@ export interface Database {
           plant_name?: string;
           variety?: string | null;
           quantity?: number;
+          in_stock?: number | null;
           description?: string | null;
           price_cents?: number;
           images?: string[];

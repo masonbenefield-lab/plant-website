@@ -18,7 +18,7 @@ export default async function InventoryPage() {
   ] = await Promise.all([
     supabase.from("inventory").select("*").eq("seller_id", user.id).is("archived_at", null).order("created_at", { ascending: false }),
     supabase.from("inventory").select("*").eq("seller_id", user.id).not("archived_at", "is", null).gte("archived_at", sevenDaysAgo).order("archived_at", { ascending: false }),
-    supabase.from("listings").select("id, plant_name, variety, status, quantity, price_cents, description, images, seller_id, created_at").eq("seller_id", user.id).order("created_at", { ascending: false }),
+    supabase.from("listings").select("id, plant_name, variety, status, quantity, in_stock, price_cents, description, images, seller_id, created_at").eq("seller_id", user.id).order("created_at", { ascending: false }),
     supabase.from("auctions").select("*").eq("seller_id", user.id).order("created_at", { ascending: false }),
   ]);
 
@@ -29,6 +29,7 @@ export default async function InventoryPage() {
       plant_name: item.plant_name,
       variety: item.variety ?? "",
       quantity: item.quantity,
+      in_stock: null as number | null,
       listing_quantity: item.listing_quantity ?? null,
       linked_listing_id: item.listing_id ?? null,
       description: item.description ?? "",
@@ -44,6 +45,7 @@ export default async function InventoryPage() {
       plant_name: l.plant_name,
       variety: l.variety ?? "",
       quantity: l.quantity,
+      in_stock: l.in_stock ?? null,
       listing_quantity: null as number | null,
       linked_listing_id: null as string | null,
       description: l.description ?? "",
@@ -59,6 +61,7 @@ export default async function InventoryPage() {
       plant_name: a.plant_name,
       variety: a.variety ?? "",
       quantity: a.quantity,
+      in_stock: null as number | null,
       listing_quantity: null as number | null,
       linked_listing_id: null as string | null,
       description: a.description ?? "",
@@ -76,6 +79,7 @@ export default async function InventoryPage() {
     plant_name: item.plant_name,
     variety: item.variety ?? "",
     quantity: item.quantity,
+    in_stock: null as number | null,
     listing_quantity: item.listing_quantity ?? null,
     linked_listing_id: item.listing_id ?? null,
     description: item.description ?? "",
