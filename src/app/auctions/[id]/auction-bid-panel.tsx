@@ -118,18 +118,16 @@ export default function AuctionBidPanel({
     const now = new Date();
     const endsAt = new Date(auction.ends_at);
     const SNIPE_WINDOW_MS = 2 * 60 * 1000;
-    const updatePayload: Record<string, unknown> = {
-      current_bid_cents: cents,
-      current_bidder_id: userId,
-    };
-    if (endsAt.getTime() - now.getTime() < SNIPE_WINDOW_MS) {
-      updatePayload.ends_at = new Date(now.getTime() + SNIPE_WINDOW_MS).toISOString();
-      toast.info("Auction extended — bid placed in final 2 minutes");
-    }
+    const extended = endsAt.getTime() - now.getTime() < SNIPE_WINDOW_MS;
+    if (extended) toast.info("Auction extended — bid placed in final 2 minutes");
 
     const { error: updateError } = await supabase
       .from("auctions")
-      .update(updatePayload)
+      .update({
+        current_bid_cents: cents,
+        current_bidder_id: userId,
+        ...(extended ? { ends_at: new Date(now.getTime() + SNIPE_WINDOW_MS).toISOString() } : {}),
+      })
       .eq("id", auction.id)
       .eq("status", "active");
 
