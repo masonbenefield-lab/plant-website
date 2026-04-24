@@ -88,6 +88,32 @@ export default function InventoryClient({
   const [linkListingId, setLinkListingId] = useState("");
   const [linkQty, setLinkQty] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [editingCell, setEditingCell] = useState<{ rowId: string; field: "quantity" | "listing_quantity" } | null>(null);
+  const [editingValue, setEditingValue] = useState("");
+
+  function startEdit(rowId: string, field: "quantity" | "listing_quantity", current: number | null) {
+    setEditingCell({ rowId, field });
+    setEditingValue(current !== null ? String(current) : "");
+  }
+
+  async function saveEdit() {
+    if (!editingCell) return;
+    const { rowId, field } = editingCell;
+    const num = editingValue === "" ? null : Number(editingValue);
+    setEditingCell(null);
+    if (num !== null && isNaN(num)) return;
+    const supabase = createClient();
+    const update = field === "quantity"
+      ? { quantity: num ?? 0 }
+      : { listing_quantity: num };
+    const { error } = await supabase.from("inventory").update(update).eq("id", rowId);
+    if (error) toast.error(error.message);
+    else router.refresh();
+  }
+
+  function cancelEdit() {
+    setEditingCell(null);
+  }
 
   function openModal(type: "listing" | "auction" | "link", row: Row) {
     setPrice("");
@@ -310,20 +336,60 @@ export default function InventoryClient({
                   <tr key={row.id} className={i % 2 === 0 ? "bg-card" : "bg-muted/20"}>
                     <td className="px-4 py-3 font-medium">{row.plant_name}</td>
                     <td className="px-4 py-3 text-muted-foreground">{row.variety || "—"}</td>
-                    <td className="px-4 py-3">{row.quantity}</td>
                     <td className="px-4 py-3">
                       {row.source === "inventory" ? (
-                        row.listing_quantity !== null ? (
+                        editingCell?.rowId === row.id && editingCell?.field === "quantity" ? (
+                          <input
+                            type="number"
+                            min={0}
+                            value={editingValue}
+                            onChange={(e) => setEditingValue(e.target.value)}
+                            onBlur={saveEdit}
+                            onKeyDown={(e) => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") cancelEdit(); }}
+                            autoFocus
+                            className="w-16 px-1.5 py-0.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-green-600"
+                          />
+                        ) : (
+                          <button
+                            onClick={() => startEdit(row.id, "quantity", row.quantity)}
+                            className="hover:text-green-700 hover:underline tabular-nums"
+                            title="Click to edit"
+                          >
+                            {row.quantity}
+                          </button>
+                        )
+                      ) : (
+                        row.quantity
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      {row.source === "inventory" ? (
+                        editingCell?.rowId === row.id && editingCell?.field === "listing_quantity" ? (
+                          <input
+                            type="number"
+                            min={0}
+                            value={editingValue}
+                            onChange={(e) => setEditingValue(e.target.value)}
+                            onBlur={saveEdit}
+                            onKeyDown={(e) => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") cancelEdit(); }}
+                            autoFocus
+                            className="w-16 px-1.5 py-0.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-green-600"
+                          />
+                        ) : (
                           <div>
-                            <span className="font-medium">{row.listing_quantity}</span>
+                            <button
+                              onClick={() => startEdit(row.id, "listing_quantity", row.listing_quantity)}
+                              className={cn("hover:text-green-700 hover:underline tabular-nums", row.listing_quantity === null && "text-muted-foreground")}
+                              title="Click to edit"
+                            >
+                              {row.listing_quantity ?? "—"}
+                            </button>
                             {linkedListing && (
                               <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-[120px]">
                                 {linkedListing.plant_name}{linkedListing.variety ? ` · ${linkedListing.variety}` : ""}
                               </p>
                             )}
                           </div>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
                         )
                       ) : (
                         <span className="text-muted-foreground">—</span>
