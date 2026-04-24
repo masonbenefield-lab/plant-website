@@ -77,6 +77,8 @@ export default function Navbar({ user, avatarUrl, username }: NavbarProps) {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
                   <DropdownMenuItem><Link href="/dashboard" className="block w-full">Dashboard</Link></DropdownMenuItem>
+                  <DropdownMenuItem><Link href="/dashboard/inventory" className="block w-full">Inventory</Link></DropdownMenuItem>
+                  <DropdownMenuItem><Link href="/wishlist" className="block w-full">Wishlist</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href="/orders" className="block w-full">My Orders</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href={`/sellers/${username}`} className="block w-full">My Storefront</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href="/account" className="block w-full">Account Settings</Link></DropdownMenuItem>
@@ -137,6 +139,8 @@ export default function Navbar({ user, avatarUrl, username }: NavbarProps) {
                 <span className="text-sm font-medium">{username}</span>
               </div>
               <MobileLink href="/dashboard" onClick={closeMenu}>Dashboard</MobileLink>
+              <MobileLink href="/dashboard/inventory" onClick={closeMenu}>Inventory</MobileLink>
+              <MobileLink href="/wishlist" onClick={closeMenu}>Wishlist</MobileLink>
               <MobileLink href="/orders" onClick={closeMenu}>My Orders</MobileLink>
               <MobileLink href={`/sellers/${username}`} onClick={closeMenu}>My Storefront</MobileLink>
               <MobileLink href="/account" onClick={closeMenu}>Account Settings</MobileLink>

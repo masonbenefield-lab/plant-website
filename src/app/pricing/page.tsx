@@ -17,6 +17,7 @@ const tiers = [
     ctaHref: "/signup",
     ctaStyle: "outline" as const,
     features: {
+      inventory: "Free inventory management",
       listings: "10 active listings",
       photos: "3 photos per listing",
       auctions: "2 active auctions",
@@ -39,6 +40,7 @@ const tiers = [
     ctaHref: "/signup?plan=grower",
     ctaStyle: "default" as const,
     features: {
+      inventory: "Free inventory management",
       listings: "50 active listings",
       photos: "10 photos per listing",
       auctions: "Unlimited auctions",
@@ -61,6 +63,7 @@ const tiers = [
     ctaHref: "/signup?plan=nursery",
     ctaStyle: "default" as const,
     features: {
+      inventory: "Free inventory management",
       listings: "Unlimited listings",
       photos: "Unlimited photos",
       auctions: "Unlimited auctions",
@@ -76,6 +79,7 @@ const tiers = [
 ];
 
 const comparisonRows = [
+  { label: "Inventory management",   key: "inventory" },
   { label: "Active listings",        key: "listings" },
   { label: "Photos per listing",     key: "photos" },
   { label: "Active auctions",        key: "auctions" },
