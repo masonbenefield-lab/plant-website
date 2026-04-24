@@ -15,9 +15,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   if (!profile?.is_admin) redirect("/");
 
+  const { count: pendingReports } = await supabase
+    .from("reports")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "pending");
+
   return (
     <div className="flex min-h-[calc(100vh-64px)]">
-      <AdminNav />
+      <AdminNav pendingReports={pendingReports ?? 0} />
       <main className="flex-1 overflow-auto min-w-0">{children}</main>
     </div>
   );

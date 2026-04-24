@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Star } from "lucide-react";
 import { centsToDisplay } from "@/lib/stripe";
 import FollowButton from "@/components/follow-button";
+import ReportButton from "@/components/report-button";
 
 export default async function SellerStorefront({
   params,
@@ -46,6 +47,10 @@ export default async function SellerStorefront({
     ? !!(await supabase.from("follows").select("id").eq("follower_id", user.id).eq("seller_id", profile.id).maybeSingle()).data
     : false;
 
+  const isReportedUser = user && user.id !== profile.id
+    ? !!(await supabase.from("reports").select("id").eq("reporter_id", user.id).eq("reported_user_id", profile.id).maybeSingle()).data
+    : false;
+
   const avgScore =
     ratings && ratings.length > 0
       ? ratings.reduce((sum, r) => sum + r.score, 0) / ratings.length
@@ -69,12 +74,22 @@ export default async function SellerStorefront({
                 <p className="text-xs text-muted-foreground mt-0.5">{followerCount} follower{followerCount !== 1 ? "s" : ""}</p>
               )}
             </div>
-            <FollowButton
-              userId={user?.id ?? null}
-              sellerId={profile.id}
-              initialFollowing={isFollowing}
-              initialCount={followerCount ?? 0}
-            />
+            <div className="flex items-center gap-3">
+              <FollowButton
+                userId={user?.id ?? null}
+                sellerId={profile.id}
+                initialFollowing={isFollowing}
+                initialCount={followerCount ?? 0}
+              />
+              {user && user.id !== profile.id && (
+                <ReportButton
+                  userId={user.id}
+                  reportedUserId={profile.id}
+                  targetName={profile.username}
+                  initialReported={isReportedUser}
+                />
+              )}
+            </div>
           </div>
           {profile.bio && (
             <p className="text-muted-foreground mt-2 max-w-lg">{profile.bio}</p>

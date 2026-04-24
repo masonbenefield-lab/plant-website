@@ -9,6 +9,7 @@ import { centsToDisplay } from "@/lib/stripe";
 import { cn } from "@/lib/utils";
 import BuyButton from "./buy-button";
 import WishlistButton from "@/components/wishlist-button";
+import ReportButton from "@/components/report-button";
 
 export default async function ListingPage({
   params,
@@ -32,13 +33,12 @@ export default async function ListingPage({
     supabase.auth.getUser(),
   ]);
 
-  const wishlistRow = user ? await supabase
-    .from("wishlists")
-    .select("id")
-    .eq("user_id", user.id)
-    .eq("listing_id", listing.id)
-    .maybeSingle() : null;
-  const isWishlisted = !!wishlistRow?.data;
+  const [wishlistRow, reportRow] = await Promise.all([
+    user ? supabase.from("wishlists").select("id").eq("user_id", user.id).eq("listing_id", listing.id).maybeSingle() : Promise.resolve({ data: null }),
+    user ? supabase.from("reports").select("id").eq("reporter_id", user.id).eq("listing_id", listing.id).maybeSingle() : Promise.resolve({ data: null }),
+  ]);
+  const isWishlisted = !!wishlistRow.data;
+  const isReported = !!reportRow.data;
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-10">
@@ -112,6 +112,17 @@ export default async function ListingPage({
               </Link>
             )}
           </div>
+
+          {user && user.id !== listing.seller_id && (
+            <div className="mt-6 flex justify-end">
+              <ReportButton
+                userId={user.id}
+                listingId={listing.id}
+                targetName={listing.plant_name}
+                initialReported={isReported}
+              />
+            </div>
+          )}
 
           {seller && (
             <Link

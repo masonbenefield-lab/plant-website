@@ -10,9 +10,10 @@ const links = [
   { href: "/admin/listings",  label: "Listings" },
   { href: "/admin/auctions",  label: "Auctions" },
   { href: "/admin/orders",    label: "Orders" },
+  { href: "/admin/reports",   label: "Reports" },
 ];
 
-export default function AdminNav() {
+export default function AdminNav({ pendingReports = 0 }: { pendingReports?: number }) {
   const pathname = usePathname();
 
   return (
@@ -23,18 +24,24 @@ export default function AdminNav() {
       <nav className="space-y-0.5">
         {links.map((link) => {
           const active = link.href === "/admin" ? pathname === "/admin" : pathname.startsWith(link.href);
+          const isReports = link.href === "/admin/reports";
           return (
             <Link
               key={link.href}
               href={link.href}
               className={cn(
-                "block px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                "flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors",
                 active
                   ? "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
                   : "text-foreground hover:bg-muted"
               )}
             >
               {link.label}
+              {isReports && pendingReports > 0 && (
+                <span className="ml-2 rounded-full bg-red-500 text-white text-xs px-1.5 py-0.5 font-semibold leading-none">
+                  {pendingReports}
+                </span>
+              )}
             </Link>
           );
         })}

@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { centsToDisplay } from "@/lib/stripe";
 import AuctionBidPanel from "./auction-bid-panel";
 import WishlistButton from "@/components/wishlist-button";
+import ReportButton from "@/components/report-button";
 
 export default async function AuctionPage({
   params,
@@ -36,13 +37,12 @@ export default async function AuctionPage({
     : { data: [] };
   const bidderMap = Object.fromEntries((bidders ?? []).map((b) => [b.id, b]));
 
-  const wishlistRow = user ? await supabase
-    .from("wishlists")
-    .select("id")
-    .eq("user_id", user.id)
-    .eq("auction_id", auction.id)
-    .maybeSingle() : null;
-  const isWishlisted = !!wishlistRow?.data;
+  const [wishlistRow, reportRow] = await Promise.all([
+    user ? supabase.from("wishlists").select("id").eq("user_id", user.id).eq("auction_id", auction.id).maybeSingle() : Promise.resolve({ data: null }),
+    user ? supabase.from("reports").select("id").eq("reporter_id", user.id).eq("auction_id", auction.id).maybeSingle() : Promise.resolve({ data: null }),
+  ]);
+  const isWishlisted = !!wishlistRow.data;
+  const isReported = !!reportRow.data;
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-10">
@@ -118,6 +118,17 @@ export default async function AuctionPage({
               }))
             }
           />
+
+          {user && user.id !== auction.seller_id && (
+            <div className="mt-4 flex justify-end">
+              <ReportButton
+                userId={user.id}
+                auctionId={auction.id}
+                targetName={auction.plant_name}
+                initialReported={isReported}
+              />
+            </div>
+          )}
 
           {seller && (
             <Link
