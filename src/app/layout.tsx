@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import Navbar from "@/components/layout/navbar";
+import { ThemeProvider } from "@/components/theme-provider";
 import { createClient } from "@/lib/supabase/server";
 
 const inter = Inter({
@@ -37,15 +38,17 @@ export default async function RootLayout({
   }
 
   return (
-    <html lang="en" className={`${inter.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col bg-gray-50">
-        <Navbar
-          user={user}
-          avatarUrl={profile?.avatar_url}
-          username={profile?.username}
-        />
-        <main className="flex-1">{children}</main>
-        <Toaster richColors />
+    <html lang="en" className={`${inter.variable} h-full antialiased`} suppressHydrationWarning>
+      <body className="min-h-full flex flex-col bg-background text-foreground">
+        <ThemeProvider>
+          <Navbar
+            user={user}
+            avatarUrl={profile?.avatar_url}
+            username={profile?.username}
+          />
+          <main className="flex-1">{children}</main>
+          <Toaster richColors />
+        </ThemeProvider>
       </body>
     </html>
   );

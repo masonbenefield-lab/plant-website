@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import { ThemeToggle } from "@/components/theme-toggle";
 import type { User } from "@supabase/supabase-js";
 
 interface NavbarProps {
@@ -39,7 +40,7 @@ export default function Navbar({ user, avatarUrl, username }: NavbarProps) {
   }
 
   return (
-    <header className="border-b bg-white sticky top-0 z-50">
+    <header className="border-b bg-background sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
 
         {/* Left: logo + desktop nav */}
@@ -88,7 +89,10 @@ export default function Navbar({ user, avatarUrl, username }: NavbarProps) {
             )}
           </div>
 
-          {/* Mobile: avatar (logged in) or hamburger button */}
+          {/* Theme toggle — always visible */}
+          <ThemeToggle />
+
+          {/* Mobile hamburger button */}
           <button
             className="md:hidden flex items-center justify-center w-9 h-9 rounded-lg hover:bg-muted transition-colors"
             onClick={() => setMobileOpen((o) => !o)}
@@ -112,7 +116,7 @@ export default function Navbar({ user, avatarUrl, username }: NavbarProps) {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="md:hidden border-t bg-white px-4 py-4 space-y-1">
+        <div className="md:hidden border-t bg-background px-4 py-4 space-y-1">
           <MobileLink href="/shop" onClick={closeMenu}>Shop</MobileLink>
           <MobileLink href="/auctions" onClick={closeMenu}>Auctions</MobileLink>
 
