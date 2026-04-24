@@ -400,7 +400,7 @@ export default function InventoryClient({
               </p>
               <div className="space-y-1">
                 <Label>Listing *</Label>
-                <Select value={linkListingId} onValueChange={setLinkListingId}>
+                <Select value={linkListingId} onValueChange={(v) => setLinkListingId(v ?? "")}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select a listing…" />
                   </SelectTrigger>
