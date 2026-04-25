@@ -17,6 +17,7 @@ interface AuctionData {
   status: AuctionStatus;
   current_bid_cents: number;
   starting_bid_cents: number;
+  buy_now_price_cents: number | null;
   ends_at: string;
   seller_id: string;
   current_bidder_id: string | null;
@@ -140,6 +141,35 @@ export default function AuctionBidPanel({
     }
   }
 
+  async function buyNow() {
+    if (!userId) return toast.error("Sign in to buy");
+    if (userId === auction.seller_id) return toast.error("You can't buy your own auction");
+    if (!auction.buy_now_price_cents) return;
+
+    setPlacing(true);
+    const supabase = createClient();
+
+    const { error: bidError } = await supabase.from("bids").insert({
+      auction_id: auction.id,
+      bidder_id: userId,
+      amount_cents: auction.buy_now_price_cents,
+    });
+    if (bidError) { toast.error(bidError.message); setPlacing(false); return; }
+
+    const { error: updateError } = await supabase.from("auctions").update({
+      current_bid_cents: auction.buy_now_price_cents,
+      current_bidder_id: userId,
+      status: "ended",
+    }).eq("id", auction.id).eq("status", "active");
+
+    setPlacing(false);
+    if (updateError) {
+      toast.error(updateError.message);
+    } else {
+      toast.success("Purchase complete! Proceed to checkout.");
+    }
+  }
+
   const isEnded = auction.status !== "active" || new Date(auction.ends_at) <= new Date();
   const isWinner = isEnded && auction.current_bidder_id === userId;
 
@@ -174,6 +204,22 @@ export default function AuctionBidPanel({
         >
           You won! Complete Purchase →
         </a>
+      )}
+
+      {!isEnded && auction.buy_now_price_cents && userId && userId !== auction.seller_id && (
+        <div className="rounded-lg border border-orange-200 bg-orange-50 dark:bg-orange-900/10 dark:border-orange-800 p-3 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-medium">Buy Now</p>
+            <p className="text-xs text-muted-foreground">Skip bidding — purchase immediately</p>
+          </div>
+          <Button
+            onClick={buyNow}
+            disabled={placing}
+            className="bg-orange-600 hover:bg-orange-700 shrink-0"
+          >
+            {placing ? "…" : `${centsToDisplay(auction.buy_now_price_cents)}`}
+          </Button>
+        </div>
       )}
 
       {!isEnded && userId && userId !== auction.seller_id && (

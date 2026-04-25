@@ -89,6 +89,7 @@ export default function InventoryClient({
   const [price, setPrice] = useState("");
   const [listQty, setListQty] = useState("");
   const [startingBid, setStartingBid] = useState("");
+  const [buyNowPrice, setBuyNowPrice] = useState("");
   const [endsAt, setEndsAt] = useState("");
   const [linkListingId, setLinkListingId] = useState("");
   const [linkQty, setLinkQty] = useState("");
@@ -140,6 +141,7 @@ export default function InventoryClient({
     setPrice("");
     setListQty(String(row.quantity));
     setStartingBid("");
+    setBuyNowPrice("");
     setEndsAt("");
     setLinkListingId(row.linked_listing_id ?? "");
     setLinkQty(row.listing_quantity !== null ? String(row.listing_quantity) : "");
@@ -191,6 +193,7 @@ export default function InventoryClient({
       description: modal.row.description || null,
       starting_bid_cents: dollarsToCents(startingBid),
       current_bid_cents: dollarsToCents(startingBid),
+      buy_now_price_cents: buyNowPrice ? dollarsToCents(buyNowPrice) : null,
       ends_at: new Date(endsAt).toISOString(),
     });
     setSubmitting(false);
@@ -686,6 +689,18 @@ export default function InventoryClient({
                   onChange={(e) => setStartingBid(e.target.value)}
                   placeholder="0.00"
                   autoFocus
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="modal-buy-now">Buy Now Price ($) <span className="font-normal text-muted-foreground">(optional)</span></Label>
+                <Input
+                  id="modal-buy-now"
+                  type="number"
+                  min={0.01}
+                  step={0.01}
+                  value={buyNowPrice}
+                  onChange={(e) => setBuyNowPrice(e.target.value)}
+                  placeholder="Leave blank to disable"
                 />
               </div>
               <div className="space-y-1">

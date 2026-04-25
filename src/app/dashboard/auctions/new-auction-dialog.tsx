@@ -52,6 +52,8 @@ export default function NewAuctionDialog({ sellerId }: { sellerId: string }) {
     const durationHours = Number(data.get("duration_hours"));
     const endsAt = new Date(Date.now() + durationHours * 60 * 60 * 1000).toISOString();
     const startingBidCents = dollarsToCents(data.get("starting_bid") as string);
+    const buyNowRaw = data.get("buy_now_price") as string;
+    const buyNowCents = buyNowRaw ? dollarsToCents(buyNowRaw) : null;
 
     const supabase = createClient();
     const { error } = await supabase.from("auctions").insert({
@@ -62,6 +64,7 @@ export default function NewAuctionDialog({ sellerId }: { sellerId: string }) {
       description: (data.get("description") as string) || null,
       starting_bid_cents: startingBidCents,
       current_bid_cents: startingBidCents,
+      buy_now_price_cents: buyNowCents,
       ends_at: endsAt,
       images: imageUrls,
     });
@@ -107,6 +110,11 @@ export default function NewAuctionDialog({ sellerId }: { sellerId: string }) {
               <Label htmlFor="starting_bid">Starting Bid ($) *</Label>
               <Input id="starting_bid" name="starting_bid" type="number" min={0.01} step={0.01} required />
             </div>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="buy_now_price">Buy Now Price ($) <span className="font-normal text-muted-foreground">(optional)</span></Label>
+            <Input id="buy_now_price" name="buy_now_price" type="number" min={0.01} step={0.01} placeholder="Leave blank to disable" />
+            <p className="text-xs text-muted-foreground">Buyers can skip bidding and purchase immediately at this price.</p>
           </div>
           <div className="space-y-1">
             <Label htmlFor="duration_hours">Duration *</Label>

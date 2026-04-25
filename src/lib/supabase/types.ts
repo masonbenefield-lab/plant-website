@@ -97,6 +97,7 @@ export interface Database {
           images: string[];
           starting_bid_cents: number;
           current_bid_cents: number;
+          buy_now_price_cents: number | null;
           current_bidder_id: string | null;
           ends_at: string;
           status: AuctionStatus;
@@ -113,6 +114,7 @@ export interface Database {
           images?: string[];
           starting_bid_cents: number;
           current_bid_cents?: number;
+          buy_now_price_cents?: number | null;
           current_bidder_id?: string | null;
           ends_at: string;
           status?: AuctionStatus;
@@ -128,6 +130,7 @@ export interface Database {
           images?: string[];
           starting_bid_cents?: number;
           current_bid_cents?: number;
+          buy_now_price_cents?: number | null;
           current_bidder_id?: string | null;
           ends_at?: string;
           status?: AuctionStatus;

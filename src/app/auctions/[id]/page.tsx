@@ -104,6 +104,7 @@ export default async function AuctionPage({
               status: auction.status,
               current_bid_cents: auction.current_bid_cents,
               starting_bid_cents: auction.starting_bid_cents,
+              buy_now_price_cents: auction.buy_now_price_cents,
               ends_at: auction.ends_at,
               seller_id: auction.seller_id,
               current_bidder_id: auction.current_bidder_id,
