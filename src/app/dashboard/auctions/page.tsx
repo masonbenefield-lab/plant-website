@@ -44,12 +44,13 @@ export default async function DashboardAuctionsPage() {
                       {auction.status}
                     </Badge>
                   </div>
-                  <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground flex-wrap">
                     <span>Starting: {centsToDisplay(auction.starting_bid_cents)}</span>
                     <span>Current: {centsToDisplay(auction.current_bid_cents)}</span>
-                    <span>
-                      Ends: {new Date(auction.ends_at).toLocaleString()}
-                    </span>
+                    {auction.buy_now_price_cents && (
+                      <span className="text-orange-600 font-medium">Buy Now: {centsToDisplay(auction.buy_now_price_cents)}</span>
+                    )}
+                    <span>Ends: {new Date(auction.ends_at).toLocaleString()}</span>
                   </div>
                 </div>
                 {auction.status === "active" && (
