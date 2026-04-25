@@ -42,6 +42,7 @@ export default function CreateInventoryPage() {
 
   // auction-specific
   const [startingBid, setStartingBid] = useState("");
+  const [buyNowPrice, setBuyNowPrice] = useState("");
   const [endsAt, setEndsAt] = useState("");
 
   async function uploadImages(files: FileList) {
@@ -113,6 +114,7 @@ export default function CreateInventoryPage() {
         quantity: Number(quantity),
         starting_bid_cents: dollarsToCents(startingBid),
         current_bid_cents: dollarsToCents(startingBid),
+        buy_now_price_cents: buyNowPrice ? dollarsToCents(buyNowPrice) : null,
         description: description || null,
         images: imageUrls,
         ends_at: new Date(endsAt).toISOString(),
@@ -375,6 +377,20 @@ export default function CreateInventoryPage() {
                   required
                   className="max-w-[180px]"
                 />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="buy_now_price">Buy Now Price ($) <span className="font-normal text-muted-foreground">(optional)</span></Label>
+                <Input
+                  id="buy_now_price"
+                  type="number"
+                  min={0.01}
+                  step={0.01}
+                  value={buyNowPrice}
+                  onChange={(e) => setBuyNowPrice(e.target.value)}
+                  placeholder="Leave blank to disable"
+                  className="max-w-[180px]"
+                />
+                <p className="text-xs text-muted-foreground">Buyers can skip bidding and purchase immediately at this price.</p>
               </div>
               <div className="space-y-1">
                 <Label htmlFor="ends_at">Auction End Date & Time *</Label>
