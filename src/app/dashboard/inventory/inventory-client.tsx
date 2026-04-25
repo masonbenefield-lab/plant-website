@@ -84,6 +84,17 @@ export default function InventoryClient({
   const router = useRouter();
   const [tab, setTab] = useState<"active" | "archived">("active");
   const [search, setSearch] = useState("");
+  const [sortCol, setSortCol] = useState<"plant_name" | "variety" | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
+  function toggleSort(col: "plant_name" | "variety") {
+    if (sortCol === col) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortCol(col);
+      setSortDir("asc");
+    }
+  }
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [modal, setModal] = useState<ActionModal>(null);
   const [price, setPrice] = useState("");
@@ -316,12 +327,19 @@ export default function InventoryClient({
   }
 
   const allRows = tab === "active" ? activeRows : archivedRows;
-  const rows = search.trim()
+  const filtered = search.trim()
     ? allRows.filter((r) => {
         const q = search.toLowerCase();
         return r.plant_name.toLowerCase().includes(q) || r.variety.toLowerCase().includes(q);
       })
     : allRows;
+  const rows = sortCol
+    ? [...filtered].sort((a, b) => {
+        const av = (a[sortCol] ?? "").toLowerCase();
+        const bv = (b[sortCol] ?? "").toLowerCase();
+        return sortDir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
+      })
+    : filtered;
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-10">
@@ -385,8 +403,18 @@ export default function InventoryClient({
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-muted-foreground">
               <tr>
-                <th className="text-left px-4 py-3 font-medium">Plant</th>
-                <th className="text-left px-4 py-3 font-medium">Variety</th>
+                <th className="text-left px-4 py-3 font-medium">
+                  <button onClick={() => toggleSort("plant_name")} className="flex items-center gap-1 hover:text-foreground transition-colors">
+                    Plant
+                    <span className="text-xs">{sortCol === "plant_name" ? (sortDir === "asc" ? "↑" : "↓") : "↕"}</span>
+                  </button>
+                </th>
+                <th className="text-left px-4 py-3 font-medium">
+                  <button onClick={() => toggleSort("variety")} className="flex items-center gap-1 hover:text-foreground transition-colors">
+                    Variety
+                    <span className="text-xs">{sortCol === "variety" ? (sortDir === "asc" ? "↑" : "↓") : "↕"}</span>
+                  </button>
+                </th>
                 <th className="text-left px-4 py-3 font-medium">In Stock</th>
                 <th className="text-left px-4 py-3 font-medium">Listed Qty</th>
                 <th className="text-left px-4 py-3 font-medium">Status</th>
