@@ -186,6 +186,11 @@ export default function AuctionBidPanel({
               <p className="text-xs text-muted-foreground mt-0.5">
                 Starting: {centsToDisplay(auction.starting_bid_cents)}
               </p>
+              {auction.buy_now_price_cents && (
+                <p className="text-xs text-orange-600 font-medium mt-0.5">
+                  Buy Now: {centsToDisplay(auction.buy_now_price_cents)}
+                </p>
+              )}
             </div>
             <div className="text-right">
               <p className="text-xs text-muted-foreground">Time remaining</p>
