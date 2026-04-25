@@ -83,6 +83,7 @@ export default function InventoryClient({
 }) {
   const router = useRouter();
   const [tab, setTab] = useState<"active" | "archived">("active");
+  const [search, setSearch] = useState("");
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [modal, setModal] = useState<ActionModal>(null);
   const [price, setPrice] = useState("");
@@ -311,7 +312,13 @@ export default function InventoryClient({
     printWindow.document.close();
   }
 
-  const rows = tab === "active" ? activeRows : archivedRows;
+  const allRows = tab === "active" ? activeRows : archivedRows;
+  const rows = search.trim()
+    ? allRows.filter((r) => {
+        const q = search.toLowerCase();
+        return r.plant_name.toLowerCase().includes(q) || r.variety.toLowerCase().includes(q);
+      })
+    : allRows;
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-10">
@@ -343,6 +350,15 @@ export default function InventoryClient({
         ))}
       </div>
 
+      <div className="mb-4">
+        <Input
+          placeholder="Search by plant name or variety…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="max-w-sm"
+        />
+      </div>
+
       {tab === "archived" && archivedRows.length > 0 && (
         <div className="mb-4 rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-700">
           Archived items are permanently deleted after 7 days. Restore an item to keep it.
@@ -352,8 +368,12 @@ export default function InventoryClient({
       {rows.length === 0 ? (
         <div className="text-center py-20 text-muted-foreground">
           <p className="text-4xl mb-4">{tab === "archived" ? "🗑️" : "📦"}</p>
-          <p className="font-medium">{tab === "archived" ? "No archived items" : "No inventory yet"}</p>
-          {tab === "active" && (
+          <p className="font-medium">
+            {search.trim()
+              ? `No results for "${search}"`
+              : tab === "archived" ? "No archived items" : "No inventory yet"}
+          </p>
+          {tab === "active" && !search.trim() && (
             <Link href="/dashboard/create" className={cn(buttonVariants(), "mt-6 bg-green-700 hover:bg-green-800")}>+ Add Inventory</Link>
           )}
         </div>
