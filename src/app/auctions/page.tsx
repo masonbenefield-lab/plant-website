@@ -106,11 +106,21 @@ export default async function AuctionsPage({
                       {auction.variety && (
                         <p className="text-sm text-muted-foreground truncate">{auction.variety}</p>
                       )}
-                      <div className="mt-2">
-                        <p className="text-xs text-muted-foreground">Current bid</p>
-                        <span className="font-bold text-green-700">
-                          {centsToDisplay(auction.current_bid_cents)}
-                        </span>
+                      <div className="mt-2 flex items-end justify-between gap-2">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Current bid</p>
+                          <span className="font-bold text-green-700">
+                            {centsToDisplay(auction.current_bid_cents)}
+                          </span>
+                        </div>
+                        {auction.buy_now_price_cents && (
+                          <div className="text-right">
+                            <p className="text-xs text-muted-foreground">Buy Now</p>
+                            <span className="font-bold text-orange-600">
+                              {centsToDisplay(auction.buy_now_price_cents)}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </Link>
