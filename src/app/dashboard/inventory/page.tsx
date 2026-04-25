@@ -8,7 +8,7 @@ export default async function InventoryPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
   const [
     { data: activeInventory },
@@ -17,7 +17,7 @@ export default async function InventoryPage() {
     { data: auctions },
   ] = await Promise.all([
     supabase.from("inventory").select("*").eq("seller_id", user.id).is("archived_at", null).order("created_at", { ascending: false }),
-    supabase.from("inventory").select("*").eq("seller_id", user.id).not("archived_at", "is", null).gte("archived_at", sevenDaysAgo).order("archived_at", { ascending: false }),
+    supabase.from("inventory").select("*").eq("seller_id", user.id).not("archived_at", "is", null).gte("archived_at", thirtyDaysAgo).order("archived_at", { ascending: false }),
     supabase.from("listings").select("id, plant_name, variety, status, quantity, in_stock, price_cents, description, images, seller_id, created_at").eq("seller_id", user.id).order("created_at", { ascending: false }),
     supabase.from("auctions").select("*").eq("seller_id", user.id).order("created_at", { ascending: false }),
   ]);
@@ -36,6 +36,8 @@ export default async function InventoryPage() {
       notes: item.notes ?? "",
       status: "Draft",
       price: "",
+      price_cents: null as number | null,
+      images: (item.images as string[]) ?? [],
       created_at: item.created_at,
       archived_at: null as string | null,
     })),
@@ -52,6 +54,8 @@ export default async function InventoryPage() {
       notes: "",
       status: l.status === "active" ? "In Shop" : l.status === "paused" ? "Paused" : "Sold Out",
       price: centsToDisplay(l.price_cents),
+      price_cents: l.price_cents,
+      images: (l.images as string[]) ?? [],
       created_at: l.created_at,
       archived_at: null as string | null,
     })),
@@ -68,6 +72,8 @@ export default async function InventoryPage() {
       notes: "",
       status: a.status === "active" ? "Live Auction" : a.status === "ended" ? "Auction Ended" : "Cancelled",
       price: `${centsToDisplay(a.current_bid_cents)} bid`,
+      price_cents: null as number | null,
+      images: (a.images as string[]) ?? [],
       created_at: a.created_at,
       archived_at: null as string | null,
     })),
@@ -86,6 +92,8 @@ export default async function InventoryPage() {
     notes: item.notes ?? "",
     status: "Archived",
     price: "",
+    price_cents: null as number | null,
+    images: (item.images as string[]) ?? [],
     created_at: item.created_at,
     archived_at: item.archived_at,
   }));

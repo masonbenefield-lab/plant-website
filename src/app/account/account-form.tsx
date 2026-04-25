@@ -36,7 +36,7 @@ export default function AccountForm({
       .from("avatars")
       .upload(path, file, { upsert: true });
     if (error) {
-      toast.error("Avatar upload failed");
+      toast.error(error.message || "Avatar upload failed");
       setUploading(false);
       return;
     }

@@ -23,7 +23,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { dollarsToCents } from "@/lib/stripe";
+import { dollarsToCents, centsToDisplay } from "@/lib/stripe";
 import * as XLSX from "xlsx";
 
 type Row = {
@@ -39,6 +39,8 @@ type Row = {
   notes: string;
   status: string;
   price: string;
+  price_cents: number | null;
+  images: string[];
   created_at: string;
   archived_at: string | null;
 };
@@ -68,8 +70,16 @@ const statusColor: Record<string, string> = {
 };
 
 function daysUntilPurge(archivedAt: string) {
-  const purgeDate = new Date(archivedAt).getTime() + 7 * 24 * 60 * 60 * 1000;
+  const purgeDate = new Date(archivedAt).getTime() + 30 * 24 * 60 * 60 * 1000;
   return Math.max(0, Math.ceil((purgeDate - Date.now()) / (1000 * 60 * 60 * 24)));
+}
+
+function Thumb({ images }: { images: string[] }) {
+  return images[0] ? (
+    <img src={images[0]} alt="" className="w-9 h-9 rounded object-cover shrink-0" />
+  ) : (
+    <div className="w-9 h-9 rounded bg-muted flex items-center justify-center text-base shrink-0">🌿</div>
+  );
 }
 
 export default function InventoryClient({
@@ -84,6 +94,7 @@ export default function InventoryClient({
   const router = useRouter();
   const [tab, setTab] = useState<"active" | "archived">("active");
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
   const [sortCol, setSortCol] = useState<"plant_name" | "variety" | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
@@ -95,6 +106,7 @@ export default function InventoryClient({
       setSortDir("asc");
     }
   }
+
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [modal, setModal] = useState<ActionModal>(null);
   const [price, setPrice] = useState("");
@@ -249,6 +261,27 @@ export default function InventoryClient({
     router.refresh();
   }
 
+  async function cloneItem(row: Row) {
+    const cloneKey = row.id + "_clone";
+    setLoadingId(cloneKey);
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { toast.error("Not logged in"); setLoadingId(null); return; }
+    const { error } = await supabase.from("inventory").insert({
+      seller_id: user.id,
+      plant_name: `${row.plant_name} (copy)`,
+      variety: row.variety || null,
+      quantity: row.quantity,
+      description: row.description || null,
+      notes: row.notes || null,
+      images: row.images,
+    });
+    setLoadingId(null);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Item cloned.");
+    router.refresh();
+  }
+
   async function unlinkItem(id: string) {
     setLoadingId(id);
     const supabase = createClient();
@@ -327,12 +360,17 @@ export default function InventoryClient({
   }
 
   const allRows = tab === "active" ? activeRows : archivedRows;
+  const allStatuses = ["All", ...Array.from(new Set(allRows.map((r) => r.status)))];
+
+  const afterStatusFilter = statusFilter !== "All"
+    ? allRows.filter((r) => r.status === statusFilter)
+    : allRows;
   const filtered = search.trim()
-    ? allRows.filter((r) => {
+    ? afterStatusFilter.filter((r) => {
         const q = search.toLowerCase();
         return r.plant_name.toLowerCase().includes(q) || r.variety.toLowerCase().includes(q);
       })
-    : allRows;
+    : afterStatusFilter;
   const rows = sortCol
     ? [...filtered].sort((a, b) => {
         const av = (a[sortCol] ?? "").toLowerCase();
@@ -340,6 +378,116 @@ export default function InventoryClient({
         return sortDir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
       })
     : filtered;
+
+  const totalListedValue = rows.reduce((sum, r) => sum + (r.price_cents !== null ? r.price_cents * r.quantity : 0), 0);
+
+  function rowActions(row: Row) {
+    if (tab === "archived" && row.archived_at) {
+      return (
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-orange-600">{daysUntilPurge(row.archived_at)}d left</span>
+          <button onClick={() => restoreItem(row.id)} disabled={loadingId === row.id} className="text-xs text-green-700 hover:underline disabled:opacity-50">
+            {loadingId === row.id ? "Restoring…" : "Restore"}
+          </button>
+        </div>
+      );
+    }
+    if (row.source === "inventory") {
+      const cloneKey = row.id + "_clone";
+      return (
+        <div className="flex items-center gap-3 flex-wrap">
+          <button onClick={() => openModal("edit", row)} className="text-xs text-foreground hover:underline font-medium">Edit</button>
+          <button onClick={() => cloneItem(row)} disabled={loadingId === cloneKey} className="text-xs text-blue-500 hover:underline font-medium disabled:opacity-50">
+            {loadingId === cloneKey ? "…" : "Clone"}
+          </button>
+          {row.linked_listing_id ? (
+            <>
+              <button onClick={() => openModal("link", row)} className="text-xs text-blue-600 hover:underline font-medium">Edit Link</button>
+              <button onClick={() => unlinkItem(row.id)} disabled={loadingId === row.id} className="text-xs text-muted-foreground hover:underline disabled:opacity-50">
+                {loadingId === row.id ? "…" : "Unlink"}
+              </button>
+            </>
+          ) : (
+            <>
+              <button onClick={() => openModal("link", row)} className="text-xs text-blue-600 hover:underline font-medium">Link</button>
+              <button onClick={() => openModal("listing", row)} className="text-xs text-green-700 hover:underline font-medium">List in Shop</button>
+            </>
+          )}
+          <button onClick={() => openModal("auction", row)} className="text-xs text-purple-600 hover:underline font-medium">Auction</button>
+          <button onClick={() => archiveItem(row.id)} disabled={loadingId === row.id} className="text-xs text-red-500 hover:underline disabled:opacity-50">
+            {loadingId === row.id ? "…" : "Delete"}
+          </button>
+        </div>
+      );
+    }
+    if (row.source === "auction" && row.status === "Cancelled") {
+      return (
+        <button onClick={() => deleteAuction(row.id)} disabled={loadingId === row.id} className="text-xs text-red-500 hover:underline disabled:opacity-50">
+          {loadingId === row.id ? "Deleting…" : "Delete"}
+        </button>
+      );
+    }
+    return <span className="text-xs text-muted-foreground">—</span>;
+  }
+
+  function inStockCell(row: Row) {
+    if (row.source === "inventory") {
+      return editingCell?.rowId === row.id && editingCell?.field === "quantity" ? (
+        <input type="number" min={0} value={editingValue} onChange={(e) => setEditingValue(e.target.value)}
+          onBlur={saveEdit} onKeyDown={(e) => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") cancelEdit(); }}
+          autoFocus className="w-16 px-1.5 py-0.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-green-600" />
+      ) : (
+        <button onClick={() => startEdit(row.id, "quantity", row.quantity, row.source)} className="hover:text-green-700 hover:underline tabular-nums" title="Click to edit">
+          {row.quantity}
+        </button>
+      );
+    }
+    if (row.source === "listing") {
+      return editingCell?.rowId === row.id && editingCell?.field === "in_stock" ? (
+        <input type="number" min={0} value={editingValue} onChange={(e) => setEditingValue(e.target.value)}
+          onBlur={saveEdit} onKeyDown={(e) => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") cancelEdit(); }}
+          autoFocus className="w-16 px-1.5 py-0.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-green-600" />
+      ) : (
+        <button onClick={() => startEdit(row.id, "in_stock", row.in_stock, row.source)} className={cn("hover:text-green-700 hover:underline tabular-nums", row.in_stock === null && "text-muted-foreground")} title="Click to edit">
+          {row.in_stock ?? "—"}
+        </button>
+      );
+    }
+    return <span className="text-muted-foreground">{row.quantity}</span>;
+  }
+
+  function listedQtyCell(row: Row, linkedListing?: ListingOption | null) {
+    if (row.source === "inventory") {
+      return editingCell?.rowId === row.id && editingCell?.field === "listing_quantity" ? (
+        <input type="number" min={0} value={editingValue} onChange={(e) => setEditingValue(e.target.value)}
+          onBlur={saveEdit} onKeyDown={(e) => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") cancelEdit(); }}
+          autoFocus className="w-16 px-1.5 py-0.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-green-600" />
+      ) : (
+        <div>
+          <button onClick={() => startEdit(row.id, "listing_quantity", row.listing_quantity, row.source)} className={cn("hover:text-green-700 hover:underline tabular-nums", row.listing_quantity === null && "text-muted-foreground")} title="Click to edit">
+            {row.listing_quantity ?? "—"}
+          </button>
+          {linkedListing && (
+            <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-[120px]">
+              {linkedListing.plant_name}{linkedListing.variety ? ` · ${linkedListing.variety}` : ""}
+            </p>
+          )}
+        </div>
+      );
+    }
+    if (row.source === "listing") {
+      return editingCell?.rowId === row.id && editingCell?.field === "listing_quantity" ? (
+        <input type="number" min={0} value={editingValue} onChange={(e) => setEditingValue(e.target.value)}
+          onBlur={saveEdit} onKeyDown={(e) => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") cancelEdit(); }}
+          autoFocus className="w-16 px-1.5 py-0.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-green-600" />
+      ) : (
+        <button onClick={() => startEdit(row.id, "listing_quantity", row.quantity, row.source)} className="hover:text-green-700 hover:underline tabular-nums" title="Click to edit">
+          {row.quantity}
+        </button>
+      );
+    }
+    return <span className="text-muted-foreground">—</span>;
+  }
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-10">
@@ -371,18 +519,29 @@ export default function InventoryClient({
         ))}
       </div>
 
-      <div className="mb-4">
+      {/* Search + Status filter */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-4">
         <Input
           placeholder="Search by plant name or variety…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="max-w-sm"
         />
+        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v ?? "All")}>
+          <SelectTrigger className="w-[160px]">
+            <SelectValue placeholder="All statuses" />
+          </SelectTrigger>
+          <SelectContent>
+            {allStatuses.map((s) => (
+              <SelectItem key={s} value={s}>{s}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {tab === "archived" && archivedRows.length > 0 && (
         <div className="mb-4 rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-700">
-          Archived items are permanently deleted after 7 days. Restore an item to keep it.
+          Archived items are permanently deleted after 30 days. Restore an item to keep it.
         </div>
       )}
 
@@ -399,200 +558,109 @@ export default function InventoryClient({
           )}
         </div>
       ) : (
-        <div className="rounded-lg border overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50 text-muted-foreground">
-              <tr>
-                <th className="text-left px-4 py-3 font-medium">
-                  <button onClick={() => toggleSort("plant_name")} className="flex items-center gap-1 hover:text-foreground transition-colors">
-                    Plant
-                    <span className="text-xs">{sortCol === "plant_name" ? (sortDir === "asc" ? "↑" : "↓") : "↕"}</span>
-                  </button>
-                </th>
-                <th className="text-left px-4 py-3 font-medium">
-                  <button onClick={() => toggleSort("variety")} className="flex items-center gap-1 hover:text-foreground transition-colors">
-                    Variety
-                    <span className="text-xs">{sortCol === "variety" ? (sortDir === "asc" ? "↑" : "↓") : "↕"}</span>
-                  </button>
-                </th>
-                <th className="text-left px-4 py-3 font-medium">In Stock</th>
-                <th className="text-left px-4 py-3 font-medium">Listed Qty</th>
-                <th className="text-left px-4 py-3 font-medium">Status</th>
-                <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Price / Bid</th>
-                <th className="text-left px-4 py-3 font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row, i) => {
-                const linkedListing = row.linked_listing_id
-                  ? listingOptions.find((l) => l.id === row.linked_listing_id)
-                  : null;
-                return (
-                  <tr key={row.id} className={i % 2 === 0 ? "bg-card" : "bg-muted/20"}>
-                    <td className="px-4 py-3 font-medium">{row.plant_name}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{row.variety || "—"}</td>
-                    {/* In Stock — editable for inventory drafts only */}
-                    <td className="px-4 py-3">
-                      {row.source === "inventory" ? (
-                        editingCell?.rowId === row.id && editingCell?.field === "quantity" ? (
-                          <input
-                            type="number"
-                            min={0}
-                            value={editingValue}
-                            onChange={(e) => setEditingValue(e.target.value)}
-                            onBlur={saveEdit}
-                            onKeyDown={(e) => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") cancelEdit(); }}
-                            autoFocus
-                            className="w-16 px-1.5 py-0.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-green-600"
-                          />
-                        ) : (
-                          <button
-                            onClick={() => startEdit(row.id, "quantity", row.quantity, row.source)}
-                            className="hover:text-green-700 hover:underline tabular-nums"
-                            title="Click to edit"
-                          >
-                            {row.quantity}
-                          </button>
-                        )
-                      ) : row.source === "listing" ? (
-                        editingCell?.rowId === row.id && editingCell?.field === "in_stock" ? (
-                          <input
-                            type="number"
-                            min={0}
-                            value={editingValue}
-                            onChange={(e) => setEditingValue(e.target.value)}
-                            onBlur={saveEdit}
-                            onKeyDown={(e) => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") cancelEdit(); }}
-                            autoFocus
-                            className="w-16 px-1.5 py-0.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-green-600"
-                          />
-                        ) : (
-                          <button
-                            onClick={() => startEdit(row.id, "in_stock", row.in_stock, row.source)}
-                            className={cn("hover:text-green-700 hover:underline tabular-nums", row.in_stock === null && "text-muted-foreground")}
-                            title="Click to edit"
-                          >
-                            {row.in_stock ?? "—"}
-                          </button>
-                        )
-                      ) : (
-                        <span className="text-muted-foreground">{row.quantity}</span>
-                      )}
-                    </td>
-                    {/* Listed Qty — editable for inventory drafts (listing_quantity) and listings (quantity) */}
-                    <td className="px-4 py-3">
-                      {row.source === "inventory" ? (
-                        editingCell?.rowId === row.id && editingCell?.field === "listing_quantity" ? (
-                          <input
-                            type="number"
-                            min={0}
-                            value={editingValue}
-                            onChange={(e) => setEditingValue(e.target.value)}
-                            onBlur={saveEdit}
-                            onKeyDown={(e) => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") cancelEdit(); }}
-                            autoFocus
-                            className="w-16 px-1.5 py-0.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-green-600"
-                          />
-                        ) : (
-                          <div>
-                            <button
-                              onClick={() => startEdit(row.id, "listing_quantity", row.listing_quantity, row.source)}
-                              className={cn("hover:text-green-700 hover:underline tabular-nums", row.listing_quantity === null && "text-muted-foreground")}
-                              title="Click to edit"
-                            >
-                              {row.listing_quantity ?? "—"}
-                            </button>
-                            {linkedListing && (
-                              <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-[120px]">
-                                {linkedListing.plant_name}{linkedListing.variety ? ` · ${linkedListing.variety}` : ""}
-                              </p>
-                            )}
-                          </div>
-                        )
-                      ) : row.source === "listing" ? (
-                        editingCell?.rowId === row.id && editingCell?.field === "listing_quantity" ? (
-                          <input
-                            type="number"
-                            min={0}
-                            value={editingValue}
-                            onChange={(e) => setEditingValue(e.target.value)}
-                            onBlur={saveEdit}
-                            onKeyDown={(e) => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") cancelEdit(); }}
-                            autoFocus
-                            className="w-16 px-1.5 py-0.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-green-600"
-                          />
-                        ) : (
-                          <button
-                            onClick={() => startEdit(row.id, "listing_quantity", row.quantity, row.source)}
-                            className="hover:text-green-700 hover:underline tabular-nums"
-                            title="Click to edit"
-                          >
-                            {row.quantity}
-                          </button>
-                        )
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium", statusColor[row.status] ?? "bg-gray-100 text-gray-600")}>
-                        {row.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{row.price || "—"}</td>
-                    <td className="px-4 py-3">
-                      {tab === "archived" && row.archived_at ? (
-                        <div className="flex items-center gap-3">
-                          <span className="text-xs text-orange-600">{daysUntilPurge(row.archived_at)}d left</span>
-                          <button onClick={() => restoreItem(row.id)} disabled={loadingId === row.id} className="text-xs text-green-700 hover:underline disabled:opacity-50">
-                            {loadingId === row.id ? "Restoring…" : "Restore"}
-                          </button>
-                        </div>
-                      ) : row.source === "inventory" ? (
-                        <div className="flex items-center gap-3 flex-wrap">
-                          <button onClick={() => openModal("edit", row)} className="text-xs text-foreground hover:underline font-medium">
-                            Edit
-                          </button>
-                          {row.linked_listing_id ? (
-                            <>
-                              <button onClick={() => openModal("link", row)} className="text-xs text-blue-600 hover:underline font-medium">
-                                Edit Link
-                              </button>
-                              <button onClick={() => unlinkItem(row.id)} disabled={loadingId === row.id} className="text-xs text-muted-foreground hover:underline disabled:opacity-50">
-                                {loadingId === row.id ? "…" : "Unlink"}
-                              </button>
-                            </>
-                          ) : (
-                            <>
-                              <button onClick={() => openModal("link", row)} className="text-xs text-blue-600 hover:underline font-medium">
-                                Link
-                              </button>
-                              <button onClick={() => openModal("listing", row)} className="text-xs text-green-700 hover:underline font-medium">
-                                List in Shop
-                              </button>
-                            </>
-                          )}
-                          <button onClick={() => openModal("auction", row)} className="text-xs text-purple-600 hover:underline font-medium">
-                            Auction
-                          </button>
-                          <button onClick={() => archiveItem(row.id)} disabled={loadingId === row.id} className="text-xs text-red-500 hover:underline disabled:opacity-50">
-                            {loadingId === row.id ? "…" : "Delete"}
-                          </button>
-                        </div>
-                      ) : row.source === "auction" && row.status === "Cancelled" ? (
-                        <button onClick={() => deleteAuction(row.id)} disabled={loadingId === row.id} className="text-xs text-red-500 hover:underline disabled:opacity-50">
-                          {loadingId === row.id ? "Deleting…" : "Delete"}
-                        </button>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <>
+          {/* Mobile card layout */}
+          <div className="sm:hidden space-y-3">
+            {rows.map((row) => {
+              const linkedListing = row.linked_listing_id
+                ? listingOptions.find((l) => l.id === row.linked_listing_id)
+                : null;
+              return (
+                <div key={row.id} className="rounded-lg border bg-card p-4 space-y-3">
+                  <div className="flex gap-3 items-start">
+                    <Thumb images={row.images} />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{row.plant_name}</p>
+                      {row.variety && <p className="text-sm text-muted-foreground truncate">{row.variety}</p>}
+                    </div>
+                    <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium shrink-0", statusColor[row.status] ?? "bg-gray-100 text-gray-600")}>
+                      {row.status}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-sm">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-0.5">In Stock</p>
+                      {inStockCell(row)}
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-0.5">Listed Qty</p>
+                      {listedQtyCell(row, linkedListing)}
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-0.5">Price / Bid</p>
+                      <p className="font-medium">{row.price || "—"}</p>
+                    </div>
+                  </div>
+                  <div>{rowActions(row)}</div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Desktop table layout */}
+          <div className="hidden sm:block rounded-lg border overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50 text-muted-foreground">
+                <tr>
+                  <th className="w-12 px-2 py-3"></th>
+                  <th className="text-left px-4 py-3 font-medium">
+                    <button onClick={() => toggleSort("plant_name")} className="flex items-center gap-1 hover:text-foreground transition-colors">
+                      Plant
+                      <span className="text-xs">{sortCol === "plant_name" ? (sortDir === "asc" ? "↑" : "↓") : "↕"}</span>
+                    </button>
+                  </th>
+                  <th className="text-left px-4 py-3 font-medium">
+                    <button onClick={() => toggleSort("variety")} className="flex items-center gap-1 hover:text-foreground transition-colors">
+                      Variety
+                      <span className="text-xs">{sortCol === "variety" ? (sortDir === "asc" ? "↑" : "↓") : "↕"}</span>
+                    </button>
+                  </th>
+                  <th className="text-left px-4 py-3 font-medium">In Stock</th>
+                  <th className="text-left px-4 py-3 font-medium">Listed Qty</th>
+                  <th className="text-left px-4 py-3 font-medium">Status</th>
+                  <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Price / Bid</th>
+                  <th className="text-left px-4 py-3 font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row, i) => {
+                  const linkedListing = row.linked_listing_id
+                    ? listingOptions.find((l) => l.id === row.linked_listing_id)
+                    : null;
+                  return (
+                    <tr key={row.id} className={i % 2 === 0 ? "bg-card" : "bg-muted/20"}>
+                      <td className="px-2 py-3">
+                        <Thumb images={row.images} />
+                      </td>
+                      <td className="px-4 py-3 font-medium">{row.plant_name}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{row.variety || "—"}</td>
+                      <td className="px-4 py-3">{inStockCell(row)}</td>
+                      <td className="px-4 py-3">{listedQtyCell(row, linkedListing)}</td>
+                      <td className="px-4 py-3">
+                        <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium", statusColor[row.status] ?? "bg-gray-100 text-gray-600")}>
+                          {row.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{row.price || "—"}</td>
+                      <td className="px-4 py-3">{rowActions(row)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Summary footer */}
+          <div className="mt-3 flex flex-wrap gap-4 px-1 text-sm text-muted-foreground">
+            <span>{rows.length} item{rows.length !== 1 ? "s" : ""}</span>
+            {totalListedValue > 0 && (
+              <span>
+                Total listed value:{" "}
+                <span className="font-semibold text-foreground">{centsToDisplay(totalListedValue)}</span>
+              </span>
+            )}
+          </div>
+        </>
       )}
 
       {/* Link to Listing modal */}
