@@ -5,8 +5,12 @@ import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { centsToDisplay } from "@/lib/stripe";
+import { PLANT_CATEGORIES } from "@/lib/categories";
 import ShopFilterBar from "@/components/shop-filter-bar";
 import WishlistButton from "@/components/wishlist-button";
+import RecentlyViewedStrip from "@/components/recently-viewed-strip";
+
+const NEW_THRESHOLD_MS = 48 * 60 * 60 * 1000;
 
 export default async function ShopPage({
   searchParams,
@@ -51,6 +55,8 @@ export default async function ShopPage({
     (wRows ?? []).forEach((r) => { if (r.listing_id) wishlistedSet.add(r.listing_id); });
   }
 
+  const hasFilters = q || (sort && sort !== "newest") || min || max || category;
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-10">
       <h1 className="text-2xl font-bold mb-6">Shop Plants</h1>
@@ -59,10 +65,30 @@ export default async function ShopPage({
         <ShopFilterBar />
       </Suspense>
 
+      <Suspense>
+        <RecentlyViewedStrip />
+      </Suspense>
+
       {!listings?.length ? (
         <div className="text-center py-16">
           <p className="text-muted-foreground text-lg mb-2">No listings found</p>
-          <p className="text-sm text-muted-foreground">Try adjusting your filters or search term.</p>
+          {hasFilters ? (
+            <p className="text-sm text-muted-foreground mb-6">Try adjusting your filters or search term.</p>
+          ) : (
+            <p className="text-sm text-muted-foreground mb-6">Check back soon — new plants are added regularly.</p>
+          )}
+          <p className="text-sm font-medium text-muted-foreground mb-3">Browse by category</p>
+          <div className="flex flex-wrap justify-center gap-2">
+            {PLANT_CATEGORIES.map((c) => (
+              <Link
+                key={c}
+                href={`/shop?category=${encodeURIComponent(c)}`}
+                className="inline-flex items-center px-3 py-1.5 rounded-full border text-sm hover:bg-muted hover:border-green-600 hover:text-green-700 transition-colors"
+              >
+                {c}
+              </Link>
+            ))}
+          </div>
         </div>
       ) : (
         <>
@@ -70,6 +96,7 @@ export default async function ShopPage({
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
             {listings.map((listing) => {
               const seller = sellerMap[listing.seller_id];
+              const isNew = Date.now() - new Date(listing.created_at).getTime() < NEW_THRESHOLD_MS;
               return (
                 <Card key={listing.id} className="overflow-hidden hover:shadow-md transition-shadow">
                   <Link href={`/shop/${listing.id}`} className="block">
@@ -86,6 +113,11 @@ export default async function ShopPage({
                         compact
                         className="absolute top-2 left-2 z-10"
                       />
+                      {isNew && (
+                        <span className="absolute top-2 right-2 z-10 bg-green-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
+                          New
+                        </span>
+                      )}
                     </div>
                     <CardContent className="p-4">
                       {listing.category && (

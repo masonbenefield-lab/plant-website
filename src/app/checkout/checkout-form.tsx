@@ -32,6 +32,7 @@ interface CheckoutFormProps {
   listingId?: string;
   auctionId?: string;
   priceCents: number;
+  quantity?: number;
 }
 
 function PaymentStep({
@@ -81,7 +82,7 @@ function PaymentStep({
   );
 }
 
-export default function CheckoutForm({ listingId, auctionId, priceCents }: CheckoutFormProps) {
+export default function CheckoutForm({ listingId, auctionId, priceCents, quantity = 1 }: CheckoutFormProps) {
   const router = useRouter();
   const [step, setStep] = useState<"address" | "payment">("address");
   const [clientSecret, setClientSecret] = useState("");
@@ -106,6 +107,7 @@ export default function CheckoutForm({ listingId, auctionId, priceCents }: Check
       body: JSON.stringify({
         listingId,
         auctionId,
+        quantity,
         shippingAddress: address,
       }),
     });

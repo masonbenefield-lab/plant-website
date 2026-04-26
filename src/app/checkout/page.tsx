@@ -7,9 +7,10 @@ import { notFound } from "next/navigation";
 export default async function CheckoutPage({
   searchParams,
 }: {
-  searchParams: Promise<{ listing?: string; auction?: string }>;
+  searchParams: Promise<{ listing?: string; auction?: string; qty?: string }>;
 }) {
-  const { listing: listingId, auction: auctionId } = await searchParams;
+  const { listing: listingId, auction: auctionId, qty: qtyParam } = await searchParams;
+  const quantity = Math.max(1, parseInt(qtyParam ?? "1", 10) || 1);
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
@@ -26,7 +27,7 @@ export default async function CheckoutPage({
       .single();
     if (!data) notFound();
     itemName = data.variety ? `${data.plant_name} — ${data.variety}` : data.plant_name;
-    priceCents = data.price_cents;
+    priceCents = data.price_cents * quantity;
   } else if (auctionId) {
     const { data } = await supabase
       .from("auctions")
@@ -46,12 +47,13 @@ export default async function CheckoutPage({
     <div className="max-w-lg mx-auto px-4 py-10">
       <h1 className="text-2xl font-bold mb-2">Checkout</h1>
       <p className="text-muted-foreground mb-8">
-        {itemName} — <strong>{centsToDisplay(priceCents)}</strong>
+        {itemName}{quantity > 1 ? ` × ${quantity}` : ""} — <strong>{centsToDisplay(priceCents)}</strong>
       </p>
       <CheckoutForm
         listingId={listingId}
         auctionId={auctionId}
         priceCents={priceCents}
+        quantity={quantity}
       />
     </div>
   );

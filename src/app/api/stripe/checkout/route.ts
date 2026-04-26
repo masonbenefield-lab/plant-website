@@ -8,9 +8,10 @@ export async function POST(request: Request) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await request.json();
-  const { listingId, auctionId, shippingAddress } = body as {
+  const { listingId, auctionId, quantity: rawQty, shippingAddress } = body as {
     listingId?: string;
     auctionId?: string;
+    quantity?: number;
     shippingAddress: {
       name: string;
       line1: string;
@@ -21,6 +22,8 @@ export async function POST(request: Request) {
       country: string;
     };
   };
+
+  const quantity = Math.max(1, Math.floor(rawQty ?? 1));
 
   if (!listingId && !auctionId) {
     return NextResponse.json({ error: "listing or auction required" }, { status: 400 });
@@ -38,6 +41,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Listing not found" }, { status: 404 });
     }
 
+    if (quantity > listing.quantity) {
+      return NextResponse.json({ error: `Only ${listing.quantity} available` }, { status: 400 });
+    }
+
     const { data: sellerProfile } = await supabase
       .from("profiles")
       .select("stripe_account_id, stripe_onboarded")
@@ -48,7 +55,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Seller not set up for payments" }, { status: 400 });
     }
 
-    const amountCents = listing.price_cents;
+    const amountCents = listing.price_cents * quantity;
     const feeCents = Math.round(amountCents * (PLATFORM_FEE_PERCENT / 100));
 
     const paymentIntent = await getStripe().paymentIntents.create({
@@ -76,8 +83,8 @@ export async function POST(request: Request) {
     await supabase
       .from("listings")
       .update({
-        quantity: listing.quantity - 1,
-        status: listing.quantity <= 1 ? "sold_out" : "active",
+        quantity: listing.quantity - quantity,
+        status: listing.quantity - quantity <= 0 ? "sold_out" : "active",
       })
       .eq("id", listingId);
 

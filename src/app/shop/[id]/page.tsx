@@ -5,11 +5,14 @@ import { createClient } from "@/lib/supabase/server";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Card, CardContent } from "@/components/ui/card";
 import { centsToDisplay } from "@/lib/stripe";
 import { cn } from "@/lib/utils";
 import BuyButton from "./buy-button";
 import WishlistButton from "@/components/wishlist-button";
 import ReportButton from "@/components/report-button";
+import ImageGallery from "@/components/image-gallery";
+import TrackView from "@/components/track-view";
 
 export default async function ListingPage({
   params,
@@ -33,35 +36,28 @@ export default async function ListingPage({
     supabase.auth.getUser(),
   ]);
 
-  const [wishlistRow, reportRow] = await Promise.all([
+  const [wishlistRow, reportRow, { data: relatedListings }] = await Promise.all([
     user ? supabase.from("wishlists").select("id").eq("user_id", user.id).eq("listing_id", listing.id).maybeSingle() : Promise.resolve({ data: null }),
     user ? supabase.from("reports").select("id").eq("reporter_id", user.id).eq("listing_id", listing.id).maybeSingle() : Promise.resolve({ data: null }),
+    supabase
+      .from("listings")
+      .select("id, plant_name, variety, price_cents, images, category")
+      .eq("seller_id", listing.seller_id)
+      .eq("status", "active")
+      .neq("id", listing.id)
+      .limit(4),
   ]);
+
   const isWishlisted = !!wishlistRow.data;
   const isReported = !!reportRow.data;
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-10">
+      <TrackView listingId={listing.id} />
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
         {/* Images */}
-        <div className="space-y-3">
-          <div className="relative h-96 rounded-xl overflow-hidden bg-muted">
-            {listing.images[0] ? (
-              <Image src={listing.images[0]} alt={listing.plant_name} fill className="object-cover" />
-            ) : (
-              <div className="flex items-center justify-center h-full text-6xl">🌿</div>
-            )}
-          </div>
-          {listing.images.length > 1 && (
-            <div className="flex gap-2 overflow-x-auto">
-              {listing.images.slice(1).map((url, i) => (
-                <div key={i} className="relative h-20 w-20 flex-shrink-0 rounded-lg overflow-hidden">
-                  <Image src={url} alt="" fill className="object-cover" />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <ImageGallery images={listing.images as string[]} alt={listing.plant_name} />
 
         {/* Details */}
         <div>
@@ -101,7 +97,7 @@ export default async function ListingPage({
               user.id === seller?.id ? (
                 <Button disabled variant="outline">This is your listing</Button>
               ) : (
-                <BuyButton listingId={listing.id} />
+                <BuyButton listingId={listing.id} maxQty={listing.quantity} />
               )
             ) : (
               <Link
@@ -143,6 +139,46 @@ export default async function ListingPage({
           )}
         </div>
       </div>
+
+      {/* Related listings */}
+      {relatedListings && relatedListings.length > 0 && (
+        <div className="mt-16">
+          <h2 className="text-lg font-semibold mb-4">
+            More from {seller?.username ?? "this seller"}
+          </h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {relatedListings.map((item) => (
+              <Link
+                key={item.id}
+                href={`/shop/${item.id}`}
+                className="rounded-lg border overflow-hidden hover:shadow-md transition-shadow bg-card"
+              >
+                <div className="relative h-36 bg-muted">
+                  {(item.images as string[])[0] ? (
+                    <Image
+                      src={(item.images as string[])[0]}
+                      alt={item.plant_name}
+                      fill
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-3xl">🌿</div>
+                  )}
+                </div>
+                <CardContent className="p-3">
+                  <p className="text-sm font-medium truncate">{item.plant_name}</p>
+                  {item.variety && (
+                    <p className="text-xs text-muted-foreground truncate">{item.variety}</p>
+                  )}
+                  <p className="text-sm font-bold text-green-700 mt-1">
+                    {centsToDisplay(item.price_cents)}
+                  </p>
+                </CardContent>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
