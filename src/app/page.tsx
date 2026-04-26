@@ -3,6 +3,9 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
 import { centsToDisplay } from "@/lib/stripe";
+import { PLANT_CATEGORIES } from "@/lib/categories";
+import HeroSearch from "@/components/hero-search";
+import LiveAuctionCard from "@/components/live-auction-card";
 
 const fallbackListings = [
   { emoji: "🌿", name: "Monstera Deliciosa", price: "$24", tag: "In Shop", bg: "bg-green-100",   href: "/shop" },
@@ -49,12 +52,22 @@ const steps = [
 
 export default async function LandingPage() {
   const supabase = await createClient();
-  const { data: liveListings } = await supabase
-    .from("listings")
-    .select("id, plant_name, variety, price_cents, images")
-    .eq("status", "active")
-    .order("created_at", { ascending: false })
-    .limit(4);
+
+  const [{ data: liveListings }, { data: liveAuctions }] = await Promise.all([
+    supabase
+      .from("listings")
+      .select("id, plant_name, variety, price_cents, images")
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(4),
+    supabase
+      .from("auctions")
+      .select("id, plant_name, variety, current_bid_cents, images, ends_at")
+      .eq("status", "active")
+      .gt("ends_at", new Date().toISOString())
+      .order("ends_at", { ascending: true })
+      .limit(4),
+  ]);
 
   const bgCycle = ["bg-green-100", "bg-pink-100", "bg-amber-100", "bg-emerald-100"];
   const emojiCycle = ["🌿", "🌸", "🌵", "🪴"];
@@ -88,23 +101,30 @@ export default async function LandingPage() {
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight mb-6">
                 The marketplace<br className="hidden sm:block" /> for plant lovers
               </h1>
-              <p className="text-base sm:text-lg text-green-100 mb-10 max-w-lg mx-auto lg:mx-0">
+              <p className="text-base sm:text-lg text-green-100 mb-8 max-w-lg mx-auto lg:mx-0">
                 Buy, sell, and auction plants directly with nurseries and hobbyists.
                 Open your storefront in minutes — no monthly fees, just a small commission when you sell.
               </p>
-              <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
-                <Link href="/signup" className={cn(buttonVariants({ size: "lg" }), "bg-white text-green-800 hover:bg-green-50 font-semibold px-8 text-base")}>
+
+              {/* Dual CTA */}
+              <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start mb-6">
+                <Link href="/signup" className={cn(buttonVariants({ size: "lg" }), "bg-white text-green-800 hover:bg-green-50 font-semibold px-8 text-base flex flex-col items-center gap-0 h-auto py-3")}>
+                  <span className="text-[11px] font-normal text-green-700/70 leading-none mb-1">For sellers</span>
                   Start Selling Free
                 </Link>
-                <Link href="/shop" className={cn(buttonVariants({ size: "lg" }), "bg-white/20 text-white border border-white/40 hover:bg-white/30 font-semibold px-8 text-base")}>
+                <Link href="/shop" className={cn(buttonVariants({ size: "lg" }), "bg-white/15 text-white border border-white/40 hover:bg-white/25 font-semibold px-8 text-base flex flex-col items-center gap-0 h-auto py-3")}>
+                  <span className="text-[11px] font-normal text-green-100/70 leading-none mb-1">For buyers</span>
                   Browse Plants
                 </Link>
               </div>
+
+              {/* Hero search */}
+              <HeroSearch />
             </div>
 
             {/* Right: live listing cards */}
             <div className="grid grid-cols-2 gap-3 sm:gap-4 max-w-sm mx-auto lg:max-w-none">
-              {heroCards.map((l, i) => (
+              {heroCards.map((l) => (
                 <Link key={l.name} href={l.href} className="bg-card rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
                   <div className={cn("relative flex items-center justify-center h-24 sm:h-28 overflow-hidden", "image" in l && l.image ? "" : l.bg)}>
                     {"image" in l && l.image ? (
@@ -130,8 +150,26 @@ export default async function LandingPage() {
         </div>
       </section>
 
+      {/* ── Category quick-links ──────────────────────────────────── */}
+      <section className="bg-background border-b py-5 px-4">
+        <div className="max-w-5xl mx-auto">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground text-center mb-3">Browse by category</p>
+          <div className="flex flex-wrap justify-center gap-2">
+            {PLANT_CATEGORIES.map((c) => (
+              <Link
+                key={c}
+                href={`/shop?category=${encodeURIComponent(c)}`}
+                className="inline-flex items-center px-3.5 py-1.5 rounded-full border text-sm font-medium hover:border-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
+              >
+                {c}
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── Trust bar ─────────────────────────────────────────────── */}
-      <section className="border-y bg-background py-5 px-4">
+      <section className="border-b bg-muted/40 py-5 px-4">
         <div className="max-w-4xl mx-auto">
           <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-muted-foreground">
             <span className="flex items-center gap-2"><span className="text-green-600 font-bold text-base">2,400+</span> plants listed</span>
@@ -144,6 +182,36 @@ export default async function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* ── Live auctions ─────────────────────────────────────────── */}
+      {liveAuctions && liveAuctions.length > 0 && (
+        <section className="py-14 sm:py-16 px-4 bg-background">
+          <div className="max-w-5xl mx-auto">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-2xl sm:text-3xl font-bold">Live Auctions</h2>
+                <p className="text-muted-foreground mt-1 text-sm">Bid now — these end soon.</p>
+              </div>
+              <Link href="/auctions" className="text-sm font-medium text-green-700 hover:underline">
+                View all →
+              </Link>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {liveAuctions.map((a) => (
+                <LiveAuctionCard
+                  key={a.id}
+                  id={a.id}
+                  plant_name={a.plant_name}
+                  variety={a.variety}
+                  current_bid_cents={a.current_bid_cents}
+                  images={a.images as string[]}
+                  ends_at={a.ends_at}
+                />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ── Who it's for ──────────────────────────────────────────── */}
       <section className="py-16 sm:py-20 px-4 bg-muted">
@@ -181,13 +249,42 @@ export default async function LandingPage() {
         </div>
       </section>
 
+      {/* ── Transparent pricing ───────────────────────────────────── */}
+      <section className="py-16 sm:py-20 px-4 bg-muted">
+        <div className="max-w-3xl mx-auto text-center">
+          <h2 className="text-2xl sm:text-3xl font-bold mb-3">Simple, honest pricing</h2>
+          <p className="text-muted-foreground mb-10 max-w-md mx-auto">
+            No subscription. No listing fees. We only make money when you do.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+            <div className="bg-card rounded-2xl border p-6 flex flex-col items-center">
+              <p className="text-4xl font-bold text-green-700 mb-2">$0</p>
+              <p className="font-semibold mb-2">To list</p>
+              <p className="text-sm text-muted-foreground leading-relaxed">Post unlimited listings and auctions — completely free.</p>
+            </div>
+            <div className="bg-card rounded-2xl border-2 border-green-600 p-6 flex flex-col items-center shadow-md">
+              <p className="text-4xl font-bold text-green-700 mb-2">5%</p>
+              <p className="font-semibold mb-2">Per sale</p>
+              <p className="text-sm text-muted-foreground leading-relaxed">A small fee taken only when a sale completes. Nothing upfront.</p>
+            </div>
+            <div className="bg-card rounded-2xl border p-6 flex flex-col items-center">
+              <p className="text-4xl font-bold text-green-700 mb-2">$0</p>
+              <p className="font-semibold mb-2">Monthly fee</p>
+              <p className="text-sm text-muted-foreground leading-relaxed">No subscription, no hidden charges, no surprises.</p>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Payments processed securely by Stripe. Funds deposit directly to your bank account.
+          </p>
+        </div>
+      </section>
+
       {/* ── How it works ──────────────────────────────────────────── */}
       <section className="py-16 sm:py-20 px-4 bg-green-700 text-white">
         <div className="max-w-3xl mx-auto text-center">
           <h2 className="text-2xl sm:text-3xl font-bold mb-3">Sell in 3 steps</h2>
           <p className="text-green-100 mb-12 max-w-md mx-auto">Getting started takes less than 10 minutes.</p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-4 relative">
-            {/* Connecting line on desktop */}
             <div className="hidden sm:block absolute top-6 left-[calc(16.67%+1rem)] right-[calc(16.67%+1rem)] h-px bg-white/30" />
             {steps.map((s) => (
               <div key={s.step} className="flex flex-col items-center relative">
@@ -203,18 +300,15 @@ export default async function LandingPage() {
       </section>
 
       {/* ── Testimonials ──────────────────────────────────────────── */}
-      <section className="py-16 sm:py-20 px-4 bg-muted">
+      <section className="py-16 sm:py-20 px-4 bg-background">
         <div className="max-w-5xl mx-auto">
           <h2 className="text-2xl sm:text-3xl font-bold text-center mb-3">Sellers love it</h2>
           <p className="text-muted-foreground text-center mb-10 max-w-xl mx-auto">Real stories from nurseries and hobbyists who&apos;ve found their plant community.</p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             {testimonials.map((t) => (
               <div key={t.name} className="bg-card rounded-2xl border p-6 shadow-sm flex flex-col gap-4">
-                {/* Stars */}
                 <div className="flex gap-0.5 text-amber-400 text-sm">{"★★★★★"}</div>
-                {/* Quote */}
                 <p className="text-sm text-muted-foreground leading-relaxed flex-1">&ldquo;{t.quote}&rdquo;</p>
-                {/* Author */}
                 <div className="flex items-center gap-3 pt-2 border-t">
                   <div className="w-9 h-9 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 font-bold text-xs flex items-center justify-center shrink-0">
                     {t.initials}
