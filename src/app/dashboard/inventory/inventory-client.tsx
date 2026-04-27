@@ -63,6 +63,7 @@ type ActionModal =
   | { type: "auction"; row: Row }
   | { type: "link"; row: Row }
   | { type: "edit"; row: Row }
+  | { type: "edit-listing"; row: Row }
   | null;
 
 const statusColor: Record<string, string> = {
@@ -270,8 +271,8 @@ export default function InventoryClient({
 
   // ── Modal helpers ─────────────────────────────────────────────────────────
 
-  function openModal(type: "listing" | "auction" | "link" | "edit", row: Row) {
-    setPrice("");
+  function openModal(type: "listing" | "auction" | "link" | "edit" | "edit-listing", row: Row) {
+    setPrice(type === "edit-listing" && row.price_cents ? (row.price_cents / 100).toFixed(2) : "");
     setListQty(String(row.quantity));
     setStartingBid("");
     setBuyNowPrice("");
@@ -399,6 +400,28 @@ export default function InventoryClient({
     setSubmitting(false);
     if (error) { toast.error(error.message); return; }
     toast.success("Item updated.");
+    setModal(null);
+    router.refresh();
+  }
+
+  async function submitEditListing() {
+    if (!modal || modal.type !== "edit-listing") return;
+    if (!editPlantName.trim()) { toast.error("Plant name is required"); return; }
+    if (!price) { toast.error("Price is required"); return; }
+    setSubmitting(true);
+    const supabase = createClient();
+    const { error } = await supabase.from("listings").update({
+      plant_name: editPlantName.trim(),
+      variety: editVariety.trim() || null,
+      quantity: Number(editQuantity) || 0,
+      price_cents: dollarsToCents(price),
+      description: editDescription.trim() || null,
+      category: editCategory || null,
+      images: editImages,
+    }).eq("id", modal.row.id);
+    setSubmitting(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Listing updated.");
     setModal(null);
     router.refresh();
   }
@@ -571,6 +594,13 @@ export default function InventoryClient({
             {loadingId === row.id ? "…" : "Delete"}
           </button>
         </div>
+      );
+    }
+    if (row.source === "listing") {
+      return (
+        <button onClick={() => openModal("edit-listing", row)} className="text-xs text-foreground hover:underline font-medium">
+          Edit
+        </button>
       );
     }
     if (row.source === "auction" && row.status === "Cancelled") {
@@ -1123,6 +1153,89 @@ export default function InventoryClient({
               <div className="flex gap-2 pt-1">
                 <Button variant="outline" onClick={() => setModal(null)} className="flex-1">Cancel</Button>
                 <Button onClick={submitEdit} disabled={submitting || !editPlantName.trim()} className="flex-1 bg-green-700 hover:bg-green-800">{submitting ? "Saving…" : "Save Changes"}</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit listing modal */}
+      <Dialog open={modal?.type === "edit-listing"} onOpenChange={(o) => !o && setModal(null)}>
+        <DialogContent className="max-w-sm max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Edit Listing</DialogTitle></DialogHeader>
+          {modal && (
+            <div className="space-y-4 mt-1">
+              <div className="space-y-1">
+                <Label htmlFor="el-name">Plant name *</Label>
+                <Input id="el-name" value={editPlantName} onChange={(e) => setEditPlantName(e.target.value)} autoFocus />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="el-variety">Variety <span className="font-normal text-muted-foreground">(optional)</span></Label>
+                <Input id="el-variety" value={editVariety} onChange={(e) => setEditVariety(e.target.value)} placeholder="e.g. Thai Constellation" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="el-price">Price ($) *</Label>
+                  <Input id="el-price" type="number" min={0.01} step={0.01} value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="el-qty">Quantity *</Label>
+                  <Input id="el-qty" type="number" min={0} value={editQuantity} onChange={(e) => setEditQuantity(e.target.value)} />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label>Category <span className="font-normal text-muted-foreground">(optional)</span></Label>
+                <Select value={editCategory || "_none"} onValueChange={(v) => setEditCategory(v === "_none" ? "" : (v ?? ""))}>
+                  <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_none">— None —</SelectItem>
+                    {CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="el-desc">Description <span className="font-normal text-muted-foreground">(optional)</span></Label>
+                <Textarea id="el-desc" value={editDescription} onChange={(e) => setEditDescription(e.target.value)} rows={3} placeholder="Describe the plant…" />
+              </div>
+
+              {/* Photos */}
+              <div className="space-y-2">
+                <Label>Photos</Label>
+                {editImages.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {editImages.map((url, idx) => (
+                      <div key={url + idx} className="relative group">
+                        <img src={url} alt="" className="w-16 h-16 rounded object-cover border" />
+                        <button
+                          type="button"
+                          onClick={() => removeEditImage(url)}
+                          className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X size={10} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageAdd} />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => imageInputRef.current?.click()}
+                  disabled={imageUploading}
+                  className="flex items-center gap-1.5 text-xs"
+                >
+                  <ImagePlus size={14} />
+                  {imageUploading ? "Uploading…" : "Add Photo"}
+                </Button>
+              </div>
+
+              <div className="flex gap-2 pt-1">
+                <Button variant="outline" onClick={() => setModal(null)} className="flex-1">Cancel</Button>
+                <Button onClick={submitEditListing} disabled={submitting || !editPlantName.trim() || !price} className="flex-1 bg-green-700 hover:bg-green-800">
+                  {submitting ? "Saving…" : "Save Changes"}
+                </Button>
               </div>
             </div>
           )}
