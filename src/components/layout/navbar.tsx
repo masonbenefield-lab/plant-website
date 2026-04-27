@@ -48,7 +48,7 @@ export default function Navbar({ user, avatarUrl, username, isAdmin }: NavbarPro
         {/* Left: logo + desktop nav */}
         <div className="flex items-center gap-8">
           <Link href="/" className="font-bold text-xl text-green-700" onClick={closeMenu}>
-            PlantMarket
+            Plantet
           </Link>
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
             <Link href="/shop" className="text-muted-foreground hover:text-foreground transition-colors">

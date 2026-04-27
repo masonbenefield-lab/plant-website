@@ -217,7 +217,7 @@ export default async function LandingPage() {
       <section className="py-16 sm:py-20 px-4 bg-muted">
         <div className="max-w-5xl mx-auto">
           <h2 className="text-2xl sm:text-3xl font-bold text-center mb-3">Who it&apos;s for</h2>
-          <p className="text-muted-foreground text-center mb-10 max-w-xl mx-auto">Whether you&apos;re moving nursery stock or trading rare cuttings, PlantMarket was built for you.</p>
+          <p className="text-muted-foreground text-center mb-10 max-w-xl mx-auto">Whether you&apos;re moving nursery stock or trading rare cuttings, Plantet was built for you.</p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             {audiences.map((a) => (
               <div key={a.label} className="bg-card rounded-2xl border p-6 shadow-sm hover:shadow-md transition-shadow">
@@ -330,7 +330,7 @@ export default async function LandingPage() {
           <span className="text-4xl mb-6 block">🌱</span>
           <h2 className="text-3xl sm:text-4xl font-bold mb-4">Ready to grow your plant business?</h2>
           <p className="text-green-100 mb-8 text-base sm:text-lg">
-            Join hundreds of nurseries and hobbyists already buying and selling on PlantMarket.
+            Join hundreds of nurseries and hobbyists already buying and selling on Plantet.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link href="/signup" className={cn(buttonVariants({ size: "lg" }), "bg-white text-green-800 hover:bg-green-50 font-semibold px-10 text-base")}>
@@ -346,7 +346,7 @@ export default async function LandingPage() {
       {/* ── Footer ────────────────────────────────────────────────── */}
       <footer className="bg-background border-t py-10 px-4">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="font-bold text-green-700 text-lg">PlantMarket</p>
+          <p className="font-bold text-green-700 text-lg">Plantet</p>
           <nav className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
             <Link href="/shop" className="hover:text-foreground transition-colors">Shop</Link>
             <Link href="/auctions" className="hover:text-foreground transition-colors">Auctions</Link>
@@ -354,7 +354,7 @@ export default async function LandingPage() {
             <Link href="/signup" className="hover:text-foreground transition-colors">Sell</Link>
             <Link href="/login" className="hover:text-foreground transition-colors">Sign in</Link>
           </nav>
-          <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} PlantMarket</p>
+          <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} Plantet</p>
         </div>
       </footer>
 

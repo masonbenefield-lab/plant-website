@@ -598,19 +598,19 @@ export default function InventoryClient({
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Inventory");
-    XLSX.writeFile(wb, "plantmarket-inventory.xlsx");
+    XLSX.writeFile(wb, "plantet-inventory.xlsx");
   }
 
   function exportPDF(exportRows: Row[]) {
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
-    printWindow.document.write(`<!DOCTYPE html><html><head><title>PlantMarket Inventory</title>
+    printWindow.document.write(`<!DOCTYPE html><html><head><title>Plantet Inventory</title>
       <style>body{font-family:Arial,sans-serif;font-size:12px;padding:20px}h1{font-size:18px;margin-bottom:4px}
       p{color:#666;margin-bottom:16px;font-size:11px}table{width:100%;border-collapse:collapse}
       th{background:#166534;color:white;padding:8px 10px;text-align:left;font-size:11px}
       td{padding:7px 10px;border-bottom:1px solid #e5e7eb;font-size:11px}
       tr:nth-child(even) td{background:#f9fafb}</style></head><body>
-      <h1>PlantMarket — Inventory Report</h1>
+      <h1>Plantet — Inventory Report</h1>
       <p>Generated ${new Date().toLocaleDateString()} · ${exportRows.length} item${exportRows.length !== 1 ? "s" : ""}</p>
       <table><thead><tr><th>Plant Name</th><th>Variety</th><th>Category</th><th>In Stock</th><th>Listed Qty</th><th>Status</th><th>Price / Bid</th></tr></thead>
       <tbody>${exportRows.map((r) => `<tr><td>${r.plant_name}</td><td>${r.variety || "—"}</td><td>${r.category || "—"}</td><td>${r.quantity}</td><td>${r.listing_quantity ?? "—"}</td><td>${r.status}</td><td>${r.price || "—"}</td></tr>`).join("")}</tbody>

@@ -12,7 +12,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "PlantMarket — Buy, Sell & Auction Plants",
+  title: "Plantet — Buy, Sell & Auction Plants",
   description:
     "A marketplace for nurseries and hobbyists to buy, sell, and auction plants.",
 };
