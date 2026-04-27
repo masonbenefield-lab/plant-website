@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import Image from "next/image";
 import Link from "next/link";
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,37 @@ import { centsToDisplay } from "@/lib/stripe";
 import AuctionBidPanel from "./auction-bid-panel";
 import WishlistButton from "@/components/wishlist-button";
 import ReportButton from "@/components/report-button";
+import ImageGallery from "@/components/image-gallery";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("auctions")
+    .select("plant_name, variety, description, images, current_bid_cents")
+    .eq("id", id)
+    .single();
+
+  if (!data) return { title: "Auction Not Found — Plantet" };
+
+  const title = data.variety
+    ? `${data.plant_name} ${data.variety} — Live Auction on Plantet`
+    : `${data.plant_name} — Live Auction on Plantet`;
+  const description =
+    data.description ||
+    `Bid on ${data.plant_name} on Plantet. Current bid: ${centsToDisplay(data.current_bid_cents)}`;
+  const image = (data.images as string[])?.[0];
+
+  return {
+    title,
+    description,
+    openGraph: { title, description, ...(image ? { images: [{ url: image }] } : {}) },
+  };
+}
 
 export default async function AuctionPage({
   params,
@@ -48,23 +79,8 @@ export default async function AuctionPage({
     <div className="max-w-5xl mx-auto px-4 py-10">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
         {/* Images */}
-        <div className="space-y-3">
-          <div className="relative h-96 rounded-xl overflow-hidden bg-muted">
-            {auction.images[0] ? (
-              <Image src={auction.images[0]} alt={auction.plant_name} fill className="object-cover" />
-            ) : (
-              <div className="flex items-center justify-center h-full text-6xl">🌿</div>
-            )}
-          </div>
-          {auction.images.length > 1 && (
-            <div className="flex gap-2 overflow-x-auto">
-              {auction.images.slice(1).map((url, i) => (
-                <div key={i} className="relative h-20 w-20 flex-shrink-0 rounded-lg overflow-hidden">
-                  <Image src={url} alt="" fill className="object-cover" />
-                </div>
-              ))}
-            </div>
-          )}
+        <div>
+          <ImageGallery images={auction.images as string[]} alt={auction.plant_name} />
         </div>
 
         {/* Details */}

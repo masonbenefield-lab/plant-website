@@ -31,12 +31,14 @@ export default async function CheckoutPage({
   } else if (auctionId) {
     const { data } = await supabase
       .from("auctions")
-      .select("plant_name, variety, current_bid_cents")
+      .select("plant_name, variety, current_bid_cents, status, ends_at")
       .eq("id", auctionId)
-      .eq("status", "ended")
       .eq("current_bidder_id", user.id)
       .single();
     if (!data) notFound();
+    // Allow checkout once auction has ended by status OR time has elapsed
+    const hasEnded = data.status === "ended" || new Date(data.ends_at) <= new Date();
+    if (!hasEnded) notFound();
     itemName = data.variety ? `${data.plant_name} — ${data.variety}` : data.plant_name;
     priceCents = data.current_bid_cents;
   } else {

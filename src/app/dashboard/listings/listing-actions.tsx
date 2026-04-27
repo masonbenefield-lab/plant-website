@@ -12,6 +12,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   DropdownMenu,
@@ -31,7 +32,9 @@ export default function ListingActions({ listing }: { listing: Listing }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Edit form state — pre-filled from listing
   const [plantName, setPlantName] = useState(listing.plant_name);
@@ -114,11 +117,14 @@ export default function ListingActions({ listing }: { listing: Listing }) {
   }
 
   async function deleteListing() {
-    if (!confirm("Delete this listing?")) return;
+    setDeleting(true);
     const supabase = createClient();
     const { error } = await supabase.from("listings").delete().eq("id", listing.id);
-    if (error) toast.error(error.message);
-    else { toast.success("Listing deleted"); router.refresh(); }
+    setDeleting(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Listing deleted");
+    setDeleteOpen(false);
+    router.refresh();
   }
 
   return (
@@ -136,9 +142,27 @@ export default function ListingActions({ listing }: { listing: Listing }) {
             {listing.status === "active" ? "Pause" : "Activate"}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={deleteListing} className="text-red-600">Delete</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setDeleteOpen(true)} className="text-red-600">Delete</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete listing?</DialogTitle>
+            <DialogDescription>
+              This will permanently remove <strong>{listing.plant_name}</strong>. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 mt-2">
+            <Button variant="outline" onClick={() => setDeleteOpen(false)} className="flex-1">Cancel</Button>
+            <Button variant="destructive" onClick={deleteListing} disabled={deleting} className="flex-1">
+              {deleting ? "Deleting…" : "Delete"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
@@ -168,7 +192,10 @@ export default function ListingActions({ listing }: { listing: Listing }) {
               </div>
             </div>
             <div className="space-y-1">
-              <Label htmlFor="edit-description">Description</Label>
+              <div className="flex justify-between">
+                <Label htmlFor="edit-description">Description</Label>
+                <span className="text-xs text-muted-foreground">{description.length}/1000</span>
+              </div>
               <Textarea id="edit-description" value={description} onChange={(e) => setDescription(e.target.value)} rows={3} maxLength={1000} />
             </div>
             <div className="flex justify-end gap-2 pt-1">

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { centsToDisplay } from "@/lib/stripe";
 import { Badge } from "@/components/ui/badge";
+import FeedUpdates from "@/components/feed-updates";
 
 export default async function FeedPage() {
   const supabase = await createClient();
@@ -70,6 +71,7 @@ export default async function FeedPage() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-10">
+      <FeedUpdates sellerIds={sellerIds} />
       <h1 className="text-2xl font-bold mb-2">Feed</h1>
       <p className="text-muted-foreground text-sm mb-8">
         Recent listings from {sellerIds.length} seller{sellerIds.length !== 1 ? "s" : ""} you follow
@@ -91,9 +93,9 @@ export default async function FeedPage() {
             return (
               <div key={data.id} className="rounded-2xl border bg-card overflow-hidden hover:shadow-md transition-shadow">
                 <Link href={`/sellers/${seller?.username}`} className="flex items-center gap-2 px-4 pt-3 pb-2 hover:bg-muted/40 transition-colors">
-                  <div className="w-7 h-7 rounded-full bg-green-100 overflow-hidden border shrink-0">
+                  <div className="relative w-7 h-7 rounded-full bg-green-100 overflow-hidden border shrink-0">
                     {seller?.avatar_url ? (
-                      <img src={seller.avatar_url} alt={seller.username} className="w-full h-full object-cover" />
+                      <Image src={seller.avatar_url} alt={seller.username} fill className="object-cover" />
                     ) : (
                       <div className="flex items-center justify-center h-full text-xs font-bold text-green-700">
                         {seller?.username?.slice(0, 1).toUpperCase()}

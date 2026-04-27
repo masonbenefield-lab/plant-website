@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +14,34 @@ import WishlistButton from "@/components/wishlist-button";
 import ReportButton from "@/components/report-button";
 import ImageGallery from "@/components/image-gallery";
 import TrackView from "@/components/track-view";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("listings")
+    .select("plant_name, variety, description, images, price_cents")
+    .eq("id", id)
+    .single();
+
+  if (!data) return { title: "Listing Not Found — Plantet" };
+
+  const title = data.variety
+    ? `${data.plant_name} ${data.variety} — Plantet`
+    : `${data.plant_name} — Plantet`;
+  const description = data.description || `Buy ${data.plant_name} on Plantet for ${centsToDisplay(data.price_cents)}`;
+  const image = (data.images as string[])?.[0];
+
+  return {
+    title,
+    description,
+    openGraph: { title, description, ...(image ? { images: [{ url: image }] } : {}) },
+  };
+}
 
 export default async function ListingPage({
   params,

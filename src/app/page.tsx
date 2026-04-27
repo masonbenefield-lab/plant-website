@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
@@ -128,7 +129,7 @@ export default async function LandingPage() {
                 <Link key={l.name} href={l.href} className="bg-card rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
                   <div className={cn("relative flex items-center justify-center h-24 sm:h-28 overflow-hidden", "image" in l && l.image ? "" : l.bg)}>
                     {"image" in l && l.image ? (
-                      <img src={l.image as string} alt={l.name} className="w-full h-full object-cover" />
+                      <Image src={l.image as string} alt={l.name} fill className="object-cover" priority />
                     ) : (
                       <span className="text-4xl sm:text-5xl">{l.emoji}</span>
                     )}

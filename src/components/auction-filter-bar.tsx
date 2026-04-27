@@ -29,6 +29,7 @@ export default function AuctionFilterBar() {
   const update = useCallback(
     (patch: Record<string, string>) => {
       const next = new URLSearchParams(params.toString());
+      next.delete("page"); // reset to page 1 on filter change
       for (const [k, v] of Object.entries(patch)) {
         if (v) next.set(k, v);
         else next.delete(k);
@@ -50,7 +51,9 @@ export default function AuctionFilterBar() {
       <div className="flex flex-wrap gap-3 items-end">
         {/* Search */}
         <div className="flex-1 min-w-[180px]">
+          <label htmlFor="auction-search" className="sr-only">Search auctions or varieties</label>
           <Input
+            id="auction-search"
             placeholder="Search auctions or varieties…"
             defaultValue={q}
             onChange={(e) => debounce(() => update({ q: e.target.value }))}
@@ -58,31 +61,41 @@ export default function AuctionFilterBar() {
         </div>
 
         {/* Sort */}
-        <select
-          value={sort}
-          onChange={(e) => update({ sort: e.target.value })}
-          className="h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-        >
-          {SORT_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </select>
+        <div>
+          <label htmlFor="auction-sort" className="sr-only">Sort by</label>
+          <select
+            id="auction-sort"
+            value={sort}
+            onChange={(e) => update({ sort: e.target.value })}
+            className="h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            {SORT_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </div>
 
         {/* Category */}
-        <select
-          value={category}
-          onChange={(e) => update({ category: e.target.value })}
-          className="h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-        >
-          <option value="">All Categories</option>
-          {PLANT_CATEGORIES.map((c) => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </select>
+        <div>
+          <label htmlFor="auction-category" className="sr-only">Filter by category</label>
+          <select
+            id="auction-category"
+            value={category}
+            onChange={(e) => update({ category: e.target.value })}
+            className="h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="">All Categories</option>
+            {PLANT_CATEGORIES.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+        </div>
 
         {/* Max bid */}
-        <div className="flex items-center gap-2">
+        <div>
+          <label htmlFor="auction-max-bid" className="sr-only">Maximum bid</label>
           <Input
+            id="auction-max-bid"
             type="number"
             placeholder="Max bid $"
             min={0}
@@ -95,7 +108,7 @@ export default function AuctionFilterBar() {
 
       {/* Active filter chips */}
       {hasFilters && (
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2" aria-label="Active filters">
           {q && (
             <Chip label={`"${q}"`} onRemove={() => update({ q: "" })} />
           )}
@@ -124,8 +137,12 @@ function Chip({ label, onRemove }: { label: string; onRemove: () => void }) {
   return (
     <span className="inline-flex items-center gap-1 bg-muted text-foreground text-xs font-medium px-2.5 py-1 rounded-full">
       {label}
-      <button onClick={onRemove} className="hover:text-destructive transition-colors">
-        <X size={12} />
+      <button
+        onClick={onRemove}
+        aria-label={`Remove filter: ${label}`}
+        className="hover:text-destructive transition-colors"
+      >
+        <X size={12} aria-hidden="true" />
       </button>
     </span>
   );

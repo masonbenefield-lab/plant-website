@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { toast } from "sonner";
 import { dollarsToCents } from "@/lib/stripe";
 import { PLANT_CATEGORIES } from "@/lib/categories";
+import { AlertTriangle } from "lucide-react";
 
 type Mode = null | "listing" | "auction" | "inventory";
 
@@ -22,6 +24,25 @@ export default function CreateInventoryPage() {
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
+  const [profileWarning, setProfileWarning] = useState<"incomplete" | "unverified" | null>(null);
+
+  useEffect(() => {
+    async function checkProfile() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      if (!user.email_confirmed_at) { setProfileWarning("unverified"); return; }
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("bio, avatar_url")
+        .eq("id", user.id)
+        .single();
+      if (!profile?.bio?.trim() || !profile?.avatar_url) {
+        setProfileWarning("incomplete");
+      }
+    }
+    checkProfile();
+  }, []);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -135,6 +156,28 @@ export default function CreateInventoryPage() {
         <h1 className="text-2xl font-bold">Add Inventory</h1>
         <p className="text-muted-foreground mt-1">Fill in your item details, then choose how to sell it.</p>
       </div>
+
+      {profileWarning === "unverified" && (
+        <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-900/10 dark:border-amber-800 px-4 py-3 mb-6 text-sm">
+          <AlertTriangle size={16} className="text-amber-600 mt-0.5 shrink-0" />
+          <div>
+            <p className="font-medium text-amber-800 dark:text-amber-400">Verify your email to start selling</p>
+            <p className="text-amber-700 dark:text-amber-500 mt-0.5">Check your inbox for a confirmation link. You can still save items to inventory.</p>
+          </div>
+        </div>
+      )}
+      {profileWarning === "incomplete" && (
+        <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-900/10 dark:border-amber-800 px-4 py-3 mb-6 text-sm">
+          <AlertTriangle size={16} className="text-amber-600 mt-0.5 shrink-0" />
+          <div>
+            <p className="font-medium text-amber-800 dark:text-amber-400">Complete your profile before listing publicly</p>
+            <p className="text-amber-700 dark:text-amber-500 mt-0.5">
+              Buyers trust sellers with a profile photo and bio.{" "}
+              <Link href="/account" className="underline font-medium">Set up your profile →</Link>
+            </p>
+          </div>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit}>
         <Card className="mb-6">
@@ -265,8 +308,9 @@ export default function CreateInventoryPage() {
             <div className="grid grid-cols-3 gap-4">
               <button
                 type="button"
-                disabled={!sharedFieldsFilled}
+                disabled={!sharedFieldsFilled || !!profileWarning}
                 onClick={() => setMode("listing")}
+                title={profileWarning ? (profileWarning === "unverified" ? "Verify your email first" : "Complete your profile first") : undefined}
                 className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-muted p-8 text-center transition hover:border-green-600 hover:bg-green-50 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <span className="text-3xl">🛒</span>
@@ -275,8 +319,9 @@ export default function CreateInventoryPage() {
               </button>
               <button
                 type="button"
-                disabled={!sharedFieldsFilled}
+                disabled={!sharedFieldsFilled || !!profileWarning}
                 onClick={() => setMode("auction")}
+                title={profileWarning ? (profileWarning === "unverified" ? "Verify your email first" : "Complete your profile first") : undefined}
                 className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-muted p-8 text-center transition hover:border-green-600 hover:bg-green-50 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <span className="text-3xl">⚡</span>

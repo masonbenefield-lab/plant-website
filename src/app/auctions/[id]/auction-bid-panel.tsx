@@ -45,6 +45,7 @@ export default function AuctionBidPanel({
   const [bidAmount, setBidAmount] = useState("");
   const [placing, setPlacing] = useState(false);
   const [timeLeft, setTimeLeft] = useState("");
+  const [connected, setConnected] = useState(true);
 
   useEffect(() => {
     const supabase = createClient();
@@ -62,15 +63,50 @@ export default function AuctionBidPanel({
         { event: "INSERT", schema: "public", table: "bids", filter: `auction_id=eq.${auction.id}` },
         (payload) => {
           const newBid = payload.new as { id: string; amount_cents: number; created_at: string; bidder_id: string };
+          // Add immediately with null bidder, then patch with real username
           setBids((prev) => [
             { id: newBid.id, amount_cents: newBid.amount_cents, created_at: newBid.created_at, bidder: null },
             ...prev.slice(0, 9),
           ]);
+          supabase
+            .from("profiles")
+            .select("id, username")
+            .eq("id", newBid.bidder_id)
+            .single()
+            .then(({ data }) => {
+              if (data) {
+                setBids((prev) =>
+                  prev.map((b) => b.id === newBid.id ? { ...b, bidder: data } : b)
+                );
+              }
+            });
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        setConnected(status === "SUBSCRIBED");
+      });
 
     return () => { supabase.removeChannel(channel); };
+  }, [auction.id]);
+
+  // Resync auction state when tab regains focus (handles stale data after tab sleep)
+  useEffect(() => {
+    async function resync() {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("auctions")
+        .select("current_bid_cents, current_bidder_id, status, ends_at")
+        .eq("id", auction.id)
+        .single();
+      if (data) setAuction((prev) => ({ ...prev, ...data }));
+    }
+
+    function handleVisibility() {
+      if (!document.hidden) resync();
+    }
+
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
   }, [auction.id]);
 
   useEffect(() => {
@@ -102,6 +138,7 @@ export default function AuctionBidPanel({
     }
 
     setPlacing(true);
+    const previousBidderId = auction.current_bidder_id;
     const supabase = createClient();
 
     const { error: bidError } = await supabase.from("bids").insert({
@@ -138,6 +175,13 @@ export default function AuctionBidPanel({
     } else {
       toast.success(`Bid of ${centsToDisplay(cents)} placed!`);
       setBidAmount("");
+      if (previousBidderId && previousBidderId !== userId) {
+        fetch("/api/bids/notify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ auctionId: auction.id, previousBidderId, newBidCents: cents }),
+        }).catch(() => {});
+      }
     }
   }
 
@@ -175,6 +219,11 @@ export default function AuctionBidPanel({
 
   return (
     <div className="space-y-4">
+      {!connected && (
+        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+          Connection interrupted — live updates paused. Bids may not reflect the latest state.
+        </p>
+      )}
       <Card className="bg-green-50 border-green-200">
         <CardContent className="p-4">
           <div className="flex items-center justify-between">

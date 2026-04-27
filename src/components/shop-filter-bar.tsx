@@ -30,6 +30,7 @@ export default function ShopFilterBar() {
   const update = useCallback(
     (patch: Record<string, string>) => {
       const next = new URLSearchParams(params.toString());
+      next.delete("page"); // reset to page 1 on filter change
       for (const [k, v] of Object.entries(patch)) {
         if (v) next.set(k, v);
         else next.delete(k);
@@ -51,39 +52,52 @@ export default function ShopFilterBar() {
       <div className="flex flex-wrap gap-3 items-end">
         {/* Search */}
         <div className="flex-1 min-w-[180px]">
+          <label htmlFor="shop-search" className="sr-only">Search plants or varieties</label>
           <Input
+            id="shop-search"
             placeholder="Search plants or varieties…"
             defaultValue={q}
-            onChange={(e) => debounce(() => update({ q: e.target.value, }))}
+            onChange={(e) => debounce(() => update({ q: e.target.value }))}
           />
         </div>
 
         {/* Sort */}
-        <select
-          value={sort}
-          onChange={(e) => update({ sort: e.target.value })}
-          className="h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-        >
-          {SORT_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </select>
+        <div>
+          <label htmlFor="shop-sort" className="sr-only">Sort by</label>
+          <select
+            id="shop-sort"
+            value={sort}
+            onChange={(e) => update({ sort: e.target.value })}
+            className="h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            {SORT_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </div>
 
         {/* Category */}
-        <select
-          value={category}
-          onChange={(e) => update({ category: e.target.value })}
-          className="h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-        >
-          <option value="">All Categories</option>
-          {PLANT_CATEGORIES.map((c) => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </select>
+        <div>
+          <label htmlFor="shop-category" className="sr-only">Filter by category</label>
+          <select
+            id="shop-category"
+            value={category}
+            onChange={(e) => update({ category: e.target.value })}
+            className="h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="">All Categories</option>
+            {PLANT_CATEGORIES.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+        </div>
 
         {/* Price range */}
-        <div className="flex items-center gap-2">
+        <fieldset className="flex items-center gap-2">
+          <legend className="sr-only">Price range</legend>
+          <label htmlFor="shop-min-price" className="sr-only">Minimum price</label>
           <Input
+            id="shop-min-price"
             type="number"
             placeholder="Min $"
             min={0}
@@ -91,8 +105,10 @@ export default function ShopFilterBar() {
             className="w-24"
             onChange={(e) => debounce(() => update({ min: e.target.value }))}
           />
-          <span className="text-muted-foreground text-sm">–</span>
+          <span className="text-muted-foreground text-sm" aria-hidden="true">–</span>
+          <label htmlFor="shop-max-price" className="sr-only">Maximum price</label>
           <Input
+            id="shop-max-price"
             type="number"
             placeholder="Max $"
             min={0}
@@ -100,12 +116,12 @@ export default function ShopFilterBar() {
             className="w-24"
             onChange={(e) => debounce(() => update({ max: e.target.value }))}
           />
-        </div>
+        </fieldset>
       </div>
 
       {/* Active filter chips */}
       {hasFilters && (
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2" aria-label="Active filters">
           {q && (
             <Chip label={`"${q}"`} onRemove={() => update({ q: "" })} />
           )}
@@ -137,8 +153,12 @@ function Chip({ label, onRemove }: { label: string; onRemove: () => void }) {
   return (
     <span className="inline-flex items-center gap-1 bg-muted text-foreground text-xs font-medium px-2.5 py-1 rounded-full">
       {label}
-      <button onClick={onRemove} className="hover:text-destructive transition-colors">
-        <X size={12} />
+      <button
+        onClick={onRemove}
+        aria-label={`Remove filter: ${label}`}
+        className="hover:text-destructive transition-colors"
+      >
+        <X size={12} aria-hidden="true" />
       </button>
     </span>
   );

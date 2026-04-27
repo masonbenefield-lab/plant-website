@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
@@ -75,10 +76,12 @@ export default async function MyOrdersPage() {
                     const img = (item as { images?: string[] } | null)?.images?.[0];
                     return img ? (
                       <Link href={order.listing_id ? `/shop/${order.listing_id}` : `/auctions/${order.auction_id}`}>
-                        <img
+                        <Image
                           src={img}
                           alt={item?.plant_name ?? ""}
-                          className="w-16 h-16 rounded-lg object-cover border shrink-0 hover:opacity-90 transition-opacity"
+                          width={64}
+                          height={64}
+                          className="rounded-lg object-cover border shrink-0 hover:opacity-90 transition-opacity"
                         />
                       </Link>
                     ) : (

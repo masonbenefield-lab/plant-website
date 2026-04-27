@@ -7,6 +7,23 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
+async function auditLog(
+  supabase: ReturnType<typeof createClient>,
+  adminId: string,
+  action: string,
+  targetType: string,
+  targetId: string,
+  notes?: string
+) {
+  await supabase.from("admin_audit_logs").insert({
+    admin_id: adminId,
+    action,
+    target_type: targetType,
+    target_id: targetId,
+    notes: notes ?? null,
+  });
+}
+
 export function DeleteUserButton({ userId, username, isAdmin }: { userId: string; username: string; isAdmin: boolean }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -19,6 +36,7 @@ export function DeleteUserButton({ userId, username, isAdmin }: { userId: string
   async function handleDelete() {
     setLoading(true);
     const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
 
     const { error } = await supabase
       .from("profiles")
@@ -27,11 +45,12 @@ export function DeleteUserButton({ userId, username, isAdmin }: { userId: string
 
     if (error) { toast.error(error.message); setLoading(false); return; }
 
-    // Pause active listings and cancel active auctions
     await Promise.all([
       supabase.from("listings").update({ status: "paused" }).eq("seller_id", userId).eq("status", "active"),
       supabase.from("auctions").update({ status: "cancelled" }).eq("seller_id", userId).eq("status", "active"),
     ]);
+
+    if (user) await auditLog(supabase, user.id, "archive_user", "user", userId, username);
 
     toast.success(`${username} archived — 30 days until permanent deletion`);
     setOpen(false);
@@ -71,12 +90,11 @@ export function RestoreUserButton({ userId, username }: { userId: string; userna
   async function handleRestore() {
     setLoading(true);
     const supabase = createClient();
-    const { error } = await supabase
-      .from("profiles")
-      .update({ deleted_at: null })
-      .eq("id", userId);
+    const { data: { user } } = await supabase.auth.getUser();
+    const { error } = await supabase.from("profiles").update({ deleted_at: null }).eq("id", userId);
     setLoading(false);
     if (error) { toast.error(error.message); return; }
+    if (user) await auditLog(supabase, user.id, "restore_user", "user", userId, username);
     toast.success(`${username} restored`);
     router.refresh();
   }

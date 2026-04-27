@@ -152,6 +152,7 @@ export default function Navbar({ user, avatarUrl, username, isAdmin }: NavbarPro
         <div className="md:hidden border-t bg-background px-4 py-4 space-y-1">
           <MobileLink href="/shop" onClick={closeMenu}>Shop</MobileLink>
           <MobileLink href="/auctions" onClick={closeMenu}>Auctions</MobileLink>
+          <MobileLink href="/search" onClick={closeMenu}>Search</MobileLink>
           <MobileLink href="/pricing" onClick={closeMenu}>Pricing</MobileLink>
 
           {user ? (

@@ -9,23 +9,29 @@ import { PLANT_CATEGORIES } from "@/lib/categories";
 import ShopFilterBar from "@/components/shop-filter-bar";
 import WishlistButton from "@/components/wishlist-button";
 import RecentlyViewedStrip from "@/components/recently-viewed-strip";
+import { Pagination } from "@/components/pagination";
 
 const NEW_THRESHOLD_MS = 48 * 60 * 60 * 1000;
+const PAGE_SIZE = 24;
 
 export default async function ShopPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; sort?: string; min?: string; max?: string; category?: string }>;
+  searchParams: Promise<{ q?: string; sort?: string; min?: string; max?: string; category?: string; page?: string }>;
 }) {
-  const { q, sort, min, max, category } = await searchParams;
+  const { q, sort, min, max, category, page: pageParam } = await searchParams;
+  const page = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
+  const from = (page - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
+
   const supabase = await createClient();
 
   let query = supabase
     .from("listings")
-    .select("*")
+    .select("*", { count: "exact" })
     .eq("status", "active");
 
-  if (q) query = query.or(`plant_name.ilike.%${q}%,variety.ilike.%${q}%`);
+  if (q) query = query.or(`plant_name.ilike.%${q}%,variety.ilike.%${q}%,description.ilike.%${q}%,category.ilike.%${q}%`);
   if (category) query = query.eq("category", category);
   if (min) query = query.gte("price_cents", Math.round(Number(min) * 100));
   if (max) query = query.lte("price_cents", Math.round(Number(max) * 100));
@@ -34,7 +40,22 @@ export default async function ShopPage({
   else if (sort === "price_desc") query = query.order("price_cents", { ascending: false });
   else                            query = query.order("created_at", { ascending: false });
 
-  const { data: listings } = await query;
+  const { data: listings, count } = await query.range(from, to);
+
+  const total = count ?? 0;
+  const totalPages = Math.ceil(total / PAGE_SIZE);
+
+  function buildPageHref(p: number) {
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    if (sort && sort !== "newest") params.set("sort", sort);
+    if (min) params.set("min", min);
+    if (max) params.set("max", max);
+    if (category) params.set("category", category);
+    if (p > 1) params.set("page", String(p));
+    const s = params.toString();
+    return s ? `/shop?${s}` : "/shop";
+  }
 
   const sellerIds = [...new Set(listings?.map((l) => l.seller_id) ?? [])];
   const { data: sellers } = sellerIds.length
@@ -92,7 +113,7 @@ export default async function ShopPage({
         </div>
       ) : (
         <>
-          <p className="text-sm text-muted-foreground mb-4">{listings.length} listing{listings.length !== 1 ? "s" : ""}</p>
+          <p className="text-sm text-muted-foreground mb-4">{total} listing{total !== 1 ? "s" : ""}</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
             {listings.map((listing) => {
               const seller = sellerMap[listing.seller_id];
@@ -153,6 +174,14 @@ export default async function ShopPage({
               );
             })}
           </div>
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            pageSize={PAGE_SIZE}
+            prevHref={page > 1 ? buildPageHref(page - 1) : null}
+            nextHref={page < totalPages ? buildPageHref(page + 1) : null}
+          />
         </>
       )}
     </div>

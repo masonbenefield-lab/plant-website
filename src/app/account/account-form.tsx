@@ -127,12 +127,15 @@ export default function AccountForm({
             </div>
 
             <div className="space-y-1">
-              <Label htmlFor="bio">Bio</Label>
+              <div className="flex justify-between">
+                <Label htmlFor="bio">Bio</Label>
+                <span className="text-xs text-muted-foreground">{bio.length}/500</span>
+              </div>
               <Textarea
                 id="bio"
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
-                rows={3}
+                rows={4}
                 placeholder="Tell buyers about your nursery or collection…"
                 maxLength={500}
               />

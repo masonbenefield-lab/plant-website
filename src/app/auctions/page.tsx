@@ -7,22 +7,29 @@ import { Badge } from "@/components/ui/badge";
 import { centsToDisplay } from "@/lib/stripe";
 import AuctionFilterBar from "@/components/auction-filter-bar";
 import WishlistButton from "@/components/wishlist-button";
+import { Pagination } from "@/components/pagination";
+
+const PAGE_SIZE = 24;
 
 export default async function AuctionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; sort?: string; max_bid?: string; category?: string }>;
+  searchParams: Promise<{ q?: string; sort?: string; max_bid?: string; category?: string; page?: string }>;
 }) {
-  const { q, sort, max_bid, category } = await searchParams;
+  const { q, sort, max_bid, category, page: pageParam } = await searchParams;
+  const page = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
+  const from = (page - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
+
   const supabase = await createClient();
 
   let query = supabase
     .from("auctions")
-    .select("*")
+    .select("*", { count: "exact" })
     .eq("status", "active")
     .gt("ends_at", new Date().toISOString());
 
-  if (q) query = query.or(`plant_name.ilike.%${q}%,variety.ilike.%${q}%`);
+  if (q) query = query.or(`plant_name.ilike.%${q}%,variety.ilike.%${q}%,description.ilike.%${q}%,category.ilike.%${q}%`);
   if (category) query = query.eq("category", category);
   if (max_bid) query = query.lte("current_bid_cents", Math.round(Number(max_bid) * 100));
 
@@ -31,7 +38,21 @@ export default async function AuctionsPage({
   else if (sort === "newest")    query = query.order("created_at", { ascending: false });
   else                           query = query.order("ends_at", { ascending: true });
 
-  const { data: auctions } = await query;
+  const { data: auctions, count } = await query.range(from, to);
+
+  const total = count ?? 0;
+  const totalPages = Math.ceil(total / PAGE_SIZE);
+
+  function buildPageHref(p: number) {
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    if (sort && sort !== "ending_soon") params.set("sort", sort);
+    if (max_bid) params.set("max_bid", max_bid);
+    if (category) params.set("category", category);
+    if (p > 1) params.set("page", String(p));
+    const s = params.toString();
+    return s ? `/auctions?${s}` : "/auctions";
+  }
 
   const sellerIds = [...new Set(auctions?.map((a) => a.seller_id) ?? [])];
   const { data: sellers } = sellerIds.length
@@ -67,7 +88,7 @@ export default async function AuctionsPage({
         </div>
       ) : (
         <>
-          <p className="text-sm text-muted-foreground mb-4">{auctions.length} auction{auctions.length !== 1 ? "s" : ""}</p>
+          <p className="text-sm text-muted-foreground mb-4">{total} auction{total !== 1 ? "s" : ""}</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
             {auctions.map((auction) => {
               const seller = sellerMap[auction.seller_id];
@@ -138,6 +159,14 @@ export default async function AuctionsPage({
               );
             })}
           </div>
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            pageSize={PAGE_SIZE}
+            prevHref={page > 1 ? buildPageHref(page - 1) : null}
+            nextHref={page < totalPages ? buildPageHref(page + 1) : null}
+          />
         </>
       )}
     </div>

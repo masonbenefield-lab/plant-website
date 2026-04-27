@@ -17,6 +17,22 @@ interface ReportActionsProps {
   targetName: string;
 }
 
+async function auditLog(
+  supabase: ReturnType<typeof createClient>,
+  adminId: string,
+  action: string,
+  targetType: string,
+  targetId: string,
+  notes?: string
+) {
+  await supabase.from("admin_audit_logs").insert({
+    admin_id: adminId,
+    action,
+    target_type: targetType,
+    target_id: targetId,
+    notes: notes ?? null,
+  });
+}
 
 export function ReportActions({ reportId, listingId, auctionId, reportedUserId, targetName }: ReportActionsProps) {
   const router = useRouter();
@@ -29,6 +45,7 @@ export function ReportActions({ reportId, listingId, auctionId, reportedUserId, 
   async function handleDismiss() {
     setLoading(true);
     const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
     const { error } = await supabase.from("reports").update({
       status: "dismissed",
       resolved_at: new Date().toISOString(),
@@ -36,6 +53,7 @@ export function ReportActions({ reportId, listingId, auctionId, reportedUserId, 
     }).eq("id", reportId);
     setLoading(false);
     if (error) { toast.error(error.message); return; }
+    if (user) await auditLog(supabase, user.id, "dismiss_report", "report", reportId, note.trim() || undefined);
     toast.success("Report dismissed");
     setDismissOpen(false);
     router.refresh();
@@ -44,6 +62,7 @@ export function ReportActions({ reportId, listingId, auctionId, reportedUserId, 
   async function handleResolve() {
     setLoading(true);
     const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
     const { error } = await supabase.from("reports").update({
       status: "resolved",
       resolved_at: new Date().toISOString(),
@@ -51,6 +70,7 @@ export function ReportActions({ reportId, listingId, auctionId, reportedUserId, 
     }).eq("id", reportId);
     setLoading(false);
     if (error) { toast.error(error.message); return; }
+    if (user) await auditLog(supabase, user.id, "resolve_report", "report", reportId, note.trim() || undefined);
     toast.success("Report resolved");
     setResolveOpen(false);
     router.refresh();
@@ -59,21 +79,24 @@ export function ReportActions({ reportId, listingId, auctionId, reportedUserId, 
   async function handleRemoveAndResolve() {
     setLoading(true);
     const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
 
     if (listingId) {
       const { error } = await supabase.from("listings").delete().eq("id", listingId);
       if (error) { toast.error(error.message); setLoading(false); return; }
+      if (user) await auditLog(supabase, user.id, "delete_listing_via_report", "listing", listingId, `report:${reportId}`);
     } else if (auctionId) {
       const { error } = await supabase.from("auctions").update({ status: "cancelled" }).eq("id", auctionId);
       if (error) { toast.error(error.message); setLoading(false); return; }
+      if (user) await auditLog(supabase, user.id, "cancel_auction_via_report", "auction", auctionId, `report:${reportId}`);
     } else if (reportedUserId) {
       const { error } = await supabase.from("profiles").update({ deleted_at: new Date().toISOString() }).eq("id", reportedUserId);
       if (error) { toast.error(error.message); setLoading(false); return; }
-      // Pause listings and cancel auctions for the archived user
       await Promise.all([
         supabase.from("listings").update({ status: "paused" }).eq("seller_id", reportedUserId).eq("status", "active"),
         supabase.from("auctions").update({ status: "cancelled" }).eq("seller_id", reportedUserId).eq("status", "active"),
       ]);
+      if (user) await auditLog(supabase, user.id, "archive_user_via_report", "user", reportedUserId, `report:${reportId} — ${targetName}`);
     }
 
     await supabase.from("reports").update({

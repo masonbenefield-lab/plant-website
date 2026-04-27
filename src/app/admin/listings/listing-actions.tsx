@@ -7,6 +7,23 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
+async function auditLog(
+  supabase: ReturnType<typeof createClient>,
+  adminId: string,
+  action: string,
+  targetType: string,
+  targetId: string,
+  notes?: string
+) {
+  await supabase.from("admin_audit_logs").insert({
+    admin_id: adminId,
+    action,
+    target_type: targetType,
+    target_id: targetId,
+    notes: notes ?? null,
+  });
+}
+
 export function DeleteListingButton({ listingId, plantName }: { listingId: string; plantName: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -15,9 +32,11 @@ export function DeleteListingButton({ listingId, plantName }: { listingId: strin
   async function handleDelete() {
     setLoading(true);
     const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
     const { error } = await supabase.from("listings").delete().eq("id", listingId);
     setLoading(false);
     if (error) { toast.error(error.message); return; }
+    if (user) await auditLog(supabase, user.id, "delete_listing", "listing", listingId, plantName);
     toast.success("Listing deleted");
     setOpen(false);
     router.refresh();
@@ -56,12 +75,12 @@ export function PauseListingButton({ listingId, currentStatus }: { listingId: st
   async function toggle() {
     setLoading(true);
     const supabase = createClient();
-    const { error } = await supabase
-      .from("listings")
-      .update({ status: isPaused ? "active" : "paused" })
-      .eq("id", listingId);
+    const { data: { user } } = await supabase.auth.getUser();
+    const newStatus = isPaused ? "active" : "paused";
+    const { error } = await supabase.from("listings").update({ status: newStatus }).eq("id", listingId);
     setLoading(false);
     if (error) { toast.error(error.message); return; }
+    if (user) await auditLog(supabase, user.id, isPaused ? "restore_listing" : "pause_listing", "listing", listingId);
     toast.success(isPaused ? "Listing restored" : "Listing paused");
     router.refresh();
   }

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +11,32 @@ import { Star } from "lucide-react";
 import { centsToDisplay } from "@/lib/stripe";
 import FollowButton from "@/components/follow-button";
 import ReportButton from "@/components/report-button";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ username: string }>;
+}): Promise<Metadata> {
+  const { username } = await params;
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("profiles")
+    .select("username, bio, avatar_url")
+    .eq("username", username)
+    .single();
+
+  if (!data) return { title: "Seller Not Found — Plantet" };
+
+  const title = `${data.username} — Plantet Storefront`;
+  const description = data.bio || `Browse plants from ${data.username} on Plantet`;
+  const image = data.avatar_url as string | null;
+
+  return {
+    title,
+    description,
+    openGraph: { title, description, ...(image ? { images: [{ url: image }] } : {}) },
+  };
+}
 
 export default async function SellerStorefront({
   params,

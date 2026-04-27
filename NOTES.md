@@ -207,3 +207,62 @@ ALTER TABLE inventory ADD COLUMN category text;
 
 ### Type changes
 - `src/lib/supabase/types.ts`: Added `category: string | null` to `inventory` Row, Insert, Update.
+
+---
+
+## 2026-04-27 — Critical & Major audit fixes
+
+### Critical fixes
+- **SEO metadata** — Added `generateMetadata` to `shop/[id]/page.tsx`, `auctions/[id]/page.tsx`, `sellers/[username]/page.tsx`. Each pulls plant name, variety, description, price/bid, and first image into `<title>`, `<meta description>`, and OpenGraph tags.
+- **Sitemap & robots** — Created `src/app/sitemap.ts` (dynamic; includes all active listings, auctions, seller profiles) and `src/app/robots.ts` (blocks private routes, points to sitemap). Uses `NEXT_PUBLIC_SITE_URL` env var, falls back to `https://plantet.co`.
+- **Image optimization** — Replaced raw `<img>` tags with Next.js `<Image>` in `app/page.tsx` (hero cards, `priority` prop), `app/orders/page.tsx` (order thumbnail), `app/feed/page.tsx` (seller avatar).
+- **Error pages** — Created `src/app/error.tsx` (global error boundary with Try Again + Go Home) and `src/app/not-found.tsx` (global 404 page).
+- **Auction checkout fix** — `app/checkout/page.tsx` previously required `status = 'ended'` for auction checkout; now also allows checkout if `ends_at <= now()` so winners can pay before the cron job runs.
+- **Realtime connection fallback** — `auction-bid-panel.tsx`: added `connected` state wired to Supabase channel subscribe callback; shows amber warning banner on disconnect. Added `visibilitychange` listener that resyncs auction data from server when browser tab regains focus.
+
+### Major fixes
+- **Pagination** — Created `src/components/pagination.tsx` (reusable Prev/Next + count). Applied to `shop/page.tsx` (24/page), `auctions/page.tsx` (24/page), `search/page.tsx` (20/page). Filter changes reset page to 1.
+- **Accessibility** — `image-gallery.tsx`: lightbox has `role="dialog"` + `aria-modal`, all buttons have `aria-label`, dot nav uses `role="tablist"`. `shop-filter-bar.tsx` and `auction-filter-bar.tsx`: all inputs and selects have associated `<label>` (sr-only), price range wrapped in `<fieldset>` + `<legend>`, chip remove buttons have descriptive `aria-label`.
+- **Rate limiting** — Created `src/lib/rate-limit.ts` (in-memory sliding window, no new dependencies). Applied to `api/stripe/checkout/route.ts` (5 req/min per user) and `api/ratings/route.ts` (10 req/min per user).
+- **Admin audit logging** — Created `supabase/migrations/002_admin_audit_logs.sql` (table + RLS: admins insert/read only). All three admin action files now insert a log row on every action: `listing-actions.tsx` (delete, pause, restore), `user-actions.tsx` (archive, restore), `report-actions.tsx` (dismiss, resolve, remove+resolve).
+
+### SQL migration required
+Run `supabase/migrations/002_admin_audit_logs.sql` in Supabase SQL editor (already done ✓).
+
+### Environment variables
+- `NEXT_PUBLIC_SITE_URL` — set to your production domain (e.g. `https://plantet.co`) for sitemap and robots.txt URLs.
+
+---
+
+## 2026-04-27 — Medium audit fixes (batch 2)
+
+### Features built
+- **Expanded search (#15)** — Shop, auctions, and unified search pages now match on `description` and `category` in addition to `plant_name` and `variety`. Changed all four `.or()` ilike filter strings in `shop/page.tsx`, `auctions/page.tsx`, and `search/page.tsx`.
+- **Feed real-time banner (#16)** — Created `src/components/feed-updates.tsx`: client component that subscribes to Supabase Realtime INSERT events on `listings` and `auctions` filtered by followed seller IDs; shows a sticky "N new posts — click to refresh" button that calls `router.refresh()`. Rendered in `src/app/feed/page.tsx`.
+- **Email notifications via Resend (#11)**:
+  - Installed `resend` package.
+  - Created `src/lib/email.ts` with `sendOrderConfirmation()` and `sendOutbidNotification()` helpers.
+  - Updated `src/app/api/stripe/webhook/route.ts`: on `payment_intent.succeeded`, fetches order + buyer email via admin client, sends order confirmation email.
+  - Created `src/app/api/bids/notify/route.ts`: accepts `{ auctionId, previousBidderId, newBidCents }`, looks up outbid user's email via admin client, sends outbid notification.
+  - Updated `src/app/auctions/[id]/auction-bid-panel.tsx`: after a successful bid, fires `POST /api/bids/notify` with the previous bidder ID.
+- **TypeScript fixes**: Added `admin_audit_logs` table to `src/lib/supabase/types.ts` (was missing, causing `never` type errors in admin action files). Fixed `src/app/sitemap.ts` to use `created_at` instead of `updated_at` (column doesn't exist).
+
+### Environment variables
+- `RESEND_API_KEY` — Resend API key for sending transactional emails. Get from resend.com.
+- Email `from` address is `noreply@plantet.co` — requires domain verified in Resend dashboard.
+
+---
+
+## 2026-04-27 — Minor/UX polish pass
+
+### Changes made
+- **Confirmation dialogs** — Replaced native browser `confirm()` calls with proper modal dialogs:
+  - `dashboard/listings/listing-actions.tsx`: "Delete listing?" Dialog with Cancel + Delete buttons and loading state
+  - `dashboard/auctions/auction-actions.tsx`: "Cancel auction?" Dialog explaining bids will be voided
+- **Auction image gallery** — `auctions/[id]/page.tsx`: replaced static image + thumbnail strip with `<ImageGallery>` (same lightbox component used on shop detail pages — supports click-to-expand, swipe, keyboard nav)
+- **Password visibility toggle** — Added Eye/EyeOff toggle button to password fields in `login/page.tsx` and `signup/page.tsx`
+- **Character counters** — Added live `{n}/max` counters to:
+  - Bio textarea in `account/account-form.tsx` (500 char limit, rows bumped to 4)
+  - Description textarea in `dashboard/listings/listing-actions.tsx` edit dialog (1000 char limit)
+- **Mobile nav Search link** — `components/layout/navbar.tsx`: added "Search" between Auctions and Pricing in the mobile hamburger menu
+- **Dashboard orders empty state** — `dashboard/orders/page.tsx`: replaced bare "No orders yet." with a card containing emoji, explanation, and links to View listings / Add a listing
