@@ -18,7 +18,7 @@ export default async function InventoryPage() {
   ] = await Promise.all([
     supabase.from("inventory").select("*").eq("seller_id", user.id).is("archived_at", null).order("created_at", { ascending: false }),
     supabase.from("inventory").select("*").eq("seller_id", user.id).not("archived_at", "is", null).gte("archived_at", thirtyDaysAgo).order("archived_at", { ascending: false }),
-    supabase.from("listings").select("id, plant_name, variety, status, quantity, in_stock, price_cents, description, images, seller_id, created_at").eq("seller_id", user.id).order("created_at", { ascending: false }),
+    supabase.from("listings").select("id, plant_name, variety, status, quantity, in_stock, price_cents, description, images, category, seller_id, created_at").eq("seller_id", user.id).order("created_at", { ascending: false }),
     supabase.from("auctions").select("*").eq("seller_id", user.id).order("created_at", { ascending: false }),
   ]);
 
@@ -38,6 +38,7 @@ export default async function InventoryPage() {
       price: "",
       price_cents: null as number | null,
       images: (item.images as string[]) ?? [],
+      category: item.category ?? null,
       created_at: item.created_at,
       archived_at: null as string | null,
     })),
@@ -56,6 +57,7 @@ export default async function InventoryPage() {
       price: centsToDisplay(l.price_cents),
       price_cents: l.price_cents,
       images: (l.images as string[]) ?? [],
+      category: l.category ?? null,
       created_at: l.created_at,
       archived_at: null as string | null,
     })),
@@ -74,6 +76,7 @@ export default async function InventoryPage() {
       price: `${centsToDisplay(a.current_bid_cents)} bid`,
       price_cents: null as number | null,
       images: (a.images as string[]) ?? [],
+      category: a.category ?? null,
       created_at: a.created_at,
       archived_at: null as string | null,
     })),
@@ -94,6 +97,7 @@ export default async function InventoryPage() {
     price: "",
     price_cents: null as number | null,
     images: (item.images as string[]) ?? [],
+    category: item.category ?? null,
     created_at: item.created_at,
     archived_at: item.archived_at,
   }));

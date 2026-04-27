@@ -15,6 +15,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Search, Heart, Package, Rss } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 
 interface NavbarProps {
@@ -56,6 +57,9 @@ export default function Navbar({ user, avatarUrl, username, isAdmin }: NavbarPro
             <Link href="/auctions" className="text-muted-foreground hover:text-foreground transition-colors">
               Auctions
             </Link>
+            <Link href="/search" className="text-muted-foreground hover:text-foreground transition-colors">
+              Search
+            </Link>
             <Link href="/pricing" className="text-muted-foreground hover:text-foreground transition-colors">
               Pricing
             </Link>
@@ -66,6 +70,22 @@ export default function Navbar({ user, avatarUrl, username, isAdmin }: NavbarPro
         <div className="flex items-center gap-3">
           {/* Desktop auth */}
           <div className="hidden md:flex items-center gap-3">
+            {user && (
+              <div className="flex items-center gap-1 mr-1">
+                <Link href="/search" className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="Search">
+                  <Search size={17} />
+                </Link>
+                <Link href="/wishlist" className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="Wishlist">
+                  <Heart size={17} />
+                </Link>
+                <Link href="/orders" className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="My Orders">
+                  <Package size={17} />
+                </Link>
+                <Link href="/feed" className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="Feed">
+                  <Rss size={17} />
+                </Link>
+              </div>
+            )}
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-green-500">
@@ -81,6 +101,7 @@ export default function Navbar({ user, avatarUrl, username, isAdmin }: NavbarPro
                   <DropdownMenuItem><Link href="/dashboard/inventory" className="block w-full">Inventory</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href="/wishlist" className="block w-full">Wishlist</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href="/orders" className="block w-full">My Orders</Link></DropdownMenuItem>
+                  <DropdownMenuItem><Link href="/feed" className="block w-full">Feed</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href={`/sellers/${username}`} className="block w-full">My Storefront</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href="/account" className="block w-full">Account Settings</Link></DropdownMenuItem>
                   {isAdmin && (

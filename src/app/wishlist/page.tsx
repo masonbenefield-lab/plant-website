@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { centsToDisplay } from "@/lib/stripe";
+import WishlistAuctionCard from "@/components/wishlist-auction-card";
 
 export default async function WishlistPage() {
   const supabase = await createClient();
@@ -61,6 +62,24 @@ export default async function WishlistPage() {
             const href = type === "listing" ? `/shop/${data.id}` : `/auctions/${data.id}`;
             const isActive = data.status === "active";
 
+            if (type === "auction") {
+              const a = data as typeof auctionMap[string];
+              return (
+                <Link key={data.id} href={href}>
+                  <WishlistAuctionCard
+                    id={a.id}
+                    plant_name={a.plant_name}
+                    variety={a.variety ?? null}
+                    category={a.category ?? null}
+                    current_bid_cents={a.current_bid_cents}
+                    images={a.images as string[]}
+                    ends_at={a.ends_at}
+                    status={a.status}
+                  />
+                </Link>
+              );
+            }
+
             return (
               <Link key={data.id} href={href}>
                 <Card className={`hover:shadow-md transition-shadow overflow-hidden ${!isActive ? "opacity-60" : ""}`}>
@@ -75,13 +94,10 @@ export default async function WishlistPage() {
                         <Badge variant="secondary">No longer available</Badge>
                       </div>
                     )}
-                    {type === "auction" && isActive && (
-                      <Badge className="absolute top-2 right-2 bg-blue-600">Auction</Badge>
-                    )}
                   </div>
                   <CardContent className="p-4">
                     {"category" in data && data.category && (
-                      <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full mb-1.5 ${type === "auction" ? "text-blue-700 bg-blue-100 dark:text-blue-400 dark:bg-blue-900/40" : "text-green-700 bg-green-100 dark:text-green-400 dark:bg-green-900/40"}`}>
+                      <span className="inline-block text-xs font-medium px-2 py-0.5 rounded-full mb-1.5 text-green-700 bg-green-100 dark:text-green-400 dark:bg-green-900/40">
                         {data.category}
                       </span>
                     )}
@@ -91,9 +107,7 @@ export default async function WishlistPage() {
                     )}
                     <div className="mt-2">
                       <span className="font-bold text-green-700">
-                        {"price_cents" in data
-                          ? centsToDisplay(data.price_cents)
-                          : `Bid: ${centsToDisplay((data as { current_bid_cents: number }).current_bid_cents)}`}
+                        {"price_cents" in data ? centsToDisplay(data.price_cents) : ""}
                       </span>
                     </div>
                   </CardContent>

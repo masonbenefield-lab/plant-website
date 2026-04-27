@@ -160,3 +160,50 @@ CREATE POLICY "Anyone can view listing images"
   USING (bucket_id = 'listings');
 ```
 Storage buckets needed: `avatars`, `listings`, `auctions` (all public)
+
+---
+
+## 2026-04-24 — Whole-site feature pass (8 improvements)
+
+### Features built
+- **Navigation audit** (`src/components/layout/navbar.tsx`): Added Search/Wishlist/My Orders/Feed icon links visible on desktop when logged in. Added Search link to main desktop nav (visible to all). Added Feed to the user dropdown.
+- **Wishlist auction countdowns** (`src/components/wishlist-auction-card.tsx`, `src/app/wishlist/page.tsx`): New `WishlistAuctionCard` client component with live 1-second countdown timer for auction cards on the wishlist page.
+- **Tracking number field** (`src/app/dashboard/orders/tracking-input.tsx`, `src/app/dashboard/orders/page.tsx`, `src/app/orders/page.tsx`): Sellers can enter/save a tracking number per order. Buyers see it on their orders page.
+- **Post-purchase confirmation screen** (`src/app/orders/confirmed/page.tsx`): New page shown after payment success with order summary, item thumbnail, shipping address, and seller link. Checkout form now routes to `/orders/confirmed?id=…` instead of `/dashboard/orders`.
+- **Unified search** (`src/app/search/page.tsx`, `src/app/search/search-input.tsx`): Searches both `listings` and `auctions` tables simultaneously. Results split into Shop / Auctions tabs. Accessible at `/search`.
+- **Followed seller feed** (`src/app/feed/page.tsx`): Shows recent listings and auctions from sellers the user follows, merged and sorted by date. Empty state if not following anyone.
+- **Pause all listings** (`src/app/dashboard/listings/pause-all-button.tsx`, `src/app/dashboard/listings/page.tsx`): One-click button to pause all active listings. Appears next to "New Listing" in the listings dashboard header.
+- **Order image & seller link** (`src/app/orders/page.tsx`): Buyer order cards now show a 64×64 thumbnail linking to the item, and the seller name links to their storefront.
+
+### SQL migration required
+```sql
+ALTER TABLE orders ADD COLUMN tracking_number text;
+```
+
+### Type changes
+- `src/lib/supabase/types.ts`: Added `tracking_number: string | null` to `orders` Row and `tracking_number?: string | null` to `orders` Update.
+
+---
+
+## 2026-04-26 — Inventory section audit improvements (8 items)
+
+### Features built
+- **Bug fix: images now copied** when using "List in Shop" or "Create Auction" from inventory — `submitListing` and `submitAuction` now pass `images: modal.row.images` and `category: modal.row.category` to their respective inserts.
+- **Category column** — new `category` field on all inventory rows (drafts, listings, auctions). Displays in table (hidden on narrow screens) and mobile cards. Inline editable for inventory drafts and shop listings by clicking the cell value; auctions are display-only.
+- **Category filter** — dropdown added to filter bar; only appears when categories exist in the current tab.
+- **Bulk select + actions** — checkbox column in desktop table, checkbox on mobile cards. Bulk action bar appears when any rows are selected with context-aware actions: "Archive selected" (inventory drafts), "Pause listings" (active shop listings). Select-all checkbox in table header. Selected rows highlighted.
+- **Sort by quantity and date** — In Stock and Added (created_at) columns are now sortable in addition to existing Plant/Variety columns.
+- **Notes preview icon** — rows with private notes show a `FileText` icon next to the plant name; hovering shows the note text via native tooltip.
+- **Hidden stock warning** — orange `⚠ N hidden` badge appears in the Listed Qty cell when In Stock > Listed Qty (inventory drafts with a linked listing) or when physical stock > listed quantity (shop listings with in_stock set).
+- **Photo editing in Edit modal** — Edit Item modal now shows a grid of current photos with hover-to-remove X buttons, plus an "Add Photo" button that uploads directly to Supabase storage (`listings` bucket, `inventory/` prefix).
+- **Category in Edit modal** — category dropdown added to Edit Item modal.
+- **Category passed through clone** — cloneItem now copies category to the new draft.
+- **Export updated** — Excel and PDF exports now include a Category column.
+
+### SQL migration required
+```sql
+ALTER TABLE inventory ADD COLUMN category text;
+```
+
+### Type changes
+- `src/lib/supabase/types.ts`: Added `category: string | null` to `inventory` Row, Insert, Update.

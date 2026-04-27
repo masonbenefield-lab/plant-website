@@ -175,6 +175,7 @@ export interface Database {
           };
           status: OrderStatus;
           amount_cents: number;
+          tracking_number: string | null;
           created_at: string;
         };
         Insert: {
@@ -201,6 +202,7 @@ export interface Database {
           id?: string;
           stripe_payment_intent_id?: string | null;
           status?: OrderStatus;
+          tracking_number?: string | null;
         };
         Relationships: [];
       };
@@ -216,6 +218,7 @@ export interface Database {
           description: string | null;
           images: string[];
           notes: string | null;
+          category: string | null;
           archived_at: string | null;
           created_at: string;
         };
@@ -230,6 +233,7 @@ export interface Database {
           description?: string | null;
           images?: string[];
           notes?: string | null;
+          category?: string | null;
           archived_at?: string | null;
           created_at?: string;
         };
@@ -242,6 +246,7 @@ export interface Database {
           description?: string | null;
           images?: string[];
           notes?: string | null;
+          category?: string | null;
           archived_at?: string | null;
         };
         Relationships: [];

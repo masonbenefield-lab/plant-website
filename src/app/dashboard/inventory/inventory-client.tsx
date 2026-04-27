@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -24,7 +24,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { dollarsToCents, centsToDisplay } from "@/lib/stripe";
+import { FileText, AlertTriangle, X, ImagePlus } from "lucide-react";
 import * as XLSX from "xlsx";
+
+const CATEGORIES = [
+  "Tropical", "Succulent", "Cactus", "Carnivorous", "Orchid",
+  "Fern", "Herb", "Rare", "Seasonal", "Other",
+];
 
 type Row = {
   id: string;
@@ -41,6 +47,7 @@ type Row = {
   price: string;
   price_cents: number | null;
   images: string[];
+  category: string | null;
   created_at: string;
   archived_at: string | null;
 };
@@ -92,22 +99,23 @@ export default function InventoryClient({
   listingOptions: ListingOption[];
 }) {
   const router = useRouter();
+
+  // — Tab / filter / sort
   const [tab, setTab] = useState<"active" | "archived">("active");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
-  const [sortCol, setSortCol] = useState<"plant_name" | "variety" | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState("All");
+  const [sortCol, setSortCol] = useState<"plant_name" | "variety" | "quantity" | "created_at" | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
-  function toggleSort(col: "plant_name" | "variety") {
-    if (sortCol === col) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setSortCol(col);
-      setSortDir("asc");
-    }
-  }
+  // — Bulk select
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkLoading, setBulkLoading] = useState(false);
 
+  // — Row-level loading
   const [loadingId, setLoadingId] = useState<string | null>(null);
+
+  // — Modals
   const [modal, setModal] = useState<ActionModal>(null);
   const [price, setPrice] = useState("");
   const [listQty, setListQty] = useState("");
@@ -117,13 +125,44 @@ export default function InventoryClient({
   const [linkListingId, setLinkListingId] = useState("");
   const [linkQty, setLinkQty] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  // — Edit modal fields
   const [editPlantName, setEditPlantName] = useState("");
   const [editVariety, setEditVariety] = useState("");
   const [editQuantity, setEditQuantity] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [editNotes, setEditNotes] = useState("");
+  const [editCategory, setEditCategory] = useState("");
+  const [editImages, setEditImages] = useState<string[]>([]);
+  const [imageUploading, setImageUploading] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+
+  // — Inline quantity editing
   const [editingCell, setEditingCell] = useState<{ rowId: string; field: "quantity" | "listing_quantity" | "in_stock"; source: Row["source"] } | null>(null);
   const [editingValue, setEditingValue] = useState("");
+
+  // — Inline category editing
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [editingCategoryValue, setEditingCategoryValue] = useState("");
+  const [editingCategorySource, setEditingCategorySource] = useState<Row["source"]>("inventory");
+
+  // ── Sort ──────────────────────────────────────────────────────────────────
+
+  function toggleSort(col: typeof sortCol) {
+    if (sortCol === col) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortCol(col);
+      setSortDir("asc");
+    }
+  }
+
+  function sortIndicator(col: typeof sortCol) {
+    if (sortCol !== col) return "↕";
+    return sortDir === "asc" ? "↑" : "↓";
+  }
+
+  // ── Inline quantity editing ───────────────────────────────────────────────
 
   function startEdit(rowId: string, field: "quantity" | "listing_quantity" | "in_stock", current: number | null, source: Row["source"]) {
     setEditingCell({ rowId, field, source });
@@ -139,26 +178,97 @@ export default function InventoryClient({
     const supabase = createClient();
     if (source === "listing" && field === "in_stock") {
       const { error } = await supabase.from("listings").update({ in_stock: num }).eq("id", rowId);
-      if (error) toast.error(error.message);
-      else router.refresh();
+      if (error) toast.error(error.message); else router.refresh();
     } else if (source === "listing") {
       const { error } = await supabase.from("listings").update({ quantity: num ?? 0 }).eq("id", rowId);
-      if (error) toast.error(error.message);
-      else router.refresh();
+      if (error) toast.error(error.message); else router.refresh();
     } else if (field === "quantity") {
       const { error } = await supabase.from("inventory").update({ quantity: num ?? 0 }).eq("id", rowId);
-      if (error) toast.error(error.message);
-      else router.refresh();
+      if (error) toast.error(error.message); else router.refresh();
     } else {
       const { error } = await supabase.from("inventory").update({ listing_quantity: num }).eq("id", rowId);
-      if (error) toast.error(error.message);
-      else router.refresh();
+      if (error) toast.error(error.message); else router.refresh();
     }
   }
 
-  function cancelEdit() {
-    setEditingCell(null);
+  function cancelEdit() { setEditingCell(null); }
+
+  // ── Inline category editing ───────────────────────────────────────────────
+
+  function startCategoryEdit(rowId: string, current: string | null, source: Row["source"]) {
+    setEditingCategoryId(rowId);
+    setEditingCategoryValue(current ?? "");
+    setEditingCategorySource(source);
   }
+
+  async function saveCategoryEdit() {
+    if (!editingCategoryId) return;
+    const id = editingCategoryId;
+    const value = editingCategoryValue || null;
+    const source = editingCategorySource;
+    setEditingCategoryId(null);
+    const supabase = createClient();
+    if (source === "inventory") {
+      const { error } = await supabase.from("inventory").update({ category: value }).eq("id", id);
+      if (error) toast.error(error.message); else router.refresh();
+    } else if (source === "listing") {
+      const { error } = await supabase.from("listings").update({ category: value }).eq("id", id);
+      if (error) toast.error(error.message); else router.refresh();
+    }
+  }
+
+  // ── Bulk actions ──────────────────────────────────────────────────────────
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (selectedIds.size === rows.length && rows.length > 0) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(rows.map((r) => r.id)));
+    }
+  }
+
+  async function bulkArchive() {
+    const ids = [...selectedIds].filter((id) => rows.find((r) => r.id === id)?.source === "inventory");
+    if (!ids.length) { toast.error("Select inventory drafts to archive"); return; }
+    setBulkLoading(true);
+    const supabase = createClient();
+    const { error } = await supabase.from("inventory").update({ archived_at: new Date().toISOString() }).in("id", ids);
+    setBulkLoading(false);
+    if (error) toast.error(error.message);
+    else {
+      toast.success(`${ids.length} item${ids.length !== 1 ? "s" : ""} archived`);
+      setSelectedIds(new Set());
+      router.refresh();
+    }
+  }
+
+  async function bulkPauseListing() {
+    const ids = [...selectedIds].filter((id) => {
+      const row = rows.find((r) => r.id === id);
+      return row?.source === "listing" && row.status === "In Shop";
+    });
+    if (!ids.length) { toast.error("Select active shop listings to pause"); return; }
+    setBulkLoading(true);
+    const supabase = createClient();
+    const { error } = await supabase.from("listings").update({ status: "paused" }).in("id", ids);
+    setBulkLoading(false);
+    if (error) toast.error(error.message);
+    else {
+      toast.success(`${ids.length} listing${ids.length !== 1 ? "s" : ""} paused`);
+      setSelectedIds(new Set());
+      router.refresh();
+    }
+  }
+
+  // ── Modal helpers ─────────────────────────────────────────────────────────
 
   function openModal(type: "listing" | "auction" | "link" | "edit", row: Row) {
     setPrice("");
@@ -173,8 +283,37 @@ export default function InventoryClient({
     setEditQuantity(String(row.quantity));
     setEditDescription(row.description);
     setEditNotes(row.notes);
+    setEditCategory(row.category ?? "");
+    setEditImages([...row.images]);
     setModal({ type, row });
   }
+
+  // ── Photo editing helpers ─────────────────────────────────────────────────
+
+  async function handleImageAdd(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    setImageUploading(true);
+    const supabase = createClient();
+    const ext = file.name.split(".").pop() ?? "jpg";
+    const path = `inventory/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const { error } = await supabase.storage.from("listings").upload(path, file);
+    if (error) {
+      toast.error("Upload failed: " + error.message);
+      setImageUploading(false);
+      return;
+    }
+    const { data } = supabase.storage.from("listings").getPublicUrl(path);
+    setEditImages((prev) => [...prev, data.publicUrl]);
+    setImageUploading(false);
+  }
+
+  function removeEditImage(url: string) {
+    setEditImages((prev) => prev.filter((u) => u !== url));
+  }
+
+  // ── CRUD actions ──────────────────────────────────────────────────────────
 
   async function submitListing() {
     if (!modal || modal.type !== "listing") return;
@@ -190,12 +329,11 @@ export default function InventoryClient({
       quantity: qty,
       description: modal.row.description || null,
       price_cents: dollarsToCents(price),
+      images: modal.row.images,
+      category: modal.row.category || null,
     }).select("id").single();
     if (error) { toast.error(error.message); setSubmitting(false); return; }
-    await supabase.from("inventory").update({
-      listing_id: newListing.id,
-      listing_quantity: qty,
-    }).eq("id", modal.row.id);
+    await supabase.from("inventory").update({ listing_id: newListing.id, listing_quantity: qty }).eq("id", modal.row.id);
     setSubmitting(false);
     toast.success(`${modal.row.plant_name} is now live in your shop!`);
     setModal(null);
@@ -218,6 +356,8 @@ export default function InventoryClient({
       current_bid_cents: dollarsToCents(startingBid),
       buy_now_price_cents: buyNowPrice ? dollarsToCents(buyNowPrice) : null,
       ends_at: new Date(endsAt).toISOString(),
+      images: modal.row.images,
+      category: modal.row.category || null,
     });
     setSubmitting(false);
     if (error) { toast.error(error.message); return; }
@@ -253,6 +393,8 @@ export default function InventoryClient({
       quantity: Number(editQuantity) || 0,
       description: editDescription.trim() || null,
       notes: editNotes.trim() || null,
+      category: editCategory || null,
+      images: editImages,
     }).eq("id", modal.row.id);
     setSubmitting(false);
     if (error) { toast.error(error.message); return; }
@@ -275,6 +417,7 @@ export default function InventoryClient({
       description: row.description || null,
       notes: row.notes || null,
       images: row.images,
+      category: row.category || null,
     });
     setLoadingId(null);
     if (error) { toast.error(error.message); return; }
@@ -285,10 +428,7 @@ export default function InventoryClient({
   async function unlinkItem(id: string) {
     setLoadingId(id);
     const supabase = createClient();
-    const { error } = await supabase.from("inventory").update({
-      listing_id: null,
-      listing_quantity: null,
-    }).eq("id", id);
+    const { error } = await supabase.from("inventory").update({ listing_id: null, listing_quantity: null }).eq("id", id);
     setLoadingId(null);
     if (error) { toast.error(error.message); return; }
     toast.success("Unlinked from listing.");
@@ -325,10 +465,13 @@ export default function InventoryClient({
     router.refresh();
   }
 
-  function exportExcel(rows: Row[]) {
-    const data = rows.map((r) => ({
+  // ── Export ────────────────────────────────────────────────────────────────
+
+  function exportExcel(exportRows: Row[]) {
+    const data = exportRows.map((r) => ({
       "Plant Name": r.plant_name,
       "Variety": r.variety,
+      "Category": r.category ?? "",
       "In Stock": r.quantity,
       "Listed Qty": r.listing_quantity ?? "",
       "Status": r.status,
@@ -342,7 +485,7 @@ export default function InventoryClient({
     XLSX.writeFile(wb, "plantmarket-inventory.xlsx");
   }
 
-  function exportPDF(rows: Row[]) {
+  function exportPDF(exportRows: Row[]) {
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
     printWindow.document.write(`<!DOCTYPE html><html><head><title>PlantMarket Inventory</title>
@@ -352,27 +495,35 @@ export default function InventoryClient({
       td{padding:7px 10px;border-bottom:1px solid #e5e7eb;font-size:11px}
       tr:nth-child(even) td{background:#f9fafb}</style></head><body>
       <h1>PlantMarket — Inventory Report</h1>
-      <p>Generated ${new Date().toLocaleDateString()} · ${rows.length} item${rows.length !== 1 ? "s" : ""}</p>
-      <table><thead><tr><th>Plant Name</th><th>Variety</th><th>In Stock</th><th>Listed Qty</th><th>Status</th><th>Price / Bid</th><th>Description</th></tr></thead>
-      <tbody>${rows.map((r) => `<tr><td>${r.plant_name}</td><td>${r.variety || "—"}</td><td>${r.quantity}</td><td>${r.listing_quantity ?? "—"}</td><td>${r.status}</td><td>${r.price || "—"}</td><td>${r.description || "—"}</td></tr>`).join("")}</tbody>
+      <p>Generated ${new Date().toLocaleDateString()} · ${exportRows.length} item${exportRows.length !== 1 ? "s" : ""}</p>
+      <table><thead><tr><th>Plant Name</th><th>Variety</th><th>Category</th><th>In Stock</th><th>Listed Qty</th><th>Status</th><th>Price / Bid</th></tr></thead>
+      <tbody>${exportRows.map((r) => `<tr><td>${r.plant_name}</td><td>${r.variety || "—"}</td><td>${r.category || "—"}</td><td>${r.quantity}</td><td>${r.listing_quantity ?? "—"}</td><td>${r.status}</td><td>${r.price || "—"}</td></tr>`).join("")}</tbody>
       </table><script>window.onload=()=>{window.print();window.onafterprint=()=>window.close()}<\/script></body></html>`);
     printWindow.document.close();
   }
 
+  // ── Filter + sort pipeline ────────────────────────────────────────────────
+
   const allRows = tab === "active" ? activeRows : archivedRows;
   const allStatuses = ["All", ...Array.from(new Set(allRows.map((r) => r.status)))];
+  const allCategories = ["All", ...Array.from(new Set(allRows.map((r) => r.category).filter((c): c is string => c !== null && c !== ""))).values()];
 
-  const afterStatusFilter = statusFilter !== "All"
-    ? allRows.filter((r) => r.status === statusFilter)
-    : allRows;
+  const afterStatusFilter = statusFilter !== "All" ? allRows.filter((r) => r.status === statusFilter) : allRows;
+  const afterCategoryFilter = categoryFilter !== "All" ? afterStatusFilter.filter((r) => r.category === categoryFilter) : afterStatusFilter;
   const filtered = search.trim()
-    ? afterStatusFilter.filter((r) => {
+    ? afterCategoryFilter.filter((r) => {
         const q = search.toLowerCase();
         return r.plant_name.toLowerCase().includes(q) || r.variety.toLowerCase().includes(q);
       })
-    : afterStatusFilter;
+    : afterCategoryFilter;
   const rows = sortCol
     ? [...filtered].sort((a, b) => {
+        if (sortCol === "quantity") return sortDir === "asc" ? a.quantity - b.quantity : b.quantity - a.quantity;
+        if (sortCol === "created_at") {
+          const ad = new Date(a.created_at).getTime();
+          const bd = new Date(b.created_at).getTime();
+          return sortDir === "asc" ? ad - bd : bd - ad;
+        }
         const av = (a[sortCol] ?? "").toLowerCase();
         const bv = (b[sortCol] ?? "").toLowerCase();
         return sortDir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
@@ -380,6 +531,8 @@ export default function InventoryClient({
     : filtered;
 
   const totalListedValue = rows.reduce((sum, r) => sum + (r.price_cents !== null ? r.price_cents * r.quantity : 0), 0);
+
+  // ── Render helpers ────────────────────────────────────────────────────────
 
   function rowActions(row: Row) {
     if (tab === "archived" && row.archived_at) {
@@ -457,16 +610,41 @@ export default function InventoryClient({
   }
 
   function listedQtyCell(row: Row, linkedListing?: ListingOption | null) {
+    const hiddenGap =
+      row.source === "inventory" &&
+      row.linked_listing_id &&
+      row.listing_quantity !== null &&
+      row.quantity > row.listing_quantity
+        ? row.quantity - row.listing_quantity
+        : null;
+
+    const listingHiddenGap =
+      row.source === "listing" &&
+      row.in_stock !== null &&
+      row.in_stock > row.quantity
+        ? row.in_stock - row.quantity
+        : null;
+
     if (row.source === "inventory") {
-      return editingCell?.rowId === row.id && editingCell?.field === "listing_quantity" ? (
-        <input type="number" min={0} value={editingValue} onChange={(e) => setEditingValue(e.target.value)}
-          onBlur={saveEdit} onKeyDown={(e) => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") cancelEdit(); }}
-          autoFocus className="w-16 px-1.5 py-0.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-green-600" />
-      ) : (
+      return (
         <div>
-          <button onClick={() => startEdit(row.id, "listing_quantity", row.listing_quantity, row.source)} className={cn("hover:text-green-700 hover:underline tabular-nums", row.listing_quantity === null && "text-muted-foreground")} title="Click to edit">
-            {row.listing_quantity ?? "—"}
-          </button>
+          <div className="flex items-center gap-1.5">
+            {editingCell?.rowId === row.id && editingCell?.field === "listing_quantity" ? (
+              <input type="number" min={0} value={editingValue} onChange={(e) => setEditingValue(e.target.value)}
+                onBlur={saveEdit} onKeyDown={(e) => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") cancelEdit(); }}
+                autoFocus className="w-16 px-1.5 py-0.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-green-600" />
+            ) : (
+              <button onClick={() => startEdit(row.id, "listing_quantity", row.listing_quantity, row.source)} className={cn("hover:text-green-700 hover:underline tabular-nums", row.listing_quantity === null && "text-muted-foreground")} title="Click to edit">
+                {row.listing_quantity ?? "—"}
+              </button>
+            )}
+            {hiddenGap !== null && (
+              <span className="inline-flex items-center gap-0.5 text-xs text-orange-600" title={`${hiddenGap} units hidden from buyers`}>
+                <AlertTriangle size={11} />
+                {hiddenGap} hidden
+              </span>
+            )}
+          </div>
           {linkedListing && (
             <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-[120px]">
               {linkedListing.plant_name}{linkedListing.variety ? ` · ${linkedListing.variety}` : ""}
@@ -476,18 +654,68 @@ export default function InventoryClient({
       );
     }
     if (row.source === "listing") {
-      return editingCell?.rowId === row.id && editingCell?.field === "listing_quantity" ? (
-        <input type="number" min={0} value={editingValue} onChange={(e) => setEditingValue(e.target.value)}
-          onBlur={saveEdit} onKeyDown={(e) => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") cancelEdit(); }}
-          autoFocus className="w-16 px-1.5 py-0.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-green-600" />
-      ) : (
-        <button onClick={() => startEdit(row.id, "listing_quantity", row.quantity, row.source)} className="hover:text-green-700 hover:underline tabular-nums" title="Click to edit">
-          {row.quantity}
-        </button>
+      return (
+        <div className="flex items-center gap-1.5">
+          {editingCell?.rowId === row.id && editingCell?.field === "listing_quantity" ? (
+            <input type="number" min={0} value={editingValue} onChange={(e) => setEditingValue(e.target.value)}
+              onBlur={saveEdit} onKeyDown={(e) => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") cancelEdit(); }}
+              autoFocus className="w-16 px-1.5 py-0.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-green-600" />
+          ) : (
+            <button onClick={() => startEdit(row.id, "listing_quantity", row.quantity, row.source)} className="hover:text-green-700 hover:underline tabular-nums" title="Click to edit">
+              {row.quantity}
+            </button>
+          )}
+          {listingHiddenGap !== null && (
+            <span className="inline-flex items-center gap-0.5 text-xs text-orange-600" title={`${listingHiddenGap} units in stock not shown to buyers`}>
+              <AlertTriangle size={11} />
+              {listingHiddenGap} hidden
+            </span>
+          )}
+        </div>
       );
     }
     return <span className="text-muted-foreground">—</span>;
   }
+
+  function categoryCell(row: Row) {
+    const canEdit = row.source === "inventory" || row.source === "listing";
+    if (canEdit && editingCategoryId === row.id) {
+      return (
+        <select
+          value={editingCategoryValue}
+          onChange={(e) => setEditingCategoryValue(e.target.value)}
+          onBlur={saveCategoryEdit}
+          autoFocus
+          className="text-xs border rounded px-1 py-0.5 bg-background max-w-[110px]"
+        >
+          <option value="">— None —</option>
+          {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
+      );
+    }
+    if (canEdit) {
+      return (
+        <button
+          onClick={() => startCategoryEdit(row.id, row.category, row.source)}
+          className={cn("text-xs hover:underline hover:text-green-700", row.category ? "text-foreground" : "text-muted-foreground")}
+          title="Click to edit category"
+        >
+          {row.category ?? "—"}
+        </button>
+      );
+    }
+    return <span className="text-xs text-muted-foreground">{row.category ?? "—"}</span>;
+  }
+
+  // ── Derived bulk state ────────────────────────────────────────────────────
+
+  const hasSelectedInventory = [...selectedIds].some((id) => rows.find((r) => r.id === id)?.source === "inventory");
+  const hasSelectedActiveListings = [...selectedIds].some((id) => {
+    const row = rows.find((r) => r.id === id);
+    return row?.source === "listing" && row.status === "In Shop";
+  });
+
+  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-10">
@@ -507,7 +735,7 @@ export default function InventoryClient({
       {/* Tabs */}
       <div className="flex gap-1 border-b mb-6">
         {(["active", "archived"] as const).map((t) => (
-          <button key={t} onClick={() => setTab(t)} className={cn(
+          <button key={t} onClick={() => { setTab(t); setSelectedIds(new Set()); setStatusFilter("All"); setCategoryFilter("All"); }} className={cn(
             "px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors capitalize",
             tab === t ? "border-green-700 text-green-700" : "border-transparent text-muted-foreground hover:text-foreground"
           )}>
@@ -519,8 +747,8 @@ export default function InventoryClient({
         ))}
       </div>
 
-      {/* Search + Status filter */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-4">
+      {/* Search + filters */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-4 flex-wrap">
         <Input
           placeholder="Search by plant name or variety…"
           value={search}
@@ -532,16 +760,47 @@ export default function InventoryClient({
             <SelectValue placeholder="All statuses" />
           </SelectTrigger>
           <SelectContent>
-            {allStatuses.map((s) => (
-              <SelectItem key={s} value={s}>{s}</SelectItem>
-            ))}
+            {allStatuses.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
           </SelectContent>
         </Select>
+        {allCategories.length > 1 && (
+          <Select value={categoryFilter} onValueChange={(v) => setCategoryFilter(v ?? "All")}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="All categories" />
+            </SelectTrigger>
+            <SelectContent>
+              {allCategories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
+      {/* Archive warning */}
       {tab === "archived" && archivedRows.length > 0 && (
         <div className="mb-4 rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-700">
           Archived items are permanently deleted after 30 days. Restore an item to keep it.
+        </div>
+      )}
+
+      {/* Bulk action bar */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-3 mb-4 px-4 py-2.5 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg text-sm">
+          <span className="font-medium text-green-800 dark:text-green-300">{selectedIds.size} selected</span>
+          <div className="flex gap-2">
+            {hasSelectedInventory && (
+              <Button size="sm" variant="outline" onClick={bulkArchive} disabled={bulkLoading} className="text-xs h-7">
+                Archive selected
+              </Button>
+            )}
+            {hasSelectedActiveListings && (
+              <Button size="sm" variant="outline" onClick={bulkPauseListing} disabled={bulkLoading} className="text-xs h-7">
+                Pause listings
+              </Button>
+            )}
+          </div>
+          <button onClick={() => setSelectedIds(new Set())} className="ml-auto text-xs text-muted-foreground hover:text-foreground">
+            Clear
+          </button>
         </div>
       )}
 
@@ -562,16 +821,32 @@ export default function InventoryClient({
           {/* Mobile card layout */}
           <div className="sm:hidden space-y-3">
             {rows.map((row) => {
-              const linkedListing = row.linked_listing_id
-                ? listingOptions.find((l) => l.id === row.linked_listing_id)
-                : null;
+              const linkedListing = row.linked_listing_id ? listingOptions.find((l) => l.id === row.linked_listing_id) : null;
               return (
                 <div key={row.id} className="rounded-lg border bg-card p-4 space-y-3">
                   <div className="flex gap-3 items-start">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(row.id)}
+                      onChange={() => toggleSelect(row.id)}
+                      className="mt-0.5 rounded border-border shrink-0"
+                    />
                     <Thumb images={row.images} />
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{row.plant_name}</p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="font-medium truncate">{row.plant_name}</p>
+                        {row.notes && (
+                          <span title={row.notes} className="shrink-0 cursor-default">
+                            <FileText size={13} className="text-muted-foreground" />
+                          </span>
+                        )}
+                      </div>
                       {row.variety && <p className="text-sm text-muted-foreground truncate">{row.variety}</p>}
+                      {row.category && (
+                        <span className="inline-block text-xs text-green-700 bg-green-100 dark:bg-green-900/40 dark:text-green-400 px-1.5 py-0.5 rounded-full mt-0.5">
+                          {row.category}
+                        </span>
+                      )}
                     </div>
                     <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium shrink-0", statusColor[row.status] ?? "bg-gray-100 text-gray-600")}>
                       {row.status}
@@ -602,38 +877,65 @@ export default function InventoryClient({
             <table className="w-full text-sm">
               <thead className="bg-muted/50 text-muted-foreground">
                 <tr>
+                  <th className="w-10 px-3 py-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.size === rows.length && rows.length > 0}
+                      onChange={toggleSelectAll}
+                      className="rounded border-border"
+                    />
+                  </th>
                   <th className="w-12 px-2 py-3"></th>
                   <th className="text-left px-4 py-3 font-medium">
                     <button onClick={() => toggleSort("plant_name")} className="flex items-center gap-1 hover:text-foreground transition-colors">
-                      Plant
-                      <span className="text-xs">{sortCol === "plant_name" ? (sortDir === "asc" ? "↑" : "↓") : "↕"}</span>
+                      Plant <span className="text-xs">{sortIndicator("plant_name")}</span>
                     </button>
                   </th>
                   <th className="text-left px-4 py-3 font-medium">
                     <button onClick={() => toggleSort("variety")} className="flex items-center gap-1 hover:text-foreground transition-colors">
-                      Variety
-                      <span className="text-xs">{sortCol === "variety" ? (sortDir === "asc" ? "↑" : "↓") : "↕"}</span>
+                      Variety <span className="text-xs">{sortIndicator("variety")}</span>
                     </button>
                   </th>
-                  <th className="text-left px-4 py-3 font-medium">In Stock</th>
+                  <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">Category</th>
+                  <th className="text-left px-4 py-3 font-medium">
+                    <button onClick={() => toggleSort("quantity")} className="flex items-center gap-1 hover:text-foreground transition-colors">
+                      In Stock <span className="text-xs">{sortIndicator("quantity")}</span>
+                    </button>
+                  </th>
                   <th className="text-left px-4 py-3 font-medium">Listed Qty</th>
                   <th className="text-left px-4 py-3 font-medium">Status</th>
                   <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Price / Bid</th>
+                  <th className="text-left px-4 py-3 font-medium hidden xl:table-cell">
+                    <button onClick={() => toggleSort("created_at")} className="flex items-center gap-1 hover:text-foreground transition-colors">
+                      Added <span className="text-xs">{sortIndicator("created_at")}</span>
+                    </button>
+                  </th>
                   <th className="text-left px-4 py-3 font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((row, i) => {
-                  const linkedListing = row.linked_listing_id
-                    ? listingOptions.find((l) => l.id === row.linked_listing_id)
-                    : null;
+                  const linkedListing = row.linked_listing_id ? listingOptions.find((l) => l.id === row.linked_listing_id) : null;
                   return (
-                    <tr key={row.id} className={i % 2 === 0 ? "bg-card" : "bg-muted/20"}>
+                    <tr key={row.id} className={cn(i % 2 === 0 ? "bg-card" : "bg-muted/20", selectedIds.has(row.id) && "ring-1 ring-inset ring-green-400/50 bg-green-50/30 dark:bg-green-950/10")}>
+                      <td className="px-3 py-3">
+                        <input type="checkbox" checked={selectedIds.has(row.id)} onChange={() => toggleSelect(row.id)} className="rounded border-border" />
+                      </td>
                       <td className="px-2 py-3">
                         <Thumb images={row.images} />
                       </td>
-                      <td className="px-4 py-3 font-medium">{row.plant_name}</td>
+                      <td className="px-4 py-3 font-medium">
+                        <div className="flex items-center gap-1.5">
+                          {row.plant_name}
+                          {row.notes && (
+                            <span title={row.notes} className="shrink-0 cursor-default">
+                              <FileText size={13} className="text-muted-foreground" />
+                            </span>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-4 py-3 text-muted-foreground">{row.variety || "—"}</td>
+                      <td className="px-4 py-3 hidden lg:table-cell">{categoryCell(row)}</td>
                       <td className="px-4 py-3">{inStockCell(row)}</td>
                       <td className="px-4 py-3">{listedQtyCell(row, linkedListing)}</td>
                       <td className="px-4 py-3">
@@ -642,6 +944,9 @@ export default function InventoryClient({
                         </span>
                       </td>
                       <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{row.price || "—"}</td>
+                      <td className="px-4 py-3 text-muted-foreground text-xs hidden xl:table-cell">
+                        {new Date(row.created_at).toLocaleDateString()}
+                      </td>
                       <td className="px-4 py-3">{rowActions(row)}</td>
                     </tr>
                   );
@@ -654,10 +959,7 @@ export default function InventoryClient({
           <div className="mt-3 flex flex-wrap gap-4 px-1 text-sm text-muted-foreground">
             <span>{rows.length} item{rows.length !== 1 ? "s" : ""}</span>
             {totalListedValue > 0 && (
-              <span>
-                Total listed value:{" "}
-                <span className="font-semibold text-foreground">{centsToDisplay(totalListedValue)}</span>
-              </span>
+              <span>Total listed value: <span className="font-semibold text-foreground">{centsToDisplay(totalListedValue)}</span></span>
             )}
           </div>
         </>
@@ -666,49 +968,29 @@ export default function InventoryClient({
       {/* Link to Listing modal */}
       <Dialog open={modal?.type === "link"} onOpenChange={(o) => !o && setModal(null)}>
         <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>{modal?.row.linked_listing_id ? "Edit Listing Link" : "Link to Listing"}</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>{modal?.row.linked_listing_id ? "Edit Listing Link" : "Link to Listing"}</DialogTitle></DialogHeader>
           {modal && (
             <div className="space-y-4 mt-1">
-              <p className="text-sm text-muted-foreground">
-                Connect <span className="font-medium text-foreground">{modal.row.plant_name}</span> to an existing listing and set how many to show buyers.
-              </p>
+              <p className="text-sm text-muted-foreground">Connect <span className="font-medium text-foreground">{modal.row.plant_name}</span> to an existing listing.</p>
               <div className="space-y-1">
                 <Label>Listing *</Label>
                 <Select value={linkListingId} onValueChange={(v) => setLinkListingId(v ?? "")}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a listing…" />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Select a listing…" /></SelectTrigger>
                   <SelectContent>
                     {listingOptions.map((l) => (
-                      <SelectItem key={l.id} value={l.id}>
-                        {l.plant_name}{l.variety ? ` · ${l.variety}` : ""}
-                      </SelectItem>
+                      <SelectItem key={l.id} value={l.id}>{l.plant_name}{l.variety ? ` · ${l.variety}` : ""}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1">
-                <Label htmlFor="link-qty">
-                  Listed quantity <span className="font-normal text-muted-foreground">(optional)</span>
-                </Label>
-                <Input
-                  id="link-qty"
-                  type="number"
-                  min={0}
-                  step={1}
-                  value={linkQty}
-                  onChange={(e) => setLinkQty(e.target.value)}
-                  placeholder={`e.g. ${modal.row.quantity}`}
-                />
-                <p className="text-xs text-muted-foreground">How many to show available on the listing. Your full stock ({modal.row.quantity}) stays private.</p>
+                <Label htmlFor="link-qty">Listed quantity <span className="font-normal text-muted-foreground">(optional)</span></Label>
+                <Input id="link-qty" type="number" min={0} step={1} value={linkQty} onChange={(e) => setLinkQty(e.target.value)} placeholder={`e.g. ${modal.row.quantity}`} />
+                <p className="text-xs text-muted-foreground">Buyers see this number. Full stock ({modal.row.quantity}) stays private.</p>
               </div>
               <div className="flex gap-2 pt-1">
                 <Button variant="outline" onClick={() => setModal(null)} className="flex-1">Cancel</Button>
-                <Button onClick={submitLink} disabled={submitting || !linkListingId} className="flex-1 bg-green-700 hover:bg-green-800">
-                  {submitting ? "Saving…" : "Save Link"}
-                </Button>
+                <Button onClick={submitLink} disabled={submitting || !linkListingId} className="flex-1 bg-green-700 hover:bg-green-800">{submitting ? "Saving…" : "Save Link"}</Button>
               </div>
             </div>
           )}
@@ -718,45 +1000,22 @@ export default function InventoryClient({
       {/* List in Shop modal */}
       <Dialog open={modal?.type === "listing"} onOpenChange={(o) => !o && setModal(null)}>
         <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>List in Shop</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>List in Shop</DialogTitle></DialogHeader>
           {modal && (
             <div className="space-y-4 mt-1">
-              <p className="text-sm text-muted-foreground">
-                Listing <span className="font-medium text-foreground">{modal.row.plant_name}</span>{modal.row.variety ? ` — ${modal.row.variety}` : ""} in your shop.
-              </p>
+              <p className="text-sm text-muted-foreground">Listing <span className="font-medium text-foreground">{modal.row.plant_name}</span>{modal.row.variety ? ` — ${modal.row.variety}` : ""} in your shop.</p>
               <div className="space-y-1">
                 <Label htmlFor="modal-price">Price per item ($) *</Label>
-                <Input
-                  id="modal-price"
-                  type="number"
-                  min={0.01}
-                  step={0.01}
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  placeholder="0.00"
-                  autoFocus
-                />
+                <Input id="modal-price" type="number" min={0.01} step={0.01} value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" autoFocus />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="modal-list-qty">Quantity to list *</Label>
-                <Input
-                  id="modal-list-qty"
-                  type="number"
-                  min={1}
-                  step={1}
-                  value={listQty}
-                  onChange={(e) => setListQty(e.target.value)}
-                  placeholder={String(modal.row.quantity)}
-                />
-                <p className="text-xs text-muted-foreground">Buyers see this number. Your full stock ({modal.row.quantity}) stays in inventory.</p>
+                <Input id="modal-list-qty" type="number" min={1} step={1} value={listQty} onChange={(e) => setListQty(e.target.value)} placeholder={String(modal.row.quantity)} />
+                <p className="text-xs text-muted-foreground">Buyers see this number. Full stock ({modal.row.quantity}) stays in inventory.</p>
               </div>
               <div className="flex gap-2 pt-1">
                 <Button variant="outline" onClick={() => setModal(null)} className="flex-1">Cancel</Button>
-                <Button onClick={submitListing} disabled={submitting || !price || !listQty} className="flex-1 bg-green-700 hover:bg-green-800">
-                  {submitting ? "Publishing…" : "Go Live"}
-                </Button>
+                <Button onClick={submitListing} disabled={submitting || !price || !listQty} className="flex-1 bg-green-700 hover:bg-green-800">{submitting ? "Publishing…" : "Go Live"}</Button>
               </div>
             </div>
           )}
@@ -766,54 +1025,25 @@ export default function InventoryClient({
       {/* Create Auction modal */}
       <Dialog open={modal?.type === "auction"} onOpenChange={(o) => !o && setModal(null)}>
         <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Create Auction</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Create Auction</DialogTitle></DialogHeader>
           {modal && (
             <div className="space-y-4 mt-1">
-              <p className="text-sm text-muted-foreground">
-                Starting an auction for <span className="font-medium text-foreground">{modal.row.plant_name}</span>{modal.row.variety ? ` — ${modal.row.variety}` : ""}.
-              </p>
+              <p className="text-sm text-muted-foreground">Starting an auction for <span className="font-medium text-foreground">{modal.row.plant_name}</span>{modal.row.variety ? ` — ${modal.row.variety}` : ""}.</p>
               <div className="space-y-1">
                 <Label htmlFor="modal-bid">Starting Bid ($) *</Label>
-                <Input
-                  id="modal-bid"
-                  type="number"
-                  min={0.01}
-                  step={0.01}
-                  value={startingBid}
-                  onChange={(e) => setStartingBid(e.target.value)}
-                  placeholder="0.00"
-                  autoFocus
-                />
+                <Input id="modal-bid" type="number" min={0.01} step={0.01} value={startingBid} onChange={(e) => setStartingBid(e.target.value)} placeholder="0.00" autoFocus />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="modal-buy-now">Buy Now Price ($) <span className="font-normal text-muted-foreground">(optional)</span></Label>
-                <Input
-                  id="modal-buy-now"
-                  type="number"
-                  min={0.01}
-                  step={0.01}
-                  value={buyNowPrice}
-                  onChange={(e) => setBuyNowPrice(e.target.value)}
-                  placeholder="Leave blank to disable"
-                />
+                <Input id="modal-buy-now" type="number" min={0.01} step={0.01} value={buyNowPrice} onChange={(e) => setBuyNowPrice(e.target.value)} placeholder="Leave blank to disable" />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="modal-ends">End Date & Time *</Label>
-                <Input
-                  id="modal-ends"
-                  type="datetime-local"
-                  value={endsAt}
-                  onChange={(e) => setEndsAt(e.target.value)}
-                  min={new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16)}
-                />
+                <Input id="modal-ends" type="datetime-local" value={endsAt} onChange={(e) => setEndsAt(e.target.value)} min={new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16)} />
               </div>
               <div className="flex gap-2 pt-1">
                 <Button variant="outline" onClick={() => setModal(null)} className="flex-1">Cancel</Button>
-                <Button onClick={submitAuction} disabled={submitting || !startingBid || !endsAt} className="flex-1 bg-green-700 hover:bg-green-800">
-                  {submitting ? "Starting…" : "Start Auction"}
-                </Button>
+                <Button onClick={submitAuction} disabled={submitting || !startingBid || !endsAt} className="flex-1 bg-green-700 hover:bg-green-800">{submitting ? "Starting…" : "Start Auction"}</Button>
               </div>
             </div>
           )}
@@ -822,65 +1052,77 @@ export default function InventoryClient({
 
       {/* Edit inventory item modal */}
       <Dialog open={modal?.type === "edit"} onOpenChange={(o) => !o && setModal(null)}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Edit Item</DialogTitle>
-          </DialogHeader>
+        <DialogContent className="max-w-sm max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Edit Item</DialogTitle></DialogHeader>
           {modal && (
             <div className="space-y-4 mt-1">
               <div className="space-y-1">
                 <Label htmlFor="edit-name">Plant name *</Label>
-                <Input
-                  id="edit-name"
-                  value={editPlantName}
-                  onChange={(e) => setEditPlantName(e.target.value)}
-                  autoFocus
-                />
+                <Input id="edit-name" value={editPlantName} onChange={(e) => setEditPlantName(e.target.value)} autoFocus />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="edit-variety">Variety <span className="font-normal text-muted-foreground">(optional)</span></Label>
-                <Input
-                  id="edit-variety"
-                  value={editVariety}
-                  onChange={(e) => setEditVariety(e.target.value)}
-                  placeholder="e.g. Thai Constellation"
-                />
+                <Input id="edit-variety" value={editVariety} onChange={(e) => setEditVariety(e.target.value)} placeholder="e.g. Thai Constellation" />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="edit-qty">Quantity</Label>
-                <Input
-                  id="edit-qty"
-                  type="number"
-                  min={0}
-                  value={editQuantity}
-                  onChange={(e) => setEditQuantity(e.target.value)}
-                />
+                <Input id="edit-qty" type="number" min={0} value={editQuantity} onChange={(e) => setEditQuantity(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label>Category <span className="font-normal text-muted-foreground">(optional)</span></Label>
+                <Select value={editCategory || "_none"} onValueChange={(v) => setEditCategory(v === "_none" ? "" : (v ?? ""))}>
+                  <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_none">— None —</SelectItem>
+                    {CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1">
                 <Label htmlFor="edit-desc">Description <span className="font-normal text-muted-foreground">(optional)</span></Label>
-                <Textarea
-                  id="edit-desc"
-                  value={editDescription}
-                  onChange={(e) => setEditDescription(e.target.value)}
-                  rows={3}
-                  placeholder="Describe the plant…"
-                />
+                <Textarea id="edit-desc" value={editDescription} onChange={(e) => setEditDescription(e.target.value)} rows={3} placeholder="Describe the plant…" />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="edit-notes">Private notes <span className="font-normal text-muted-foreground">(optional)</span></Label>
-                <Textarea
-                  id="edit-notes"
-                  value={editNotes}
-                  onChange={(e) => setEditNotes(e.target.value)}
-                  rows={2}
-                  placeholder="Internal notes, not visible to buyers…"
-                />
+                <Textarea id="edit-notes" value={editNotes} onChange={(e) => setEditNotes(e.target.value)} rows={2} placeholder="Internal notes, not visible to buyers…" />
               </div>
+
+              {/* Photos */}
+              <div className="space-y-2">
+                <Label>Photos</Label>
+                {editImages.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {editImages.map((url, idx) => (
+                      <div key={url + idx} className="relative group">
+                        <img src={url} alt="" className="w-16 h-16 rounded object-cover border" />
+                        <button
+                          type="button"
+                          onClick={() => removeEditImage(url)}
+                          className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X size={10} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageAdd} />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => imageInputRef.current?.click()}
+                  disabled={imageUploading}
+                  className="flex items-center gap-1.5 text-xs"
+                >
+                  <ImagePlus size={14} />
+                  {imageUploading ? "Uploading…" : "Add Photo"}
+                </Button>
+              </div>
+
               <div className="flex gap-2 pt-1">
                 <Button variant="outline" onClick={() => setModal(null)} className="flex-1">Cancel</Button>
-                <Button onClick={submitEdit} disabled={submitting || !editPlantName.trim()} className="flex-1 bg-green-700 hover:bg-green-800">
-                  {submitting ? "Saving…" : "Save Changes"}
-                </Button>
+                <Button onClick={submitEdit} disabled={submitting || !editPlantName.trim()} className="flex-1 bg-green-700 hover:bg-green-800">{submitting ? "Saving…" : "Save Changes"}</Button>
               </div>
             </div>
           )}

@@ -86,6 +86,7 @@ export default function CheckoutForm({ listingId, auctionId, priceCents, quantit
   const router = useRouter();
   const [step, setStep] = useState<"address" | "payment">("address");
   const [clientSecret, setClientSecret] = useState("");
+  const [orderId, setOrderId] = useState("");
   const [loading, setLoading] = useState(false);
   const [address, setAddress] = useState<ShippingAddress>({
     name: "",
@@ -120,13 +121,13 @@ export default function CheckoutForm({ listingId, auctionId, priceCents, quantit
     }
 
     setClientSecret(data.clientSecret);
+    setOrderId(data.orderId ?? "");
     setStep("payment");
     setLoading(false);
   }
 
   function onPaymentSuccess() {
-    toast.success("Payment successful! Check your dashboard for order details.");
-    router.push("/dashboard/orders");
+    router.push(orderId ? `/orders/confirmed?id=${orderId}` : "/orders");
   }
 
   if (step === "payment" && clientSecret) {

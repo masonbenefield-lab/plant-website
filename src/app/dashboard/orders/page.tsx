@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { centsToDisplay } from "@/lib/stripe";
 import OrderStatusSelect from "./order-status-select";
+import TrackingInput from "./tracking-input";
 import type { OrderStatus } from "@/lib/supabase/types";
 
 const statusColors: Record<string, string> = {
@@ -105,6 +106,7 @@ export default async function OrdersDashboardPage() {
                     <OrderStatusSelect orderId={order.id} currentStatus={order.status as OrderStatus} />
                   </div>
                 </div>
+                <TrackingInput orderId={order.id} initialValue={order.tracking_number ?? null} />
               </CardContent>
             </Card>
           );
