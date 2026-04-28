@@ -1,7 +1,7 @@
 import { Resend } from "resend";
 import { centsToDisplay } from "./stripe";
 
-const FROM = "Plantet <noreply@plantet.co>";
+const FROM = "Plantet <noreply@plantet.shop>";
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY!);
