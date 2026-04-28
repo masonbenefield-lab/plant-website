@@ -41,6 +41,9 @@ export default async function RootLayout({
     <html lang="en" className={`${inter.variable} h-full antialiased`} suppressHydrationWarning>
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <ThemeProvider>
+          <div className="w-full bg-yellow-400 text-yellow-900 text-center text-sm font-medium py-2 px-4">
+            🚧 Plantet is currently in development — payments are not active yet. Stay tuned!
+          </div>
           <Navbar
             user={user}
             avatarUrl={profile?.avatar_url}
