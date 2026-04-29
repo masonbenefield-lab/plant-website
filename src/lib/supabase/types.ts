@@ -16,6 +16,7 @@ export interface Database {
           avatar_url: string | null;
           location: string | null;
           banner_url: string | null;
+          seller_terms_accepted_at: string | null;
           stripe_account_id: string | null;
           stripe_onboarded: boolean;
           is_admin: boolean;
@@ -42,6 +43,7 @@ export interface Database {
           avatar_url?: string | null;
           location?: string | null;
           banner_url?: string | null;
+          seller_terms_accepted_at?: string | null;
           stripe_account_id?: string | null;
           stripe_onboarded?: boolean;
           is_admin?: boolean;
