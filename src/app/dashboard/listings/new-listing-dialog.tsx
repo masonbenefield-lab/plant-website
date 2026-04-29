@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { dollarsToCents } from "@/lib/stripe";
+import PriceSuggestion from "@/components/price-suggestion";
 
 export default function NewListingDialog({ sellerId }: { sellerId: string }) {
   const router = useRouter();
@@ -23,6 +24,8 @@ export default function NewListingDialog({ sellerId }: { sellerId: string }) {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [plantName, setPlantName] = useState("");
+  const [variety, setVariety] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
   async function uploadImages(files: FileList) {
@@ -67,6 +70,8 @@ export default function NewListingDialog({ sellerId }: { sellerId: string }) {
       toast.success("Listing created!");
       setOpen(false);
       setImageUrls([]);
+      setPlantName("");
+      setVariety("");
       form.reset();
       router.refresh();
     }
@@ -85,11 +90,22 @@ export default function NewListingDialog({ sellerId }: { sellerId: string }) {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
               <Label htmlFor="plant_name">Plant Name *</Label>
-              <Input id="plant_name" name="plant_name" required />
+              <Input
+                id="plant_name"
+                name="plant_name"
+                required
+                value={plantName}
+                onChange={(e) => setPlantName(e.target.value)}
+              />
             </div>
             <div className="space-y-1">
               <Label htmlFor="variety">Variety</Label>
-              <Input id="variety" name="variety" />
+              <Input
+                id="variety"
+                name="variety"
+                value={variety}
+                onChange={(e) => setVariety(e.target.value)}
+              />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -100,6 +116,7 @@ export default function NewListingDialog({ sellerId }: { sellerId: string }) {
             <div className="space-y-1">
               <Label htmlFor="price">Price ($) *</Label>
               <Input id="price" name="price" type="number" min={0.01} step={0.01} required />
+              <PriceSuggestion plantName={plantName} variety={variety} label="price" />
             </div>
           </div>
           <div className="space-y-1">
