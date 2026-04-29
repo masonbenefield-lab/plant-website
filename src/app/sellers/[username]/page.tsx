@@ -11,6 +11,7 @@ import { Star } from "lucide-react";
 import { centsToDisplay } from "@/lib/stripe";
 import FollowButton from "@/components/follow-button";
 import ReportButton from "@/components/report-button";
+import RateSellerForm from "@/app/orders/rate-seller-form";
 
 export async function generateMetadata({
   params,
@@ -78,6 +79,19 @@ export default async function SellerStorefront({
     ? !!(await supabase.from("reports").select("id").eq("reporter_id", user.id).eq("reported_user_id", profile.id).maybeSingle()).data
     : false;
 
+  // Find an unrated delivered order the viewer placed with this seller
+  let orderToRate: string | null = null;
+  if (user && user.id !== profile.id) {
+    const [{ data: deliveredOrders }, { data: viewerRatings }] = await Promise.all([
+      supabase.from("orders").select("id").eq("buyer_id", user.id).eq("seller_id", profile.id).eq("status", "delivered"),
+      supabase.from("ratings").select("order_id").eq("reviewer_id", user.id).eq("seller_id", profile.id),
+    ]);
+    const ratedIds = new Set(viewerRatings?.map((r) => r.order_id) ?? []);
+    orderToRate = deliveredOrders?.find((o) => !ratedIds.has(o.id))?.id ?? null;
+  }
+
+  const memberSince = new Date(profile.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+
   const avgScore =
     ratings && ratings.length > 0
       ? ratings.reduce((sum, r) => sum + r.score, 0) / ratings.length
@@ -121,6 +135,7 @@ export default async function SellerStorefront({
           {profile.bio && (
             <p className="text-muted-foreground mt-2 max-w-lg">{profile.bio}</p>
           )}
+          <p className="text-xs text-muted-foreground mt-1.5">Member since {memberSince}</p>
           {avgScore !== null && (
             <div className="flex items-center gap-1 mt-2">
               {[1, 2, 3, 4, 5].map((n) => (
@@ -219,41 +234,56 @@ export default async function SellerStorefront({
         </TabsContent>
 
         <TabsContent value="reviews" className="mt-6">
-          {!ratings?.length ? (
-            <p className="text-muted-foreground">No reviews yet.</p>
-          ) : (
-            <div className="space-y-4">
-              {ratings.map((rating) => {
-                const reviewer = reviewerMap[rating.reviewer_id] ?? null;
-                return (
-                  <Card key={rating.id}>
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-3 mb-2">
-                        <Avatar className="h-7 w-7">
-                          <AvatarImage src={reviewer?.avatar_url ?? undefined} />
-                          <AvatarFallback className="text-xs">
-                            {reviewer?.username?.slice(0, 1).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="text-sm font-medium">{reviewer?.username}</span>
-                        <div className="flex items-center gap-0.5 ml-auto">
-                          {[1, 2, 3, 4, 5].map((n) => (
-                            <Star
-                              key={n}
-                              className={`h-3.5 w-3.5 ${n <= rating.score ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30"}`}
-                            />
-                          ))}
+          <div className="space-y-6">
+            {/* Submit a review */}
+            {orderToRate && (
+              <Card className="border-green-200 bg-green-50 dark:bg-green-900/20 dark:border-green-800">
+                <CardContent className="p-5">
+                  <RateSellerForm orderId={orderToRate} sellerUsername={profile.username} />
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Existing reviews */}
+            {!ratings?.length ? (
+              <p className="text-muted-foreground">No reviews yet.</p>
+            ) : (
+              <div className="space-y-4">
+                {ratings.map((rating) => {
+                  const reviewer = reviewerMap[rating.reviewer_id] ?? null;
+                  return (
+                    <Card key={rating.id}>
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3 mb-2">
+                          <Avatar className="h-7 w-7">
+                            <AvatarImage src={reviewer?.avatar_url ?? undefined} />
+                            <AvatarFallback className="text-xs">
+                              {reviewer?.username?.slice(0, 1).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm font-medium">{reviewer?.username}</span>
+                          <span className="text-xs text-muted-foreground ml-1">
+                            {new Date(rating.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                          </span>
+                          <div className="flex items-center gap-0.5 ml-auto">
+                            {[1, 2, 3, 4, 5].map((n) => (
+                              <Star
+                                key={n}
+                                className={`h-3.5 w-3.5 ${n <= rating.score ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30"}`}
+                              />
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                      {rating.comment && (
-                        <p className="text-sm text-muted-foreground">{rating.comment}</p>
-                      )}
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
+                        {rating.comment && (
+                          <p className="text-sm text-muted-foreground">{rating.comment}</p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </TabsContent>
       </Tabs>
     </div>
