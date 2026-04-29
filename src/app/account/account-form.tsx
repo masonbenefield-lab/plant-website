@@ -26,9 +26,31 @@ export default function AccountForm({
   const [bio, setBio] = useState(profile?.bio ?? "");
   const [location, setLocation] = useState(profile?.location ?? "");
   const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url ?? "");
+  const [bannerUrl, setBannerUrl] = useState(profile?.banner_url ?? "");
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const bannerRef = useRef<HTMLInputElement>(null);
+
+  async function uploadBanner(file: File) {
+    setUploadingBanner(true);
+    const supabase = createClient();
+    const ext = file.name.split(".").pop();
+    const path = `${userId}/banner.${ext}`;
+    const { error } = await supabase.storage
+      .from("avatars")
+      .upload(path, file, { upsert: true });
+    if (error) {
+      toast.error(error.message || "Banner upload failed");
+      setUploadingBanner(false);
+      return;
+    }
+    const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+    setBannerUrl(data.publicUrl);
+    setUploadingBanner(false);
+    toast.success("Banner uploaded");
+  }
 
   async function uploadAvatar(file: File) {
     setUploading(true);
@@ -69,7 +91,7 @@ export default function AccountForm({
     const res = await fetch("/api/profile/update", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, bio, location, avatar_url: avatarUrl }),
+      body: JSON.stringify({ username, bio, location, avatar_url: avatarUrl, banner_url: bannerUrl }),
     });
     const data = await res.json();
     setSaving(false);
@@ -95,6 +117,46 @@ export default function AccountForm({
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSave} className="space-y-5">
+            {/* Store Banner */}
+            <div className="space-y-2">
+              <Label>Store Banner</Label>
+              <div
+                className="relative w-full h-36 rounded-lg border-2 border-dashed border-border bg-muted overflow-hidden cursor-pointer group"
+                onClick={() => bannerRef.current?.click()}
+              >
+                {bannerUrl ? (
+                  <Image src={bannerUrl} alt="Store banner" fill className="object-cover" />
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full gap-1 text-muted-foreground">
+                    <span className="text-2xl">🖼️</span>
+                    <span className="text-sm">Click to upload a banner</span>
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <span className="text-white text-sm font-medium">
+                    {uploadingBanner ? "Uploading…" : bannerUrl ? "Change banner" : "Upload banner"}
+                  </span>
+                </div>
+              </div>
+              <input
+                ref={bannerRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadBanner(file); }}
+              />
+              {bannerUrl && (
+                <button
+                  type="button"
+                  onClick={() => setBannerUrl("")}
+                  className="text-xs text-destructive hover:underline"
+                >
+                  Remove banner
+                </button>
+              )}
+              <p className="text-xs text-muted-foreground">Recommended: 1200×300px. Landscape images work best.</p>
+            </div>
+
             <div className="flex items-center gap-4">
               {avatarUrl ? (
                 <Image

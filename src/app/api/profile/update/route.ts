@@ -9,11 +9,12 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { username, bio, avatar_url, location } = await request.json() as {
+  const { username, bio, avatar_url, location, banner_url } = await request.json() as {
     username: string;
     bio?: string;
     avatar_url?: string;
     location?: string;
+    banner_url?: string;
   };
 
   if (!username || !USERNAME_RE.test(username)) {
@@ -53,7 +54,7 @@ export async function POST(request: Request) {
 
   const { error } = await supabase
     .from("profiles")
-    .update({ username, bio: bio ?? null, avatar_url: avatar_url ?? null, location: location ?? null })
+    .update({ username, bio: bio ?? null, avatar_url: avatar_url ?? null, location: location ?? null, banner_url: banner_url ?? null })
     .eq("id", user.id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

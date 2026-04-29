@@ -99,6 +99,19 @@ export default async function SellerStorefront({
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-10">
+      {/* Banner */}
+      {profile.banner_url && (
+        <div className="relative w-full h-48 rounded-2xl overflow-hidden mb-6 -mx-0">
+          <Image
+            src={profile.banner_url}
+            alt={`${profile.username}'s store banner`}
+            fill
+            className="object-cover"
+            priority
+          />
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-start gap-6 mb-10">
         <Avatar className="h-20 w-20">

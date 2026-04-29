@@ -15,6 +15,7 @@ export interface Database {
           bio: string | null;
           avatar_url: string | null;
           location: string | null;
+          banner_url: string | null;
           stripe_account_id: string | null;
           stripe_onboarded: boolean;
           is_admin: boolean;
@@ -27,6 +28,7 @@ export interface Database {
           bio?: string | null;
           avatar_url?: string | null;
           location?: string | null;
+          banner_url?: string | null;
           stripe_account_id?: string | null;
           stripe_onboarded?: boolean;
           is_admin?: boolean;
@@ -39,6 +41,7 @@ export interface Database {
           bio?: string | null;
           avatar_url?: string | null;
           location?: string | null;
+          banner_url?: string | null;
           stripe_account_id?: string | null;
           stripe_onboarded?: boolean;
           is_admin?: boolean;
