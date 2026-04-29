@@ -24,8 +24,9 @@ export default function ShopFilterBar() {
   const min      = params.get("min") ?? "";
   const max      = params.get("max") ?? "";
   const category = params.get("category") ?? "";
+  const inStock  = params.get("in_stock") === "1";
 
-  const hasFilters = q || sort !== "newest" || min || max || category;
+  const hasFilters = q || sort !== "newest" || min || max || category || inStock;
 
   const update = useCallback(
     (patch: Record<string, string>) => {
@@ -117,6 +118,19 @@ export default function ShopFilterBar() {
             onChange={(e) => debounce(() => update({ max: e.target.value }))}
           />
         </fieldset>
+
+        {/* In Stock toggle */}
+        <button
+          onClick={() => update({ in_stock: inStock ? "" : "1" })}
+          className={cn(
+            "h-10 px-4 rounded-md border text-sm font-medium transition-colors whitespace-nowrap",
+            inStock
+              ? "bg-green-700 text-white border-green-700"
+              : "border-input bg-background text-muted-foreground hover:text-foreground hover:border-foreground"
+          )}
+        >
+          In Stock Only
+        </button>
       </div>
 
       {/* Active filter chips */}
@@ -136,6 +150,9 @@ export default function ShopFilterBar() {
           )}
           {category && (
             <Chip label={category} onRemove={() => update({ category: "" })} />
+          )}
+          {inStock && (
+            <Chip label="In Stock Only" onRemove={() => update({ in_stock: "" })} />
           )}
           <button
             onClick={() => router.replace(pathname)}

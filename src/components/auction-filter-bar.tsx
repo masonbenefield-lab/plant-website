@@ -4,6 +4,7 @@ import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useCallback, useTransition } from "react";
 import { X } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import { PLANT_CATEGORIES } from "@/lib/categories";
 
 const SORT_OPTIONS = [
@@ -13,18 +14,29 @@ const SORT_OPTIONS = [
   { value: "newest",      label: "Newest" },
 ];
 
+const ENDS_WITHIN_OPTIONS = [
+  { value: "",    label: "Any time" },
+  { value: "1h",  label: "Ending in 1 hour" },
+  { value: "24h", label: "Ending in 24 hours" },
+  { value: "3d",  label: "Ending in 3 days" },
+  { value: "7d",  label: "Ending in 7 days" },
+];
+
 export default function AuctionFilterBar() {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
   const [, startTransition] = useTransition();
 
-  const q        = params.get("q") ?? "";
-  const sort     = params.get("sort") ?? "ending_soon";
-  const maxBid   = params.get("max_bid") ?? "";
-  const category = params.get("category") ?? "";
+  const q          = params.get("q") ?? "";
+  const sort       = params.get("sort") ?? "ending_soon";
+  const maxBid     = params.get("max_bid") ?? "";
+  const category   = params.get("category") ?? "";
+  const hasBuyNow  = params.get("has_buy_now") === "1";
+  const noBids     = params.get("no_bids") === "1";
+  const endsWithin = params.get("ends_within") ?? "";
 
-  const hasFilters = q || sort !== "ending_soon" || maxBid || category;
+  const hasFilters = q || sort !== "ending_soon" || maxBid || category || hasBuyNow || noBids || endsWithin;
 
   const update = useCallback(
     (patch: Record<string, string>) => {
@@ -104,6 +116,47 @@ export default function AuctionFilterBar() {
             onChange={(e) => debounce(() => update({ max_bid: e.target.value }))}
           />
         </div>
+
+        {/* Ending within */}
+        <div>
+          <label htmlFor="auction-ends-within" className="sr-only">Ending within</label>
+          <select
+            id="auction-ends-within"
+            value={endsWithin}
+            onChange={(e) => update({ ends_within: e.target.value })}
+            className="h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            {ENDS_WITHIN_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Has Buy Now toggle */}
+        <button
+          onClick={() => update({ has_buy_now: hasBuyNow ? "" : "1" })}
+          className={cn(
+            "h-10 px-4 rounded-md border text-sm font-medium transition-colors whitespace-nowrap",
+            hasBuyNow
+              ? "bg-orange-600 text-white border-orange-600"
+              : "border-input bg-background text-muted-foreground hover:text-foreground hover:border-foreground"
+          )}
+        >
+          Has Buy Now
+        </button>
+
+        {/* No Bids toggle */}
+        <button
+          onClick={() => update({ no_bids: noBids ? "" : "1" })}
+          className={cn(
+            "h-10 px-4 rounded-md border text-sm font-medium transition-colors whitespace-nowrap",
+            noBids
+              ? "bg-blue-600 text-white border-blue-600"
+              : "border-input bg-background text-muted-foreground hover:text-foreground hover:border-foreground"
+          )}
+        >
+          No Bids Yet
+        </button>
       </div>
 
       {/* Active filter chips */}
@@ -120,6 +173,15 @@ export default function AuctionFilterBar() {
           )}
           {category && (
             <Chip label={category} onRemove={() => update({ category: "" })} />
+          )}
+          {endsWithin && (
+            <Chip label={ENDS_WITHIN_OPTIONS.find((o) => o.value === endsWithin)?.label ?? endsWithin} onRemove={() => update({ ends_within: "" })} />
+          )}
+          {hasBuyNow && (
+            <Chip label="Has Buy Now" onRemove={() => update({ has_buy_now: "" })} />
+          )}
+          {noBids && (
+            <Chip label="No Bids Yet" onRemove={() => update({ no_bids: "" })} />
           )}
           <button
             onClick={() => router.replace(pathname)}

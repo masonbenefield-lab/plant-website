@@ -14,9 +14,9 @@ const PAGE_SIZE = 24;
 export default async function AuctionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; sort?: string; max_bid?: string; category?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; sort?: string; max_bid?: string; category?: string; has_buy_now?: string; no_bids?: string; ends_within?: string; page?: string }>;
 }) {
-  const { q, sort, max_bid, category, page: pageParam } = await searchParams;
+  const { q, sort, max_bid, category, has_buy_now, no_bids, ends_within, page: pageParam } = await searchParams;
   const page = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
   const from = (page - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
@@ -32,6 +32,12 @@ export default async function AuctionsPage({
   if (q) query = query.or(`plant_name.ilike.%${q}%,variety.ilike.%${q}%,description.ilike.%${q}%,category.ilike.%${q}%`);
   if (category) query = query.eq("category", category);
   if (max_bid) query = query.lte("current_bid_cents", Math.round(Number(max_bid) * 100));
+  if (has_buy_now === "1") query = query.not("buy_now_price_cents", "is", null);
+  if (no_bids === "1") query = query.is("current_bidder_id", null);
+  if (ends_within) {
+    const ms: Record<string, number> = { "1h": 3600000, "24h": 86400000, "3d": 259200000, "7d": 604800000 };
+    if (ms[ends_within]) query = query.lt("ends_at", new Date(Date.now() + ms[ends_within]).toISOString());
+  }
 
   if (sort === "bid_asc")        query = query.order("current_bid_cents", { ascending: true });
   else if (sort === "bid_desc")  query = query.order("current_bid_cents", { ascending: false });
@@ -49,6 +55,9 @@ export default async function AuctionsPage({
     if (sort && sort !== "ending_soon") params.set("sort", sort);
     if (max_bid) params.set("max_bid", max_bid);
     if (category) params.set("category", category);
+    if (has_buy_now === "1") params.set("has_buy_now", "1");
+    if (no_bids === "1") params.set("no_bids", "1");
+    if (ends_within) params.set("ends_within", ends_within);
     if (p > 1) params.set("page", String(p));
     const s = params.toString();
     return s ? `/auctions?${s}` : "/auctions";
