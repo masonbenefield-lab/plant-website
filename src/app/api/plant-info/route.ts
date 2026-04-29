@@ -10,7 +10,7 @@ function adminClient() {
   );
 }
 
-const CACHE_DAYS = 30;
+const CACHE_DAYS = 90;
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
