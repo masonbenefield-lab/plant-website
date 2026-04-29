@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import type { Database } from "@/lib/supabase/types";
 import { containsSlur } from "@/lib/profanity";
+import { MapPin } from "lucide-react";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 
@@ -23,6 +24,7 @@ export default function AccountForm({
 }) {
   const [username, setUsername] = useState(profile?.username ?? "");
   const [bio, setBio] = useState(profile?.bio ?? "");
+  const [location, setLocation] = useState(profile?.location ?? "");
   const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url ?? "");
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -58,12 +60,16 @@ export default function AccountForm({
       toast.error("Bio contains a prohibited word");
       return;
     }
+    if (location && containsSlur(location)) {
+      toast.error("Location contains a prohibited word");
+      return;
+    }
 
     setSaving(true);
     const res = await fetch("/api/profile/update", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, bio, avatar_url: avatarUrl }),
+      body: JSON.stringify({ username, bio, location, avatar_url: avatarUrl }),
     });
     const data = await res.json();
     setSaving(false);
@@ -151,6 +157,22 @@ export default function AccountForm({
                 placeholder="Tell buyers about your nursery or collection…"
                 maxLength={500}
               />
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="location">Location</Label>
+              <div className="relative">
+                <MapPin size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="location"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="e.g. Nashville, TN or United Kingdom"
+                  maxLength={100}
+                  className="pl-8"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">Helps buyers find sellers near them. Be as specific or general as you like.</p>
             </div>
 
             <Button type="submit" disabled={saving} className="bg-green-700 hover:bg-green-800">

@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useCallback, useTransition } from "react";
-import { X } from "lucide-react";
+import { X, MapPin } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { PLANT_CATEGORIES } from "@/lib/categories";
@@ -24,9 +24,10 @@ export default function ShopFilterBar() {
   const min      = params.get("min") ?? "";
   const max      = params.get("max") ?? "";
   const category = params.get("category") ?? "";
+  const location = params.get("location") ?? "";
   const inStock  = params.get("in_stock") === "1";
 
-  const hasFilters = q || sort !== "newest" || min || max || category || inStock;
+  const hasFilters = q || sort !== "newest" || min || max || category || location || inStock;
 
   const update = useCallback(
     (patch: Record<string, string>) => {
@@ -119,6 +120,19 @@ export default function ShopFilterBar() {
           />
         </fieldset>
 
+        {/* Location */}
+        <div className="relative">
+          <label htmlFor="shop-location" className="sr-only">Filter by location</label>
+          <MapPin size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          <Input
+            id="shop-location"
+            placeholder="Location (state, country…)"
+            defaultValue={location}
+            className="pl-8 w-44"
+            onChange={(e) => debounce(() => update({ location: e.target.value }))}
+          />
+        </div>
+
         {/* In Stock toggle */}
         <button
           onClick={() => update({ in_stock: inStock ? "" : "1" })}
@@ -150,6 +164,9 @@ export default function ShopFilterBar() {
           )}
           {category && (
             <Chip label={category} onRemove={() => update({ category: "" })} />
+          )}
+          {location && (
+            <Chip label={`📍 ${location}`} onRemove={() => update({ location: "" })} />
           )}
           {inStock && (
             <Chip label="In Stock Only" onRemove={() => update({ in_stock: "" })} />

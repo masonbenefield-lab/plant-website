@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useCallback, useTransition } from "react";
-import { X } from "lucide-react";
+import { X, MapPin } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { PLANT_CATEGORIES } from "@/lib/categories";
@@ -32,11 +32,12 @@ export default function AuctionFilterBar() {
   const sort       = params.get("sort") ?? "ending_soon";
   const maxBid     = params.get("max_bid") ?? "";
   const category   = params.get("category") ?? "";
+  const location   = params.get("location") ?? "";
   const hasBuyNow  = params.get("has_buy_now") === "1";
   const noBids     = params.get("no_bids") === "1";
   const endsWithin = params.get("ends_within") ?? "";
 
-  const hasFilters = q || sort !== "ending_soon" || maxBid || category || hasBuyNow || noBids || endsWithin;
+  const hasFilters = q || sort !== "ending_soon" || maxBid || category || location || hasBuyNow || noBids || endsWithin;
 
   const update = useCallback(
     (patch: Record<string, string>) => {
@@ -117,6 +118,19 @@ export default function AuctionFilterBar() {
           />
         </div>
 
+        {/* Location */}
+        <div className="relative">
+          <label htmlFor="auction-location" className="sr-only">Filter by location</label>
+          <MapPin size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          <Input
+            id="auction-location"
+            placeholder="Location (state, country…)"
+            defaultValue={location}
+            className="pl-8 w-44"
+            onChange={(e) => debounce(() => update({ location: e.target.value }))}
+          />
+        </div>
+
         {/* Ending within */}
         <div>
           <label htmlFor="auction-ends-within" className="sr-only">Ending within</label>
@@ -173,6 +187,9 @@ export default function AuctionFilterBar() {
           )}
           {category && (
             <Chip label={category} onRemove={() => update({ category: "" })} />
+          )}
+          {location && (
+            <Chip label={`📍 ${location}`} onRemove={() => update({ location: "" })} />
           )}
           {endsWithin && (
             <Chip label={ENDS_WITHIN_OPTIONS.find((o) => o.value === endsWithin)?.label ?? endsWithin} onRemove={() => update({ ends_within: "" })} />

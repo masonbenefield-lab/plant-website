@@ -17,14 +17,25 @@ const PAGE_SIZE = 24;
 export default async function ShopPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; sort?: string; min?: string; max?: string; category?: string; in_stock?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; sort?: string; min?: string; max?: string; category?: string; in_stock?: string; location?: string; page?: string }>;
 }) {
-  const { q, sort, min, max, category, in_stock, page: pageParam } = await searchParams;
+  const { q, sort, min, max, category, in_stock, location, page: pageParam } = await searchParams;
   const page = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
   const from = (page - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
 
   const supabase = await createClient();
+
+  // Two-step location filter: find matching seller IDs first
+  let locationSellerIds: string[] | null = null;
+  if (location) {
+    const { data: locationSellers } = await supabase
+      .from("profiles")
+      .select("id")
+      .ilike("location", `%${location}%`)
+      .is("deleted_at", null);
+    locationSellerIds = locationSellers?.map((s) => s.id) ?? [];
+  }
 
   let query = supabase
     .from("listings")
@@ -36,6 +47,14 @@ export default async function ShopPage({
   if (min) query = query.gte("price_cents", Math.round(Number(min) * 100));
   if (max) query = query.lte("price_cents", Math.round(Number(max) * 100));
   if (in_stock === "1") query = query.gt("in_stock", 0);
+  if (locationSellerIds !== null) {
+    if (locationSellerIds.length === 0) {
+      // No sellers in this location — force zero results
+      query = query.in("seller_id", ["00000000-0000-0000-0000-000000000000"]);
+    } else {
+      query = query.in("seller_id", locationSellerIds);
+    }
+  }
 
   if (sort === "price_asc")       query = query.order("price_cents", { ascending: true });
   else if (sort === "price_desc") query = query.order("price_cents", { ascending: false });
@@ -54,6 +73,7 @@ export default async function ShopPage({
     if (max) params.set("max", max);
     if (category) params.set("category", category);
     if (in_stock === "1") params.set("in_stock", "1");
+    if (location) params.set("location", location);
     if (p > 1) params.set("page", String(p));
     const s = params.toString();
     return s ? `/shop?${s}` : "/shop";
@@ -78,7 +98,7 @@ export default async function ShopPage({
     (wRows ?? []).forEach((r) => { if (r.listing_id) wishlistedSet.add(r.listing_id); });
   }
 
-  const hasFilters = q || (sort && sort !== "newest") || min || max || category || in_stock === "1";
+  const hasFilters = q || (sort && sort !== "newest") || min || max || category || in_stock === "1" || location;
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-10">

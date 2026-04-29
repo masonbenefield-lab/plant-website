@@ -9,10 +9,11 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { username, bio, avatar_url } = await request.json() as {
+  const { username, bio, avatar_url, location } = await request.json() as {
     username: string;
     bio?: string;
     avatar_url?: string;
+    location?: string;
   };
 
   if (!username || !USERNAME_RE.test(username)) {
@@ -30,6 +31,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Bio contains a prohibited word" }, { status: 400 });
   }
 
+  if (location && containsSlur(location)) {
+    return NextResponse.json({ error: "Location contains a prohibited word" }, { status: 400 });
+  }
+
+  if (location && location.length > 100) {
+    return NextResponse.json({ error: "Location must be 100 characters or fewer" }, { status: 400 });
+  }
+
   // Uniqueness check — only matters if username changed
   const { data: existing } = await supabase
     .from("profiles")
@@ -44,7 +53,7 @@ export async function POST(request: Request) {
 
   const { error } = await supabase
     .from("profiles")
-    .update({ username, bio: bio ?? null, avatar_url: avatar_url ?? null })
+    .update({ username, bio: bio ?? null, avatar_url: avatar_url ?? null, location: location ?? null })
     .eq("id", user.id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

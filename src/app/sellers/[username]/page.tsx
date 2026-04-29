@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Star } from "lucide-react";
+import { Star, MapPin } from "lucide-react";
 import { centsToDisplay } from "@/lib/stripe";
 import FollowButton from "@/components/follow-button";
 import ReportButton from "@/components/report-button";
@@ -135,7 +135,15 @@ export default async function SellerStorefront({
           {profile.bio && (
             <p className="text-muted-foreground mt-2 max-w-lg">{profile.bio}</p>
           )}
-          <p className="text-xs text-muted-foreground mt-1.5">Member since {memberSince}</p>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5">
+            {profile.location && (
+              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                <MapPin size={12} />
+                {profile.location}
+              </span>
+            )}
+            <span className="text-xs text-muted-foreground">Member since {memberSince}</span>
+          </div>
           {avgScore !== null && (
             <div className="flex items-center gap-1 mt-2">
               {[1, 2, 3, 4, 5].map((n) => (

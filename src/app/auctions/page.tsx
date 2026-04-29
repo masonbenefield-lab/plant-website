@@ -14,14 +14,25 @@ const PAGE_SIZE = 24;
 export default async function AuctionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; sort?: string; max_bid?: string; category?: string; has_buy_now?: string; no_bids?: string; ends_within?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; sort?: string; max_bid?: string; category?: string; location?: string; has_buy_now?: string; no_bids?: string; ends_within?: string; page?: string }>;
 }) {
-  const { q, sort, max_bid, category, has_buy_now, no_bids, ends_within, page: pageParam } = await searchParams;
+  const { q, sort, max_bid, category, location, has_buy_now, no_bids, ends_within, page: pageParam } = await searchParams;
   const page = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
   const from = (page - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
 
   const supabase = await createClient();
+
+  // Two-step location filter: find matching seller IDs first
+  let locationSellerIds: string[] | null = null;
+  if (location) {
+    const { data: locationSellers } = await supabase
+      .from("profiles")
+      .select("id")
+      .ilike("location", `%${location}%`)
+      .is("deleted_at", null);
+    locationSellerIds = locationSellers?.map((s) => s.id) ?? [];
+  }
 
   let query = supabase
     .from("auctions")
@@ -31,6 +42,13 @@ export default async function AuctionsPage({
 
   if (q) query = query.or(`plant_name.ilike.%${q}%,variety.ilike.%${q}%,description.ilike.%${q}%,category.ilike.%${q}%`);
   if (category) query = query.eq("category", category);
+  if (locationSellerIds !== null) {
+    if (locationSellerIds.length === 0) {
+      query = query.in("seller_id", ["00000000-0000-0000-0000-000000000000"]);
+    } else {
+      query = query.in("seller_id", locationSellerIds);
+    }
+  }
   if (max_bid) query = query.lte("current_bid_cents", Math.round(Number(max_bid) * 100));
   if (has_buy_now === "1") query = query.not("buy_now_price_cents", "is", null);
   if (no_bids === "1") query = query.is("current_bidder_id", null);
@@ -55,6 +73,7 @@ export default async function AuctionsPage({
     if (sort && sort !== "ending_soon") params.set("sort", sort);
     if (max_bid) params.set("max_bid", max_bid);
     if (category) params.set("category", category);
+    if (location) params.set("location", location);
     if (has_buy_now === "1") params.set("has_buy_now", "1");
     if (no_bids === "1") params.set("no_bids", "1");
     if (ends_within) params.set("ends_within", ends_within);
