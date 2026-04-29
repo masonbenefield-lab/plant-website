@@ -17,6 +17,7 @@ import {
 import { toast } from "sonner";
 import { dollarsToCents } from "@/lib/stripe";
 import PriceSuggestion from "@/components/price-suggestion";
+import PotSizePicker from "@/components/pot-size-picker";
 
 export default function NewListingDialog({ sellerId }: { sellerId: string }) {
   const router = useRouter();
@@ -26,6 +27,7 @@ export default function NewListingDialog({ sellerId }: { sellerId: string }) {
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [plantName, setPlantName] = useState("");
   const [variety, setVariety] = useState("");
+  const [potSize, setPotSize] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
   async function uploadImages(files: FileList) {
@@ -61,6 +63,7 @@ export default function NewListingDialog({ sellerId }: { sellerId: string }) {
       price_cents: dollarsToCents(data.get("price") as string),
       description: (data.get("description") as string) || null,
       images: imageUrls,
+      pot_size: potSize || null,
     });
 
     setSaving(false);
@@ -72,6 +75,7 @@ export default function NewListingDialog({ sellerId }: { sellerId: string }) {
       setImageUrls([]);
       setPlantName("");
       setVariety("");
+      setPotSize("");
       form.reset();
       router.refresh();
     }
@@ -118,6 +122,10 @@ export default function NewListingDialog({ sellerId }: { sellerId: string }) {
               <Input id="price" name="price" type="number" min={0.01} step={0.01} required />
               <PriceSuggestion plantName={plantName} variety={variety} label="price" />
             </div>
+          </div>
+          <div className="space-y-1">
+            <Label>Pot Size <span className="font-normal text-muted-foreground">(optional)</span></Label>
+            <PotSizePicker value={potSize} onChange={setPotSize} />
           </div>
           <div className="space-y-1">
             <Label htmlFor="description">Description</Label>

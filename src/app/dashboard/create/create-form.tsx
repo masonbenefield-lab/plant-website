@@ -13,6 +13,8 @@ import { toast } from "sonner";
 import { dollarsToCents } from "@/lib/stripe";
 import { PLANT_CATEGORIES } from "@/lib/categories";
 import { AlertTriangle } from "lucide-react";
+import PotSizePicker from "@/components/pot-size-picker";
+import PriceSuggestion from "@/components/price-suggestion";
 
 type Mode = null | "listing" | "auction" | "inventory";
 
@@ -57,6 +59,7 @@ export default function CreateInventoryPage() {
   const [quantity, setQuantity] = useState("1");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
+  const [potSize, setPotSize] = useState("");
 
   // listing-specific
   const [price, setPrice] = useState("");
@@ -104,6 +107,7 @@ export default function CreateInventoryPage() {
         quantity: Number(quantity),
         description: description || null,
         images: imageUrls,
+        pot_size: potSize || null,
       });
       setSaving(false);
       if (error) { toast.error(error.message); return; }
@@ -122,6 +126,7 @@ export default function CreateInventoryPage() {
         description: description || null,
         images: imageUrls,
         category: category || null,
+        pot_size: potSize || null,
       });
       setSaving(false);
       if (error) { toast.error(error.message); return; }
@@ -140,6 +145,7 @@ export default function CreateInventoryPage() {
         images: imageUrls,
         ends_at: new Date(endsAt).toISOString(),
         category: category || null,
+        pot_size: potSize || null,
       });
       setSaving(false);
       if (error) { toast.error(error.message); return; }
@@ -218,6 +224,11 @@ export default function CreateInventoryPage() {
                 required
                 className="max-w-[140px]"
               />
+            </div>
+
+            <div className="space-y-1">
+              <Label>Pot Size <span className="font-normal text-muted-foreground">(optional)</span></Label>
+              <PotSizePicker value={potSize} onChange={setPotSize} />
             </div>
 
             <div className="space-y-1">
@@ -384,6 +395,7 @@ export default function CreateInventoryPage() {
                   required
                   className="max-w-[180px]"
                 />
+                <PriceSuggestion plantName={plantName} variety={variety} label="price" />
               </div>
               <div className="flex gap-3 pt-2">
                 <Button type="button" variant="outline" onClick={() => setMode(null)}>
@@ -422,6 +434,7 @@ export default function CreateInventoryPage() {
                   required
                   className="max-w-[180px]"
                 />
+                <PriceSuggestion plantName={plantName} variety={variety} label="bid" />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="buy_now_price">Buy Now Price ($) <span className="font-normal text-muted-foreground">(optional)</span></Label>

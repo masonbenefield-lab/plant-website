@@ -6,6 +6,7 @@ import { X, MapPin, Leaf } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { PLANT_CATEGORIES } from "@/lib/categories";
+import { POT_SIZES } from "@/lib/pot-sizes";
 import PlantInfoCard from "@/components/plant-info-card";
 
 const SORT_OPTIONS = [
@@ -40,8 +41,9 @@ export default function ShopFilterBar() {
   const category = params.get("category") ?? "";
   const location = params.get("location") ?? "";
   const inStock  = params.get("in_stock") === "1";
+  const potSize  = params.get("pot_size") ?? "";
 
-  const hasFilters = q || sort !== "newest" || min || max || category || location || inStock;
+  const hasFilters = q || sort !== "newest" || min || max || category || location || inStock || potSize;
 
   const update = useCallback(
     (patch: Record<string, string>) => {
@@ -147,6 +149,22 @@ export default function ShopFilterBar() {
           />
         </div>
 
+        {/* Pot size */}
+        <div>
+          <label htmlFor="shop-pot-size" className="sr-only">Filter by pot size</label>
+          <select
+            id="shop-pot-size"
+            value={potSize}
+            onChange={(e) => update({ pot_size: e.target.value })}
+            className="h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="">Any Size</option>
+            {POT_SIZES.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        </div>
+
         {/* In Stock toggle */}
         <button
           onClick={() => update({ in_stock: inStock ? "" : "1" })}
@@ -205,6 +223,9 @@ export default function ShopFilterBar() {
           )}
           {inStock && (
             <Chip label="In Stock Only" onRemove={() => update({ in_stock: "" })} />
+          )}
+          {potSize && (
+            <Chip label={`Pot: ${potSize}`} onRemove={() => update({ pot_size: "" })} />
           )}
           <button
             onClick={() => router.replace(pathname)}

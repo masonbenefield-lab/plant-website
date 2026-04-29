@@ -17,9 +17,9 @@ const PAGE_SIZE = 24;
 export default async function ShopPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; sort?: string; min?: string; max?: string; category?: string; in_stock?: string; location?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; sort?: string; min?: string; max?: string; category?: string; in_stock?: string; location?: string; pot_size?: string; page?: string }>;
 }) {
-  const { q, sort, min, max, category, in_stock, location, page: pageParam } = await searchParams;
+  const { q, sort, min, max, category, in_stock, location, pot_size, page: pageParam } = await searchParams;
   const page = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
   const from = (page - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
@@ -47,6 +47,7 @@ export default async function ShopPage({
   if (min) query = query.gte("price_cents", Math.round(Number(min) * 100));
   if (max) query = query.lte("price_cents", Math.round(Number(max) * 100));
   if (in_stock === "1") query = query.gt("in_stock", 0);
+  if (pot_size) query = query.eq("pot_size", pot_size);
   if (locationSellerIds !== null) {
     if (locationSellerIds.length === 0) {
       // No sellers in this location — force zero results
@@ -74,6 +75,7 @@ export default async function ShopPage({
     if (category) params.set("category", category);
     if (in_stock === "1") params.set("in_stock", "1");
     if (location) params.set("location", location);
+    if (pot_size) params.set("pot_size", pot_size);
     if (p > 1) params.set("page", String(p));
     const s = params.toString();
     return s ? `/shop?${s}` : "/shop";

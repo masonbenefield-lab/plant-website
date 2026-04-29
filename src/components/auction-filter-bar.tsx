@@ -6,6 +6,7 @@ import { X, MapPin, Leaf } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { PLANT_CATEGORIES } from "@/lib/categories";
+import { POT_SIZES } from "@/lib/pot-sizes";
 import PlantInfoCard from "@/components/plant-info-card";
 
 const SORT_OPTIONS = [
@@ -50,8 +51,9 @@ export default function AuctionFilterBar() {
   const hasBuyNow  = params.get("has_buy_now") === "1";
   const noBids     = params.get("no_bids") === "1";
   const endsWithin = params.get("ends_within") ?? "";
+  const potSize    = params.get("pot_size") ?? "";
 
-  const hasFilters = q || sort !== "ending_soon" || maxBid || category || location || hasBuyNow || noBids || endsWithin;
+  const hasFilters = q || sort !== "ending_soon" || maxBid || category || location || hasBuyNow || noBids || endsWithin || potSize;
 
   const update = useCallback(
     (patch: Record<string, string>) => {
@@ -160,6 +162,22 @@ export default function AuctionFilterBar() {
           </select>
         </div>
 
+        {/* Pot size */}
+        <div>
+          <label htmlFor="auction-pot-size" className="sr-only">Filter by pot size</label>
+          <select
+            id="auction-pot-size"
+            value={potSize}
+            onChange={(e) => update({ pot_size: e.target.value })}
+            className="h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="">Any Size</option>
+            {POT_SIZES.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        </div>
+
         {/* Has Buy Now toggle */}
         <button
           onClick={() => update({ has_buy_now: hasBuyNow ? "" : "1" })}
@@ -234,6 +252,9 @@ export default function AuctionFilterBar() {
           )}
           {noBids && (
             <Chip label="No Bids Yet" onRemove={() => update({ no_bids: "" })} />
+          )}
+          {potSize && (
+            <Chip label={`Pot: ${potSize}`} onRemove={() => update({ pot_size: "" })} />
           )}
           <button
             onClick={() => router.replace(pathname)}

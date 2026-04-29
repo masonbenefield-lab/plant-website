@@ -17,6 +17,7 @@ import {
 import { toast } from "sonner";
 import { dollarsToCents } from "@/lib/stripe";
 import PriceSuggestion from "@/components/price-suggestion";
+import PotSizePicker from "@/components/pot-size-picker";
 
 export default function NewAuctionDialog({ sellerId }: { sellerId: string }) {
   const router = useRouter();
@@ -26,6 +27,7 @@ export default function NewAuctionDialog({ sellerId }: { sellerId: string }) {
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [plantName, setPlantName] = useState("");
   const [variety, setVariety] = useState("");
+  const [potSize, setPotSize] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
   async function uploadImages(files: FileList) {
@@ -70,6 +72,7 @@ export default function NewAuctionDialog({ sellerId }: { sellerId: string }) {
       buy_now_price_cents: buyNowCents,
       ends_at: endsAt,
       images: imageUrls,
+      pot_size: potSize || null,
     });
 
     setSaving(false);
@@ -81,6 +84,7 @@ export default function NewAuctionDialog({ sellerId }: { sellerId: string }) {
       setImageUrls([]);
       setPlantName("");
       setVariety("");
+      setPotSize("");
       form.reset();
       router.refresh();
     }
@@ -147,6 +151,10 @@ export default function NewAuctionDialog({ sellerId }: { sellerId: string }) {
               <option value="120">5 days</option>
               <option value="168">7 days</option>
             </select>
+          </div>
+          <div className="space-y-1">
+            <Label>Pot Size <span className="font-normal text-muted-foreground">(optional)</span></Label>
+            <PotSizePicker value={potSize} onChange={setPotSize} />
           </div>
           <div className="space-y-1">
             <Label htmlFor="description">Description</Label>

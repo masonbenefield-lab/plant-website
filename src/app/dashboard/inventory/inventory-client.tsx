@@ -36,6 +36,7 @@ import {
   MoreHorizontal, SlidersHorizontal, AlertCircle, Check,
 } from "lucide-react";
 import * as XLSX from "xlsx";
+import PotSizePicker from "@/components/pot-size-picker";
 
 const CATEGORIES = [
   "Tropical", "Succulent", "Cactus", "Carnivorous", "Orchid",
@@ -68,6 +69,7 @@ type Row = {
   price_cents: number | null;
   images: string[];
   category: string | null;
+  pot_size: string | null;
   ends_at: string | null;
   created_at: string;
   archived_at: string | null;
@@ -177,6 +179,7 @@ export default function InventoryClient({
   // — Edit modal fields
   const [editPlantName, setEditPlantName] = useState("");
   const [editVariety, setEditVariety] = useState("");
+  const [editPotSize, setEditPotSize] = useState("");
   const [editQuantity, setEditQuantity] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [editNotes, setEditNotes] = useState("");
@@ -348,6 +351,7 @@ export default function InventoryClient({
     setEditDescription(row.description);
     setEditNotes(row.notes);
     setEditCategory(row.category ?? "");
+    setEditPotSize(row.pot_size ?? "");
     setEditImages([...row.images]);
     setModal({ type, row });
   }
@@ -389,6 +393,7 @@ export default function InventoryClient({
       price_cents: dollarsToCents(price),
       images: modal.row.images,
       category: modal.row.category || null,
+      pot_size: modal.row.pot_size || null,
     }).select("id").single();
     if (error) { toast.error(error.message); setSubmitting(false); return; }
     if (modal.row.source === "inventory") {
@@ -418,6 +423,7 @@ export default function InventoryClient({
       ends_at: new Date(endsAt).toISOString(),
       images: modal.row.images,
       category: modal.row.category || null,
+      pot_size: modal.row.pot_size || null,
     });
     setSubmitting(false);
     if (error) { toast.error(error.message); return; }
@@ -454,6 +460,7 @@ export default function InventoryClient({
       description: editDescription.trim() || null,
       notes: editNotes.trim() || null,
       category: editCategory || null,
+      pot_size: editPotSize || null,
       images: editImages,
     }).eq("id", modal.row.id);
     setSubmitting(false);
@@ -476,6 +483,7 @@ export default function InventoryClient({
       price_cents: dollarsToCents(price),
       description: editDescription.trim() || null,
       category: editCategory || null,
+      pot_size: editPotSize || null,
       images: editImages,
     }).eq("id", modal.row.id);
     setSubmitting(false);
@@ -1343,6 +1351,10 @@ export default function InventoryClient({
                 <Input id="edit-variety" value={editVariety} onChange={(e) => setEditVariety(e.target.value)} placeholder="e.g. Thai Constellation" />
               </div>
               <div className="space-y-1">
+                <Label>Pot Size <span className="font-normal text-muted-foreground">(optional)</span></Label>
+                <PotSizePicker value={editPotSize} onChange={setEditPotSize} />
+              </div>
+              <div className="space-y-1">
                 <Label htmlFor="edit-qty">Quantity</Label>
                 <Input id="edit-qty" type="number" min={0} value={editQuantity} onChange={(e) => setEditQuantity(e.target.value)} />
               </div>
@@ -1387,6 +1399,10 @@ export default function InventoryClient({
               <div className="space-y-1">
                 <Label htmlFor="el-variety">Variety <span className="font-normal text-muted-foreground">(optional)</span></Label>
                 <Input id="el-variety" value={editVariety} onChange={(e) => setEditVariety(e.target.value)} placeholder="e.g. Thai Constellation" />
+              </div>
+              <div className="space-y-1">
+                <Label>Pot Size <span className="font-normal text-muted-foreground">(optional)</span></Label>
+                <PotSizePicker value={editPotSize} onChange={setEditPotSize} />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
