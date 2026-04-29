@@ -353,6 +353,7 @@ export default async function LandingPage() {
             <Link href="/auctions" className="hover:text-foreground transition-colors">Auctions</Link>
             <Link href="/pricing" className="hover:text-foreground transition-colors">Pricing</Link>
             <Link href="/signup" className="hover:text-foreground transition-colors">Sell</Link>
+            <Link href="/contact" className="hover:text-foreground transition-colors">Contact</Link>
             <Link href="/login" className="hover:text-foreground transition-colors">Sign in</Link>
           </nav>
           <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} Plantet</p>
