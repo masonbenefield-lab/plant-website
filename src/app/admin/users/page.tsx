@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import UserSearch from "./user-search";
-import { DeleteUserButton, RestoreUserButton } from "./user-actions";
+import { DeleteUserButton, RestoreUserButton, RenameUserButton } from "./user-actions";
 
 function daysUntilPurge(deletedAt: string) {
   const purge = new Date(deletedAt).getTime() + 30 * 24 * 60 * 60 * 1000;
@@ -178,7 +178,10 @@ export default async function AdminUsersPage({
                     {showArchived ? (
                       <RestoreUserButton userId={p.id} username={p.username} />
                     ) : (
-                      <DeleteUserButton userId={p.id} username={p.username} isAdmin={p.is_admin} />
+                      <>
+                        <RenameUserButton userId={p.id} username={p.username} isAdmin={p.is_admin} />
+                        <DeleteUserButton userId={p.id} username={p.username} isAdmin={p.is_admin} />
+                      </>
                     )}
                   </div>
                 </td>

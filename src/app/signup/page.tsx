@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Eye, EyeOff } from "lucide-react";
+import { containsSlur } from "@/lib/profanity";
 
 const PLAN_LABELS: Record<string, { name: string; price: string }> = {
   grower:  { name: "Grower",  price: "$9/mo" },
@@ -32,8 +33,13 @@ export default function SignupPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    setLoading(true);
 
+    if (containsSlur(username)) {
+      setError("Username contains a prohibited word. Please choose a different name.");
+      return;
+    }
+
+    setLoading(true);
     const supabase = createClient();
 
     const { data, error: signUpError } = await supabase.auth.signUp({

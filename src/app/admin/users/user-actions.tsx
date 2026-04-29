@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
@@ -103,5 +104,67 @@ export function RestoreUserButton({ userId, username }: { userId: string; userna
     <button onClick={handleRestore} disabled={loading} className="text-xs text-green-700 hover:underline font-medium disabled:opacity-50">
       {loading ? "Restoring…" : "Restore"}
     </button>
+  );
+}
+
+export function RenameUserButton({ userId, username, isAdmin }: { userId: string; username: string; isAdmin: boolean }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [newName, setNewName] = useState(username);
+  const [loading, setLoading] = useState(false);
+
+  if (isAdmin) return null;
+
+  async function handleRename() {
+    const trimmed = newName.trim().toLowerCase();
+    if (!trimmed || trimmed === username) { setOpen(false); return; }
+    setLoading(true);
+    const res = await fetch("/api/admin/rename-user", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ targetUserId: userId, newUsername: trimmed }),
+    });
+    const data = await res.json();
+    setLoading(false);
+    if (data.error) {
+      toast.error(data.error);
+    } else {
+      toast.success(`Renamed to ${trimmed}`);
+      setOpen(false);
+      router.refresh();
+    }
+  }
+
+  return (
+    <>
+      <button onClick={() => { setNewName(username); setOpen(true); }} className="text-xs text-blue-600 hover:underline font-medium">
+        Rename
+      </button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Rename user</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground mb-3">
+            Changing the username for <strong>{username}</strong>. This will also change their storefront URL.
+          </p>
+          <Input
+            value={newName}
+            onChange={(e) => setNewName(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ""))}
+            placeholder="new-username"
+            minLength={3}
+            maxLength={30}
+            autoFocus
+            onKeyDown={(e) => { if (e.key === "Enter") handleRename(); }}
+          />
+          <div className="flex gap-2 mt-2">
+            <Button variant="outline" onClick={() => setOpen(false)} className="flex-1">Cancel</Button>
+            <Button onClick={handleRename} disabled={loading || !newName.trim() || newName.trim() === username} className="flex-1 bg-blue-600 hover:bg-blue-700">
+              {loading ? "Saving…" : "Save"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

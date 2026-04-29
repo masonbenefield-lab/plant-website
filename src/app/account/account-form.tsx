@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import type { Database } from "@/lib/supabase/types";
+import { containsSlur } from "@/lib/profanity";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 
@@ -48,15 +49,26 @@ export default function AccountForm({
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
+
+    if (containsSlur(username)) {
+      toast.error("Username contains a prohibited word");
+      return;
+    }
+    if (bio && containsSlur(bio)) {
+      toast.error("Bio contains a prohibited word");
+      return;
+    }
+
     setSaving(true);
-    const supabase = createClient();
-    const { error } = await supabase
-      .from("profiles")
-      .update({ username, bio, avatar_url: avatarUrl })
-      .eq("id", userId);
+    const res = await fetch("/api/profile/update", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, bio, avatar_url: avatarUrl }),
+    });
+    const data = await res.json();
     setSaving(false);
-    if (error) {
-      toast.error(error.message);
+    if (data.error) {
+      toast.error(data.error);
     } else {
       toast.success("Profile saved");
     }
