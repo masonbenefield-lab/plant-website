@@ -11,11 +11,13 @@ export default async function InventoryPage() {
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
   const [
+    { data: profile },
     { data: activeInventory },
     { data: archivedInventory },
     { data: listings },
     { data: auctions },
   ] = await Promise.all([
+    supabase.from("profiles").select("seller_terms_accepted_at").eq("id", user.id).single(),
     supabase.from("inventory").select("*").eq("seller_id", user.id).is("archived_at", null).order("created_at", { ascending: false }),
     supabase.from("inventory").select("*").eq("seller_id", user.id).not("archived_at", "is", null).gte("archived_at", thirtyDaysAgo).order("archived_at", { ascending: false }),
     supabase.from("listings").select("id, plant_name, variety, status, quantity, in_stock, price_cents, description, images, category, seller_id, created_at").eq("seller_id", user.id).order("created_at", { ascending: false }),
@@ -112,5 +114,7 @@ export default async function InventoryPage() {
     variety: l.variety ?? null,
   }));
 
-  return <InventoryClient activeRows={activeRows} archivedRows={archivedRows} listingOptions={listingOptions} />;
+  const termsAccepted = !!profile?.seller_terms_accepted_at;
+
+  return <InventoryClient activeRows={activeRows} archivedRows={archivedRows} listingOptions={listingOptions} termsAccepted={termsAccepted} />;
 }

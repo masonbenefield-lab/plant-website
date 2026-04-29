@@ -123,10 +123,12 @@ export default function InventoryClient({
   activeRows,
   archivedRows,
   listingOptions,
+  termsAccepted,
 }: {
   activeRows: Row[];
   archivedRows: Row[];
   listingOptions: ListingOption[];
+  termsAccepted: boolean;
 }) {
   const router = useRouter();
 
@@ -331,6 +333,10 @@ export default function InventoryClient({
   // ── Modal helpers ─────────────────────────────────────────────────────────
 
   function openModal(type: "listing" | "auction" | "link" | "edit" | "edit-listing" | "restock", row: Row) {
+    if ((type === "listing" || type === "auction") && !termsAccepted) {
+      router.push("/seller-agreement?next=/dashboard/inventory");
+      return;
+    }
     setPrice(type === "edit-listing" && row.price_cents ? (row.price_cents / 100).toFixed(2) : "");
     setListQty(String(row.quantity));
     setStartingBid(""); setBuyNowPrice(""); setEndsAt("");

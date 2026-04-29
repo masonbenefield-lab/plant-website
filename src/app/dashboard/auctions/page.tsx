@@ -11,6 +11,16 @@ export default async function DashboardAuctionsPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("seller_terms_accepted_at")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile?.seller_terms_accepted_at) {
+    redirect("/seller-agreement?next=/dashboard/auctions");
+  }
+
   const { data: auctions } = await supabase
     .from("auctions")
     .select("*")
