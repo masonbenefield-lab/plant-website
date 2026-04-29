@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { centsToDisplay } from "@/lib/stripe";
 import SearchInput from "./search-input";
 import { Pagination } from "@/components/pagination";
+import PlantInfoCard from "@/components/plant-info-card";
 
 const PAGE_SIZE = 20;
 
@@ -69,6 +70,8 @@ export default async function SearchPage({
           {total} result{total !== 1 ? "s" : ""} for &ldquo;{q}&rdquo;
         </p>
       )}
+
+      <PlantInfoCard q={q} />
 
       {q.trim() && (
         <div className="flex gap-2 mb-8">

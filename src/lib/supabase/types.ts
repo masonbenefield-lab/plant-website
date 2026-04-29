@@ -345,6 +345,23 @@ export interface Database {
         Relationships: [];
       };
 
+      plant_descriptions: {
+        Row: {
+          query: string;
+          description: string;
+          created_at: string;
+        };
+        Insert: {
+          query: string;
+          description: string;
+          created_at?: string;
+        };
+        Update: {
+          description?: string;
+        };
+        Relationships: [];
+      };
+
       admin_audit_logs: {
         Row: {
           id: string;
