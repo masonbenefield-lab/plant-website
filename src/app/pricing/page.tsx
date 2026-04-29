@@ -16,12 +16,13 @@ const tiers = [
     cta: "Get started free",
     ctaHref: "/signup",
     ctaStyle: "outline" as const,
+    commissionRate: 6.5,
     features: {
       inventory: "Free inventory management",
       listings: "10 active listings",
-      photos: "3 photos per listing",
-      auctions: "2 active auctions",
-      commission: "8% platform commission",
+      photos: "5 photos per listing",
+      auctions: "5 active auctions",
+      commission: "6.5% platform commission",
       banner: false,
       search: false,
       analytics: false,
@@ -39,6 +40,7 @@ const tiers = [
     cta: "Start Grower",
     ctaHref: "/signup?plan=grower",
     ctaStyle: "default" as const,
+    commissionRate: 5,
     features: {
       inventory: "Free inventory management",
       listings: "50 active listings",
@@ -47,8 +49,8 @@ const tiers = [
       commission: "5% platform commission",
       banner: true,
       search: true,
-      analytics: false,
-      bulk: false,
+      analytics: "Basic analytics",
+      bulk: "Basic bulk tools",
       support: "Standard support",
       featured: false,
     },
@@ -62,6 +64,7 @@ const tiers = [
     cta: "Start Nursery",
     ctaHref: "/signup?plan=nursery",
     ctaStyle: "default" as const,
+    commissionRate: 3,
     features: {
       inventory: "Free inventory management",
       listings: "Unlimited listings",
@@ -70,8 +73,8 @@ const tiers = [
       commission: "3% platform commission",
       banner: true,
       search: true,
-      analytics: true,
-      bulk: true,
+      analytics: "Full sales analytics",
+      bulk: "Advanced bulk tools",
       support: "Priority support",
       featured: true,
     },
@@ -79,18 +82,114 @@ const tiers = [
 ];
 
 const comparisonRows = [
-  { label: "Inventory management",   key: "inventory" },
-  { label: "Active listings",        key: "listings" },
-  { label: "Photos per listing",     key: "photos" },
-  { label: "Active auctions",        key: "auctions" },
-  { label: "Platform commission",    key: "commission" },
-  { label: "Custom storefront banner", key: "banner" },
-  { label: "Priority search placement", key: "search" },
-  { label: "Sales analytics",        key: "analytics" },
-  { label: "Bulk listing tools",     key: "bulk" },
-  { label: "Support",                key: "support" },
+  { label: "Inventory management",        key: "inventory" },
+  { label: "Active listings",             key: "listings" },
+  { label: "Photos per listing",          key: "photos" },
+  { label: "Active auctions",             key: "auctions" },
+  { label: "Platform commission",         key: "commission" },
+  { label: "Custom storefront banner",    key: "banner" },
+  { label: "Priority search placement",   key: "search" },
+  { label: "Sales analytics",             key: "analytics" },
+  { label: "Bulk listing tools",          key: "bulk" },
+  { label: "Support",                     key: "support" },
   { label: "Featured homepage placement", key: "featured" },
 ];
+
+function BreakevenCalculator() {
+  const [monthlySales, setMonthlySales] = useState(500);
+
+  const seedlingCost  = monthlySales * 0.065;
+  const growerCost    = monthlySales * 0.05  + 9;
+  const nurseryCost   = monthlySales * 0.03  + 29;
+
+  const growerBreakeven  = Math.ceil(9  / (0.065 - 0.05));   // $600
+  const nurseryBreakeven = Math.ceil(20 / (0.05  - 0.03));   // $1,000 above Grower
+
+  const bestPlan =
+    nurseryCost < growerCost && nurseryCost < seedlingCost ? "Nursery"
+    : growerCost < seedlingCost ? "Grower"
+    : "Seedling";
+
+  const bestColor =
+    bestPlan === "Nursery" ? "text-blue-600" :
+    bestPlan === "Grower"  ? "text-green-700" :
+    "text-muted-foreground";
+
+  return (
+    <section className="px-4 pb-16">
+      <div className="max-w-2xl mx-auto bg-muted rounded-2xl border p-8">
+        <h2 className="font-bold text-xl mb-1 text-center">Find your breakeven</h2>
+        <p className="text-sm text-muted-foreground text-center mb-6">
+          Drag the slider to your estimated monthly sales and see which plan saves you the most.
+        </p>
+
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm text-muted-foreground">Monthly sales</span>
+            <span className="font-bold text-lg">${monthlySales.toLocaleString()}</span>
+          </div>
+          <input
+            type="range"
+            min={0}
+            max={5000}
+            step={50}
+            value={monthlySales}
+            onChange={(e) => setMonthlySales(Number(e.target.value))}
+            className="w-full accent-green-700"
+          />
+          <div className="flex justify-between text-xs text-muted-foreground mt-1">
+            <span>$0</span>
+            <span>$5,000</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-3 mb-6">
+          {[
+            { name: "Seedling", cost: seedlingCost,  sub: 0  },
+            { name: "Grower",   cost: growerCost,    sub: 9  },
+            { name: "Nursery",  cost: nurseryCost,   sub: 29 },
+          ].map((t) => (
+            <div
+              key={t.name}
+              className={cn(
+                "rounded-xl border p-4 text-center transition-all",
+                bestPlan === t.name
+                  ? "border-green-500 bg-green-50 dark:bg-green-900/20 ring-2 ring-green-500"
+                  : "bg-card"
+              )}
+            >
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">{t.name}</p>
+              <p className="text-xl font-bold">${t.cost.toFixed(2)}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {t.sub > 0 ? `$${t.sub}/mo + ` : ""}{t.name === "Seedling" ? "6.5" : t.name === "Grower" ? "5" : "3"}% commission
+              </p>
+              {bestPlan === t.name && (
+                <span className="inline-block mt-2 text-xs font-semibold text-green-700 dark:text-green-400">Best value</span>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <div className="rounded-lg bg-background border px-5 py-4 text-sm space-y-1.5 text-muted-foreground">
+          <p>
+            Upgrading to <strong className="text-foreground">Grower</strong> pays for itself at{" "}
+            <strong className="text-green-700">${growerBreakeven.toLocaleString()}/mo</strong> in sales.
+          </p>
+          <p>
+            Upgrading to <strong className="text-foreground">Nursery</strong> (from Grower) pays for itself at{" "}
+            <strong className="text-green-700">${(growerBreakeven + nurseryBreakeven).toLocaleString()}/mo</strong> in sales.
+          </p>
+          {monthlySales > 0 && (
+            <p className="pt-1 border-t">
+              At <strong className="text-foreground">${monthlySales.toLocaleString()}/mo</strong>, the{" "}
+              <strong className={bestColor}>{bestPlan}</strong> plan costs you the least overall.
+            </p>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
 
 export default function PricingPage() {
   const [annual, setAnnual] = useState(false);
@@ -186,7 +285,6 @@ export default function PricingPage() {
                   {comparisonRows.map((row) => {
                     const val = tier.features[row.key as keyof typeof tier.features];
                     const isString = typeof val === "string";
-                    const isTrue = val === true;
                     const isFalse = val === false;
 
                     return (
@@ -223,6 +321,9 @@ export default function PricingPage() {
           })}
         </div>
       </section>
+
+      {/* Breakeven calculator */}
+      <BreakevenCalculator />
 
       {/* Commission callout */}
       <section className="px-4 pb-16">
@@ -265,11 +366,15 @@ const faqs = [
   },
   {
     q: "Is the commission charged on top of the sale price?",
-    a: "No. The commission is deducted from the payment you receive. If you sell a plant for $20 on the Seedling plan, you receive $18.40 after the 8% commission.",
+    a: "No. The commission is deducted from the payment you receive. If you sell a plant for $20 on the Seedling plan, you receive $18.70 after the 6.5% commission.",
   },
   {
     q: "Do auction wins count toward my commission?",
     a: "Yes, auctions are subject to the same commission rate as fixed-price listings based on your current plan.",
+  },
+  {
+    q: "What's included in basic analytics on the Grower plan?",
+    a: "Grower sellers get total sales volume, revenue over time, and their top 5 best-performing listings. Full analytics on the Nursery plan adds per-listing breakdown, conversion rates, and buyer geography.",
   },
   {
     q: "Is there a free trial on paid plans?",
