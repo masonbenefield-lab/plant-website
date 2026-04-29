@@ -11,6 +11,7 @@ import { Star, MapPin } from "lucide-react";
 import { centsToDisplay } from "@/lib/stripe";
 import FollowButton from "@/components/follow-button";
 import ReportButton from "@/components/report-button";
+import ShareButton from "@/components/share-button";
 import RateSellerForm from "@/app/orders/rate-seller-form";
 
 export async function generateMetadata({
@@ -128,7 +129,8 @@ export default async function SellerStorefront({
                 <p className="text-xs text-muted-foreground mt-0.5">{followerCount} follower{followerCount !== 1 ? "s" : ""}</p>
               )}
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 flex-wrap">
+              <ShareButton username={profile.username} />
               <FollowButton
                 userId={user?.id ?? null}
                 sellerId={profile.id}
