@@ -42,7 +42,7 @@ export async function GET(request: Request) {
     messages: [
       {
         role: "user",
-        content: `You are a helpful gardening assistant on a plant marketplace. Given the search term "${q}", if it is a plant, write 2 concise sentences for beginner gardeners: mention care difficulty, light and water needs, and whether it's good for beginners. If it is not a plant, reply only with the word NULL.`,
+        content: `You are a helpful gardening assistant on a plant marketplace. Given the search term "${q}", if it is a plant, write exactly 2 concise sentences for beginner gardeners covering care difficulty, light and water needs, and whether it's good for beginners. Do not include any headings, markdown, or the plant name at the start — just the sentences. If it is not a plant, reply only with the word NULL.`,
       },
     ],
   });
