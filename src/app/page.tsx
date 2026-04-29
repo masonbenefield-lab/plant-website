@@ -344,21 +344,6 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ── Footer ────────────────────────────────────────────────── */}
-      <footer className="bg-background border-t py-10 px-4">
-        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="font-bold text-green-700 text-lg">Plantet</p>
-          <nav className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
-            <Link href="/shop" className="hover:text-foreground transition-colors">Shop</Link>
-            <Link href="/auctions" className="hover:text-foreground transition-colors">Auctions</Link>
-            <Link href="/pricing" className="hover:text-foreground transition-colors">Pricing</Link>
-            <Link href="/signup" className="hover:text-foreground transition-colors">Sell</Link>
-            <Link href="/contact" className="hover:text-foreground transition-colors">Contact</Link>
-            <Link href="/login" className="hover:text-foreground transition-colors">Sign in</Link>
-          </nav>
-          <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} Plantet</p>
-        </div>
-      </footer>
 
     </div>
   );
