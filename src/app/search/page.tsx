@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { centsToDisplay } from "@/lib/stripe";
 import SearchInput from "./search-input";
@@ -71,7 +72,9 @@ export default async function SearchPage({
         </p>
       )}
 
-      <PlantInfoCard q={q} />
+      <Suspense>
+        <PlantInfoCard />
+      </Suspense>
 
       {q.trim() && (
         <div className="flex gap-2 mb-8">

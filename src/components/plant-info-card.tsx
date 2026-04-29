@@ -1,9 +1,12 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { Leaf } from "lucide-react";
 
-export default function PlantInfoCard({ q }: { q: string }) {
+export default function PlantInfoCard() {
+  const searchParams = useSearchParams();
+  const q = searchParams.get("q") ?? "";
   const [description, setDescription] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
