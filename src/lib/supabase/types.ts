@@ -64,6 +64,7 @@ export interface Database {
           images: string[];
           status: ListingStatus;
           category: string | null;
+          pot_size: string | null;
           created_at: string;
         };
         Insert: {
@@ -78,6 +79,7 @@ export interface Database {
           images?: string[];
           status?: ListingStatus;
           category?: string | null;
+          pot_size?: string | null;
           created_at?: string;
         };
         Update: {
@@ -91,6 +93,7 @@ export interface Database {
           images?: string[];
           status?: ListingStatus;
           category?: string | null;
+          pot_size?: string | null;
         };
         Relationships: [];
       };
@@ -110,6 +113,7 @@ export interface Database {
           ends_at: string;
           status: AuctionStatus;
           category: string | null;
+          pot_size: string | null;
           created_at: string;
         };
         Insert: {
@@ -127,6 +131,7 @@ export interface Database {
           ends_at: string;
           status?: AuctionStatus;
           category?: string | null;
+          pot_size?: string | null;
           created_at?: string;
         };
         Update: {
@@ -143,6 +148,7 @@ export interface Database {
           ends_at?: string;
           status?: AuctionStatus;
           category?: string | null;
+          pot_size?: string | null;
         };
         Relationships: [];
       };
@@ -227,6 +233,7 @@ export interface Database {
           images: string[];
           notes: string | null;
           category: string | null;
+          pot_size: string | null;
           archived_at: string | null;
           created_at: string;
         };
@@ -242,6 +249,7 @@ export interface Database {
           images?: string[];
           notes?: string | null;
           category?: string | null;
+          pot_size?: string | null;
           archived_at?: string | null;
           created_at?: string;
         };
@@ -255,6 +263,7 @@ export interface Database {
           images?: string[];
           notes?: string | null;
           category?: string | null;
+          pot_size?: string | null;
           archived_at?: string | null;
         };
         Relationships: [];
