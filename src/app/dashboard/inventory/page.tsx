@@ -20,7 +20,7 @@ export default async function InventoryPage() {
     supabase.from("profiles").select("seller_terms_accepted_at").eq("id", user.id).single(),
     supabase.from("inventory").select("*").eq("seller_id", user.id).is("archived_at", null).order("created_at", { ascending: false }),
     supabase.from("inventory").select("*").eq("seller_id", user.id).not("archived_at", "is", null).gte("archived_at", thirtyDaysAgo).order("archived_at", { ascending: false }),
-    supabase.from("listings").select("id, plant_name, variety, status, quantity, in_stock, price_cents, description, images, category, seller_id, created_at").eq("seller_id", user.id).order("created_at", { ascending: false }),
+    supabase.from("listings").select("id, plant_name, variety, status, quantity, in_stock, price_cents, description, images, category, pot_size, seller_id, created_at").eq("seller_id", user.id).order("created_at", { ascending: false }),
     supabase.from("auctions").select("*").eq("seller_id", user.id).order("created_at", { ascending: false }),
   ]);
 
