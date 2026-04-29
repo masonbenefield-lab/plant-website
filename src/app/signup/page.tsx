@@ -26,6 +26,7 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [username, setUsername] = useState("");
+  const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -153,7 +154,23 @@ export default function SignupPage() {
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-3">
-            <Button type="submit" className="w-full bg-green-700 hover:bg-green-800" disabled={loading}>
+            <label className="flex items-start gap-2 cursor-pointer text-sm text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={ageConfirmed}
+                onChange={(e) => setAgeConfirmed(e.target.checked)}
+                className="mt-0.5 accent-green-700"
+                required
+              />
+              <span>
+                I confirm I am at least 18 years old and have read the{" "}
+                <Link href="/privacy-policy" className="underline hover:text-foreground" target="_blank">
+                  Privacy Policy
+                </Link>
+                .
+              </span>
+            </label>
+            <Button type="submit" className="w-full bg-green-700 hover:bg-green-800" disabled={loading || !ageConfirmed}>
               {loading ? "Creating account…" : "Create account"}
             </Button>
             {planInfo && (

@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import Navbar from "@/components/layout/navbar";
+import Footer from "@/components/layout/footer";
 import { ThemeProvider } from "@/components/theme-provider";
 import { createClient } from "@/lib/supabase/server";
 
@@ -51,6 +52,7 @@ export default async function RootLayout({
             isAdmin={profile?.is_admin ?? false}
           />
           <main className="flex-1">{children}</main>
+          <Footer />
           <Toaster richColors />
         </ThemeProvider>
       </body>
