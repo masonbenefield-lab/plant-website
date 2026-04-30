@@ -71,11 +71,12 @@ export default async function AnalyticsPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("plan")
+    .select("plan, is_admin")
     .eq("id", user.id)
     .single();
 
-  const plan = (profile?.plan ?? "seedling") as "seedling" | "grower" | "nursery";
+  const plan: "seedling" | "grower" | "nursery" =
+    profile?.is_admin ? "nursery" : (profile?.plan ?? "seedling");
 
   if (plan === "seedling") {
     return (
