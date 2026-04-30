@@ -69,14 +69,17 @@ export default async function AnalyticsPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("plan, is_admin")
-    .eq("id", user.id)
-    .single();
+  // Two separate queries so a missing `plan` column (pre-migration) never
+  // breaks the is_admin check.
+  const [{ data: adminProfile }, { data: planProfile }] = await Promise.all([
+    supabase.from("profiles").select("is_admin").eq("id", user.id).single(),
+    supabase.from("profiles").select("plan").eq("id", user.id).single(),
+  ]);
 
   const plan: "seedling" | "grower" | "nursery" =
-    profile?.is_admin ? "nursery" : (profile?.plan ?? "seedling");
+    adminProfile?.is_admin
+      ? "nursery"
+      : ((planProfile?.plan as "seedling" | "grower" | "nursery") ?? "seedling");
 
   if (plan === "seedling") {
     return (
