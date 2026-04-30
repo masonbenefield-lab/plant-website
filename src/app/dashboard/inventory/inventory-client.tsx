@@ -84,6 +84,7 @@ type ActionModal =
   | { type: "edit"; row: Row }
   | { type: "edit-listing"; row: Row }
   | { type: "restock"; row: Row }
+  | { type: "sold"; row: Row }
   | null;
 
 const statusColor: Record<string, string> = {
@@ -175,6 +176,12 @@ export default function InventoryClient({
   const [linkListingId, setLinkListingId] = useState("");
   const [linkQty, setLinkQty] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  // — Sold modal fields
+  const [soldPrice, setSoldPrice] = useState("");
+  const [soldQuantity, setSoldQuantity] = useState("1");
+  const [soldNote, setSoldNote] = useState("");
+  const [soldDate, setSoldDate] = useState("");
 
   // — Edit modal fields
   const [editPlantName, setEditPlantName] = useState("");
@@ -335,7 +342,7 @@ export default function InventoryClient({
 
   // ── Modal helpers ─────────────────────────────────────────────────────────
 
-  function openModal(type: "listing" | "auction" | "link" | "edit" | "edit-listing" | "restock", row: Row) {
+  function openModal(type: "listing" | "auction" | "link" | "edit" | "edit-listing" | "restock" | "sold", row: Row) {
     if ((type === "listing" || type === "auction") && !termsAccepted) {
       router.push("/seller-agreement?next=/dashboard/inventory");
       return;
@@ -353,6 +360,12 @@ export default function InventoryClient({
     setEditCategory(row.category ?? "");
     setEditPotSize(row.pot_size ?? "");
     setEditImages([...row.images]);
+    if (type === "sold") {
+      setSoldPrice("");
+      setSoldQuantity("1");
+      setSoldNote("");
+      setSoldDate(new Date().toISOString().split("T")[0]);
+    }
     setModal({ type, row });
   }
 
@@ -577,6 +590,42 @@ export default function InventoryClient({
     router.refresh();
   }
 
+  async function submitSold() {
+    if (!modal || modal.type !== "sold") return;
+    const qty = Math.max(1, Math.min(Number(soldQuantity) || 1, modal.row.quantity));
+    const priceCents = dollarsToCents(soldPrice);
+    if (!soldPrice || priceCents <= 0) { toast.error("Enter a sale price"); return; }
+    setSubmitting(true);
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { toast.error("Not logged in"); setSubmitting(false); return; }
+
+    const { error: saleError } = await supabase.from("manual_sales").insert({
+      seller_id: user.id,
+      inventory_id: modal.row.id,
+      plant_name: modal.row.plant_name,
+      variety: modal.row.variety || null,
+      price_cents: priceCents,
+      quantity: qty,
+      note: soldNote || null,
+      sold_at: soldDate ? new Date(soldDate + "T12:00:00").toISOString() : new Date().toISOString(),
+    });
+
+    if (saleError) { toast.error(saleError.message); setSubmitting(false); return; }
+
+    const newQty = modal.row.quantity - qty;
+    if (newQty <= 0) {
+      await supabase.from("inventory").update({ quantity: 0, archived_at: new Date().toISOString() }).eq("id", modal.row.id);
+    } else {
+      await supabase.from("inventory").update({ quantity: newQty }).eq("id", modal.row.id);
+    }
+
+    setSubmitting(false);
+    toast.success(newQty <= 0 ? `${qty} sold — item archived (out of stock)` : `${qty} sold · ${newQty} remaining`);
+    setModal(null);
+    router.refresh();
+  }
+
   async function resumeListing(id: string) {
     setLoadingId(id);
     const supabase = createClient();
@@ -724,6 +773,7 @@ export default function InventoryClient({
       return (
         <div className="flex items-center gap-2 flex-wrap">
           <button onClick={() => openModal("edit", row)} className="text-xs text-foreground hover:underline font-medium">Edit</button>
+          <button onClick={() => openModal("sold", row)} className="text-xs text-orange-600 hover:underline font-medium">Sold</button>
           {row.linked_listing_id ? (
             <span className="text-xs text-muted-foreground">Linked</span>
           ) : (
@@ -1452,6 +1502,83 @@ export default function InventoryClient({
               <div className="flex gap-2 pt-1">
                 <Button variant="outline" onClick={() => setModal(null)} className="flex-1">Cancel</Button>
                 <Button onClick={submitRestock} disabled={submitting || !editQuantity || Number(editQuantity) < 1} className="flex-1 bg-green-700 hover:bg-green-800">{submitting ? "Saving…" : "Restock & Go Live"}</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Mark as Sold modal */}
+      <Dialog open={modal?.type === "sold"} onOpenChange={(o) => !o && setModal(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Mark as Sold</DialogTitle></DialogHeader>
+          {modal && (
+            <div className="space-y-4 mt-1">
+              <p className="text-sm text-muted-foreground">
+                Record an off-platform sale for{" "}
+                <span className="font-medium text-foreground">{modal.row.plant_name}{modal.row.variety ? ` — ${modal.row.variety}` : ""}</span>.
+                {" "}This will update your inventory and appear in analytics as an off-platform sale.
+              </p>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="sold-price">Sale price ($) *</Label>
+                  <Input
+                    id="sold-price"
+                    type="number"
+                    min={0.01}
+                    step={0.01}
+                    placeholder="0.00"
+                    value={soldPrice}
+                    onChange={(e) => setSoldPrice(e.target.value)}
+                    autoFocus
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="sold-qty">Quantity *</Label>
+                  <Input
+                    id="sold-qty"
+                    type="number"
+                    min={1}
+                    max={modal.row.quantity}
+                    step={1}
+                    value={soldQuantity}
+                    onChange={(e) => setSoldQuantity(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">{modal.row.quantity} available</p>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <Label htmlFor="sold-date">Date sold</Label>
+                <Input
+                  id="sold-date"
+                  type="date"
+                  value={soldDate}
+                  onChange={(e) => setSoldDate(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label htmlFor="sold-note">Note <span className="font-normal text-muted-foreground">(optional)</span></Label>
+                <Input
+                  id="sold-note"
+                  placeholder="e.g. Farmers market, local pickup…"
+                  value={soldNote}
+                  onChange={(e) => setSoldNote(e.target.value)}
+                  maxLength={200}
+                />
+              </div>
+
+              <div className="flex gap-2 pt-1">
+                <Button variant="outline" onClick={() => setModal(null)} className="flex-1">Cancel</Button>
+                <Button
+                  onClick={submitSold}
+                  disabled={submitting || !soldPrice || Number(soldPrice) <= 0 || !soldQuantity || Number(soldQuantity) < 1}
+                  className="flex-1 bg-orange-600 hover:bg-orange-700 text-white"
+                >
+                  {submitting ? "Saving…" : "Record Sale"}
+                </Button>
               </div>
             </div>
           )}

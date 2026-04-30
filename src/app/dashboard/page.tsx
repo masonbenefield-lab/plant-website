@@ -133,7 +133,7 @@ export default async function DashboardPage() {
         <StatCard
           label="This Month"
           value={centsToDisplay(thisMonthRevenue)}
-          sub={`All time: ${centsToDisplay(totalRevenue)}`}
+          sub={`Platform only · All time: ${centsToDisplay(totalRevenue)}`}
           trend={revenueChangePct}
         />
       </div>

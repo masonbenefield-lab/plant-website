@@ -99,15 +99,23 @@ export default async function AnalyticsPage() {
     );
   }
 
-  // --- Fetch all completed orders ---
-  const { data: rawOrders } = await supabase
-    .from("orders")
-    .select("id, amount_cents, created_at, listing_id, auction_id, shipping_address")
-    .eq("seller_id", user.id)
-    .in("status", ["paid", "shipped", "delivered"])
-    .order("created_at", { ascending: true });
+  // --- Fetch all completed orders + off-platform sales ---
+  const [{ data: rawOrders }, { data: rawManualSales }] = await Promise.all([
+    supabase
+      .from("orders")
+      .select("id, amount_cents, created_at, listing_id, auction_id, shipping_address")
+      .eq("seller_id", user.id)
+      .in("status", ["paid", "shipped", "delivered"])
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("manual_sales")
+      .select("id, plant_name, variety, price_cents, quantity, note, sold_at")
+      .eq("seller_id", user.id)
+      .order("sold_at", { ascending: false }),
+  ]);
 
   const orders = (rawOrders ?? []) as Order[];
+  const manualSales = rawManualSales ?? [];
 
   // Date boundaries
   const now = new Date();
@@ -127,6 +135,16 @@ export default async function AnalyticsPage() {
 
   const totalRevenue = orders.reduce((s, o) => s + o.amount_cents, 0);
   const avgOrderValue = orders.length ? totalRevenue / orders.length : 0;
+
+  // Off-platform totals
+  const offPlatformThisMonth = manualSales
+    .filter(s => new Date(s.sold_at) >= startOfThisMonth)
+    .reduce((sum, s) => sum + s.price_cents * s.quantity, 0);
+  const offPlatformLastMonth = manualSales
+    .filter(s => { const d = new Date(s.sold_at); return d >= startOfLastMonth && d < startOfThisMonth; })
+    .reduce((sum, s) => sum + s.price_cents * s.quantity, 0);
+  const offPlatformTotal = manualSales.reduce((sum, s) => sum + s.price_cents * s.quantity, 0);
+  const offPlatformChange = pct(offPlatformThisMonth, offPlatformLastMonth);
 
   // --- Top items by revenue ---
   const listingRevMap: Record<string, number> = {};
@@ -439,6 +457,72 @@ export default async function AnalyticsPage() {
           )}
         </div>
       )}
+
+      {/* Off-platform sales — available to all paid plans */}
+      <div>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">Off-platform sales</h2>
+        {manualSales.length === 0 ? (
+          <Card className="border-dashed">
+            <CardContent className="py-8 text-center space-y-2">
+              <p className="font-medium">No off-platform sales recorded yet</p>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Use the <strong>Sold</strong> button on any inventory item to log sales made at farmers markets, local pickups, or anywhere outside Plantet.
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+              <StatCard
+                label="Off-platform this month"
+                value={centsToDisplay(offPlatformThisMonth)}
+                sub={`Last month: ${centsToDisplay(offPlatformLastMonth)}`}
+                trend={offPlatformChange}
+              />
+              <StatCard
+                label="Off-platform all time"
+                value={centsToDisplay(offPlatformTotal)}
+                sub={`${manualSales.length} sale${manualSales.length !== 1 ? "s" : ""} recorded`}
+              />
+              <StatCard
+                label="Combined this month"
+                value={centsToDisplay(thisMonthRevenue + offPlatformThisMonth)}
+                sub="Plantet + off-platform"
+              />
+            </div>
+            <Card>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b text-muted-foreground text-xs uppercase tracking-wide">
+                        <th className="px-4 py-3 text-left font-medium">Item</th>
+                        <th className="px-4 py-3 text-right font-medium">Qty</th>
+                        <th className="px-4 py-3 text-right font-medium">Revenue</th>
+                        <th className="px-4 py-3 text-left font-medium">Note</th>
+                        <th className="px-4 py-3 text-right font-medium">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {manualSales.map((s) => (
+                        <tr key={s.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                          <td className="px-4 py-3 font-medium">{s.plant_name}{s.variety ? ` — ${s.variety}` : ""}</td>
+                          <td className="px-4 py-3 text-right text-muted-foreground">{s.quantity}</td>
+                          <td className="px-4 py-3 text-right font-semibold">{centsToDisplay(s.price_cents * s.quantity)}</td>
+                          <td className="px-4 py-3 text-muted-foreground">{s.note ?? "—"}</td>
+                          <td className="px-4 py-3 text-right text-muted-foreground whitespace-nowrap">
+                            {new Date(s.sold_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </div>
 
       {/* Grower upgrade teaser */}
       {plan === "grower" && (

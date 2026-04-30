@@ -382,6 +382,35 @@ export interface Database {
         Relationships: [];
       };
 
+      manual_sales: {
+        Row: {
+          id: string;
+          seller_id: string;
+          inventory_id: string | null;
+          plant_name: string;
+          variety: string | null;
+          price_cents: number;
+          quantity: number;
+          note: string | null;
+          sold_at: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          seller_id: string;
+          inventory_id?: string | null;
+          plant_name: string;
+          variety?: string | null;
+          price_cents: number;
+          quantity?: number;
+          note?: string | null;
+          sold_at?: string;
+          created_at?: string;
+        };
+        Update: Record<string, never>;
+        Relationships: [];
+      };
+
       admin_audit_logs: {
         Row: {
           id: string;
