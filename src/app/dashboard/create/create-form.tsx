@@ -15,6 +15,7 @@ import { PLANT_CATEGORIES } from "@/lib/categories";
 import { AlertTriangle } from "lucide-react";
 import PotSizePicker from "@/components/pot-size-picker";
 import PriceSuggestion from "@/components/price-suggestion";
+import { getPlanLimits, type PlanLimits } from "@/lib/plan-limits";
 
 type Mode = null | "listing" | "auction" | "inventory";
 
@@ -27,6 +28,9 @@ export default function CreateInventoryPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const [profileWarning, setProfileWarning] = useState<"incomplete" | "unverified" | null>(null);
+  const [planLimits, setPlanLimits] = useState<PlanLimits>({ listings: null, auctions: null, photos: null });
+  const [currentListingCount, setCurrentListingCount] = useState(0);
+  const [currentAuctionCount, setCurrentAuctionCount] = useState(0);
 
   useEffect(() => {
     async function checkProfile() {
@@ -34,14 +38,21 @@ export default function CreateInventoryPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       if (!user.email_confirmed_at) { setProfileWarning("unverified"); return; }
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("bio, avatar_url")
-        .eq("id", user.id)
-        .single();
+      const [{ data: profile }, { data: planProfile }] = await Promise.all([
+        supabase.from("profiles").select("bio, avatar_url").eq("id", user.id).single(),
+        supabase.from("profiles").select("plan, is_admin").eq("id", user.id).single(),
+      ]);
       if (!profile?.bio?.trim() || !profile?.avatar_url) {
         setProfileWarning("incomplete");
       }
+      const limits = getPlanLimits(planProfile?.plan, !!planProfile?.is_admin);
+      setPlanLimits(limits);
+      const [{ count: lCount }, { count: aCount }] = await Promise.all([
+        supabase.from("listings").select("*", { count: "exact", head: true }).eq("seller_id", user.id).in("status", ["active", "paused"]),
+        supabase.from("auctions").select("*", { count: "exact", head: true }).eq("seller_id", user.id).eq("status", "active"),
+      ]);
+      setCurrentListingCount(lCount ?? 0);
+      setCurrentAuctionCount(aCount ?? 0);
     }
     checkProfile();
   }, []);
@@ -70,12 +81,19 @@ export default function CreateInventoryPage() {
   const [endsAt, setEndsAt] = useState("");
 
   async function uploadImages(files: FileList) {
+    const photoLimit = planLimits.photos;
+    if (photoLimit !== null && imageUrls.length >= photoLimit) {
+      toast.error(`Your plan allows ${photoLimit} photos per listing.`);
+      return;
+    }
     setUploading(true);
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setUploading(false); return; }
+    const remaining = photoLimit !== null ? photoLimit - imageUrls.length : Infinity;
+    const toUpload = Array.from(files).slice(0, remaining);
     const urls: string[] = [];
-    for (const file of Array.from(files)) {
+    for (const file of toUpload) {
       const path = `${user.id}/${Date.now()}-${file.name}`;
       const { error } = await supabase.storage.from("listings").upload(path, file, { upsert: true });
       if (error) {
@@ -98,6 +116,17 @@ export default function CreateInventoryPage() {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { toast.error("Not logged in"); setSaving(false); return; }
+
+    if (mode === "listing" && planLimits.listings !== null && currentListingCount >= planLimits.listings) {
+      toast.error(`You've reached your ${planLimits.listings}-listing limit. Upgrade your plan to add more.`);
+      setSaving(false);
+      return;
+    }
+    if (mode === "auction" && planLimits.auctions !== null && currentAuctionCount >= planLimits.auctions) {
+      toast.error(`You've reached your ${planLimits.auctions}-auction limit. Upgrade your plan for unlimited auctions.`);
+      setSaving(false);
+      return;
+    }
 
     if (mode === "inventory") {
       const { error } = await supabase.from("inventory").insert({
@@ -259,22 +288,36 @@ export default function CreateInventoryPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Photos</Label>
+              <Label>
+                Photos{planLimits.photos !== null && (
+                  <span className="ml-1 font-normal text-muted-foreground text-xs">({imageUrls.length}/{planLimits.photos})</span>
+                )}
+              </Label>
               <div
-                onClick={() => !uploading && fileRef.current?.click()}
+                onClick={() => { if (!uploading && !(planLimits.photos !== null && imageUrls.length >= planLimits.photos)) fileRef.current?.click(); }}
                 onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
                 onDragLeave={() => setDragging(false)}
                 onDrop={handleDrop}
-                className={`relative flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-6 py-8 text-center cursor-pointer transition-colors ${
-                  dragging
-                    ? "border-green-500 bg-green-50"
-                    : "border-muted-foreground/25 hover:border-green-400 hover:bg-muted/40"
+                className={`relative flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-6 py-8 text-center transition-colors ${
+                  planLimits.photos !== null && imageUrls.length >= planLimits.photos
+                    ? "border-muted-foreground/20 opacity-50 cursor-not-allowed"
+                    : dragging
+                    ? "border-green-500 bg-green-50 cursor-pointer"
+                    : "border-muted-foreground/25 hover:border-green-400 hover:bg-muted/40 cursor-pointer"
                 } ${uploading ? "pointer-events-none opacity-60" : ""}`}
               >
                 {uploading ? (
                   <>
                     <span className="text-2xl">⏳</span>
                     <p className="text-sm text-muted-foreground">Uploading…</p>
+                  </>
+                ) : planLimits.photos !== null && imageUrls.length >= planLimits.photos ? (
+                  <>
+                    <span className="text-3xl">📷</span>
+                    <p className="text-sm font-medium">Photo limit reached</p>
+                    <p className="text-xs text-muted-foreground">
+                      <Link href="/pricing" className="underline">Upgrade</Link> for more photos
+                    </p>
                   </>
                 ) : (
                   <>

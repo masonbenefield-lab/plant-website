@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { getStripe, PLATFORM_FEE_PERCENT } from "@/lib/stripe";
+import { getStripe } from "@/lib/stripe";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { planFeePercent } from "@/lib/plan-limits";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -50,18 +51,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: `Only ${listing.quantity} available` }, { status: 400 });
     }
 
-    const { data: sellerProfile } = await supabase
-      .from("profiles")
-      .select("stripe_account_id, stripe_onboarded")
-      .eq("id", listing.seller_id)
-      .single();
+    const [{ data: sellerProfile }, { data: sellerPlan }] = await Promise.all([
+      supabase.from("profiles").select("stripe_account_id, stripe_onboarded").eq("id", listing.seller_id).single(),
+      supabase.from("profiles").select("plan, is_admin").eq("id", listing.seller_id).single(),
+    ]);
 
     if (!sellerProfile?.stripe_onboarded || !sellerProfile.stripe_account_id) {
       return NextResponse.json({ error: "Seller not set up for payments" }, { status: 400 });
     }
 
+    const feePercent = planFeePercent(sellerPlan?.plan, !!sellerPlan?.is_admin);
     const amountCents = listing.price_cents * quantity;
-    const feeCents = Math.round(amountCents * (PLATFORM_FEE_PERCENT / 100));
+    const feeCents = Math.round(amountCents * (feePercent / 100));
 
     const paymentIntent = await getStripe().paymentIntents.create({
       amount: amountCents,
@@ -109,18 +110,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Auction not found or not eligible" }, { status: 404 });
     }
 
-    const { data: sellerProfile } = await supabase
-      .from("profiles")
-      .select("stripe_account_id, stripe_onboarded")
-      .eq("id", auction.seller_id)
-      .single();
+    const [{ data: sellerProfile }, { data: sellerPlan }] = await Promise.all([
+      supabase.from("profiles").select("stripe_account_id, stripe_onboarded").eq("id", auction.seller_id).single(),
+      supabase.from("profiles").select("plan, is_admin").eq("id", auction.seller_id).single(),
+    ]);
 
     if (!sellerProfile?.stripe_onboarded || !sellerProfile.stripe_account_id) {
       return NextResponse.json({ error: "Seller not set up for payments" }, { status: 400 });
     }
 
+    const feePercent = planFeePercent(sellerPlan?.plan, !!sellerPlan?.is_admin);
     const amountCents = auction.current_bid_cents;
-    const feeCents = Math.round(amountCents * (PLATFORM_FEE_PERCENT / 100));
+    const feeCents = Math.round(amountCents * (feePercent / 100));
 
     const paymentIntent = await getStripe().paymentIntents.create({
       amount: amountCents,

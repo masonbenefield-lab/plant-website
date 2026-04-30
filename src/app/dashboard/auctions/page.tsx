@@ -5,21 +5,24 @@ import { Card, CardContent } from "@/components/ui/card";
 import { centsToDisplay } from "@/lib/stripe";
 import NewAuctionDialog from "./new-auction-dialog";
 import AuctionActions from "./auction-actions";
+import { getPlanLimits } from "@/lib/plan-limits";
 
 export default async function DashboardAuctionsPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("seller_terms_accepted_at")
-    .eq("id", user.id)
-    .single();
+  const [{ data: profile }, { data: planProfile }, { count: activeAuctionCount }] = await Promise.all([
+    supabase.from("profiles").select("seller_terms_accepted_at").eq("id", user.id).single(),
+    supabase.from("profiles").select("plan, is_admin").eq("id", user.id).single(),
+    supabase.from("auctions").select("*", { count: "exact", head: true }).eq("seller_id", user.id).eq("status", "active"),
+  ]);
 
   if (!profile?.seller_terms_accepted_at) {
     redirect("/seller-agreement?next=/dashboard/auctions");
   }
+
+  const limits = getPlanLimits(planProfile?.plan, !!planProfile?.is_admin);
 
   const { data: auctions } = await supabase
     .from("auctions")
@@ -31,7 +34,12 @@ export default async function DashboardAuctionsPage() {
     <div className="max-w-5xl mx-auto px-4 py-10">
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-2xl font-bold">My Auctions</h1>
-        <NewAuctionDialog sellerId={user.id} />
+        <NewAuctionDialog
+          sellerId={user.id}
+          planLimit={limits.auctions}
+          currentCount={activeAuctionCount ?? 0}
+          photoLimit={limits.photos}
+        />
       </div>
 
       {!auctions?.length ? (

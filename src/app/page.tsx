@@ -54,7 +54,7 @@ const steps = [
 export default async function LandingPage() {
   const supabase = await createClient();
 
-  const [{ data: liveListings }, { data: liveAuctions }] = await Promise.all([
+  const [{ data: liveListings }, { data: liveAuctions }, { data: nurseryProfiles }] = await Promise.all([
     supabase
       .from("listings")
       .select("id, plant_name, variety, price_cents, images")
@@ -68,7 +68,24 @@ export default async function LandingPage() {
       .gt("ends_at", new Date().toISOString())
       .order("ends_at", { ascending: true })
       .limit(4),
+    supabase
+      .from("profiles")
+      .select("id")
+      .eq("plan", "nursery"),
   ]);
+
+  const nurserySellerIds = (nurseryProfiles ?? []).map((p) => p.id);
+  let featuredListings: { id: string; plant_name: string; variety: string | null; price_cents: number; images: string[] }[] = [];
+  if (nurserySellerIds.length > 0) {
+    const { data } = await supabase
+      .from("listings")
+      .select("id, plant_name, variety, price_cents, images")
+      .eq("status", "active")
+      .in("seller_id", nurserySellerIds)
+      .order("created_at", { ascending: false })
+      .limit(4);
+    featuredListings = data ?? [];
+  }
 
   const bgCycle = ["bg-green-100", "bg-pink-100", "bg-amber-100", "bg-emerald-100"];
   const emojiCycle = ["🌿", "🌸", "🌵", "🪴"];
@@ -214,6 +231,50 @@ export default async function LandingPage() {
         </section>
       )}
 
+      {/* ── Featured sellers (Nursery plan) ──────────────────────── */}
+      {featuredListings.length > 0 && (
+        <section className="py-14 sm:py-16 px-4 bg-muted/40">
+          <div className="max-w-5xl mx-auto">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs font-bold uppercase tracking-widest text-green-700 bg-green-100 dark:bg-green-900/40 dark:text-green-400 px-2 py-0.5 rounded-full">Featured</span>
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-bold">From top nurseries</h2>
+                <p className="text-muted-foreground mt-1 text-sm">Hand-picked from our highest-rated professional sellers.</p>
+              </div>
+              <Link href="/shop" className="text-sm font-medium text-green-700 hover:underline">
+                Browse all →
+              </Link>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {featuredListings.map((l, i) => {
+                const bg = ["bg-green-100", "bg-pink-100", "bg-amber-100", "bg-emerald-100"][i % 4];
+                const emoji = ["🌿", "🌸", "🌵", "🪴"][i % 4];
+                return (
+                  <Link key={l.id} href={`/shop/${l.id}`} className="bg-card rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow border">
+                    <div className={cn("relative flex items-center justify-center h-24 sm:h-28 overflow-hidden", l.images?.[0] ? "" : bg)}>
+                      {l.images?.[0] ? (
+                        <Image src={l.images[0]} alt={l.plant_name} fill className="object-cover" />
+                      ) : (
+                        <span className="text-4xl sm:text-5xl">{emoji}</span>
+                      )}
+                    </div>
+                    <div className="p-3">
+                      <p className="font-semibold text-card-foreground text-sm leading-tight truncate">{l.plant_name}{l.variety ? ` ${l.variety}` : ""}</p>
+                      <div className="flex items-center justify-between mt-1.5">
+                        <span className="text-green-600 dark:text-green-400 font-bold text-sm">{centsToDisplay(l.price_cents)}</span>
+                        <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">⭐ Featured</span>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* ── Who it's for ──────────────────────────────────────────── */}
       <section className="py-16 sm:py-20 px-4 bg-muted">
         <div className="max-w-5xl mx-auto">
@@ -264,9 +325,9 @@ export default async function LandingPage() {
               <p className="text-sm text-muted-foreground leading-relaxed">Post unlimited listings and auctions — completely free.</p>
             </div>
             <div className="bg-card rounded-2xl border-2 border-green-600 p-6 flex flex-col items-center shadow-md">
-              <p className="text-4xl font-bold text-green-700 mb-2">5%</p>
+              <p className="text-4xl font-bold text-green-700 mb-2">3–6.5%</p>
               <p className="font-semibold mb-2">Per sale</p>
-              <p className="text-sm text-muted-foreground leading-relaxed">A small fee taken only when a sale completes. Nothing upfront.</p>
+              <p className="text-sm text-muted-foreground leading-relaxed">A small fee taken only when a sale completes. Rate depends on your plan.</p>
             </div>
             <div className="bg-card rounded-2xl border p-6 flex flex-col items-center">
               <p className="text-4xl font-bold text-green-700 mb-2">$0</p>

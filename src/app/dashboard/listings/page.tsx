@@ -6,21 +6,24 @@ import { Card, CardContent } from "@/components/ui/card";
 import ListingActions from "./listing-actions";
 import NewListingDialog from "./new-listing-dialog";
 import PauseAllButton from "./pause-all-button";
+import { getPlanLimits } from "@/lib/plan-limits";
 
 export default async function DashboardListingsPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("seller_terms_accepted_at")
-    .eq("id", user.id)
-    .single();
+  const [{ data: profile }, { data: planProfile }, { count: activeListingCount }] = await Promise.all([
+    supabase.from("profiles").select("seller_terms_accepted_at").eq("id", user.id).single(),
+    supabase.from("profiles").select("plan, is_admin").eq("id", user.id).single(),
+    supabase.from("listings").select("*", { count: "exact", head: true }).eq("seller_id", user.id).in("status", ["active", "paused"]),
+  ]);
 
   if (!profile?.seller_terms_accepted_at) {
     redirect("/seller-agreement?next=/dashboard/listings");
   }
+
+  const limits = getPlanLimits(planProfile?.plan, !!planProfile?.is_admin);
 
   const { data: listings } = await supabase
     .from("listings")
@@ -34,7 +37,12 @@ export default async function DashboardListingsPage() {
         <h1 className="text-2xl font-bold">My Listings</h1>
         <div className="flex items-center gap-2">
           <PauseAllButton sellerId={user.id} />
-          <NewListingDialog sellerId={user.id} />
+          <NewListingDialog
+            sellerId={user.id}
+            planLimit={limits.listings}
+            currentCount={activeListingCount ?? 0}
+            photoLimit={limits.photos}
+          />
         </div>
       </div>
 

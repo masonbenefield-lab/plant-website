@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +20,14 @@ import { dollarsToCents } from "@/lib/stripe";
 import PriceSuggestion from "@/components/price-suggestion";
 import PotSizePicker from "@/components/pot-size-picker";
 
-export default function NewAuctionDialog({ sellerId }: { sellerId: string }) {
+interface Props {
+  sellerId: string;
+  planLimit: number | null;
+  currentCount: number;
+  photoLimit: number | null;
+}
+
+export default function NewAuctionDialog({ sellerId, planLimit, currentCount, photoLimit }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -30,15 +38,22 @@ export default function NewAuctionDialog({ sellerId }: { sellerId: string }) {
   const [potSize, setPotSize] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const atAuctionLimit = planLimit !== null && currentCount >= planLimit;
+  const atPhotoLimit = photoLimit !== null && imageUrls.length >= photoLimit;
+
   async function uploadImages(files: FileList) {
+    if (atPhotoLimit) {
+      toast.error(`Your plan allows ${photoLimit} photo${photoLimit === 1 ? "" : "s"} per listing.`);
+      return;
+    }
     setUploading(true);
     const supabase = createClient();
+    const remaining = photoLimit !== null ? photoLimit - imageUrls.length : Infinity;
+    const toUpload = Array.from(files).slice(0, remaining);
     const urls: string[] = [];
-    for (const file of Array.from(files)) {
+    for (const file of toUpload) {
       const path = `${sellerId}/${Date.now()}-${file.name}`;
-      const { error } = await supabase.storage
-        .from("auctions")
-        .upload(path, file, { upsert: true });
+      const { error } = await supabase.storage.from("auctions").upload(path, file, { upsert: true });
       if (!error) {
         const { data } = supabase.storage.from("auctions").getPublicUrl(path);
         urls.push(data.publicUrl);
@@ -50,6 +65,7 @@ export default function NewAuctionDialog({ sellerId }: { sellerId: string }) {
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (atAuctionLimit) return;
     setSaving(true);
     const form = e.currentTarget;
     const data = new FormData(form);
@@ -99,6 +115,17 @@ export default function NewAuctionDialog({ sellerId }: { sellerId: string }) {
         <DialogHeader>
           <DialogTitle>Create an Auction</DialogTitle>
         </DialogHeader>
+
+        {atAuctionLimit && (
+          <div className="rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
+            You&apos;ve reached your <strong>{planLimit}-auction limit</strong> on the Seedling plan.{" "}
+            <Link href="/pricing" className="font-semibold underline" onClick={() => setOpen(false)}>
+              Upgrade your plan
+            </Link>{" "}
+            for unlimited auctions.
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4 mt-2">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
@@ -107,6 +134,7 @@ export default function NewAuctionDialog({ sellerId }: { sellerId: string }) {
                 id="plant_name"
                 name="plant_name"
                 required
+                disabled={atAuctionLimit}
                 value={plantName}
                 onChange={(e) => setPlantName(e.target.value)}
               />
@@ -116,6 +144,7 @@ export default function NewAuctionDialog({ sellerId }: { sellerId: string }) {
               <Input
                 id="variety"
                 name="variety"
+                disabled={atAuctionLimit}
                 value={variety}
                 onChange={(e) => setVariety(e.target.value)}
               />
@@ -124,17 +153,17 @@ export default function NewAuctionDialog({ sellerId }: { sellerId: string }) {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
               <Label htmlFor="quantity">Quantity *</Label>
-              <Input id="quantity" name="quantity" type="number" min={1} defaultValue={1} required />
+              <Input id="quantity" name="quantity" type="number" min={1} defaultValue={1} required disabled={atAuctionLimit} />
             </div>
             <div className="space-y-1">
               <Label htmlFor="starting_bid">Starting Bid ($) *</Label>
-              <Input id="starting_bid" name="starting_bid" type="number" min={0.01} step={0.01} required />
+              <Input id="starting_bid" name="starting_bid" type="number" min={0.01} step={0.01} required disabled={atAuctionLimit} />
               <PriceSuggestion plantName={plantName} variety={variety} label="bid" />
             </div>
           </div>
           <div className="space-y-1">
             <Label htmlFor="buy_now_price">Buy Now Price ($) <span className="font-normal text-muted-foreground">(optional)</span></Label>
-            <Input id="buy_now_price" name="buy_now_price" type="number" min={0.01} step={0.01} placeholder="Leave blank to disable" />
+            <Input id="buy_now_price" name="buy_now_price" type="number" min={0.01} step={0.01} placeholder="Leave blank to disable" disabled={atAuctionLimit} />
             <p className="text-xs text-muted-foreground">Buyers can skip bidding and purchase immediately at this price.</p>
           </div>
           <div className="space-y-1">
@@ -144,6 +173,7 @@ export default function NewAuctionDialog({ sellerId }: { sellerId: string }) {
               name="duration_hours"
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               required
+              disabled={atAuctionLimit}
             >
               <option value="24">24 hours</option>
               <option value="48">48 hours</option>
@@ -158,22 +188,29 @@ export default function NewAuctionDialog({ sellerId }: { sellerId: string }) {
           </div>
           <div className="space-y-1">
             <Label htmlFor="description">Description</Label>
-            <Textarea id="description" name="description" rows={3} maxLength={1000} />
+            <Textarea id="description" name="description" rows={3} maxLength={1000} disabled={atAuctionLimit} />
           </div>
           <div className="space-y-1">
-            <Label>Photos</Label>
+            <Label>
+              Photos{photoLimit !== null && (
+                <span className="ml-1 font-normal text-muted-foreground text-xs">({imageUrls.length}/{photoLimit})</span>
+              )}
+            </Label>
             <div className="flex items-center gap-2">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                disabled={uploading}
+                disabled={uploading || atAuctionLimit || atPhotoLimit}
                 onClick={() => fileRef.current?.click()}
               >
                 {uploading ? "Uploading…" : "Add photos"}
               </Button>
-              {imageUrls.length > 0 && (
+              {imageUrls.length > 0 && photoLimit === null && (
                 <span className="text-sm text-muted-foreground">{imageUrls.length} uploaded</span>
+              )}
+              {atPhotoLimit && (
+                <span className="text-xs text-amber-600">Photo limit reached</span>
               )}
             </div>
             <input
@@ -182,14 +219,12 @@ export default function NewAuctionDialog({ sellerId }: { sellerId: string }) {
               accept="image/*"
               multiple
               className="hidden"
-              onChange={(e) => {
-                if (e.target.files) uploadImages(e.target.files);
-              }}
+              onChange={(e) => { if (e.target.files) uploadImages(e.target.files); }}
             />
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={saving} className="bg-green-700 hover:bg-green-800">
+            <Button type="submit" disabled={saving || atAuctionLimit} className="bg-green-700 hover:bg-green-800">
               {saving ? "Saving…" : "Create auction"}
             </Button>
           </div>
