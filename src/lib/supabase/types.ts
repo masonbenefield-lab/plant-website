@@ -20,6 +20,7 @@ export interface Database {
           stripe_account_id: string | null;
           stripe_onboarded: boolean;
           is_admin: boolean;
+          plan: "seedling" | "grower" | "nursery";
           deleted_at: string | null;
           created_at: string;
         };
@@ -33,6 +34,7 @@ export interface Database {
           stripe_account_id?: string | null;
           stripe_onboarded?: boolean;
           is_admin?: boolean;
+          plan?: "seedling" | "grower" | "nursery";
           deleted_at?: string | null;
           created_at?: string;
         };
@@ -47,6 +49,7 @@ export interface Database {
           stripe_account_id?: string | null;
           stripe_onboarded?: boolean;
           is_admin?: boolean;
+          plan?: "seedling" | "grower" | "nursery";
           deleted_at?: string | null;
         };
         Relationships: [];
