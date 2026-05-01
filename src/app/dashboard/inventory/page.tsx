@@ -2,7 +2,12 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import InventoryClient from "./inventory-client";
 
-export default async function InventoryPage() {
+export default async function InventoryPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; cat?: string }>;
+}) {
+  const { q, cat } = await searchParams;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
@@ -151,6 +156,8 @@ export default async function InventoryPage() {
         pot_size: a.pot_size ?? null,
         description: a.description ?? "",
       }))}
+      initialSearch={q ?? ""}
+      initialCategory={cat ?? ""}
     />
   );
 }

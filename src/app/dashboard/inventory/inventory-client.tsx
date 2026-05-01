@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -152,12 +152,16 @@ export default function InventoryClient({
   termsAccepted,
   unlinkedListings,
   unlinkedAuctions,
+  initialSearch = "",
+  initialCategory = "",
 }: {
   activeRows: Row[];
   archivedRows: Row[];
   termsAccepted: boolean;
   unlinkedListings: UnlinkedListing[];
   unlinkedAuctions: UnlinkedAuction[];
+  initialSearch?: string;
+  initialCategory?: string;
 }) {
   const router = useRouter();
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -168,8 +172,8 @@ export default function InventoryClient({
     return new Set();
   });
   const [showArchived, setShowArchived] = useState(false);
-  const [search, setSearch] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("");
+  const [search, setSearch] = useState(initialSearch);
+  const [categoryFilter, setCategoryFilter] = useState(initialCategory);
   const [modal, setModal] = useState<ModalState>(null);
   const [submitting, setSubmitting] = useState(false);
   const [loadingId, setLoadingId] = useState<string | null>(null);
@@ -212,6 +216,14 @@ export default function InventoryClient({
 
   const [importingId, setImportingId] = useState<string | null>(null);
   const [importingAll, setImportingAll] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (search) params.set("q", search);
+    if (categoryFilter) params.set("cat", categoryFilter);
+    const qs = params.toString();
+    window.history.replaceState({}, "", qs ? `?${qs}` : window.location.pathname);
+  }, [search, categoryFilter]);
 
   const activeGroups = useMemo(() => {
     const groups = groupRows(activeRows);
@@ -419,8 +431,18 @@ export default function InventoryClient({
       pot_size: editPotSize || null,
       images: editImages,
     }).eq("id", modal.row.id);
+    if (error) { toast.error(error.message); setSubmitting(false); return; }
+    if (modal.row.listing_id) {
+      await supabase.from("listings").update({
+        plant_name: editPlantName.trim(),
+        variety: editVariety.trim() || null,
+        description: editDescription.trim() || null,
+        images: editImages,
+        category: editCategory || null,
+        pot_size: editPotSize || null,
+      }).eq("id", modal.row.listing_id);
+    }
     setSubmitting(false);
-    if (error) { toast.error(error.message); return; }
     toast.success("Item updated.");
     setModal(null);
     router.refresh();
@@ -599,6 +621,116 @@ export default function InventoryClient({
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Inventory");
     XLSX.writeFile(wb, "inventory.xlsx");
+  }
+
+  // ── Mobile variant card ───────────────────────────────────────────────────
+  function renderVariantCard(row: Row) {
+    const a = avail(row);
+    const hasListing = !!row.listing_id;
+    const hasActiveAuction = !!row.auction_id && row.auction_status === "active";
+    const dropdownMenu = (
+      <DropdownMenu>
+        <DropdownMenuTrigger className="inline-flex items-center justify-center w-7 h-7 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
+          <MoreHorizontal size={15} />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="min-w-[160px]">
+          <DropdownMenuItem onClick={() => openModal({ type: "edit", row })}>Edit item</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => openModal({ type: "sold", row })}>Mark as sold</DropdownMenuItem>
+          {hasListing && (
+            <DropdownMenuItem onClick={() => { setModal(null); toggleListingPause(row); }}>
+              {row.listing_status === "active" ? "Pause listing" : "Resume listing"}
+            </DropdownMenuItem>
+          )}
+          {row.auction_id && row.auction_status !== "active" && (
+            <DropdownMenuItem onClick={() => unlinkAuction(row)}>Unlink ended auction</DropdownMenuItem>
+          )}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => archiveItem(row.id)} disabled={loadingId === row.id} className="text-destructive focus:text-destructive">
+            Archive
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+
+    return (
+      <div key={row.id} className="border-t border-border/40 px-4 py-3 space-y-2">
+        {/* Size + qty + actions */}
+        <div className="flex items-center gap-2">
+          {row.pot_size
+            ? <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium">{row.pot_size}</span>
+            : <span className="text-xs text-muted-foreground italic">No size</span>}
+          {editingQtyId === row.id ? (
+            <input
+              type="number" min={0} value={editingQtyValue}
+              onChange={e => setEditingQtyValue(e.target.value)}
+              onBlur={() => saveQtyEdit(row.id)}
+              onKeyDown={e => { if (e.key === "Enter") saveQtyEdit(row.id); if (e.key === "Escape") setEditingQtyId(null); }}
+              autoFocus
+              className="w-16 px-1.5 py-0.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-green-600"
+            />
+          ) : (
+            <button
+              onClick={() => { setEditingQtyId(row.id); setEditingQtyValue(String(row.quantity)); }}
+              className="inline-flex items-center gap-1 text-sm font-medium tabular-nums hover:text-green-700 group"
+              title="Click to edit total stock"
+            >
+              {row.quantity} <Pencil size={11} className="opacity-0 group-hover:opacity-50 transition-opacity" />
+            </button>
+          )}
+          <div className="ml-auto">{dropdownMenu}</div>
+        </div>
+
+        {/* Stock breakdown */}
+        {((row.listing_quantity ?? 0) > 0 || (row.auction_quantity ?? 0) > 0) && (
+          <div className="flex gap-3 text-xs">
+            {(row.listing_quantity ?? 0) > 0 && <span className="text-green-600">{row.listing_quantity} in shop</span>}
+            {(row.auction_quantity ?? 0) > 0 && <span className="text-blue-600">{row.auction_quantity} in auction</span>}
+            <span className="text-muted-foreground">{a} avail</span>
+          </div>
+        )}
+
+        {/* Shop */}
+        {hasListing ? (
+          <div className="flex items-center gap-2 flex-wrap text-sm">
+            <Store size={12} className="text-green-600 shrink-0" />
+            <span className="font-medium">{centsToDisplay(row.listing_price_cents ?? 0)}</span>
+            <span className={cn(
+              "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
+              row.listing_status === "active" ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400" :
+              row.listing_status === "paused" ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400" :
+              "bg-red-100 text-red-600"
+            )}>{row.listing_status}</span>
+            <button onClick={() => openModal({ type: "edit-listing", row })} className="text-xs text-blue-600 hover:underline">Edit</button>
+            <Link href={`/shop/${row.listing_id}`} target="_blank" className="text-xs text-muted-foreground hover:underline">View</Link>
+          </div>
+        ) : a > 0 ? (
+          <button onClick={() => openModal({ type: "listing", row })} className="inline-flex items-center gap-1.5 text-sm text-green-700 hover:underline font-medium">
+            <Store size={13} /> List in Shop
+          </button>
+        ) : null}
+
+        {/* Auction */}
+        {hasActiveAuction ? (
+          <div className="flex items-center gap-2 flex-wrap text-sm">
+            <Gavel size={12} className="text-blue-600 shrink-0" />
+            <span className="font-medium">{centsToDisplay(row.auction_bid_cents ?? 0)}</span>
+            <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400 rounded-full px-2 py-0.5">live</span>
+            <span className="text-xs text-muted-foreground">Ends {new Date(row.auction_ends_at!).toLocaleDateString()}</span>
+            <Link href={`/auctions/${row.auction_id}`} target="_blank" className="text-xs hover:underline">View</Link>
+          </div>
+        ) : row.auction_id && row.auction_status !== "active" ? (
+          <div className="flex items-center gap-2 text-sm">
+            <Gavel size={12} className="text-muted-foreground shrink-0" />
+            <span className="text-xs text-muted-foreground capitalize">{row.auction_status}</span>
+            <Link href={`/auctions/${row.auction_id}`} target="_blank" className="text-xs text-muted-foreground hover:underline">View</Link>
+          </div>
+        ) : a > 0 ? (
+          <button onClick={() => openModal({ type: "auction", row })} className="inline-flex items-center gap-1.5 text-sm text-purple-700 hover:underline font-medium">
+            <Gavel size={13} /> Auction
+          </button>
+        ) : null}
+      </div>
+    );
   }
 
   // ── Variant sub-row ───────────────────────────────────────────────────────
@@ -801,20 +933,27 @@ export default function InventoryClient({
         </button>
 
         {isOpen && (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-background border-t border-border/40">
-                  <th className="py-2 pl-12 pr-3 text-left text-xs font-medium text-muted-foreground w-28">Size</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground w-32">Stock</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Shop Listing</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Auction</th>
-                  <th className="px-3 py-2 w-12" />
-                </tr>
-              </thead>
-              <tbody>{group.variants.map(renderVariantRow)}</tbody>
-            </table>
-          </div>
+          <>
+            {/* Mobile: cards */}
+            <div className="sm:hidden">
+              {group.variants.map(renderVariantCard)}
+            </div>
+            {/* Desktop: table */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-background border-t border-border/40">
+                    <th className="py-2 pl-12 pr-3 text-left text-xs font-medium text-muted-foreground w-28">Size</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground w-32">Stock</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Shop Listing</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Auction</th>
+                    <th className="px-3 py-2 w-12" />
+                  </tr>
+                </thead>
+                <tbody>{group.variants.map(renderVariantRow)}</tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
     );
