@@ -23,7 +23,7 @@ import { toast } from "sonner";
 import { dollarsToCents, centsToDisplay } from "@/lib/stripe";
 import {
   ChevronRight, ChevronDown, MoreHorizontal, Plus,
-  ImagePlus, X, Store, Gavel,
+  ImagePlus, X, Store, Gavel, Pencil,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import PotSizePicker from "@/components/pot-size-picker";
@@ -162,9 +162,14 @@ export default function InventoryClient({
   const router = useRouter();
   const imageInputRef = useRef<HTMLInputElement>(null);
 
-  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
+  const [openGroups, setOpenGroups] = useState<Set<string>>(() => {
+    const groups = groupRows(activeRows);
+    if (groups.length <= 5) return new Set(groups.map(g => g.key));
+    return new Set();
+  });
   const [showArchived, setShowArchived] = useState(false);
   const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
   const [modal, setModal] = useState<ModalState>(null);
   const [submitting, setSubmitting] = useState(false);
   const [loadingId, setLoadingId] = useState<string | null>(null);
@@ -206,15 +211,17 @@ export default function InventoryClient({
   const [variantNotes, setVariantNotes] = useState("");
 
   const [importingId, setImportingId] = useState<string | null>(null);
+  const [importingAll, setImportingAll] = useState(false);
 
   const activeGroups = useMemo(() => {
     const groups = groupRows(activeRows);
-    if (!search.trim()) return groups;
-    const q = search.toLowerCase();
-    return groups.filter(g =>
-      g.plant_name.toLowerCase().includes(q) || g.variety.toLowerCase().includes(q)
-    );
-  }, [activeRows, search]);
+    const q = search.toLowerCase().trim();
+    return groups.filter(g => {
+      const matchesSearch = !q || g.plant_name.toLowerCase().includes(q) || g.variety.toLowerCase().includes(q);
+      const matchesCategory = !categoryFilter || g.variants.some(v => v.category === categoryFilter);
+      return matchesSearch && matchesCategory;
+    });
+  }, [activeRows, search, categoryFilter]);
 
   const archivedGroups = useMemo(() => groupRows(archivedRows), [archivedRows]);
 
@@ -422,8 +429,7 @@ export default function InventoryClient({
   async function submitSold() {
     if (!modal || modal.type !== "sold") return;
     const qty = Math.max(1, Math.min(Number(soldQuantity) || 1, avail(modal.row)));
-    const priceCents = dollarsToCents(soldPrice);
-    if (!soldPrice || priceCents <= 0) { toast.error("Enter a sale price"); return; }
+    const priceCents = soldPrice ? dollarsToCents(soldPrice) : 0;
     setSubmitting(true);
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -480,8 +486,17 @@ export default function InventoryClient({
     const { error } = await supabase.from("inventory").update({ archived_at: new Date().toISOString() }).eq("id", id);
     setLoadingId(null);
     if (error) { toast.error(error.message); return; }
-    toast.success("Item archived.");
     router.refresh();
+    toast("Item archived", {
+      action: {
+        label: "Undo",
+        onClick: async () => {
+          await createClient().from("inventory").update({ archived_at: null }).eq("id", id);
+          router.refresh();
+          toast.success("Restored!");
+        },
+      },
+    });
   }
 
   async function restoreItem(id: string) {
@@ -542,6 +557,35 @@ export default function InventoryClient({
     router.refresh();
   }
 
+  async function importAll() {
+    setImportingAll(true);
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setImportingAll(false); return; }
+    for (const l of unlinkedListings) {
+      const { data: inv, error } = await supabase.from("inventory").insert({
+        seller_id: user.id, plant_name: l.plant_name, variety: l.variety || null,
+        quantity: l.quantity, description: l.description || null, images: l.images,
+        category: l.category || null, pot_size: l.pot_size || null,
+        listing_id: l.id, listing_quantity: l.quantity,
+      }).select("id").single();
+      if (!error && inv) await supabase.from("listings").update({ inventory_id: inv.id }).eq("id", l.id);
+    }
+    for (const a of unlinkedAuctions) {
+      const { data: inv, error } = await supabase.from("inventory").insert({
+        seller_id: user.id, plant_name: a.plant_name, variety: a.variety || null,
+        quantity: a.quantity, description: a.description || null, images: a.images,
+        category: a.category || null, pot_size: a.pot_size || null,
+        auction_id: a.id, auction_quantity: a.quantity,
+      }).select("id").single();
+      if (!error && inv) await supabase.from("auctions").update({ inventory_id: inv.id }).eq("id", a.id);
+    }
+    setImportingAll(false);
+    const total = unlinkedListings.length + unlinkedAuctions.length;
+    toast.success(`${total} item${total !== 1 ? "s" : ""} imported to inventory!`);
+    router.refresh();
+  }
+
   function exportExcel() {
     const data = activeRows.map(r => ({
       "Plant Name": r.plant_name, "Variety": r.variety, "Pot Size": r.pot_size ?? "",
@@ -588,10 +632,11 @@ export default function InventoryClient({
           ) : (
             <button
               onClick={() => { setEditingQtyId(row.id); setEditingQtyValue(String(row.quantity)); }}
-              className="font-medium tabular-nums hover:text-green-700 hover:underline"
+              className="inline-flex items-center gap-1 font-medium tabular-nums hover:text-green-700 group"
               title="Click to edit total stock"
             >
               {row.quantity}
+              <Pencil size={11} className="opacity-0 group-hover:opacity-50 transition-opacity" />
             </button>
           )}
           {((row.listing_quantity ?? 0) > 0 || (row.auction_quantity ?? 0) > 0) && (
@@ -720,6 +765,9 @@ export default function InventoryClient({
           {isOpen
             ? <ChevronDown size={16} className="shrink-0 text-muted-foreground" />
             : <ChevronRight size={16} className="shrink-0 text-muted-foreground" />}
+          {first?.images?.[0] && (
+            <img src={first.images[0]} alt="" className="w-8 h-8 rounded object-cover shrink-0 border" />
+          )}
           <div className="flex-1 min-w-0">
             <span className="font-semibold">{group.plant_name}</span>
             {group.variety && <span className="text-muted-foreground ml-2 font-normal">· {group.variety}</span>}
@@ -788,19 +836,36 @@ export default function InventoryClient({
         </div>
       </div>
 
-      <div className="mb-5">
+      <div className="flex flex-wrap gap-2 mb-5">
         <Input
           placeholder="Search by plant name or variety…"
           value={search}
           onChange={e => setSearch(e.target.value)}
           className="max-w-sm"
         />
+        <Select value={categoryFilter || "_all"} onValueChange={v => setCategoryFilter(v === "_all" ? "" : (v ?? ""))}>
+          <SelectTrigger className="w-40">
+            <SelectValue placeholder="All categories" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="_all">All categories</SelectItem>
+            {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        {(search || categoryFilter) && (
+          <button
+            onClick={() => { setSearch(""); setCategoryFilter(""); }}
+            className="text-xs text-muted-foreground hover:text-foreground underline self-center"
+          >
+            Clear
+          </button>
+        )}
       </div>
 
       {activeGroups.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">
           <p className="text-4xl mb-4">📦</p>
-          <p className="font-medium text-lg">{search.trim() ? `No results for "${search}"` : "No inventory yet"}</p>
+          <p className="font-medium text-lg">{(search.trim() || categoryFilter) ? `No results${search.trim() ? ` for "${search}"` : ""}${categoryFilter ? ` in ${categoryFilter}` : ""}` : "No inventory yet"}</p>
           {!search.trim() && (
             <Link href="/dashboard/create" className={cn(buttonVariants(), "mt-6 bg-green-700 hover:bg-green-800")}>+ Add to Inventory</Link>
           )}
@@ -814,11 +879,20 @@ export default function InventoryClient({
         const groups = groupUnlinked(unlinkedListings, unlinkedAuctions);
         return (
           <div className="mt-8 border-t pt-6">
-            <div className="mb-4">
-              <h2 className="text-base font-semibold">Not yet in inventory</h2>
-              <p className="text-sm text-muted-foreground mt-0.5">
-                These listings and auctions were created before inventory tracking. Import each one to manage it alongside your inventory.
-              </p>
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <div>
+                <h2 className="text-base font-semibold">Not yet in inventory</h2>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  These listings and auctions were created before inventory tracking. Import each one to manage it alongside your inventory.
+                </p>
+              </div>
+              <button
+                onClick={importAll}
+                disabled={importingAll}
+                className={cn(buttonVariants({ variant: "outline", size: "sm" }), "shrink-0 disabled:opacity-50")}
+              >
+                {importingAll ? "Importing…" : "Import All"}
+              </button>
             </div>
             <div className="space-y-2">
               {groups.map(group => (
@@ -1174,7 +1248,7 @@ export default function InventoryClient({
               </p>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <Label htmlFor="sold-price">Sale price ($) *</Label>
+                  <Label htmlFor="sold-price">Sale price ($) <span className="font-normal text-muted-foreground">(optional)</span></Label>
                   <Input id="sold-price" type="number" min={0.01} step={0.01} placeholder="0.00" value={soldPrice} onChange={e => setSoldPrice(e.target.value)} autoFocus />
                 </div>
                 <div className="space-y-1">
@@ -1193,7 +1267,7 @@ export default function InventoryClient({
               </div>
               <div className="flex gap-2 pt-1">
                 <Button variant="outline" onClick={() => setModal(null)} className="flex-1">Cancel</Button>
-                <Button onClick={submitSold} disabled={submitting || !soldPrice || Number(soldPrice) <= 0} className="flex-1 bg-orange-600 hover:bg-orange-700 text-white">
+                <Button onClick={submitSold} disabled={submitting} className="flex-1 bg-orange-600 hover:bg-orange-700 text-white">
                   {submitting ? "Saving…" : "Record Sale"}
                 </Button>
               </div>
