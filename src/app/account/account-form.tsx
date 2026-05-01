@@ -159,7 +159,7 @@ export default function AccountForm({
                       Remove banner
                     </button>
                   )}
-                  <p className="text-xs text-muted-foreground">Recommended: 1200×300px. Landscape images work best.</p>
+                  <p className="text-xs text-muted-foreground">Recommended: 1500×400px (landscape). Avoid tall or square images — they'll be cropped on wider screens.</p>
                 </>
               ) : (
                 <div className="w-full h-36 rounded-lg border-2 border-dashed border-border bg-muted flex flex-col items-center justify-center gap-2 text-muted-foreground">
