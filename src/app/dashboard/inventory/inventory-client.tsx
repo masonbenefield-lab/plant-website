@@ -23,7 +23,7 @@ import { toast } from "sonner";
 import { dollarsToCents, centsToDisplay } from "@/lib/stripe";
 import {
   ChevronRight, ChevronDown, MoreHorizontal, Plus,
-  ImagePlus, X, Store, Gavel, Pencil,
+  ImagePlus, X, Store, Gavel, Pencil, HelpCircle,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import PotSizePicker from "@/components/pot-size-picker";
@@ -216,6 +216,7 @@ export default function InventoryClient({
 
   const [importingId, setImportingId] = useState<string | null>(null);
   const [importingAll, setImportingAll] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -964,7 +965,16 @@ export default function InventoryClient({
     <div className="max-w-5xl mx-auto px-4 py-10">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Inventory</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold">Inventory</h1>
+            <button
+              onClick={() => setShowHelp(true)}
+              className="text-muted-foreground hover:text-foreground transition-colors"
+              title="How inventory works"
+            >
+              <HelpCircle size={18} />
+            </button>
+          </div>
           <p className="text-sm text-muted-foreground mt-1">
             {activeRows.length} item{activeRows.length !== 1 ? "s" : ""} · {activeGroups.length} plant{activeGroups.length !== 1 ? "s" : ""}
           </p>
@@ -1412,6 +1422,55 @@ export default function InventoryClient({
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ── How Inventory Works ── */}
+      <Dialog open={showHelp} onOpenChange={setShowHelp}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>How Inventory Works</DialogTitle>
+            <DialogDescription>Your inventory is the single source of truth for every plant you have in stock.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-5 mt-2 text-sm">
+
+            <div className="space-y-1.5">
+              <p className="font-semibold">Plants &amp; Variants</p>
+              <p className="text-muted-foreground">Each plant (name + variety) gets its own collapsible group. Inside, each pot size is a separate row — so 4", 6", and 8" Monsteras are three rows under one group. Click <strong>+ Variant</strong> in the header to add a new size.</p>
+            </div>
+
+            <div className="space-y-1.5">
+              <p className="font-semibold">Stock Breakdown</p>
+              <p className="text-muted-foreground">Every row tracks four numbers:</p>
+              <ul className="list-disc pl-4 space-y-0.5 text-muted-foreground">
+                <li><span className="font-medium text-foreground">Total</span> — everything you own (click the number to edit)</li>
+                <li><span className="font-medium text-green-700">In Shop</span> — allocated to an active shop listing</li>
+                <li><span className="font-medium text-blue-700">In Auction</span> — reserved for a live auction</li>
+                <li><span className="font-medium text-foreground">Available</span> — Total minus In Shop minus In Auction</li>
+              </ul>
+            </div>
+
+            <div className="space-y-1.5">
+              <p className="font-semibold">Listing in the Shop</p>
+              <p className="text-muted-foreground">Click <strong>List in Shop</strong> on any row to set a price and go live. Once listed, click <strong>Edit</strong> to update the price or quantity, or <strong>Pause</strong> to hide it from buyers temporarily. When a buyer purchases, your stock decrements automatically.</p>
+            </div>
+
+            <div className="space-y-1.5">
+              <p className="font-semibold">Running an Auction</p>
+              <p className="text-muted-foreground">Click <strong>Auction</strong> to set a starting bid, optional Buy Now price, and an end date. The row shows the live bid and a View link while it&apos;s running. When the auction ends with a winner, stock decrements on checkout. If no one bids, the quantity is released back to Available.</p>
+            </div>
+
+            <div className="space-y-1.5">
+              <p className="font-semibold">Off-Platform Sales</p>
+              <p className="text-muted-foreground">Sold something at a farmers market or locally? Use <strong>Mark as Sold</strong> from the row menu. Enter the quantity and an optional price — it records the sale in your analytics and decrements stock.</p>
+            </div>
+
+            <div className="space-y-1.5">
+              <p className="font-semibold">Archiving</p>
+              <p className="text-muted-foreground">Archive removes an item from your active inventory. Archived items are held for 30 days (visible at the bottom of the page) so you can restore them if needed. Items that sell out are archived automatically.</p>
+            </div>
+
+          </div>
         </DialogContent>
       </Dialog>
     </div>
