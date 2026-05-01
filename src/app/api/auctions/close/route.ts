@@ -19,7 +19,7 @@ export async function GET(request: Request) {
 
   const { data: expiredAuctions, error } = await supabase
     .from("auctions")
-    .select("id, current_bidder_id, seller_id, current_bid_cents, plant_name")
+    .select("id, current_bidder_id, seller_id, current_bid_cents, plant_name, inventory_id")
     .eq("status", "active")
     .lt("ends_at", new Date().toISOString());
 
@@ -29,10 +29,13 @@ export async function GET(request: Request) {
 
   let closed = 0;
   for (const auction of expiredAuctions ?? []) {
-    await supabase
-      .from("auctions")
-      .update({ status: "ended" })
-      .eq("id", auction.id);
+    await supabase.from("auctions").update({ status: "ended" }).eq("id", auction.id);
+    if (!auction.current_bidder_id && auction.inventory_id) {
+      await supabase.from("inventory").update({
+        auction_id: null,
+        auction_quantity: null,
+      }).eq("id", auction.inventory_id);
+    }
     closed++;
   }
 

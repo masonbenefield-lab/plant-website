@@ -1,29 +1,26 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import Link from "next/link";
 import { centsToDisplay } from "@/lib/stripe";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import ListingActions from "./listing-actions";
-import NewListingDialog from "./new-listing-dialog";
 import PauseAllButton from "./pause-all-button";
-import { getPlanLimits } from "@/lib/plan-limits";
 
 export default async function DashboardListingsPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const [{ data: profile }, { data: planProfile }, { count: activeListingCount }] = await Promise.all([
-    supabase.from("profiles").select("seller_terms_accepted_at").eq("id", user.id).single(),
-    supabase.from("profiles").select("plan, is_admin").eq("id", user.id).single(),
-    supabase.from("listings").select("*", { count: "exact", head: true }).eq("seller_id", user.id).in("status", ["active", "paused"]),
-  ]);
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("seller_terms_accepted_at")
+    .eq("id", user.id)
+    .single();
 
   if (!profile?.seller_terms_accepted_at) {
     redirect("/seller-agreement?next=/dashboard/listings");
   }
-
-  const limits = getPlanLimits(planProfile?.plan, !!planProfile?.is_admin);
 
   const { data: listings } = await supabase
     .from("listings")
@@ -37,17 +34,15 @@ export default async function DashboardListingsPage() {
         <h1 className="text-2xl font-bold">My Listings</h1>
         <div className="flex items-center gap-2">
           <PauseAllButton sellerId={user.id} />
-          <NewListingDialog
-            sellerId={user.id}
-            planLimit={limits.listings}
-            currentCount={activeListingCount ?? 0}
-            photoLimit={limits.photos}
-          />
+          <Link href="/dashboard/inventory" className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors">
+            Create from Inventory →
+          </Link>
         </div>
       </div>
+      <p className="text-sm text-muted-foreground mb-6">To create a new listing, open an inventory item and click "List in Shop".</p>
 
       {!listings?.length ? (
-        <p className="text-muted-foreground">No listings yet. Create your first one!</p>
+        <p className="text-muted-foreground">No listings yet.</p>
       ) : (
         <div className="space-y-3">
           {listings.map((listing) => (

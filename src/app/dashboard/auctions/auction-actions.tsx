@@ -21,6 +21,11 @@ export default function AuctionActions({ auctionId }: { auctionId: string }) {
   async function cancelAuction() {
     setCancelling(true);
     const supabase = createClient();
+    const { data: auctionData } = await supabase
+      .from("auctions")
+      .select("inventory_id")
+      .eq("id", auctionId)
+      .single();
     const { error } = await supabase
       .from("auctions")
       .update({ status: "cancelled" })
@@ -28,6 +33,12 @@ export default function AuctionActions({ auctionId }: { auctionId: string }) {
       .eq("status", "active");
     setCancelling(false);
     if (error) { toast.error(error.message); return; }
+    if (auctionData?.inventory_id) {
+      await supabase.from("inventory").update({
+        auction_id: null,
+        auction_quantity: null,
+      }).eq("id", auctionData.inventory_id);
+    }
     toast.success("Auction cancelled");
     setOpen(false);
     router.refresh();

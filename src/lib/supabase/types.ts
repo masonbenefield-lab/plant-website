@@ -68,6 +68,7 @@ export interface Database {
           status: ListingStatus;
           category: string | null;
           pot_size: string | null;
+          inventory_id: string | null;
           created_at: string;
         };
         Insert: {
@@ -83,6 +84,7 @@ export interface Database {
           status?: ListingStatus;
           category?: string | null;
           pot_size?: string | null;
+          inventory_id?: string | null;
           created_at?: string;
         };
         Update: {
@@ -97,6 +99,7 @@ export interface Database {
           status?: ListingStatus;
           category?: string | null;
           pot_size?: string | null;
+          inventory_id?: string | null;
         };
         Relationships: [];
       };
@@ -117,6 +120,7 @@ export interface Database {
           status: AuctionStatus;
           category: string | null;
           pot_size: string | null;
+          inventory_id: string | null;
           created_at: string;
         };
         Insert: {
@@ -135,6 +139,7 @@ export interface Database {
           status?: AuctionStatus;
           category?: string | null;
           pot_size?: string | null;
+          inventory_id?: string | null;
           created_at?: string;
         };
         Update: {
@@ -152,6 +157,7 @@ export interface Database {
           status?: AuctionStatus;
           category?: string | null;
           pot_size?: string | null;
+          inventory_id?: string | null;
         };
         Relationships: [];
       };
@@ -232,6 +238,8 @@ export interface Database {
           quantity: number;
           listing_quantity: number | null;
           listing_id: string | null;
+          auction_id: string | null;
+          auction_quantity: number | null;
           description: string | null;
           images: string[];
           notes: string | null;
@@ -248,6 +256,8 @@ export interface Database {
           quantity: number;
           listing_quantity?: number | null;
           listing_id?: string | null;
+          auction_id?: string | null;
+          auction_quantity?: number | null;
           description?: string | null;
           images?: string[];
           notes?: string | null;
@@ -262,6 +272,8 @@ export interface Database {
           quantity?: number;
           listing_quantity?: number | null;
           listing_id?: string | null;
+          auction_id?: string | null;
+          auction_quantity?: number | null;
           description?: string | null;
           images?: string[];
           notes?: string | null;

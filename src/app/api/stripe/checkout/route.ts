@@ -94,6 +94,22 @@ export async function POST(request: Request) {
       })
       .eq("id", listingId);
 
+    if (listing.inventory_id) {
+      const { data: inv } = await supabase
+        .from("inventory")
+        .select("quantity, listing_quantity")
+        .eq("id", listing.inventory_id)
+        .single();
+      if (inv) {
+        const newListingQty = Math.max(0, (inv.listing_quantity ?? 0) - quantity);
+        await supabase.from("inventory").update({
+          quantity: Math.max(0, inv.quantity - quantity),
+          listing_quantity: newListingQty,
+          ...(newListingQty <= 0 ? { listing_id: null } : {}),
+        }).eq("id", listing.inventory_id);
+      }
+    }
+
     return NextResponse.json({ clientSecret: paymentIntent.client_secret, orderId: order.id });
   }
 
@@ -144,6 +160,21 @@ export async function POST(request: Request) {
       .single();
 
     if (orderError) return NextResponse.json({ error: orderError.message }, { status: 500 });
+
+    if (auction.inventory_id) {
+      const { data: inv } = await supabase
+        .from("inventory")
+        .select("quantity")
+        .eq("id", auction.inventory_id)
+        .single();
+      if (inv) {
+        await supabase.from("inventory").update({
+          quantity: Math.max(0, inv.quantity - (auction.quantity ?? 1)),
+          auction_id: null,
+          auction_quantity: null,
+        }).eq("id", auction.inventory_id);
+      }
+    }
 
     return NextResponse.json({ clientSecret: paymentIntent.client_secret, orderId: order.id });
   }

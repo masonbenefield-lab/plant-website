@@ -32,8 +32,8 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { dollarsToCents, centsToDisplay } from "@/lib/stripe";
 import {
-  FileText, AlertTriangle, X, ImagePlus, ExternalLink, Info,
-  MoreHorizontal, SlidersHorizontal, AlertCircle, Check,
+  FileText, X, ImagePlus, Info,
+  MoreHorizontal, SlidersHorizontal, AlertCircle, Check, Store, Gavel,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import PotSizePicker from "@/components/pot-size-picker";
@@ -44,69 +44,64 @@ const CATEGORIES = [
 ];
 
 const TOGGLEABLE_COLS = [
-  { key: "variety",    label: "Variety" },
-  { key: "category",   label: "Category" },
-  { key: "in_stock",   label: "In Stock" },
-  { key: "listed_qty", label: "Listed Qty" },
-  { key: "price",      label: "Price / Bid" },
-  { key: "added",      label: "Added" },
+  { key: "variety",  label: "Variety" },
+  { key: "category", label: "Category" },
+  { key: "price",    label: "Price / Bid" },
+  { key: "added",    label: "Added" },
 ] as const;
 type ColKey = (typeof TOGGLEABLE_COLS)[number]["key"];
 
 type Row = {
   id: string;
-  source: "inventory" | "listing" | "auction";
   plant_name: string;
   variety: string;
   quantity: number;
-  in_stock: number | null;
+  listing_id: string | null;
   listing_quantity: number | null;
-  linked_listing_id: string | null;
+  listing_price_cents: number | null;
+  listing_status: string | null;
+  auction_id: string | null;
+  auction_quantity: number | null;
+  auction_bid_cents: number | null;
+  auction_ends_at: string | null;
+  auction_status: string | null;
+  status: string;
   description: string;
   notes: string;
-  status: string;
-  price: string;
-  price_cents: number | null;
   images: string[];
   category: string | null;
   pot_size: string | null;
-  ends_at: string | null;
   created_at: string;
   archived_at: string | null;
 };
 
-type ListingOption = { id: string; plant_name: string; variety: string | null };
-
 type ActionModal =
   | { type: "listing"; row: Row }
   | { type: "auction"; row: Row }
-  | { type: "link"; row: Row }
   | { type: "edit"; row: Row }
-  | { type: "edit-listing"; row: Row }
-  | { type: "restock"; row: Row }
   | { type: "sold"; row: Row }
   | null;
 
 const statusColor: Record<string, string> = {
-  "Draft":         "bg-muted text-muted-foreground",
-  "In Shop":       "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400",
-  "Paused":        "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400",
-  "Sold Out":      "bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400",
-  "Live Auction":  "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400",
-  "Auction Ended": "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400",
-  "Cancelled":     "bg-muted text-muted-foreground",
-  "Archived":      "bg-orange-100 text-orange-600 dark:bg-orange-900/40 dark:text-orange-400",
+  "Draft":          "bg-muted text-muted-foreground",
+  "In Shop":        "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400",
+  "Shop + Auction": "bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-400",
+  "Paused":         "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400",
+  "Sold Out":       "bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400",
+  "Live Auction":   "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400",
+  "Auction Ended":  "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400",
+  "Archived":       "bg-orange-100 text-orange-600 dark:bg-orange-900/40 dark:text-orange-400",
 };
 
 const statusDot: Record<string, string> = {
-  "Draft":         "bg-gray-400",
-  "In Shop":       "bg-green-500",
-  "Paused":        "bg-yellow-500",
-  "Sold Out":      "bg-red-500",
-  "Live Auction":  "bg-blue-500",
-  "Auction Ended": "bg-purple-500",
-  "Cancelled":     "bg-gray-400",
-  "Archived":      "bg-orange-500",
+  "Draft":          "bg-gray-400",
+  "In Shop":        "bg-green-500",
+  "Shop + Auction": "bg-teal-500",
+  "Paused":         "bg-yellow-500",
+  "Sold Out":       "bg-red-500",
+  "Live Auction":   "bg-blue-500",
+  "Auction Ended":  "bg-purple-500",
+  "Archived":       "bg-orange-500",
 };
 
 function daysUntilPurge(archivedAt: string) {
@@ -125,17 +120,14 @@ function Thumb({ images }: { images: string[] }) {
 export default function InventoryClient({
   activeRows,
   archivedRows,
-  listingOptions,
   termsAccepted,
 }: {
   activeRows: Row[];
   archivedRows: Row[];
-  listingOptions: ListingOption[];
   termsAccepted: boolean;
 }) {
   const router = useRouter();
 
-  // — Tab / filter / sort
   const [tab, setTab] = useState<"active" | "archived">("active");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -144,46 +136,32 @@ export default function InventoryClient({
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [attentionFilter, setAttentionFilter] = useState(false);
 
-  // — Column visibility
   const [visibleCols, setVisibleCols] = useState<Set<ColKey>>(
-    new Set<ColKey>(["variety", "category", "in_stock", "listed_qty", "price", "added"])
+    new Set<ColKey>(["variety", "category", "price", "added"])
   );
 
-  // — Bulk select
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
   const [bulkCategoryOpen, setBulkCategoryOpen] = useState(false);
   const [bulkCategory, setBulkCategory] = useState("");
 
-  // — Row-level loading + flash
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [flashId, setFlashId] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string } | null>(null);
 
-  // — Delete confirm
-  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; type: "inventory" | "auction" } | null>(null);
-
-  // — Inline price editing
-  const [editingPriceId, setEditingPriceId] = useState<string | null>(null);
-  const [editingPriceValue, setEditingPriceValue] = useState("");
-
-  // — Modals
   const [modal, setModal] = useState<ActionModal>(null);
   const [price, setPrice] = useState("");
   const [listQty, setListQty] = useState("");
   const [startingBid, setStartingBid] = useState("");
   const [buyNowPrice, setBuyNowPrice] = useState("");
   const [endsAt, setEndsAt] = useState("");
-  const [linkListingId, setLinkListingId] = useState("");
-  const [linkQty, setLinkQty] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // — Sold modal fields
   const [soldPrice, setSoldPrice] = useState("");
   const [soldQuantity, setSoldQuantity] = useState("1");
   const [soldNote, setSoldNote] = useState("");
   const [soldDate, setSoldDate] = useState("");
 
-  // — Edit modal fields
   const [editPlantName, setEditPlantName] = useState("");
   const [editVariety, setEditVariety] = useState("");
   const [editPotSize, setEditPotSize] = useState("");
@@ -194,17 +172,13 @@ export default function InventoryClient({
   const [editImages, setEditImages] = useState<string[]>([]);
   const [imageUploading, setImageUploading] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
-  const imageInputRef2 = useRef<HTMLInputElement>(null);
 
-  // — Inline quantity / category editing
-  const [editingCell, setEditingCell] = useState<{ rowId: string; field: "quantity" | "listing_quantity" | "in_stock"; source: Row["source"] } | null>(null);
+  const [editingCell, setEditingCell] = useState<{ rowId: string } | null>(null);
   const [editingValue, setEditingValue] = useState("");
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
   const [editingCategoryValue, setEditingCategoryValue] = useState("");
-  const [editingCategorySource, setEditingCategorySource] = useState<Row["source"]>("inventory");
 
-  // ── Column visibility ─────────────────────────────────────────────────────
-
+  // ── Column visibility ──────────────────────────────────────────────────────
   function toggleCol(key: ColKey) {
     setVisibleCols((prev) => {
       const next = new Set(prev);
@@ -215,7 +189,6 @@ export default function InventoryClient({
   const col = (key: ColKey) => visibleCols.has(key);
 
   // ── Sort ──────────────────────────────────────────────────────────────────
-
   function toggleSort(c: typeof sortCol) {
     if (sortCol === c) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     else { setSortCol(c); setSortDir("asc"); }
@@ -225,66 +198,26 @@ export default function InventoryClient({
     return sortDir === "asc" ? "↑" : "↓";
   }
 
-  // ── Inline quantity editing ───────────────────────────────────────────────
-
-  function startEdit(rowId: string, field: "quantity" | "listing_quantity" | "in_stock", current: number | null, source: Row["source"]) {
-    setEditingCell({ rowId, field, source });
-    setEditingValue(current !== null ? String(current) : "");
+  // ── Inline quantity editing ────────────────────────────────────────────────
+  function startEdit(rowId: string, current: number) {
+    setEditingCell({ rowId });
+    setEditingValue(String(current));
   }
 
   async function saveEdit() {
     if (!editingCell) return;
-    const { rowId, field, source } = editingCell;
+    const { rowId } = editingCell;
     const num = editingValue === "" ? null : Number(editingValue);
     setEditingCell(null);
     if (num !== null && isNaN(num)) return;
     const supabase = createClient();
-    if (source === "listing" && field === "in_stock") {
-      const { error } = await supabase.from("listings").update({ in_stock: num }).eq("id", rowId);
-      if (error) toast.error(error.message); else router.refresh();
-    } else if (source === "listing") {
-      const { error } = await supabase.from("listings").update({ quantity: num ?? 0 }).eq("id", rowId);
-      if (error) toast.error(error.message); else router.refresh();
-    } else if (field === "quantity") {
-      const { error } = await supabase.from("inventory").update({ quantity: num ?? 0 }).eq("id", rowId);
-      if (error) toast.error(error.message); else router.refresh();
-    } else {
-      const { error } = await supabase.from("inventory").update({ listing_quantity: num }).eq("id", rowId);
-      if (error) toast.error(error.message); else router.refresh();
-    }
+    const { error } = await supabase.from("inventory").update({ quantity: num ?? 0 }).eq("id", rowId);
+    if (error) toast.error(error.message); else router.refresh();
   }
 
   function cancelEdit() { setEditingCell(null); }
 
-  // ── Inline price editing ──────────────────────────────────────────────────
-
-  function startPriceEdit(rowId: string, priceCents: number | null) {
-    setEditingPriceId(rowId);
-    setEditingPriceValue(priceCents !== null ? (priceCents / 100).toFixed(2) : "");
-  }
-
-  async function savePriceEdit() {
-    if (!editingPriceId) return;
-    const id = editingPriceId;
-    const val = editingPriceValue;
-    setEditingPriceId(null);
-    const num = parseFloat(val);
-    if (isNaN(num) || num <= 0) return;
-    const supabase = createClient();
-    const { error } = await supabase.from("listings").update({ price_cents: Math.round(num * 100) }).eq("id", id);
-    if (error) toast.error(error.message); else router.refresh();
-  }
-
-  // ── Inline category editing ───────────────────────────────────────────────
-
-  function startCategoryEdit(rowId: string, current: string | null, source: Row["source"]) {
-    setEditingCategoryId(rowId);
-    setEditingCategoryValue(current ?? "");
-    setEditingCategorySource(source);
-  }
-
   // ── Bulk actions ──────────────────────────────────────────────────────────
-
   function toggleSelect(id: string) {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -299,39 +232,20 @@ export default function InventoryClient({
   }
 
   async function bulkArchive() {
-    const ids = [...selectedIds].filter((id) => rows.find((r) => r.id === id)?.source === "inventory");
-    if (!ids.length) { toast.error("Select inventory drafts to archive"); return; }
+    if (!selectedIds.size) { toast.error("Select items to archive"); return; }
     setBulkLoading(true);
     const supabase = createClient();
-    const { error } = await supabase.from("inventory").update({ archived_at: new Date().toISOString() }).in("id", ids);
+    const { error } = await supabase.from("inventory").update({ archived_at: new Date().toISOString() }).in("id", [...selectedIds]);
     setBulkLoading(false);
     if (error) toast.error(error.message);
-    else { toast.success(`${ids.length} item${ids.length !== 1 ? "s" : ""} archived`); setSelectedIds(new Set()); router.refresh(); }
-  }
-
-  async function bulkPauseListing() {
-    const ids = [...selectedIds].filter((id) => {
-      const row = rows.find((r) => r.id === id);
-      return row?.source === "listing" && row.status === "In Shop";
-    });
-    if (!ids.length) { toast.error("Select active shop listings to pause"); return; }
-    setBulkLoading(true);
-    const supabase = createClient();
-    const { error } = await supabase.from("listings").update({ status: "paused" }).in("id", ids);
-    setBulkLoading(false);
-    if (error) toast.error(error.message);
-    else { toast.success(`${ids.length} listing${ids.length !== 1 ? "s" : ""} paused`); setSelectedIds(new Set()); router.refresh(); }
+    else { toast.success(`${selectedIds.size} item${selectedIds.size !== 1 ? "s" : ""} archived`); setSelectedIds(new Set()); router.refresh(); }
   }
 
   async function bulkSetCategory() {
     if (!bulkCategory) { toast.error("Select a category"); return; }
-    const inventoryIds = [...selectedIds].filter((id) => rows.find((r) => r.id === id)?.source === "inventory");
-    const listingIds = [...selectedIds].filter((id) => rows.find((r) => r.id === id)?.source === "listing");
-    if (!inventoryIds.length && !listingIds.length) { toast.error("No editable rows selected"); return; }
     setBulkLoading(true);
     const supabase = createClient();
-    if (inventoryIds.length) await supabase.from("inventory").update({ category: bulkCategory }).in("id", inventoryIds);
-    if (listingIds.length) await supabase.from("listings").update({ category: bulkCategory }).in("id", listingIds);
+    await supabase.from("inventory").update({ category: bulkCategory }).in("id", [...selectedIds]);
     setBulkLoading(false);
     setBulkCategoryOpen(false);
     setBulkCategory("");
@@ -341,17 +255,13 @@ export default function InventoryClient({
   }
 
   // ── Modal helpers ─────────────────────────────────────────────────────────
-
-  function openModal(type: "listing" | "auction" | "link" | "edit" | "edit-listing" | "restock" | "sold", row: Row) {
+  function openModal(type: "listing" | "auction" | "edit" | "sold", row: Row) {
     if ((type === "listing" || type === "auction") && !termsAccepted) {
       router.push("/seller-agreement?next=/dashboard/inventory");
       return;
     }
-    setPrice(type === "edit-listing" && row.price_cents ? (row.price_cents / 100).toFixed(2) : "");
-    setListQty(String(row.quantity));
+    setPrice("");
     setStartingBid(""); setBuyNowPrice(""); setEndsAt("");
-    setLinkListingId(row.linked_listing_id ?? "");
-    setLinkQty(row.listing_quantity !== null ? String(row.listing_quantity) : "");
     setEditPlantName(row.plant_name);
     setEditVariety(row.variety);
     setEditQuantity(String(row.quantity));
@@ -360,17 +270,23 @@ export default function InventoryClient({
     setEditCategory(row.category ?? "");
     setEditPotSize(row.pot_size ?? "");
     setEditImages([...row.images]);
+
     if (type === "sold") {
-      setSoldPrice("");
-      setSoldQuantity("1");
-      setSoldNote("");
+      setSoldPrice(""); setSoldQuantity("1"); setSoldNote("");
       setSoldDate(new Date().toISOString().split("T")[0]);
+    }
+    if (type === "listing") {
+      const avail = row.quantity - (row.auction_quantity ?? 0);
+      setListQty(String(Math.max(1, avail)));
+    }
+    if (type === "auction") {
+      const avail = row.quantity - (row.listing_quantity ?? 0);
+      setListQty(String(Math.max(1, avail)));
     }
     setModal({ type, row });
   }
 
   // ── Photo helpers ─────────────────────────────────────────────────────────
-
   async function handleImageAdd(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -389,14 +305,15 @@ export default function InventoryClient({
   function removeEditImage(url: string) { setEditImages((prev) => prev.filter((u) => u !== url)); }
 
   // ── CRUD ──────────────────────────────────────────────────────────────────
-
   async function submitListing() {
     if (!modal || modal.type !== "listing") return;
     setSubmitting(true);
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { toast.error("Not logged in"); setSubmitting(false); return; }
-    const qty = Number(listQty) || modal.row.quantity;
+    const available = modal.row.quantity - (modal.row.auction_quantity ?? 0);
+    const qty = Math.min(Math.max(1, Number(listQty) || available), available);
+    if (qty < 1) { toast.error("No stock available to list"); setSubmitting(false); return; }
     const { data: newListing, error } = await supabase.from("listings").insert({
       seller_id: user.id,
       plant_name: modal.row.plant_name,
@@ -407,11 +324,10 @@ export default function InventoryClient({
       images: modal.row.images,
       category: modal.row.category || null,
       pot_size: modal.row.pot_size || null,
+      inventory_id: modal.row.id,
     }).select("id").single();
     if (error) { toast.error(error.message); setSubmitting(false); return; }
-    if (modal.row.source === "inventory") {
-      await supabase.from("inventory").update({ listing_id: newListing.id, listing_quantity: qty }).eq("id", modal.row.id);
-    }
+    await supabase.from("inventory").update({ listing_id: newListing.id, listing_quantity: qty }).eq("id", modal.row.id);
     setSubmitting(false);
     toast.success(`${modal.row.plant_name} is now live in your shop!`);
     setModal(null);
@@ -424,11 +340,14 @@ export default function InventoryClient({
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { toast.error("Not logged in"); setSubmitting(false); return; }
-    const { error } = await supabase.from("auctions").insert({
+    const available = modal.row.quantity - (modal.row.listing_quantity ?? 0);
+    const qty = Math.min(Math.max(1, Number(listQty) || available), available);
+    if (qty < 1) { toast.error("No stock available for auction"); setSubmitting(false); return; }
+    const { data: newAuction, error } = await supabase.from("auctions").insert({
       seller_id: user.id,
       plant_name: modal.row.plant_name,
       variety: modal.row.variety || null,
-      quantity: modal.row.quantity,
+      quantity: qty,
       description: modal.row.description || null,
       starting_bid_cents: dollarsToCents(startingBid),
       current_bid_cents: dollarsToCents(startingBid),
@@ -437,26 +356,12 @@ export default function InventoryClient({
       images: modal.row.images,
       category: modal.row.category || null,
       pot_size: modal.row.pot_size || null,
-    });
+      inventory_id: modal.row.id,
+    }).select("id").single();
+    if (error) { toast.error(error.message); setSubmitting(false); return; }
+    await supabase.from("inventory").update({ auction_id: newAuction.id, auction_quantity: qty }).eq("id", modal.row.id);
     setSubmitting(false);
-    if (error) { toast.error(error.message); return; }
     toast.success(`Auction started for ${modal.row.plant_name}!`);
-    setModal(null);
-    router.refresh();
-  }
-
-  async function submitLink() {
-    if (!modal || modal.type !== "link") return;
-    if (!linkListingId) { toast.error("Select a listing to link"); return; }
-    setSubmitting(true);
-    const supabase = createClient();
-    const { error } = await supabase.from("inventory").update({
-      listing_id: linkListingId,
-      listing_quantity: linkQty ? Number(linkQty) : null,
-    }).eq("id", modal.row.id);
-    setSubmitting(false);
-    if (error) { toast.error(error.message); return; }
-    toast.success("Linked to listing.");
     setModal(null);
     router.refresh();
   }
@@ -483,25 +388,34 @@ export default function InventoryClient({
     router.refresh();
   }
 
-  async function submitEditListing() {
-    if (!modal || modal.type !== "edit-listing") return;
-    if (!editPlantName.trim()) { toast.error("Plant name is required"); return; }
-    if (!price) { toast.error("Price is required"); return; }
+  async function submitSold() {
+    if (!modal || modal.type !== "sold") return;
+    const qty = Math.max(1, Math.min(Number(soldQuantity) || 1, modal.row.quantity));
+    const priceCents = dollarsToCents(soldPrice);
+    if (!soldPrice || priceCents <= 0) { toast.error("Enter a sale price"); return; }
     setSubmitting(true);
     const supabase = createClient();
-    const { error } = await supabase.from("listings").update({
-      plant_name: editPlantName.trim(),
-      variety: editVariety.trim() || null,
-      quantity: Number(editQuantity) || 0,
-      price_cents: dollarsToCents(price),
-      description: editDescription.trim() || null,
-      category: editCategory || null,
-      pot_size: editPotSize || null,
-      images: editImages,
-    }).eq("id", modal.row.id);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { toast.error("Not logged in"); setSubmitting(false); return; }
+    const { error: saleError } = await supabase.from("manual_sales").insert({
+      seller_id: user.id,
+      inventory_id: modal.row.id,
+      plant_name: modal.row.plant_name,
+      variety: modal.row.variety || null,
+      price_cents: priceCents,
+      quantity: qty,
+      note: soldNote || null,
+      sold_at: soldDate ? new Date(soldDate + "T12:00:00").toISOString() : new Date().toISOString(),
+    });
+    if (saleError) { toast.error(saleError.message); setSubmitting(false); return; }
+    const newQty = modal.row.quantity - qty;
+    if (newQty <= 0) {
+      await supabase.from("inventory").update({ quantity: 0, archived_at: new Date().toISOString() }).eq("id", modal.row.id);
+    } else {
+      await supabase.from("inventory").update({ quantity: newQty }).eq("id", modal.row.id);
+    }
     setSubmitting(false);
-    if (error) { toast.error(error.message); return; }
-    toast.success("Listing updated.");
+    toast.success(newQty <= 0 ? `${qty} sold — item archived (out of stock)` : `${qty} sold · ${newQty} remaining`);
     setModal(null);
     router.refresh();
   }
@@ -524,22 +438,17 @@ export default function InventoryClient({
     }).select("id").single();
     setLoadingId(null);
     if (error || !newItem) { toast.error(error?.message ?? "Clone failed"); return; }
-    const cloneRow: Row = { ...row, id: newItem.id, plant_name: `${row.plant_name} (copy)`, linked_listing_id: null, listing_quantity: null };
+    const cloneRow: Row = {
+      ...row, id: newItem.id, plant_name: `${row.plant_name} (copy)`,
+      listing_id: null, listing_quantity: null, listing_price_cents: null, listing_status: null,
+      auction_id: null, auction_quantity: null, auction_bid_cents: null, auction_ends_at: null, auction_status: null,
+      status: "Draft",
+    };
     setFlashId(newItem.id);
     setTimeout(() => setFlashId(null), 3000);
     toast.success("Item cloned.", {
       action: { label: "Edit now", onClick: () => openModal("edit", cloneRow) },
     });
-    router.refresh();
-  }
-
-  async function unlinkItem(id: string) {
-    setLoadingId(id);
-    const supabase = createClient();
-    const { error } = await supabase.from("inventory").update({ listing_id: null, listing_quantity: null }).eq("id", id);
-    setLoadingId(null);
-    if (error) { toast.error(error.message); return; }
-    toast.success("Unlinked from listing.");
     router.refresh();
   }
 
@@ -553,20 +462,9 @@ export default function InventoryClient({
     router.refresh();
   }
 
-  async function deleteAuction(id: string) {
-    setLoadingId(id);
-    const supabase = createClient();
-    const { error } = await supabase.from("auctions").delete().eq("id", id);
-    setLoadingId(null);
-    if (error) { toast.error(error.message); return; }
-    toast.success("Auction removed.");
-    router.refresh();
-  }
-
   async function confirmDelete() {
     if (!deleteConfirm) return;
-    if (deleteConfirm.type === "inventory") await archiveItem(deleteConfirm.id);
-    else await deleteAuction(deleteConfirm.id);
+    await archiveItem(deleteConfirm.id);
     setDeleteConfirm(null);
   }
 
@@ -580,84 +478,18 @@ export default function InventoryClient({
     router.refresh();
   }
 
-  async function pauseListing(id: string) {
-    setLoadingId(id);
-    const supabase = createClient();
-    const { error } = await supabase.from("listings").update({ status: "paused" }).eq("id", id);
-    setLoadingId(null);
-    if (error) { toast.error(error.message); return; }
-    toast.success("Listing paused.");
-    router.refresh();
-  }
-
-  async function submitSold() {
-    if (!modal || modal.type !== "sold") return;
-    const qty = Math.max(1, Math.min(Number(soldQuantity) || 1, modal.row.quantity));
-    const priceCents = dollarsToCents(soldPrice);
-    if (!soldPrice || priceCents <= 0) { toast.error("Enter a sale price"); return; }
-    setSubmitting(true);
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { toast.error("Not logged in"); setSubmitting(false); return; }
-
-    const { error: saleError } = await supabase.from("manual_sales").insert({
-      seller_id: user.id,
-      inventory_id: modal.row.id,
-      plant_name: modal.row.plant_name,
-      variety: modal.row.variety || null,
-      price_cents: priceCents,
-      quantity: qty,
-      note: soldNote || null,
-      sold_at: soldDate ? new Date(soldDate + "T12:00:00").toISOString() : new Date().toISOString(),
-    });
-
-    if (saleError) { toast.error(saleError.message); setSubmitting(false); return; }
-
-    const newQty = modal.row.quantity - qty;
-    if (newQty <= 0) {
-      await supabase.from("inventory").update({ quantity: 0, archived_at: new Date().toISOString() }).eq("id", modal.row.id);
-    } else {
-      await supabase.from("inventory").update({ quantity: newQty }).eq("id", modal.row.id);
-    }
-
-    setSubmitting(false);
-    toast.success(newQty <= 0 ? `${qty} sold — item archived (out of stock)` : `${qty} sold · ${newQty} remaining`);
-    setModal(null);
-    router.refresh();
-  }
-
-  async function resumeListing(id: string) {
-    setLoadingId(id);
-    const supabase = createClient();
-    const { error } = await supabase.from("listings").update({ status: "active" }).eq("id", id);
-    setLoadingId(null);
-    if (error) { toast.error(error.message); return; }
-    toast.success("Listing resumed.");
-    router.refresh();
-  }
-
-  async function submitRestock() {
-    if (!modal || modal.type !== "restock") return;
-    if (!editQuantity || Number(editQuantity) < 1) { toast.error("Enter a quantity"); return; }
-    setSubmitting(true);
-    const supabase = createClient();
-    const { error } = await supabase.from("listings").update({ quantity: Number(editQuantity), status: "active" }).eq("id", modal.row.id);
-    setSubmitting(false);
-    if (error) { toast.error(error.message); return; }
-    toast.success("Listing restocked and live again!");
-    setModal(null);
-    router.refresh();
-  }
-
   // ── Export ────────────────────────────────────────────────────────────────
-
   function exportExcel(exportRows: Row[]) {
-    const data = exportRows.map((r) => ({
-      "Plant Name": r.plant_name, "Variety": r.variety, "Category": r.category ?? "",
-      "In Stock": r.quantity, "Listed Qty": r.listing_quantity ?? "",
-      "Status": r.status, "Price / Bid": r.price,
-      "Description": r.description, "Date Added": new Date(r.created_at).toLocaleDateString(),
-    }));
+    const data = exportRows.map((r) => {
+      const avail = r.quantity - (r.listing_quantity ?? 0) - (r.auction_quantity ?? 0);
+      return {
+        "Plant Name": r.plant_name, "Variety": r.variety, "Category": r.category ?? "",
+        "Total Stock": r.quantity, "In Shop": r.listing_quantity ?? 0,
+        "In Auction": r.auction_quantity ?? 0, "Available": avail,
+        "Status": r.status, "Description": r.description,
+        "Date Added": new Date(r.created_at).toLocaleDateString(),
+      };
+    });
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Inventory");
@@ -675,20 +507,22 @@ export default function InventoryClient({
       tr:nth-child(even) td{background:#f9fafb}</style></head><body>
       <h1>Plantet — Inventory Report</h1>
       <p>Generated ${new Date().toLocaleDateString()} · ${exportRows.length} item${exportRows.length !== 1 ? "s" : ""}</p>
-      <table><thead><tr><th>Plant Name</th><th>Variety</th><th>Category</th><th>In Stock</th><th>Listed Qty</th><th>Status</th><th>Price / Bid</th></tr></thead>
-      <tbody>${exportRows.map((r) => `<tr><td>${r.plant_name}</td><td>${r.variety || "—"}</td><td>${r.category || "—"}</td><td>${r.quantity}</td><td>${r.listing_quantity ?? "—"}</td><td>${r.status}</td><td>${r.price || "—"}</td></tr>`).join("")}</tbody>
+      <table><thead><tr><th>Plant Name</th><th>Variety</th><th>Category</th><th>Total</th><th>In Shop</th><th>In Auction</th><th>Available</th><th>Status</th></tr></thead>
+      <tbody>${exportRows.map((r) => {
+        const avail = r.quantity - (r.listing_quantity ?? 0) - (r.auction_quantity ?? 0);
+        return `<tr><td>${r.plant_name}</td><td>${r.variety || "—"}</td><td>${r.category || "—"}</td><td>${r.quantity}</td><td>${r.listing_quantity ?? 0}</td><td>${r.auction_quantity ?? 0}</td><td>${avail}</td><td>${r.status}</td></tr>`;
+      }).join("")}</tbody>
       </table><script>window.onload=()=>{window.print();window.onafterprint=()=>window.close()}<\/script></body></html>`);
     printWindow.document.close();
   }
 
   // ── Filter + sort pipeline ────────────────────────────────────────────────
-
   const allRows = tab === "active" ? activeRows : archivedRows;
   const allCategories = ["All", ...Array.from(new Set(allRows.map((r) => r.category).filter((c): c is string => c !== null && c !== ""))).values()];
   const statusCounts = allRows.reduce<Record<string, number>>((acc, r) => { acc[r.status] = (acc[r.status] || 0) + 1; return acc; }, {});
 
   const needsAttentionRows = allRows.filter((r) =>
-    r.images.length === 0 || r.status === "Sold Out" || (r.source === "inventory" && !r.description.trim())
+    r.images.length === 0 || r.status === "Sold Out" || !r.description.trim()
   );
 
   const afterStatusFilter = statusFilter !== "All" ? allRows.filter((r) => r.status === statusFilter) : allRows;
@@ -715,46 +549,43 @@ export default function InventoryClient({
       })
     : filtered;
 
-  const totalListedValue = rows.reduce((sum, r) => sum + (r.price_cents !== null ? r.price_cents * r.quantity : 0), 0);
-
-  const hasSelectedInventory = [...selectedIds].some((id) => rows.find((r) => r.id === id)?.source === "inventory");
-  const hasSelectedActiveListings = [...selectedIds].some((id) => { const r = rows.find((r) => r.id === id); return r?.source === "listing" && r.status === "In Shop"; });
-  const hasSelectedEditable = [...selectedIds].some((id) => { const r = rows.find((r) => r.id === id); return r?.source === "inventory" || r?.source === "listing"; });
+  const totalListedValue = rows.reduce((sum, r) => sum + (r.listing_price_cents !== null ? r.listing_price_cents * (r.listing_quantity ?? 0) : 0), 0);
 
   // ── Render helpers ────────────────────────────────────────────────────────
+  function stockCell(row: Row) {
+    const available = row.quantity - (row.listing_quantity ?? 0) - (row.auction_quantity ?? 0);
+    const hasAllocations = (row.listing_quantity ?? 0) > 0 || (row.auction_quantity ?? 0) > 0;
+
+    return (
+      <div>
+        {editingCell?.rowId === row.id ? (
+          <input type="number" min={0} value={editingValue}
+            onChange={(e) => setEditingValue(e.target.value)}
+            onBlur={saveEdit}
+            onKeyDown={(e) => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") cancelEdit(); }}
+            autoFocus className="w-16 px-1.5 py-0.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-green-600" />
+        ) : (
+          <button onClick={() => startEdit(row.id, row.quantity)}
+            className="font-medium hover:text-green-700 hover:underline tabular-nums" title="Click to edit total stock">
+            {row.quantity}
+          </button>
+        )}
+        {hasAllocations && (
+          <div className="text-xs mt-0.5 space-y-0.5">
+            {(row.listing_quantity ?? 0) > 0 && <div className="text-green-600">{row.listing_quantity} in shop</div>}
+            {(row.auction_quantity ?? 0) > 0 && <div className="text-blue-600">{row.auction_quantity} in auction</div>}
+            <div className="text-muted-foreground">{available} available</div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   function priceBidCell(row: Row) {
-    if (row.source === "listing") {
-      if (editingPriceId === row.id) {
-        return (
-          <input type="number" min={0.01} step={0.01} value={editingPriceValue}
-            onChange={(e) => setEditingPriceValue(e.target.value)}
-            onBlur={savePriceEdit}
-            onKeyDown={(e) => { if (e.key === "Enter") savePriceEdit(); if (e.key === "Escape") setEditingPriceId(null); }}
-            autoFocus className="w-20 px-1.5 py-0.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-green-600" />
-        );
-      }
-      return (
-        <button onClick={() => startPriceEdit(row.id, row.price_cents)}
-          className="hover:text-green-700 hover:underline tabular-nums text-muted-foreground" title="Click to edit price">
-          {row.price || "—"}
-        </button>
-      );
-    }
-    if (row.source === "auction" && row.ends_at) {
-      const endDate = new Date(row.ends_at);
-      const isEnded = endDate < new Date();
-      const dateStr = endDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-      return (
-        <div>
-          <p className="text-muted-foreground">{row.price || "—"}</p>
-          <p className={cn("text-xs mt-0.5", isEnded ? "text-muted-foreground" : "text-blue-600")}>
-            {isEnded ? `Ended ${dateStr}` : `Ends ${dateStr}`}
-          </p>
-        </div>
-      );
-    }
-    return <span className="text-muted-foreground">{row.price || "—"}</span>;
+    const parts: string[] = [];
+    if (row.listing_price_cents) parts.push(centsToDisplay(row.listing_price_cents));
+    if (row.auction_bid_cents) parts.push(`${centsToDisplay(row.auction_bid_cents)} bid`);
+    return <span className="text-muted-foreground text-sm">{parts.join(" · ") || "—"}</span>;
   }
 
   function rowActions(row: Row) {
@@ -768,189 +599,57 @@ export default function InventoryClient({
         </div>
       );
     }
-    if (row.source === "inventory") {
-      const cloneKey = row.id + "_clone";
-      return (
-        <div className="flex items-center gap-2 flex-wrap">
-          <button onClick={() => openModal("edit", row)} className="text-xs text-foreground hover:underline font-medium">Edit</button>
-          <button onClick={() => openModal("sold", row)} className="text-xs text-orange-600 hover:underline font-medium">Sold</button>
-          {row.linked_listing_id ? (
-            <span className="text-xs text-muted-foreground">Linked</span>
-          ) : (
-            <>
-              <button onClick={() => openModal("listing", row)} className="text-xs text-green-700 hover:underline font-medium">List in Shop</button>
-              <button onClick={() => openModal("auction", row)} className="text-xs text-purple-600 hover:underline font-medium">Auction</button>
-            </>
-          )}
-          <DropdownMenu>
-            <DropdownMenuTrigger className="inline-flex items-center justify-center w-6 h-6 rounded hover:bg-muted text-muted-foreground hover:text-foreground" title="More actions">
-              <MoreHorizontal size={14} />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-[160px]">
-              <DropdownMenuItem onClick={() => cloneItem(row)} disabled={loadingId === cloneKey}>
-                {loadingId === cloneKey ? "Cloning…" : "Clone"}
-              </DropdownMenuItem>
-              {row.linked_listing_id ? (
-                <>
-                  <DropdownMenuItem onClick={() => openModal("link", row)}>Edit Link</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => unlinkItem(row.id)} disabled={loadingId === row.id}>Unlink</DropdownMenuItem>
-                </>
-              ) : (
-                <DropdownMenuItem onClick={() => openModal("link", row)}>Link to Listing</DropdownMenuItem>
-              )}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setDeleteConfirm({ id: row.id, type: "inventory" })} className="text-destructive focus:text-destructive">
-                Archive
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      );
-    }
-    if (row.source === "listing") {
-      return (
-        <div className="flex items-center gap-2 flex-wrap">
-          <button onClick={() => openModal("edit-listing", row)} className="text-xs text-foreground hover:underline font-medium">Edit</button>
-          {row.status === "In Shop" && (
-            <button onClick={() => pauseListing(row.id)} disabled={loadingId === row.id} className="text-xs text-yellow-600 hover:underline disabled:opacity-50">
-              {loadingId === row.id ? "…" : "Pause"}
-            </button>
-          )}
-          {row.status === "Paused" && (
-            <button onClick={() => resumeListing(row.id)} disabled={loadingId === row.id} className="text-xs text-green-700 hover:underline disabled:opacity-50">
-              {loadingId === row.id ? "…" : "Resume"}
-            </button>
-          )}
-          {row.status === "Sold Out" && (
-            <button onClick={() => openModal("restock", row)} className="text-xs text-blue-600 hover:underline font-medium">Restock</button>
-          )}
-          <Link href={`/shop/${row.id}`} target="_blank" className="inline-flex items-center gap-0.5 text-xs text-muted-foreground hover:text-foreground">
-            <ExternalLink size={11} />View
+
+    const available = row.quantity - (row.listing_quantity ?? 0) - (row.auction_quantity ?? 0);
+    const cloneKey = row.id + "_clone";
+
+    return (
+      <div className="flex items-center gap-2 flex-wrap">
+        <button onClick={() => openModal("edit", row)} className="text-xs text-foreground hover:underline font-medium">Edit</button>
+        <button onClick={() => openModal("sold", row)} className="text-xs text-orange-600 hover:underline font-medium">Sold</button>
+
+        {row.listing_id ? (
+          <Link href="/dashboard/listings" className="inline-flex items-center gap-0.5 text-xs text-green-700 hover:underline font-medium">
+            <Store size={11} />Listing
           </Link>
-        </div>
-      );
-    }
-    if (row.source === "auction") {
-      if (row.status === "Cancelled") {
-        return (
-          <button onClick={() => setDeleteConfirm({ id: row.id, type: "auction" })} className="text-xs text-red-500 hover:underline">Delete</button>
-        );
-      }
-      if (row.status === "Auction Ended") {
-        return (
-          <div className="flex items-center gap-2 flex-wrap">
-            <button onClick={() => openModal("listing", row)} className="text-xs text-green-700 hover:underline font-medium">List in Shop</button>
-            <button onClick={() => openModal("auction", row)} className="text-xs text-purple-600 hover:underline font-medium">Re-auction</button>
-            <Link href={`/auctions/${row.id}`} target="_blank" className="inline-flex items-center gap-0.5 text-xs text-muted-foreground hover:text-foreground">
-              <ExternalLink size={11} />View
-            </Link>
-          </div>
-        );
-      }
-      if (row.status === "Live Auction") {
-        return (
-          <Link href={`/auctions/${row.id}`} target="_blank" className="inline-flex items-center gap-0.5 text-xs text-muted-foreground hover:text-foreground">
-            <ExternalLink size={11} />View
+        ) : available > 0 ? (
+          <button onClick={() => openModal("listing", row)} className="text-xs text-green-700 hover:underline font-medium">List in Shop</button>
+        ) : null}
+
+        {row.auction_id ? (
+          <Link href="/dashboard/auctions" className="inline-flex items-center gap-0.5 text-xs text-blue-600 hover:underline font-medium">
+            <Gavel size={11} />Auction
           </Link>
-        );
-      }
-    }
-    return <span className="text-xs text-muted-foreground">—</span>;
-  }
+        ) : available > 0 ? (
+          <button onClick={() => openModal("auction", row)} className="text-xs text-purple-600 hover:underline font-medium">Auction</button>
+        ) : null}
 
-  function inStockCell(row: Row) {
-    if (row.source === "inventory") {
-      return editingCell?.rowId === row.id && editingCell?.field === "quantity" ? (
-        <input type="number" min={0} value={editingValue} onChange={(e) => setEditingValue(e.target.value)}
-          onBlur={saveEdit} onKeyDown={(e) => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") cancelEdit(); }}
-          autoFocus className="w-16 px-1.5 py-0.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-green-600" />
-      ) : (
-        <button onClick={() => startEdit(row.id, "quantity", row.quantity, row.source)} className="hover:text-green-700 hover:underline tabular-nums" title="Click to edit">
-          {row.quantity}
-        </button>
-      );
-    }
-    if (row.source === "listing") {
-      return editingCell?.rowId === row.id && editingCell?.field === "in_stock" ? (
-        <input type="number" min={0} value={editingValue} onChange={(e) => setEditingValue(e.target.value)}
-          onBlur={saveEdit} onKeyDown={(e) => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") cancelEdit(); }}
-          autoFocus className="w-16 px-1.5 py-0.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-green-600" />
-      ) : (
-        <button onClick={() => startEdit(row.id, "in_stock", row.in_stock, row.source)} className={cn("hover:text-green-700 hover:underline tabular-nums", row.in_stock === null && "text-muted-foreground")} title="Click to edit">
-          {row.in_stock ?? "—"}
-        </button>
-      );
-    }
-    return <span className="text-muted-foreground">{row.quantity}</span>;
-  }
-
-  function listedQtyCell(row: Row, linkedListing?: ListingOption | null) {
-    const hiddenGap = row.source === "inventory" && row.linked_listing_id && row.listing_quantity !== null && row.quantity > row.listing_quantity
-      ? row.quantity - row.listing_quantity : null;
-    const listingHiddenGap = row.source === "listing" && row.in_stock !== null && row.in_stock > row.quantity
-      ? row.in_stock - row.quantity : null;
-
-    if (row.source === "inventory") {
-      return (
-        <div>
-          <div className="flex items-center gap-1.5">
-            {editingCell?.rowId === row.id && editingCell?.field === "listing_quantity" ? (
-              <input type="number" min={0} value={editingValue} onChange={(e) => setEditingValue(e.target.value)}
-                onBlur={saveEdit} onKeyDown={(e) => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") cancelEdit(); }}
-                autoFocus className="w-16 px-1.5 py-0.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-green-600" />
-            ) : (
-              <button onClick={() => startEdit(row.id, "listing_quantity", row.listing_quantity, row.source)} className={cn("hover:text-green-700 hover:underline tabular-nums", row.listing_quantity === null && "text-muted-foreground")} title="Click to edit">
-                {row.listing_quantity ?? "—"}
-              </button>
-            )}
-            {hiddenGap !== null && (
-              <span className="inline-flex items-center gap-0.5 text-xs text-orange-600" title={`${hiddenGap} units hidden from buyers`}>
-                <AlertTriangle size={11} />{hiddenGap} hidden
-              </span>
-            )}
-          </div>
-          {linkedListing && (
-            <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-[120px]">
-              {linkedListing.plant_name}{linkedListing.variety ? ` · ${linkedListing.variety}` : ""}
-            </p>
-          )}
-        </div>
-      );
-    }
-    if (row.source === "listing") {
-      return (
-        <div className="flex items-center gap-1.5">
-          {editingCell?.rowId === row.id && editingCell?.field === "listing_quantity" ? (
-            <input type="number" min={0} value={editingValue} onChange={(e) => setEditingValue(e.target.value)}
-              onBlur={saveEdit} onKeyDown={(e) => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") cancelEdit(); }}
-              autoFocus className="w-16 px-1.5 py-0.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-green-600" />
-          ) : (
-            <button onClick={() => startEdit(row.id, "listing_quantity", row.quantity, row.source)} className="hover:text-green-700 hover:underline tabular-nums" title="Click to edit">
-              {row.quantity}
-            </button>
-          )}
-          {listingHiddenGap !== null && (
-            <span className="inline-flex items-center gap-0.5 text-xs text-orange-600" title={`${listingHiddenGap} units in stock not shown to buyers`}>
-              <AlertTriangle size={11} />{listingHiddenGap} hidden
-            </span>
-          )}
-        </div>
-      );
-    }
-    return <span className="text-muted-foreground">—</span>;
+        <DropdownMenu>
+          <DropdownMenuTrigger className="inline-flex items-center justify-center w-6 h-6 rounded hover:bg-muted text-muted-foreground hover:text-foreground" title="More actions">
+            <MoreHorizontal size={14} />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-[160px]">
+            <DropdownMenuItem onClick={() => cloneItem(row)} disabled={loadingId === cloneKey}>
+              {loadingId === cloneKey ? "Cloning…" : "Clone"}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => setDeleteConfirm({ id: row.id })} className="text-destructive focus:text-destructive">
+              Archive
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    );
   }
 
   function categoryCell(row: Row) {
-    const canEdit = row.source === "inventory" || row.source === "listing";
-    if (canEdit && editingCategoryId === row.id) {
+    if (editingCategoryId === row.id) {
       const doSave = (v: string | null) => {
         const saveVal = !v || v === "_none" ? null : v;
         const id = row.id;
-        const source = row.source;
         setEditingCategoryId(null);
         const supabase = createClient();
-        const table = source === "inventory" ? "inventory" : "listings";
-        supabase.from(table).update({ category: saveVal } as never).eq("id", id).then(({ error }) => {
+        supabase.from("inventory").update({ category: saveVal } as never).eq("id", id).then(({ error }) => {
           if (error) toast.error(error.message); else router.refresh();
         });
       };
@@ -964,19 +663,14 @@ export default function InventoryClient({
         </Select>
       );
     }
-    if (canEdit) {
-      return (
-        <button onClick={() => startCategoryEdit(row.id, row.category, row.source)}
-          className={cn("text-xs hover:underline hover:text-green-700", row.category ? "text-foreground" : "text-muted-foreground")}
-          title="Click to edit category">
-          {row.category ?? "—"}
-        </button>
-      );
-    }
-    return <span className="text-xs text-muted-foreground">{row.category ?? "—"}</span>;
+    return (
+      <button onClick={() => { setEditingCategoryId(row.id); setEditingCategoryValue(row.category ?? ""); }}
+        className={cn("text-xs hover:underline hover:text-green-700", row.category ? "text-foreground" : "text-muted-foreground")}
+        title="Click to edit category">
+        {row.category ?? "—"}
+      </button>
+    );
   }
-
-  // ── Photo modal shared section ────────────────────────────────────────────
 
   function PhotoSection({ refProp }: { refProp: React.RefObject<HTMLInputElement | null> }) {
     return (
@@ -1004,10 +698,8 @@ export default function InventoryClient({
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
-
   return (
     <div className="max-w-6xl mx-auto px-4 py-10">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold">Inventory</h1>
@@ -1020,7 +712,6 @@ export default function InventoryClient({
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-1 border-b mb-6">
         {(["active", "archived"] as const).map((t) => (
           <button key={t} onClick={() => { setTab(t); setSelectedIds(new Set()); setStatusFilter("All"); setCategoryFilter("All"); setAttentionFilter(false); }} className={cn(
@@ -1035,7 +726,6 @@ export default function InventoryClient({
         ))}
       </div>
 
-      {/* Filter bar */}
       <div className="flex flex-col sm:flex-row gap-3 mb-4 flex-wrap items-center">
         <Input placeholder="Search by plant name or variety…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm" />
         {allCategories.length > 1 && (
@@ -1084,14 +774,12 @@ export default function InventoryClient({
         </div>
       </div>
 
-      {/* Archive warning */}
       {tab === "archived" && archivedRows.length > 0 && (
         <div className="mb-4 rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-700">
           Archived items are permanently deleted after 30 days. Restore an item to keep it.
         </div>
       )}
 
-      {/* Status breakdown chips */}
       {Object.keys(statusCounts).length > 1 && (
         <div className="flex flex-wrap gap-2 mb-4">
           {Object.entries(statusCounts).map(([status, count]) => (
@@ -1115,20 +803,12 @@ export default function InventoryClient({
         </div>
       )}
 
-      {/* Bulk action bar */}
       {selectedIds.size > 0 && (
         <div className="flex items-center gap-3 mb-4 px-4 py-2.5 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg text-sm">
           <span className="font-medium text-green-800 dark:text-green-300">{selectedIds.size} selected</span>
           <div className="flex gap-2 flex-wrap">
-            {hasSelectedInventory && (
-              <Button size="sm" variant="outline" onClick={bulkArchive} disabled={bulkLoading} className="text-xs h-7">Archive selected</Button>
-            )}
-            {hasSelectedActiveListings && (
-              <Button size="sm" variant="outline" onClick={bulkPauseListing} disabled={bulkLoading} className="text-xs h-7">Pause listings</Button>
-            )}
-            {hasSelectedEditable && (
-              <Button size="sm" variant="outline" onClick={() => setBulkCategoryOpen(true)} disabled={bulkLoading} className="text-xs h-7">Set category</Button>
-            )}
+            <Button size="sm" variant="outline" onClick={bulkArchive} disabled={bulkLoading} className="text-xs h-7">Archive selected</Button>
+            <Button size="sm" variant="outline" onClick={() => setBulkCategoryOpen(true)} disabled={bulkLoading} className="text-xs h-7">Set category</Button>
           </div>
           <button onClick={() => setSelectedIds(new Set())} className="ml-auto text-xs text-muted-foreground hover:text-foreground">Clear</button>
         </div>
@@ -1149,7 +829,7 @@ export default function InventoryClient({
           {/* Mobile cards */}
           <div className="sm:hidden space-y-3">
             {rows.map((row) => {
-              const linkedListing = row.linked_listing_id ? listingOptions.find((l) => l.id === row.linked_listing_id) : null;
+              const available = row.quantity - (row.listing_quantity ?? 0) - (row.auction_quantity ?? 0);
               return (
                 <div key={row.id} className={cn("rounded-lg border bg-card p-4 space-y-3", flashId === row.id && "ring-2 ring-green-400 bg-green-50/30 dark:bg-green-950/10")}>
                   <div className="flex gap-3 items-start">
@@ -1167,9 +847,22 @@ export default function InventoryClient({
                     <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium shrink-0", statusColor[row.status] ?? "bg-gray-100 text-gray-600")}>{row.status}</span>
                   </div>
                   <div className="grid grid-cols-3 gap-2 text-sm">
-                    <div><p className="text-xs text-muted-foreground mb-0.5">In Stock</p>{inStockCell(row)}</div>
-                    <div><p className="text-xs text-muted-foreground mb-0.5">Listed Qty</p>{listedQtyCell(row, linkedListing)}</div>
-                    <div><p className="text-xs text-muted-foreground mb-0.5">Price / Bid</p>{priceBidCell(row)}</div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-0.5">Total</p>
+                      <p className="font-medium">{row.quantity}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-0.5">Available</p>
+                      <p className="font-medium">{available}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-0.5">Allocated</p>
+                      <div className="text-xs">
+                        {(row.listing_quantity ?? 0) > 0 && <p className="text-green-600">{row.listing_quantity} shop</p>}
+                        {(row.auction_quantity ?? 0) > 0 && <p className="text-blue-600">{row.auction_quantity} auction</p>}
+                        {!(row.listing_quantity) && !(row.auction_quantity) && <p className="text-muted-foreground">—</p>}
+                      </div>
+                    </div>
                   </div>
                   <div>{rowActions(row)}</div>
                 </div>
@@ -1195,19 +888,13 @@ export default function InventoryClient({
                     </th>
                   )}
                   {col("category") && <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">Category</th>}
-                  {col("in_stock") && (
-                    <th className="text-left px-4 py-3 font-medium">
-                      <button onClick={() => toggleSort("quantity")} className="flex items-center gap-1 hover:text-foreground transition-colors">In Stock <span className="text-xs">{sortIndicator("quantity")}</span></button>
-                    </th>
-                  )}
-                  {col("listed_qty") && (
-                    <th className="text-left px-4 py-3 font-medium">
-                      <span className="inline-flex items-center gap-1">
-                        Listed Qty
-                        <span title="Quantity shown to buyers. May differ from physical stock." className="cursor-default text-muted-foreground"><Info size={12} /></span>
-                      </span>
-                    </th>
-                  )}
+                  <th className="text-left px-4 py-3 font-medium">
+                    <button onClick={() => toggleSort("quantity")} className="flex items-center gap-1 hover:text-foreground transition-colors">
+                      Stock
+                      <span className="cursor-default text-muted-foreground" title="Total stock. Shows breakdown when allocated to listings or auctions."><Info size={12} /></span>
+                      <span className="text-xs">{sortIndicator("quantity")}</span>
+                    </button>
+                  </th>
                   <th className="text-left px-4 py-3 font-medium">
                     <button onClick={() => toggleSort("status")} className="flex items-center gap-1 hover:text-foreground transition-colors">Status <span className="text-xs">{sortIndicator("status")}</span></button>
                   </th>
@@ -1221,44 +908,39 @@ export default function InventoryClient({
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row, i) => {
-                  const linkedListing = row.linked_listing_id ? listingOptions.find((l) => l.id === row.linked_listing_id) : null;
-                  return (
-                    <tr key={row.id} className={cn(
-                      i % 2 === 0 ? "bg-card" : "bg-muted/20",
-                      selectedIds.has(row.id) && "ring-1 ring-inset ring-green-400/50 bg-green-50/30 dark:bg-green-950/10",
-                      flashId === row.id && "ring-2 ring-inset ring-green-500 bg-green-50/40 dark:bg-green-950/20"
-                    )}>
-                      <td className="px-3 py-3"><input type="checkbox" checked={selectedIds.has(row.id)} onChange={() => toggleSelect(row.id)} className="rounded border-border" /></td>
-                      <td className="px-2 py-3"><Thumb images={row.images} /></td>
-                      <td className="px-4 py-3 font-medium">
-                        <div className="flex items-center gap-1.5">
-                          {row.plant_name}
-                          {row.notes && <span title={row.notes} className="shrink-0 cursor-default"><FileText size={13} className="text-muted-foreground" /></span>}
-                          {row.images.length === 0 && <span title="No photos" className="shrink-0 cursor-default"><AlertCircle size={13} className="text-orange-400" /></span>}
-                        </div>
-                      </td>
-                      {col("variety") && <td className="px-4 py-3 text-muted-foreground">{row.variety || "—"}</td>}
-                      {col("category") && <td className="px-4 py-3 hidden lg:table-cell">{categoryCell(row)}</td>}
-                      {col("in_stock") && <td className="px-4 py-3">{inStockCell(row)}</td>}
-                      {col("listed_qty") && <td className="px-4 py-3">{listedQtyCell(row, linkedListing)}</td>}
-                      <td className="px-4 py-3">
-                        <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium", statusColor[row.status] ?? "bg-gray-100 text-gray-600")}>{row.status}</span>
-                      </td>
-                      {col("price") && <td className="px-4 py-3 hidden md:table-cell">{priceBidCell(row)}</td>}
-                      {col("added") && <td className="px-4 py-3 text-muted-foreground text-xs hidden xl:table-cell">{new Date(row.created_at).toLocaleDateString()}</td>}
-                      <td className="px-4 py-3">{rowActions(row)}</td>
-                    </tr>
-                  );
-                })}
+                {rows.map((row, i) => (
+                  <tr key={row.id} className={cn(
+                    i % 2 === 0 ? "bg-card" : "bg-muted/20",
+                    selectedIds.has(row.id) && "ring-1 ring-inset ring-green-400/50 bg-green-50/30 dark:bg-green-950/10",
+                    flashId === row.id && "ring-2 ring-inset ring-green-500 bg-green-50/40 dark:bg-green-950/20"
+                  )}>
+                    <td className="px-3 py-3"><input type="checkbox" checked={selectedIds.has(row.id)} onChange={() => toggleSelect(row.id)} className="rounded border-border" /></td>
+                    <td className="px-2 py-3"><Thumb images={row.images} /></td>
+                    <td className="px-4 py-3 font-medium">
+                      <div className="flex items-center gap-1.5">
+                        {row.plant_name}
+                        {row.notes && <span title={row.notes} className="shrink-0 cursor-default"><FileText size={13} className="text-muted-foreground" /></span>}
+                        {row.images.length === 0 && <span title="No photos" className="shrink-0 cursor-default"><AlertCircle size={13} className="text-orange-400" /></span>}
+                      </div>
+                    </td>
+                    {col("variety") && <td className="px-4 py-3 text-muted-foreground">{row.variety || "—"}</td>}
+                    {col("category") && <td className="px-4 py-3 hidden lg:table-cell">{categoryCell(row)}</td>}
+                    <td className="px-4 py-3">{stockCell(row)}</td>
+                    <td className="px-4 py-3">
+                      <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium", statusColor[row.status] ?? "bg-gray-100 text-gray-600")}>{row.status}</span>
+                    </td>
+                    {col("price") && <td className="px-4 py-3 hidden md:table-cell">{priceBidCell(row)}</td>}
+                    {col("added") && <td className="px-4 py-3 text-muted-foreground text-xs hidden xl:table-cell">{new Date(row.created_at).toLocaleDateString()}</td>}
+                    <td className="px-4 py-3">{rowActions(row)}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
 
-          {/* Footer */}
           <div className="mt-3 flex flex-wrap gap-4 px-1 text-sm text-muted-foreground">
             <span>{rows.length < allRows.length ? `Showing ${rows.length} of ${allRows.length} items` : `${rows.length} item${rows.length !== 1 ? "s" : ""}`}</span>
-            {totalListedValue > 0 && <span>Total listed value: <span className="font-semibold text-foreground">{centsToDisplay(totalListedValue)}</span></span>}
+            {totalListedValue > 0 && <span>Listed value: <span className="font-semibold text-foreground">{centsToDisplay(totalListedValue)}</span></span>}
           </div>
         </>
       )}
@@ -1266,18 +948,11 @@ export default function InventoryClient({
       {/* Delete confirm */}
       <Dialog open={!!deleteConfirm} onOpenChange={(o) => !o && setDeleteConfirm(null)}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>{deleteConfirm?.type === "auction" ? "Delete auction?" : "Archive item?"}</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground mt-1">
-            {deleteConfirm?.type === "auction"
-              ? "This will permanently remove the auction and cannot be undone."
-              : "This moves the item to your archive. You can restore it within 30 days."}
-          </p>
+          <DialogHeader><DialogTitle>Archive item?</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground mt-1">This moves the item to your archive. You can restore it within 30 days.</p>
           <div className="flex gap-2 mt-4">
             <Button variant="outline" onClick={() => setDeleteConfirm(null)} className="flex-1">Cancel</Button>
-            <Button onClick={confirmDelete} disabled={!!loadingId}
-              className={cn("flex-1", deleteConfirm?.type === "auction" ? "bg-red-600 hover:bg-red-700" : "bg-orange-600 hover:bg-orange-700")}>
-              {deleteConfirm?.type === "auction" ? "Delete" : "Archive"}
-            </Button>
+            <Button onClick={confirmDelete} disabled={!!loadingId} className="flex-1 bg-orange-600 hover:bg-orange-700">Archive</Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -1305,56 +980,31 @@ export default function InventoryClient({
         </DialogContent>
       </Dialog>
 
-      {/* Link modal */}
-      <Dialog open={modal?.type === "link"} onOpenChange={(o) => !o && setModal(null)}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>{modal?.row.linked_listing_id ? "Edit Listing Link" : "Link to Listing"}</DialogTitle></DialogHeader>
-          {modal && (
-            <div className="space-y-4 mt-1">
-              <p className="text-sm text-muted-foreground">Connect <span className="font-medium text-foreground">{modal.row.plant_name}</span> to an existing listing.</p>
-              <div className="space-y-1">
-                <Label>Listing *</Label>
-                <Select value={linkListingId} onValueChange={(v) => setLinkListingId(v ?? "")}>
-                  <SelectTrigger><SelectValue placeholder="Select a listing…" /></SelectTrigger>
-                  <SelectContent>{listingOptions.map((l) => <SelectItem key={l.id} value={l.id}>{l.plant_name}{l.variety ? ` · ${l.variety}` : ""}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="link-qty">Listed quantity <span className="font-normal text-muted-foreground">(optional)</span></Label>
-                <Input id="link-qty" type="number" min={0} step={1} value={linkQty} onChange={(e) => setLinkQty(e.target.value)} placeholder={`e.g. ${modal.row.quantity}`} />
-                <p className="text-xs text-muted-foreground">Buyers see this number. Full stock ({modal.row.quantity}) stays private.</p>
-              </div>
-              <div className="flex gap-2 pt-1">
-                <Button variant="outline" onClick={() => setModal(null)} className="flex-1">Cancel</Button>
-                <Button onClick={submitLink} disabled={submitting || !linkListingId} className="flex-1 bg-green-700 hover:bg-green-800">{submitting ? "Saving…" : "Save Link"}</Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
       {/* List in Shop modal */}
       <Dialog open={modal?.type === "listing"} onOpenChange={(o) => !o && setModal(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader><DialogTitle>List in Shop</DialogTitle></DialogHeader>
-          {modal && (
-            <div className="space-y-4 mt-1">
-              <p className="text-sm text-muted-foreground">Listing <span className="font-medium text-foreground">{modal.row.plant_name}</span>{modal.row.variety ? ` — ${modal.row.variety}` : ""} in your shop.</p>
-              <div className="space-y-1">
-                <Label htmlFor="modal-price">Price per item ($) *</Label>
-                <Input id="modal-price" type="number" min={0.01} step={0.01} value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" autoFocus />
+          {modal && modal.type === "listing" && (() => {
+            const available = modal.row.quantity - (modal.row.auction_quantity ?? 0);
+            return (
+              <div className="space-y-4 mt-1">
+                <p className="text-sm text-muted-foreground">Listing <span className="font-medium text-foreground">{modal.row.plant_name}</span>{modal.row.variety ? ` — ${modal.row.variety}` : ""} in your shop.</p>
+                <div className="space-y-1">
+                  <Label htmlFor="modal-price">Price per item ($) *</Label>
+                  <Input id="modal-price" type="number" min={0.01} step={0.01} value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" autoFocus />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="modal-list-qty">Quantity to list *</Label>
+                  <Input id="modal-list-qty" type="number" min={1} max={available} step={1} value={listQty} onChange={(e) => setListQty(e.target.value)} />
+                  <p className="text-xs text-muted-foreground">{available} available · {modal.row.quantity} total stock</p>
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <Button variant="outline" onClick={() => setModal(null)} className="flex-1">Cancel</Button>
+                  <Button onClick={submitListing} disabled={submitting || !price || !listQty} className="flex-1 bg-green-700 hover:bg-green-800">{submitting ? "Publishing…" : "Go Live"}</Button>
+                </div>
               </div>
-              <div className="space-y-1">
-                <Label htmlFor="modal-list-qty">Quantity to list *</Label>
-                <Input id="modal-list-qty" type="number" min={1} step={1} value={listQty} onChange={(e) => setListQty(e.target.value)} placeholder={String(modal.row.quantity)} />
-                <p className="text-xs text-muted-foreground">Buyers see this number. Full stock ({modal.row.quantity}) stays in inventory.</p>
-              </div>
-              <div className="flex gap-2 pt-1">
-                <Button variant="outline" onClick={() => setModal(null)} className="flex-1">Cancel</Button>
-                <Button onClick={submitListing} disabled={submitting || !price || !listQty} className="flex-1 bg-green-700 hover:bg-green-800">{submitting ? "Publishing…" : "Go Live"}</Button>
-              </div>
-            </div>
-          )}
+            );
+          })()}
         </DialogContent>
       </Dialog>
 
@@ -1362,27 +1012,37 @@ export default function InventoryClient({
       <Dialog open={modal?.type === "auction"} onOpenChange={(o) => !o && setModal(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader><DialogTitle>Create Auction</DialogTitle></DialogHeader>
-          {modal && (
-            <div className="space-y-4 mt-1">
-              <p className="text-sm text-muted-foreground">Starting an auction for <span className="font-medium text-foreground">{modal.row.plant_name}</span>{modal.row.variety ? ` — ${modal.row.variety}` : ""}.</p>
-              <div className="space-y-1">
-                <Label htmlFor="modal-bid">Starting Bid ($) *</Label>
-                <Input id="modal-bid" type="number" min={0.01} step={0.01} value={startingBid} onChange={(e) => setStartingBid(e.target.value)} placeholder="0.00" autoFocus />
+          {modal && modal.type === "auction" && (() => {
+            const available = modal.row.quantity - (modal.row.listing_quantity ?? 0);
+            return (
+              <div className="space-y-4 mt-1">
+                <p className="text-sm text-muted-foreground">Starting an auction for <span className="font-medium text-foreground">{modal.row.plant_name}</span>{modal.row.variety ? ` — ${modal.row.variety}` : ""}.</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="modal-bid">Starting Bid ($) *</Label>
+                    <Input id="modal-bid" type="number" min={0.01} step={0.01} value={startingBid} onChange={(e) => setStartingBid(e.target.value)} placeholder="0.00" autoFocus />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="modal-auction-qty">Quantity *</Label>
+                    <Input id="modal-auction-qty" type="number" min={1} max={available} step={1} value={listQty} onChange={(e) => setListQty(e.target.value)} />
+                    <p className="text-xs text-muted-foreground">{available} available</p>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="modal-buy-now">Buy Now Price ($) <span className="font-normal text-muted-foreground">(optional)</span></Label>
+                  <Input id="modal-buy-now" type="number" min={0.01} step={0.01} value={buyNowPrice} onChange={(e) => setBuyNowPrice(e.target.value)} placeholder="Leave blank to disable" />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="modal-ends">End Date & Time *</Label>
+                  <Input id="modal-ends" type="datetime-local" value={endsAt} onChange={(e) => setEndsAt(e.target.value)} min={new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16)} />
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <Button variant="outline" onClick={() => setModal(null)} className="flex-1">Cancel</Button>
+                  <Button onClick={submitAuction} disabled={submitting || !startingBid || !endsAt || !listQty} className="flex-1 bg-green-700 hover:bg-green-800">{submitting ? "Starting…" : "Start Auction"}</Button>
+                </div>
               </div>
-              <div className="space-y-1">
-                <Label htmlFor="modal-buy-now">Buy Now Price ($) <span className="font-normal text-muted-foreground">(optional)</span></Label>
-                <Input id="modal-buy-now" type="number" min={0.01} step={0.01} value={buyNowPrice} onChange={(e) => setBuyNowPrice(e.target.value)} placeholder="Leave blank to disable" />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="modal-ends">End Date & Time *</Label>
-                <Input id="modal-ends" type="datetime-local" value={endsAt} onChange={(e) => setEndsAt(e.target.value)} min={new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16)} />
-              </div>
-              <div className="flex gap-2 pt-1">
-                <Button variant="outline" onClick={() => setModal(null)} className="flex-1">Cancel</Button>
-                <Button onClick={submitAuction} disabled={submitting || !startingBid || !endsAt} className="flex-1 bg-green-700 hover:bg-green-800">{submitting ? "Starting…" : "Start Auction"}</Button>
-              </div>
-            </div>
-          )}
+            );
+          })()}
         </DialogContent>
       </Dialog>
 
@@ -1405,7 +1065,7 @@ export default function InventoryClient({
                 <PotSizePicker value={editPotSize} onChange={setEditPotSize} />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="edit-qty">Quantity</Label>
+                <Label htmlFor="edit-qty">Total quantity</Label>
                 <Input id="edit-qty" type="number" min={0} value={editQuantity} onChange={(e) => setEditQuantity(e.target.value)} />
               </div>
               <div className="space-y-1">
@@ -1436,78 +1096,6 @@ export default function InventoryClient({
         </DialogContent>
       </Dialog>
 
-      {/* Edit listing modal */}
-      <Dialog open={modal?.type === "edit-listing"} onOpenChange={(o) => !o && setModal(null)}>
-        <DialogContent className="max-w-sm max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Edit Listing</DialogTitle></DialogHeader>
-          {modal && (
-            <div className="space-y-4 mt-1">
-              <div className="space-y-1">
-                <Label htmlFor="el-name">Plant name *</Label>
-                <Input id="el-name" value={editPlantName} onChange={(e) => setEditPlantName(e.target.value)} autoFocus />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="el-variety">Variety <span className="font-normal text-muted-foreground">(optional)</span></Label>
-                <Input id="el-variety" value={editVariety} onChange={(e) => setEditVariety(e.target.value)} placeholder="e.g. Thai Constellation" />
-              </div>
-              <div className="space-y-1">
-                <Label>Pot Size <span className="font-normal text-muted-foreground">(optional)</span></Label>
-                <PotSizePicker value={editPotSize} onChange={setEditPotSize} />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label htmlFor="el-price">Price ($) *</Label>
-                  <Input id="el-price" type="number" min={0.01} step={0.01} value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="el-qty">Quantity *</Label>
-                  <Input id="el-qty" type="number" min={0} value={editQuantity} onChange={(e) => setEditQuantity(e.target.value)} />
-                </div>
-              </div>
-              <div className="space-y-1">
-                <Label>Category <span className="font-normal text-muted-foreground">(optional)</span></Label>
-                <Select value={editCategory || "_none"} onValueChange={(v) => setEditCategory(v === "_none" ? "" : (v ?? ""))}>
-                  <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="_none">— None —</SelectItem>
-                    {CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="el-desc">Description <span className="font-normal text-muted-foreground">(optional)</span></Label>
-                <Textarea id="el-desc" value={editDescription} onChange={(e) => setEditDescription(e.target.value)} rows={3} placeholder="Describe the plant…" />
-              </div>
-              <PhotoSection refProp={imageInputRef2} />
-              <div className="flex gap-2 pt-1">
-                <Button variant="outline" onClick={() => setModal(null)} className="flex-1">Cancel</Button>
-                <Button onClick={submitEditListing} disabled={submitting || !editPlantName.trim() || !price} className="flex-1 bg-green-700 hover:bg-green-800">{submitting ? "Saving…" : "Save Changes"}</Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Restock modal */}
-      <Dialog open={modal?.type === "restock"} onOpenChange={(o) => !o && setModal(null)}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Restock Listing</DialogTitle></DialogHeader>
-          {modal && (
-            <div className="space-y-4 mt-1">
-              <p className="text-sm text-muted-foreground">Set a new quantity for <span className="font-medium text-foreground">{modal.row.plant_name}</span>. The listing will go back live immediately.</p>
-              <div className="space-y-1">
-                <Label htmlFor="restock-qty">New quantity *</Label>
-                <Input id="restock-qty" type="number" min={1} step={1} value={editQuantity} onChange={(e) => setEditQuantity(e.target.value)} autoFocus placeholder="e.g. 5" />
-              </div>
-              <div className="flex gap-2 pt-1">
-                <Button variant="outline" onClick={() => setModal(null)} className="flex-1">Cancel</Button>
-                <Button onClick={submitRestock} disabled={submitting || !editQuantity || Number(editQuantity) < 1} className="flex-1 bg-green-700 hover:bg-green-800">{submitting ? "Saving…" : "Restock & Go Live"}</Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
       {/* Mark as Sold modal */}
       <Dialog open={modal?.type === "sold"} onOpenChange={(o) => !o && setModal(null)}>
         <DialogContent className="max-w-sm">
@@ -1519,64 +1107,28 @@ export default function InventoryClient({
                 <span className="font-medium text-foreground">{modal.row.plant_name}{modal.row.variety ? ` — ${modal.row.variety}` : ""}</span>.
                 {" "}This will update your inventory and appear in analytics as an off-platform sale.
               </p>
-
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <Label htmlFor="sold-price">Sale price ($) *</Label>
-                  <Input
-                    id="sold-price"
-                    type="number"
-                    min={0.01}
-                    step={0.01}
-                    placeholder="0.00"
-                    value={soldPrice}
-                    onChange={(e) => setSoldPrice(e.target.value)}
-                    autoFocus
-                  />
+                  <Input id="sold-price" type="number" min={0.01} step={0.01} placeholder="0.00" value={soldPrice} onChange={(e) => setSoldPrice(e.target.value)} autoFocus />
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="sold-qty">Quantity *</Label>
-                  <Input
-                    id="sold-qty"
-                    type="number"
-                    min={1}
-                    max={modal.row.quantity}
-                    step={1}
-                    value={soldQuantity}
-                    onChange={(e) => setSoldQuantity(e.target.value)}
-                  />
-                  <p className="text-xs text-muted-foreground">{modal.row.quantity} available</p>
+                  <Input id="sold-qty" type="number" min={1} max={modal.row.quantity} step={1} value={soldQuantity} onChange={(e) => setSoldQuantity(e.target.value)} />
+                  <p className="text-xs text-muted-foreground">{modal.row.quantity} total</p>
                 </div>
               </div>
-
               <div className="space-y-1">
                 <Label htmlFor="sold-date">Date sold</Label>
-                <Input
-                  id="sold-date"
-                  type="date"
-                  value={soldDate}
-                  onChange={(e) => setSoldDate(e.target.value)}
-                />
+                <Input id="sold-date" type="date" value={soldDate} onChange={(e) => setSoldDate(e.target.value)} />
               </div>
-
               <div className="space-y-1">
                 <Label htmlFor="sold-note">Note <span className="font-normal text-muted-foreground">(optional)</span></Label>
-                <Input
-                  id="sold-note"
-                  placeholder="e.g. Farmers market, local pickup…"
-                  value={soldNote}
-                  onChange={(e) => setSoldNote(e.target.value)}
-                  maxLength={200}
-                />
+                <Input id="sold-note" placeholder="e.g. Farmers market, local pickup…" value={soldNote} onChange={(e) => setSoldNote(e.target.value)} maxLength={200} />
               </div>
-
               <div className="flex gap-2 pt-1">
                 <Button variant="outline" onClick={() => setModal(null)} className="flex-1">Cancel</Button>
-                <Button
-                  onClick={submitSold}
-                  disabled={submitting || !soldPrice || Number(soldPrice) <= 0 || !soldQuantity || Number(soldQuantity) < 1}
-                  className="flex-1 bg-orange-600 hover:bg-orange-700 text-white"
-                >
+                <Button onClick={submitSold} disabled={submitting || !soldPrice || Number(soldPrice) <= 0 || !soldQuantity || Number(soldQuantity) < 1} className="flex-1 bg-orange-600 hover:bg-orange-700 text-white">
                   {submitting ? "Saving…" : "Record Sale"}
                 </Button>
               </div>
