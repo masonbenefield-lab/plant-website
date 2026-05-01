@@ -353,7 +353,15 @@ export default function InventoryClient({
     await supabase.from("listings").update({ status: "paused" }).eq("id", row.listing_id);
     await supabase.from("inventory").update({ listing_id: null, listing_quantity: null }).eq("id", row.id);
     setModal(null);
-    toast.success("Listing unlinked");
+    toast.success("Removed from shop");
+    router.refresh();
+  }
+
+  async function unlinkAuction(row: Row) {
+    if (!row.auction_id) return;
+    const supabase = createClient();
+    await supabase.from("inventory").update({ auction_id: null, auction_quantity: null }).eq("id", row.id);
+    toast.success("Auction unlinked from inventory");
     router.refresh();
   }
 
@@ -413,7 +421,7 @@ export default function InventoryClient({
 
   async function submitSold() {
     if (!modal || modal.type !== "sold") return;
-    const qty = Math.max(1, Math.min(Number(soldQuantity) || 1, modal.row.quantity));
+    const qty = Math.max(1, Math.min(Number(soldQuantity) || 1, avail(modal.row)));
     const priceCents = dollarsToCents(soldPrice);
     if (!soldPrice || priceCents <= 0) { toast.error("Enter a sale price"); return; }
     setSubmitting(true);
@@ -613,6 +621,7 @@ export default function InventoryClient({
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <span>{row.listing_quantity} listed</span>
                 <button onClick={() => openModal({ type: "edit-listing", row })} className="text-blue-600 hover:underline">Edit</button>
+                <Link href={`/shop/${row.listing_id}`} target="_blank" className="text-muted-foreground hover:underline">View</Link>
               </div>
             </div>
           ) : a > 0 ? (
@@ -635,12 +644,18 @@ export default function InventoryClient({
                 <span className="font-medium text-sm">{centsToDisplay(row.auction_bid_cents ?? 0)}</span>
                 <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400 rounded-full px-2 py-0.5">live</span>
               </div>
-              <div className="text-xs text-muted-foreground">
-                Ends {new Date(row.auction_ends_at!).toLocaleDateString()}
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span>Ends {new Date(row.auction_ends_at!).toLocaleDateString()}</span>
+                <Link href={`/auctions/${row.auction_id}`} target="_blank" className="hover:underline">View</Link>
               </div>
             </div>
           ) : row.auction_id && row.auction_status !== "active" ? (
-            <span className="text-xs text-muted-foreground capitalize">{row.auction_status}</span>
+            <div className="space-y-0.5">
+              <span className="text-xs text-muted-foreground capitalize">{row.auction_status}</span>
+              <div>
+                <Link href={`/auctions/${row.auction_id}`} target="_blank" className="text-xs text-muted-foreground hover:underline">View</Link>
+              </div>
+            </div>
           ) : a > 0 ? (
             <button
               onClick={() => openModal({ type: "auction", row })}
@@ -665,6 +680,11 @@ export default function InventoryClient({
               {hasListing && (
                 <DropdownMenuItem onClick={() => { setModal(null); toggleListingPause(row); }}>
                   {row.listing_status === "active" ? "Pause listing" : "Resume listing"}
+                </DropdownMenuItem>
+              )}
+              {row.auction_id && row.auction_status !== "active" && (
+                <DropdownMenuItem onClick={() => unlinkAuction(row)}>
+                  Unlink ended auction
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
@@ -972,7 +992,7 @@ export default function InventoryClient({
                   {modal.row.listing_status === "active" ? "Pause" : "Resume"}
                 </Button>
                 <Button variant="ghost" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => unlinkListing(modal.row)}>
-                  Unlink
+                  Remove from Shop
                 </Button>
               </div>
             </div>
@@ -1159,8 +1179,8 @@ export default function InventoryClient({
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="sold-qty">Quantity *</Label>
-                  <Input id="sold-qty" type="number" min={1} max={modal.row.quantity} value={soldQuantity} onChange={e => setSoldQuantity(e.target.value)} />
-                  <p className="text-xs text-muted-foreground">{modal.row.quantity} in stock</p>
+                  <Input id="sold-qty" type="number" min={1} max={avail(modal.row)} value={soldQuantity} onChange={e => setSoldQuantity(e.target.value)} />
+                  <p className="text-xs text-muted-foreground">{avail(modal.row)} available</p>
                 </div>
               </div>
               <div className="space-y-1">
