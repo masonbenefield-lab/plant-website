@@ -102,12 +102,12 @@ export default async function SellerStorefront({
     <div className="max-w-5xl mx-auto px-4 py-10">
       {/* Banner */}
       {profile.banner_url && (
-        <div className="relative w-full h-48 rounded-2xl overflow-hidden mb-6 -mx-0">
+        <div className="relative w-full h-48 sm:h-56 md:h-64 lg:h-72 rounded-2xl overflow-hidden mb-6">
           <Image
             src={profile.banner_url}
             alt={`${profile.username}'s store banner`}
             fill
-            className="object-cover"
+            className="object-cover object-center"
             priority
           />
         </div>
