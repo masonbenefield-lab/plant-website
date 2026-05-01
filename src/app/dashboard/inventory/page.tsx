@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { centsToDisplay } from "@/lib/stripe";
 import InventoryClient from "./inventory-client";
 
 export default async function InventoryPage() {
@@ -104,7 +103,54 @@ export default async function InventoryPage() {
     archived_at: item.archived_at,
   }));
 
+  // Orphaned listings/auctions — created before inventory tracking (no inventory_id)
+  const [{ data: unlinkedListings }, { data: unlinkedAuctions }] = await Promise.all([
+    supabase
+      .from("listings")
+      .select("id, plant_name, variety, quantity, price_cents, status, images, category, pot_size, description")
+      .eq("seller_id", user.id)
+      .is("inventory_id", null)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("auctions")
+      .select("id, plant_name, variety, quantity, current_bid_cents, ends_at, status, images, category, pot_size, description")
+      .eq("seller_id", user.id)
+      .is("inventory_id", null)
+      .order("created_at", { ascending: false }),
+  ]);
+
   const termsAccepted = !!profile?.seller_terms_accepted_at;
 
-  return <InventoryClient activeRows={activeRows} archivedRows={archivedRows} termsAccepted={termsAccepted} />;
+  return (
+    <InventoryClient
+      activeRows={activeRows}
+      archivedRows={archivedRows}
+      termsAccepted={termsAccepted}
+      unlinkedListings={(unlinkedListings ?? []).map(l => ({
+        id: l.id,
+        plant_name: l.plant_name,
+        variety: l.variety ?? "",
+        quantity: l.quantity,
+        price_cents: l.price_cents,
+        status: l.status,
+        images: (l.images as string[]) ?? [],
+        category: l.category ?? null,
+        pot_size: l.pot_size ?? null,
+        description: l.description ?? "",
+      }))}
+      unlinkedAuctions={(unlinkedAuctions ?? []).map(a => ({
+        id: a.id,
+        plant_name: a.plant_name,
+        variety: a.variety ?? "",
+        quantity: a.quantity,
+        current_bid_cents: a.current_bid_cents,
+        ends_at: a.ends_at,
+        status: a.status,
+        images: (a.images as string[]) ?? [],
+        category: a.category ?? null,
+        pot_size: a.pot_size ?? null,
+        description: a.description ?? "",
+      }))}
+    />
+  );
 }

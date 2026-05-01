@@ -65,6 +65,58 @@ type PlantGroup = {
   variants: Row[];
 };
 
+type UnlinkedListing = {
+  id: string;
+  plant_name: string;
+  variety: string;
+  quantity: number;
+  price_cents: number;
+  status: string;
+  images: string[];
+  category: string | null;
+  pot_size: string | null;
+  description: string;
+};
+
+type UnlinkedAuction = {
+  id: string;
+  plant_name: string;
+  variety: string;
+  quantity: number;
+  current_bid_cents: number;
+  ends_at: string;
+  status: string;
+  images: string[];
+  category: string | null;
+  pot_size: string | null;
+  description: string;
+};
+
+type UnlinkedGroup = {
+  key: string;
+  plant_name: string;
+  variety: string;
+  listings: UnlinkedListing[];
+  auctions: UnlinkedAuction[];
+};
+
+function groupUnlinked(listings: UnlinkedListing[], auctions: UnlinkedAuction[]): UnlinkedGroup[] {
+  const map = new Map<string, UnlinkedGroup>();
+  for (const l of listings) {
+    const key = `${l.plant_name.toLowerCase()}|||${l.variety.toLowerCase()}`;
+    if (!map.has(key)) map.set(key, { key, plant_name: l.plant_name, variety: l.variety, listings: [], auctions: [] });
+    map.get(key)!.listings.push(l);
+  }
+  for (const a of auctions) {
+    const key = `${a.plant_name.toLowerCase()}|||${a.variety.toLowerCase()}`;
+    if (!map.has(key)) map.set(key, { key, plant_name: a.plant_name, variety: a.variety, listings: [], auctions: [] });
+    map.get(key)!.auctions.push(a);
+  }
+  return Array.from(map.values()).sort((a, b) =>
+    a.plant_name.localeCompare(b.plant_name) || a.variety.localeCompare(b.variety)
+  );
+}
+
 type ModalState =
   | { type: "listing"; row: Row }
   | { type: "edit-listing"; row: Row }
@@ -98,10 +150,14 @@ export default function InventoryClient({
   activeRows,
   archivedRows,
   termsAccepted,
+  unlinkedListings,
+  unlinkedAuctions,
 }: {
   activeRows: Row[];
   archivedRows: Row[];
   termsAccepted: boolean;
+  unlinkedListings: UnlinkedListing[];
+  unlinkedAuctions: UnlinkedAuction[];
 }) {
   const router = useRouter();
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -148,6 +204,8 @@ export default function InventoryClient({
   const [variantPotSize, setVariantPotSize] = useState("");
   const [variantQty, setVariantQty] = useState("1");
   const [variantNotes, setVariantNotes] = useState("");
+
+  const [importingId, setImportingId] = useState<string | null>(null);
 
   const activeGroups = useMemo(() => {
     const groups = groupRows(activeRows);
@@ -428,6 +486,54 @@ export default function InventoryClient({
     router.refresh();
   }
 
+  async function importListing(l: UnlinkedListing) {
+    setImportingId(l.id);
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setImportingId(null); return; }
+    const { data: inv, error } = await supabase.from("inventory").insert({
+      seller_id: user.id,
+      plant_name: l.plant_name,
+      variety: l.variety || null,
+      quantity: l.quantity,
+      description: l.description || null,
+      images: l.images,
+      category: l.category || null,
+      pot_size: l.pot_size || null,
+      listing_id: l.id,
+      listing_quantity: l.quantity,
+    }).select("id").single();
+    if (error) { toast.error(error.message); setImportingId(null); return; }
+    await supabase.from("listings").update({ inventory_id: inv.id }).eq("id", l.id);
+    setImportingId(null);
+    toast.success(`${l.plant_name} imported to inventory!`);
+    router.refresh();
+  }
+
+  async function importAuction(a: UnlinkedAuction) {
+    setImportingId(a.id);
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setImportingId(null); return; }
+    const { data: inv, error } = await supabase.from("inventory").insert({
+      seller_id: user.id,
+      plant_name: a.plant_name,
+      variety: a.variety || null,
+      quantity: a.quantity,
+      description: a.description || null,
+      images: a.images,
+      category: a.category || null,
+      pot_size: a.pot_size || null,
+      auction_id: a.id,
+      auction_quantity: a.quantity,
+    }).select("id").single();
+    if (error) { toast.error(error.message); setImportingId(null); return; }
+    await supabase.from("auctions").update({ inventory_id: inv.id }).eq("id", a.id);
+    setImportingId(null);
+    toast.success(`${a.plant_name} imported to inventory!`);
+    router.refresh();
+  }
+
   function exportExcel() {
     const data = activeRows.map(r => ({
       "Plant Name": r.plant_name, "Variety": r.variety, "Pot Size": r.pot_size ?? "",
@@ -682,6 +788,78 @@ export default function InventoryClient({
       ) : (
         <div>{activeGroups.map(renderGroup)}</div>
       )}
+
+      {/* Unlinked listings & auctions */}
+      {(unlinkedListings.length > 0 || unlinkedAuctions.length > 0) && (() => {
+        const groups = groupUnlinked(unlinkedListings, unlinkedAuctions);
+        return (
+          <div className="mt-8 border-t pt-6">
+            <div className="mb-4">
+              <h2 className="text-base font-semibold">Not yet in inventory</h2>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                These listings and auctions were created before inventory tracking. Import each one to manage it alongside your inventory.
+              </p>
+            </div>
+            <div className="space-y-2">
+              {groups.map(group => (
+                <div key={group.key} className="border rounded-lg overflow-hidden">
+                  <div className="px-4 py-3 bg-muted/20 border-b border-border/40">
+                    <span className="font-semibold">{group.plant_name}</span>
+                    {group.variety && <span className="text-muted-foreground ml-2 font-normal">· {group.variety}</span>}
+                  </div>
+                  <div className="divide-y divide-border/40">
+                    {group.listings.map(l => (
+                      <div key={l.id} className="flex items-center gap-3 px-4 py-3 text-sm flex-wrap">
+                        <Store size={13} className="text-green-600 shrink-0" />
+                        <span className="font-medium">Shop Listing</span>
+                        {l.pot_size && <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs">{l.pot_size}</span>}
+                        <span>{l.quantity} in stock</span>
+                        <span className="font-medium">{centsToDisplay(l.price_cents)}</span>
+                        <span className={cn(
+                          "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
+                          l.status === "active" ? "bg-green-100 text-green-700" :
+                          l.status === "paused" ? "bg-yellow-100 text-yellow-700" :
+                          "bg-red-100 text-red-600"
+                        )}>{l.status}</span>
+                        <button
+                          onClick={() => importListing(l)}
+                          disabled={importingId === l.id}
+                          className="ml-auto text-xs text-green-700 hover:underline font-medium disabled:opacity-50"
+                        >
+                          {importingId === l.id ? "Importing…" : "Import to Inventory"}
+                        </button>
+                      </div>
+                    ))}
+                    {group.auctions.map(a => (
+                      <div key={a.id} className="flex items-center gap-3 px-4 py-3 text-sm flex-wrap">
+                        <Gavel size={13} className="text-purple-600 shrink-0" />
+                        <span className="font-medium">Auction</span>
+                        {a.pot_size && <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs">{a.pot_size}</span>}
+                        <span>{a.quantity} qty</span>
+                        <span className="font-medium">Bid: {centsToDisplay(a.current_bid_cents)}</span>
+                        <span className={cn(
+                          "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
+                          a.status === "active" ? "bg-blue-100 text-blue-700" :
+                          a.status === "ended" ? "bg-purple-100 text-purple-700" :
+                          "bg-muted text-muted-foreground"
+                        )}>{a.status}</span>
+                        <span className="text-xs text-muted-foreground">Ends {new Date(a.ends_at).toLocaleDateString()}</span>
+                        <button
+                          onClick={() => importAuction(a)}
+                          disabled={importingId === a.id}
+                          className="ml-auto text-xs text-green-700 hover:underline font-medium disabled:opacity-50"
+                        >
+                          {importingId === a.id ? "Importing…" : "Import to Inventory"}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Archived */}
       {archivedRows.length > 0 && (
