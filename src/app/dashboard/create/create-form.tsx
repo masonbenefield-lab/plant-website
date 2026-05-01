@@ -56,6 +56,28 @@ export default function CreateInventoryPage() {
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [potSize, setPotSize] = useState("");
+  const [existingGroup, setExistingGroup] = useState<{ plant_name: string; count: number } | null>(null);
+
+  useEffect(() => {
+    if (!plantName.trim()) { setExistingGroup(null); return; }
+    const timer = setTimeout(async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from("inventory")
+        .select("id, plant_name, variety")
+        .eq("seller_id", user.id)
+        .ilike("plant_name", plantName.trim())
+        .is("archived_at", null);
+      if (!data || data.length === 0) { setExistingGroup(null); return; }
+      const matches = data.filter(item =>
+        (item.variety ?? "").toLowerCase() === variety.trim().toLowerCase()
+      );
+      setExistingGroup(matches.length > 0 ? { plant_name: data[0].plant_name, count: matches.length } : null);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [plantName, variety]);
 
   async function uploadImages(files: FileList) {
     const photoLimit = planLimits.photos;
@@ -134,6 +156,20 @@ export default function CreateInventoryPage() {
             <p className="text-amber-700 dark:text-amber-500 mt-0.5">
               Buyers trust sellers with a profile photo and bio.{" "}
               <Link href="/account" className="underline font-medium">Set up your profile →</Link>
+            </p>
+          </div>
+        </div>
+      )}
+
+      {existingGroup && (
+        <div className="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 dark:bg-blue-900/10 dark:border-blue-800 px-4 py-3 mb-6 text-sm">
+          <AlertTriangle size={16} className="text-blue-600 mt-0.5 shrink-0" />
+          <div>
+            <p className="font-medium text-blue-800 dark:text-blue-400">
+              You already have {existingGroup.plant_name} in inventory
+            </p>
+            <p className="text-blue-700 dark:text-blue-500 mt-0.5">
+              Adding this will create a new size variant that groups with your existing {existingGroup.count === 1 ? "entry" : `${existingGroup.count} entries`}.
             </p>
           </div>
         </div>
