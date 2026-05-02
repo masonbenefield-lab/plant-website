@@ -30,8 +30,8 @@ export default async function InventoryPage({
 
   const [{ data: linkedListings }, { data: linkedAuctions }] = await Promise.all([
     listingIds.length
-      ? supabase.from("listings").select("id, price_cents, quantity, status").in("id", listingIds)
-      : Promise.resolve({ data: [] as { id: string; price_cents: number; quantity: number; status: string }[] }),
+      ? supabase.from("listings").select("id, price_cents, quantity, status, created_at").in("id", listingIds)
+      : Promise.resolve({ data: [] as { id: string; price_cents: number; quantity: number; status: string; created_at: string }[] }),
     inventoryIds.length
       ? supabase.from("auctions").select("id, inventory_id, current_bid_cents, ends_at, status, quantity").in("inventory_id", inventoryIds)
       : Promise.resolve({ data: [] as { id: string; inventory_id: string | null; current_bid_cents: number; ends_at: string; status: string; quantity: number }[] }),
@@ -76,8 +76,10 @@ export default async function InventoryPage({
       listing_id: item.listing_id ?? null,
       listing_price_cents: listing?.price_cents ?? null,
       listing_status: listing?.status ?? null,
+      listing_created_at: listing?.created_at ?? null,
       auctions,
       low_stock_threshold: (item as { low_stock_threshold?: number | null }).low_stock_threshold ?? null,
+      cost_cents: (item as { cost_cents?: number | null }).cost_cents ?? null,
       status: computeStatus(listing, auctions),
       description: item.description ?? "",
       notes: item.notes ?? "",
@@ -98,8 +100,10 @@ export default async function InventoryPage({
     listing_id: item.listing_id ?? null,
     listing_price_cents: null as number | null,
     listing_status: null as string | null,
+    listing_created_at: null as string | null,
     auctions: [] as { id: string; quantity: number; current_bid_cents: number; ends_at: string; status: string }[],
     low_stock_threshold: null as number | null,
+    cost_cents: null as number | null,
     status: "Archived",
     description: item.description ?? "",
     notes: item.notes ?? "",

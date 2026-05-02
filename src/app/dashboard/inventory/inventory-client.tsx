@@ -24,7 +24,7 @@ import { dollarsToCents, centsToDisplay } from "@/lib/stripe";
 import {
   ChevronRight, ChevronDown, MoreHorizontal, Plus,
   ImagePlus, X, Store, Gavel, Pencil, HelpCircle,
-  AlertTriangle, GripVertical, Copy,
+  AlertTriangle, GripVertical, Copy, StickyNote, ArrowUpDown,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import PotSizePicker from "@/components/pot-size-picker";
@@ -53,8 +53,10 @@ type Row = {
   listing_quantity: number | null;
   listing_price_cents: number | null;
   listing_status: string | null;
+  listing_created_at: string | null;
   auctions: AuctionSummary[];
   low_stock_threshold: number | null;
+  cost_cents: number | null;
   status: string;
   description: string;
   notes: string;
@@ -132,6 +134,16 @@ type ModalState =
   | { type: "sold"; row: Row }
   | { type: "add-variant"; plant_name: string; variety: string; category: string | null }
   | null;
+
+function listingAge(dateStr: string): string {
+  const days = Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24));
+  if (days === 0) return "Listed today";
+  if (days === 1) return "Listed yesterday";
+  if (days < 7) return `Listed ${days} days ago`;
+  if (days < 30) return `Listed ${Math.floor(days / 7)}w ago`;
+  if (days < 365) return `Listed ${Math.floor(days / 30)}mo ago`;
+  return `Listed ${Math.floor(days / 365)}y ago`;
+}
 
 function daysUntilPurge(archivedAt: string) {
   const purge = new Date(archivedAt).getTime() + 30 * 24 * 60 * 60 * 1000;
@@ -230,6 +242,8 @@ export default function InventoryClient({
   const [importingId, setImportingId] = useState<string | null>(null);
   const [importingAll, setImportingAll] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [sortBy, setSortBy] = useState<"name" | "avail-asc" | "date-desc" | "price-asc">("name");
+  const [editCostPrice, setEditCostPrice] = useState("");
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -242,12 +256,30 @@ export default function InventoryClient({
   const activeGroups = useMemo(() => {
     const groups = groupRows(activeRows);
     const q = search.toLowerCase().trim();
-    return groups.filter(g => {
+    const filtered = groups.filter(g => {
       const matchesSearch = !q || g.plant_name.toLowerCase().includes(q) || g.variety.toLowerCase().includes(q);
       const matchesCategory = !categoryFilter || g.variants.some(v => v.category === categoryFilter);
       return matchesSearch && matchesCategory;
     });
-  }, [activeRows, search, categoryFilter]);
+    if (sortBy === "avail-asc") {
+      filtered.sort((a, b) =>
+        a.variants.reduce((s, v) => s + avail(v), 0) - b.variants.reduce((s, v) => s + avail(v), 0)
+      );
+    } else if (sortBy === "date-desc") {
+      filtered.sort((a, b) =>
+        Math.max(...b.variants.map(v => new Date(v.created_at).getTime())) -
+        Math.max(...a.variants.map(v => new Date(v.created_at).getTime()))
+      );
+    } else if (sortBy === "price-asc") {
+      filtered.sort((a, b) => {
+        const aPrice = Math.min(...a.variants.filter(v => v.listing_price_cents).map(v => v.listing_price_cents!), Infinity);
+        const bPrice = Math.min(...b.variants.filter(v => v.listing_price_cents).map(v => v.listing_price_cents!), Infinity);
+        return aPrice - bPrice;
+      });
+    }
+    // "name" is already alphabetical from groupRows
+    return filtered;
+  }, [activeRows, search, categoryFilter, sortBy]);
 
   const archivedGroups = useMemo(() => groupRows(archivedRows), [archivedRows]);
 
@@ -295,6 +327,7 @@ export default function InventoryClient({
       setEditCategory(m.row.category ?? "");
       setEditImages([...m.row.images]);
       setEditLowStockThreshold(m.row.low_stock_threshold != null ? String(m.row.low_stock_threshold) : "");
+      setEditCostPrice(m.row.cost_cents != null ? String(m.row.cost_cents / 100) : "");
       setDragPhotoIdx(null);
     }
     if (m.type === "sold") {
@@ -478,6 +511,7 @@ export default function InventoryClient({
       pot_size: editPotSize || null,
       images: editImages,
       low_stock_threshold: editLowStockThreshold !== "" ? Number(editLowStockThreshold) : null,
+      cost_cents: editCostPrice !== "" ? dollarsToCents(editCostPrice) : null,
     }).eq("id", modal.row.id);
     if (error) { toast.error(error.message); setSubmitting(false); return; }
     if (modal.row.listing_id) {
@@ -726,6 +760,15 @@ export default function InventoryClient({
           {row.pot_size
             ? <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium">{row.pot_size}</span>
             : <span className="text-xs text-muted-foreground italic">No size</span>}
+          {row.notes && (
+            <div className="relative group/note shrink-0">
+              <StickyNote size={13} className="text-muted-foreground cursor-help" />
+              <div className="pointer-events-none absolute bottom-full left-0 mb-1.5 hidden group-hover/note:block z-50 w-56 rounded-md bg-popover border shadow-md p-2.5 text-xs text-foreground whitespace-pre-wrap">
+                <p className="text-muted-foreground font-medium mb-1">Private note</p>
+                {row.notes}
+              </div>
+            </div>
+          )}
           {editingQtyId === row.id ? (
             <input
               type="number" min={0} value={editingQtyValue}
@@ -797,6 +840,16 @@ export default function InventoryClient({
               <button onClick={() => openModal({ type: "edit-listing", row })} className="text-xs text-blue-600 hover:underline">Edit</button>
               <Link href={`/shop/${row.listing_id}`} target="_blank" className="text-xs text-muted-foreground hover:underline">View</Link>
             </div>
+            <div className="flex items-center gap-3 flex-wrap">
+              {row.listing_created_at && (
+                <span className="text-xs text-muted-foreground">{listingAge(row.listing_created_at)}</span>
+              )}
+              {row.cost_cents && row.listing_price_cents && (
+                <span className="text-xs text-muted-foreground">
+                  Margin: {Math.round(((row.listing_price_cents - row.cost_cents) / row.listing_price_cents) * 100)}%
+                </span>
+              )}
+            </div>
             {a === 0 && row.listing_status === "active" && (
               <div className="flex items-center gap-1 text-xs text-amber-600 font-medium">
                 <AlertTriangle size={11} /> Fully committed — consider pausing
@@ -851,11 +904,22 @@ export default function InventoryClient({
       <tr key={row.id} className="border-t border-border/40 hover:bg-muted/20 transition-colors">
         {/* Size */}
         <td className="py-3 pl-12 pr-3 w-28">
-          {row.pot_size ? (
-            <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium">{row.pot_size}</span>
-          ) : (
-            <span className="text-xs text-muted-foreground italic">No size</span>
-          )}
+          <div className="flex items-center gap-1.5">
+            {row.pot_size ? (
+              <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium">{row.pot_size}</span>
+            ) : (
+              <span className="text-xs text-muted-foreground italic">No size</span>
+            )}
+            {row.notes && (
+              <div className="relative group/note">
+                <StickyNote size={12} className="text-muted-foreground cursor-help shrink-0" />
+                <div className="pointer-events-none absolute bottom-full left-0 mb-1.5 hidden group-hover/note:block z-50 w-56 rounded-md bg-popover border shadow-md p-2.5 text-xs text-foreground whitespace-pre-wrap">
+                  <p className="text-muted-foreground font-medium mb-1">Private note</p>
+                  {row.notes}
+                </div>
+              </div>
+            )}
+          </div>
         </td>
 
         {/* Stock */}
@@ -929,10 +993,16 @@ export default function InventoryClient({
                   {row.listing_status}
                 </span>
               </div>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
                 <span>{row.listing_quantity} listed</span>
                 <button onClick={() => openModal({ type: "edit-listing", row })} className="text-blue-600 hover:underline">Edit</button>
                 <Link href={`/shop/${row.listing_id}`} target="_blank" className="text-muted-foreground hover:underline">View</Link>
+                {row.listing_created_at && (
+                  <span>{listingAge(row.listing_created_at)}</span>
+                )}
+                {row.cost_cents && row.listing_price_cents && (
+                  <span>Margin: {Math.round(((row.listing_price_cents - row.cost_cents) / row.listing_price_cents) * 100)}%</span>
+                )}
               </div>
               {a === 0 && row.listing_status === "active" && (
                 <div className="flex items-center gap-1 text-xs text-amber-600 font-medium">
@@ -1139,6 +1209,17 @@ export default function InventoryClient({
           <SelectContent>
             <SelectItem value="_all">All categories</SelectItem>
             {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={sortBy} onValueChange={v => setSortBy(v as typeof sortBy)}>
+          <SelectTrigger className="w-44">
+            <span className="flex items-center gap-1.5"><ArrowUpDown size={13} /><SelectValue /></span>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="name">Name (A–Z)</SelectItem>
+            <SelectItem value="avail-asc">Available (low first)</SelectItem>
+            <SelectItem value="date-desc">Recently added</SelectItem>
+            <SelectItem value="price-asc">Price (low first)</SelectItem>
           </SelectContent>
         </Select>
         {(search || categoryFilter) && (
@@ -1542,9 +1623,22 @@ export default function InventoryClient({
                   <ImagePlus size={14} />{imageUploading ? "Uploading…" : "Add Photo"}
                 </Button>
               </div>
-              <div className="space-y-1">
-                <Label htmlFor="edit-threshold">Low stock alert <span className="font-normal text-muted-foreground">(optional)</span></Label>
-                <div className="flex items-center gap-2">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="edit-cost">Cost per unit ($) <span className="font-normal text-muted-foreground">(optional)</span></Label>
+                  <Input
+                    id="edit-cost"
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    value={editCostPrice}
+                    onChange={e => setEditCostPrice(e.target.value)}
+                    placeholder="0.00"
+                  />
+                  <p className="text-xs text-muted-foreground">Private — used to calculate margin</p>
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="edit-threshold">Low stock alert <span className="font-normal text-muted-foreground">(optional)</span></Label>
                   <Input
                     id="edit-threshold"
                     type="number"
@@ -1552,9 +1646,8 @@ export default function InventoryClient({
                     value={editLowStockThreshold}
                     onChange={e => setEditLowStockThreshold(e.target.value)}
                     placeholder="e.g. 3"
-                    className="max-w-[100px]"
                   />
-                  <p className="text-xs text-muted-foreground">Warn me when available drops to this number</p>
+                  <p className="text-xs text-muted-foreground">Warn when available ≤ this</p>
                 </div>
               </div>
               <div className="flex gap-2 pt-1">

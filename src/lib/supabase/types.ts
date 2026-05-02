@@ -240,6 +240,7 @@ export interface Database {
           variety: string | null;
           quantity: number;
           low_stock_threshold: number | null;
+          cost_cents: number | null;
           listing_quantity: number | null;
           listing_id: string | null;
           auction_id: string | null;
@@ -259,6 +260,7 @@ export interface Database {
           variety?: string | null;
           quantity: number;
           low_stock_threshold?: number | null;
+          cost_cents?: number | null;
           listing_quantity?: number | null;
           listing_id?: string | null;
           auction_id?: string | null;
@@ -276,6 +278,7 @@ export interface Database {
           variety?: string | null;
           quantity?: number;
           low_stock_threshold?: number | null;
+          cost_cents?: number | null;
           listing_quantity?: number | null;
           listing_id?: string | null;
           auction_id?: string | null;
