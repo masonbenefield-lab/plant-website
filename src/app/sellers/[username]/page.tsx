@@ -155,6 +155,11 @@ export default async function SellerStorefront({
               </span>
             )}
             <span className="text-xs text-muted-foreground">Member since {memberSince}</span>
+            {profile.show_follower_count && (followerCount ?? 0) > 0 && (
+              <span className="text-xs text-muted-foreground">
+                {followerCount} follower{followerCount !== 1 ? "s" : ""}
+              </span>
+            )}
           </div>
           {avgScore !== null && (
             <div className="flex items-center gap-1 mt-2">

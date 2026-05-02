@@ -21,6 +21,7 @@ export interface Database {
           stripe_onboarded: boolean;
           is_admin: boolean;
           plan: "seedling" | "grower" | "nursery";
+          show_follower_count: boolean;
           deleted_at: string | null;
           created_at: string;
         };
@@ -35,6 +36,7 @@ export interface Database {
           stripe_onboarded?: boolean;
           is_admin?: boolean;
           plan?: "seedling" | "grower" | "nursery";
+          show_follower_count?: boolean;
           deleted_at?: string | null;
           created_at?: string;
         };
@@ -50,6 +52,7 @@ export interface Database {
           stripe_onboarded?: boolean;
           is_admin?: boolean;
           plan?: "seedling" | "grower" | "nursery";
+          show_follower_count?: boolean;
           deleted_at?: string | null;
         };
         Relationships: [];

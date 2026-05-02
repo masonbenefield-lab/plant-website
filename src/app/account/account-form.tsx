@@ -28,6 +28,7 @@ export default function AccountForm({
   const [location, setLocation] = useState(profile?.location ?? "");
   const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url ?? "");
   const [bannerUrl, setBannerUrl] = useState(profile?.banner_url ?? "");
+  const [showFollowerCount, setShowFollowerCount] = useState(profile?.show_follower_count ?? false);
 
   const canUseBanner = profile?.is_admin || (profile?.plan && profile.plan !== "seedling");
   const [saving, setSaving] = useState(false);
@@ -100,7 +101,7 @@ export default function AccountForm({
     const res = await fetch("/api/profile/update", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, bio, location, avatar_url: avatarUrl, banner_url: bannerUrl }),
+      body: JSON.stringify({ username, bio, location, avatar_url: avatarUrl, banner_url: bannerUrl, show_follower_count: showFollowerCount }),
     });
     const data = await res.json();
     setSaving(false);
@@ -256,6 +257,24 @@ export default function AccountForm({
                 />
               </div>
               <p className="text-xs text-muted-foreground">Helps buyers find sellers near them. Be as specific or general as you like.</p>
+            </div>
+
+            <div className="flex items-center justify-between rounded-lg border px-4 py-3">
+              <div>
+                <p className="text-sm font-medium">Show follower count publicly</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Display how many people follow you on your storefront</p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={showFollowerCount}
+                onClick={() => setShowFollowerCount((v) => !v)}
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${showFollowerCount ? "bg-green-600" : "bg-input"}`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition-transform ${showFollowerCount ? "translate-x-5" : "translate-x-0"}`}
+                />
+              </button>
             </div>
 
             <Button type="submit" disabled={saving} className="bg-green-700 hover:bg-green-800">
