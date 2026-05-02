@@ -24,6 +24,7 @@ import { dollarsToCents, centsToDisplay } from "@/lib/stripe";
 import {
   ChevronRight, ChevronDown, MoreHorizontal, Plus,
   ImagePlus, X, Store, Gavel, Pencil, HelpCircle,
+  AlertTriangle, GripVertical, Copy,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import PotSizePicker from "@/components/pot-size-picker";
@@ -53,6 +54,7 @@ type Row = {
   listing_price_cents: number | null;
   listing_status: string | null;
   auctions: AuctionSummary[];
+  low_stock_threshold: number | null;
   status: string;
   description: string;
   notes: string;
@@ -211,6 +213,8 @@ export default function InventoryClient({
   const [editCategory, setEditCategory] = useState("");
   const [editImages, setEditImages] = useState<string[]>([]);
   const [imageUploading, setImageUploading] = useState(false);
+  const [editLowStockThreshold, setEditLowStockThreshold] = useState("");
+  const [dragPhotoIdx, setDragPhotoIdx] = useState<number | null>(null);
 
   // Sold modal
   const [soldPrice, setSoldPrice] = useState("");
@@ -290,6 +294,8 @@ export default function InventoryClient({
       setEditNotes(m.row.notes ?? "");
       setEditCategory(m.row.category ?? "");
       setEditImages([...m.row.images]);
+      setEditLowStockThreshold(m.row.low_stock_threshold != null ? String(m.row.low_stock_threshold) : "");
+      setDragPhotoIdx(null);
     }
     if (m.type === "sold") {
       setSoldPrice(""); setSoldQuantity("1"); setSoldNote("");
@@ -471,6 +477,7 @@ export default function InventoryClient({
       category: editCategory || null,
       pot_size: editPotSize || null,
       images: editImages,
+      low_stock_threshold: editLowStockThreshold !== "" ? Number(editLowStockThreshold) : null,
     }).eq("id", modal.row.id);
     if (error) { toast.error(error.message); setSubmitting(false); return; }
     if (modal.row.listing_id) {
@@ -569,6 +576,26 @@ export default function InventoryClient({
     setLoadingId(null);
     if (error) { toast.error(error.message); return; }
     toast.success("Item restored.");
+    router.refresh();
+  }
+
+  async function duplicateItem(row: Row) {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { error } = await supabase.from("inventory").insert({
+      seller_id: user.id,
+      plant_name: row.plant_name,
+      variety: row.variety || null,
+      quantity: 1,
+      description: row.description || null,
+      images: [...row.images],
+      category: row.category || null,
+      pot_size: row.pot_size || null,
+      low_stock_threshold: row.low_stock_threshold ?? null,
+    });
+    if (error) { toast.error(error.message); return; }
+    toast.success("Item duplicated — update the quantity and size as needed");
     router.refresh();
   }
 
@@ -675,6 +702,9 @@ export default function InventoryClient({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="min-w-[160px]">
           <DropdownMenuItem onClick={() => openModal({ type: "edit", row })}>Edit item</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => duplicateItem(row)}>
+            <Copy size={13} className="mr-1.5" /> Duplicate
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => openModal({ type: "sold", row })}>Mark as sold</DropdownMenuItem>
           {hasListing && (
             <DropdownMenuItem onClick={() => { setModal(null); toggleListingPause(row); }}>
@@ -742,23 +772,36 @@ export default function InventoryClient({
               )
             )}
             {totalAuctionQty > 0 && <span className="text-blue-600">{totalAuctionQty} in auction</span>}
-            <span className="text-muted-foreground">{a} avail</span>
+            <span className={cn(
+              "flex items-center gap-0.5",
+              row.low_stock_threshold != null && a <= row.low_stock_threshold ? "text-amber-600 font-semibold" : "text-muted-foreground"
+            )}>
+              {row.low_stock_threshold != null && a <= row.low_stock_threshold && <AlertTriangle size={10} />}
+              {a} avail
+            </span>
           </div>
         )}
 
         {/* Shop */}
         {hasListing ? (
-          <div className="flex items-center gap-2 flex-wrap text-sm">
-            <Store size={12} className="text-green-600 shrink-0" />
-            <span className="font-medium">{centsToDisplay(row.listing_price_cents ?? 0)}</span>
-            <span className={cn(
-              "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
-              row.listing_status === "active" ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400" :
-              row.listing_status === "paused" ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400" :
-              "bg-red-100 text-red-600"
-            )}>{row.listing_status}</span>
-            <button onClick={() => openModal({ type: "edit-listing", row })} className="text-xs text-blue-600 hover:underline">Edit</button>
-            <Link href={`/shop/${row.listing_id}`} target="_blank" className="text-xs text-muted-foreground hover:underline">View</Link>
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 flex-wrap text-sm">
+              <Store size={12} className="text-green-600 shrink-0" />
+              <span className="font-medium">{centsToDisplay(row.listing_price_cents ?? 0)}</span>
+              <span className={cn(
+                "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
+                row.listing_status === "active" ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400" :
+                row.listing_status === "paused" ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400" :
+                "bg-red-100 text-red-600"
+              )}>{row.listing_status}</span>
+              <button onClick={() => openModal({ type: "edit-listing", row })} className="text-xs text-blue-600 hover:underline">Edit</button>
+              <Link href={`/shop/${row.listing_id}`} target="_blank" className="text-xs text-muted-foreground hover:underline">View</Link>
+            </div>
+            {a === 0 && row.listing_status === "active" && (
+              <div className="flex items-center gap-1 text-xs text-amber-600 font-medium">
+                <AlertTriangle size={11} /> Fully committed — consider pausing
+              </div>
+            )}
           </div>
         ) : a > 0 ? (
           <button onClick={() => openModal({ type: "listing", row })} className="inline-flex items-center gap-1.5 text-sm text-green-700 hover:underline font-medium">
@@ -860,7 +903,13 @@ export default function InventoryClient({
                 )
               )}
               {totalAuctionQty > 0 && <div className="text-blue-600">{totalAuctionQty} in auction</div>}
-              <div className="text-muted-foreground">{a} available</div>
+              <div className={cn(
+                "flex items-center gap-0.5",
+                row.low_stock_threshold != null && a <= row.low_stock_threshold ? "text-amber-600 font-semibold" : "text-muted-foreground"
+              )}>
+                {row.low_stock_threshold != null && a <= row.low_stock_threshold && <AlertTriangle size={11} />}
+                {a} available
+              </div>
             </div>
           )}
         </td>
@@ -885,6 +934,11 @@ export default function InventoryClient({
                 <button onClick={() => openModal({ type: "edit-listing", row })} className="text-blue-600 hover:underline">Edit</button>
                 <Link href={`/shop/${row.listing_id}`} target="_blank" className="text-muted-foreground hover:underline">View</Link>
               </div>
+              {a === 0 && row.listing_status === "active" && (
+                <div className="flex items-center gap-1 text-xs text-amber-600 font-medium">
+                  <AlertTriangle size={11} /> Fully committed — consider pausing
+                </div>
+              )}
             </div>
           ) : a > 0 ? (
             <button
@@ -942,6 +996,9 @@ export default function InventoryClient({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-[160px]">
               <DropdownMenuItem onClick={() => openModal({ type: "edit", row })}>Edit item</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => duplicateItem(row)}>
+                <Copy size={13} className="mr-1.5" /> Duplicate
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => openModal({ type: "sold", row })}>Mark as sold</DropdownMenuItem>
               {hasListing && (
                 <DropdownMenuItem onClick={() => { setModal(null); toggleListingPause(row); }}>
@@ -1438,12 +1495,37 @@ export default function InventoryClient({
                 <Textarea id="edit-notes" value={editNotes} onChange={e => setEditNotes(e.target.value)} rows={2} placeholder="Not visible to buyers…" />
               </div>
               <div className="space-y-2">
-                <Label>Photos</Label>
+                <div className="flex items-center justify-between">
+                  <Label>Photos</Label>
+                  {editImages.length > 1 && <span className="text-xs text-muted-foreground">Drag to reorder · First photo is the cover</span>}
+                </div>
                 {editImages.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {editImages.map((url, idx) => (
-                      <div key={url + idx} className="relative group">
+                      <div
+                        key={url + idx}
+                        className={cn("relative group cursor-grab active:cursor-grabbing", dragPhotoIdx === idx && "opacity-40")}
+                        draggable
+                        onDragStart={() => setDragPhotoIdx(idx)}
+                        onDragOver={e => e.preventDefault()}
+                        onDrop={e => {
+                          e.preventDefault();
+                          if (dragPhotoIdx === null || dragPhotoIdx === idx) return;
+                          const reordered = [...editImages];
+                          const [moved] = reordered.splice(dragPhotoIdx, 1);
+                          reordered.splice(idx, 0, moved);
+                          setEditImages(reordered);
+                          setDragPhotoIdx(null);
+                        }}
+                        onDragEnd={() => setDragPhotoIdx(null)}
+                      >
                         <img src={url} alt="" className="w-16 h-16 rounded object-cover border" />
+                        {idx === 0 && (
+                          <span className="absolute bottom-0 left-0 right-0 text-center text-[9px] font-semibold bg-black/60 text-white rounded-b py-0.5">Cover</span>
+                        )}
+                        <div className="absolute top-0.5 left-0.5 opacity-0 group-hover:opacity-80 transition-opacity">
+                          <GripVertical size={12} className="text-white drop-shadow" />
+                        </div>
                         <button
                           type="button"
                           onClick={() => setEditImages(prev => prev.filter((_, i) => i !== idx))}
@@ -1459,6 +1541,21 @@ export default function InventoryClient({
                 <Button type="button" variant="outline" size="sm" onClick={() => imageInputRef.current?.click()} disabled={imageUploading} className="flex items-center gap-1.5 text-xs">
                   <ImagePlus size={14} />{imageUploading ? "Uploading…" : "Add Photo"}
                 </Button>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="edit-threshold">Low stock alert <span className="font-normal text-muted-foreground">(optional)</span></Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="edit-threshold"
+                    type="number"
+                    min={0}
+                    value={editLowStockThreshold}
+                    onChange={e => setEditLowStockThreshold(e.target.value)}
+                    placeholder="e.g. 3"
+                    className="max-w-[100px]"
+                  />
+                  <p className="text-xs text-muted-foreground">Warn me when available drops to this number</p>
+                </div>
               </div>
               <div className="flex gap-2 pt-1">
                 <Button variant="outline" onClick={() => setModal(null)} className="flex-1">Cancel</Button>

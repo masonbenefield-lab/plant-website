@@ -239,6 +239,7 @@ export interface Database {
           plant_name: string;
           variety: string | null;
           quantity: number;
+          low_stock_threshold: number | null;
           listing_quantity: number | null;
           listing_id: string | null;
           auction_id: string | null;
@@ -257,6 +258,7 @@ export interface Database {
           plant_name: string;
           variety?: string | null;
           quantity: number;
+          low_stock_threshold?: number | null;
           listing_quantity?: number | null;
           listing_id?: string | null;
           auction_id?: string | null;
@@ -273,6 +275,7 @@ export interface Database {
           plant_name?: string;
           variety?: string | null;
           quantity?: number;
+          low_stock_threshold?: number | null;
           listing_quantity?: number | null;
           listing_id?: string | null;
           auction_id?: string | null;
