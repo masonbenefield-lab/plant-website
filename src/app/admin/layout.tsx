@@ -15,14 +15,20 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   if (!profile?.is_admin) redirect("/");
 
-  const { count: pendingReports } = await supabase
-    .from("reports")
-    .select("*", { count: "exact", head: true })
-    .eq("status", "pending");
+  const [{ count: pendingReports }, { data: violationUsers }] = await Promise.all([
+    supabase.from("reports").select("*", { count: "exact", head: true }).eq("status", "pending"),
+    supabase.from("word_violations").select("user_id"),
+  ]);
+
+  const violationCounts = new Map<string, number>();
+  for (const v of violationUsers ?? []) {
+    violationCounts.set(v.user_id, (violationCounts.get(v.user_id) ?? 0) + 1);
+  }
+  const repeatViolators = Array.from(violationCounts.values()).filter(c => c >= 3).length;
 
   return (
     <div className="flex min-h-[calc(100vh-64px)]">
-      <AdminNav pendingReports={pendingReports ?? 0} />
+      <AdminNav pendingReports={pendingReports ?? 0} repeatViolators={repeatViolators} />
       <main className="flex-1 overflow-auto min-w-0">{children}</main>
     </div>
   );

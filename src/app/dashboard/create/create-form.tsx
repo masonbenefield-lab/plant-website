@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { PLANT_CATEGORIES } from "@/lib/categories";
 import { AlertTriangle } from "lucide-react";
 import PotSizePicker from "@/components/pot-size-picker";
+import { findProhibitedWord, censorWord, logViolation } from "@/lib/profanity";
 import { getPlanLimits, type PlanLimits } from "@/lib/plan-limits";
 
 export default function CreateInventoryPage() {
@@ -109,6 +110,20 @@ export default function CreateInventoryPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const fields: [string, string][] = [
+      [plantName, "plant name"],
+      [variety, "variety"],
+      [description, "description"],
+    ];
+    for (const [text, label] of fields) {
+      if (!text) continue;
+      const hit = findProhibitedWord(text);
+      if (hit) {
+        toast.error(`Your ${label} contains a prohibited word: "${censorWord(hit)}"`);
+        logViolation(hit, `inventory-${label}`, text);
+        return;
+      }
+    }
     setSaving(true);
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();

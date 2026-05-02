@@ -45,12 +45,38 @@ function normalize(text: string): string {
 }
 
 export function containsSlur(text: string): boolean {
-  const normalizedInput = normalize(text);
-  // Also check original lowercased (for multi-word slurs with spaces)
-  const lowered = text.toLowerCase();
+  return findProhibitedWord(text) !== null;
+}
 
-  return SLURS.some((slur) => {
+/** Returns the matched slur from our list, or null if clean. */
+export function findProhibitedWord(text: string): string | null {
+  const normalizedInput = normalize(text);
+  const lowered = text.toLowerCase();
+  for (const slur of SLURS) {
     const normalizedSlur = normalize(slur);
-    return normalizedInput.includes(normalizedSlur) || lowered.includes(slur);
-  });
+    if (normalizedInput.includes(normalizedSlur) || lowered.includes(slur)) {
+      return slur;
+    }
+  }
+  return null;
+}
+
+function censorToken(word: string): string {
+  if (word.length <= 2) return word[0] + "*".repeat(word.length - 1);
+  if (word.length === 3) return word[0] + "*" + word[2];
+  return word[0] + "*".repeat(word.length - 2) + word[word.length - 1];
+}
+
+/** Returns a display-safe censored form, e.g. "n****r" or "p****h m****y". */
+export function censorWord(word: string): string {
+  return word.split(" ").map(censorToken).join(" ");
+}
+
+/** Fire-and-forget: log a violation to the server without blocking the UI. */
+export function logViolation(word: string, context: string, snippet?: string): void {
+  fetch("/api/violations", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ word, context, snippet: snippet?.slice(0, 120) }),
+  }).catch(() => {});
 }

@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import type { Database } from "@/lib/supabase/types";
-import { containsSlur } from "@/lib/profanity";
+import { findProhibitedWord, censorWord, logViolation } from "@/lib/profanity";
 import { MapPin, Lock } from "lucide-react";
 import Link from "next/link";
 
@@ -77,16 +77,22 @@ export default function AccountForm({
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
 
-    if (containsSlur(username)) {
-      toast.error("Username contains a prohibited word");
+    const usernameViolation = findProhibitedWord(username);
+    if (usernameViolation) {
+      toast.error(`Your username contains a prohibited word: "${censorWord(usernameViolation)}"`);
+      logViolation(usernameViolation, "username", username);
       return;
     }
-    if (bio && containsSlur(bio)) {
-      toast.error("Bio contains a prohibited word");
+    const bioViolation = bio ? findProhibitedWord(bio) : null;
+    if (bioViolation) {
+      toast.error(`Your bio contains a prohibited word: "${censorWord(bioViolation)}"`);
+      logViolation(bioViolation, "bio", bio);
       return;
     }
-    if (location && containsSlur(location)) {
-      toast.error("Location contains a prohibited word");
+    const locationViolation = location ? findProhibitedWord(location) : null;
+    if (locationViolation) {
+      toast.error(`Your location contains a prohibited word: "${censorWord(locationViolation)}"`);
+      logViolation(locationViolation, "location", location);
       return;
     }
 

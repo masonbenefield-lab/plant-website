@@ -28,6 +28,7 @@ import {
 import * as XLSX from "xlsx";
 import PotSizePicker from "@/components/pot-size-picker";
 import PriceSuggestion from "@/components/price-suggestion";
+import { findProhibitedWord, censorWord, logViolation } from "@/lib/profanity";
 
 const CATEGORIES = [
   "Tropical", "Succulent", "Cactus", "Carnivorous", "Orchid",
@@ -420,6 +421,21 @@ export default function InventoryClient({
   async function submitEdit() {
     if (!modal || modal.type !== "edit") return;
     if (!editPlantName.trim()) { toast.error("Plant name is required"); return; }
+    const editFields: [string, string][] = [
+      [editPlantName, "plant name"],
+      [editVariety, "variety"],
+      [editDescription, "description"],
+      [editNotes, "notes"],
+    ];
+    for (const [text, label] of editFields) {
+      if (!text) continue;
+      const hit = findProhibitedWord(text);
+      if (hit) {
+        toast.error(`Your ${label} contains a prohibited word: "${censorWord(hit)}"`);
+        logViolation(hit, `inventory-edit-${label}`, text);
+        return;
+      }
+    }
     setSubmitting(true);
     const supabase = createClient();
     const { error } = await supabase.from("inventory").update({

@@ -423,6 +423,27 @@ export interface Database {
         Relationships: [];
       };
 
+      word_violations: {
+        Row: {
+          id: string;
+          user_id: string;
+          word: string;
+          context: string;
+          content_snippet: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          word: string;
+          context: string;
+          content_snippet?: string | null;
+          created_at?: string;
+        };
+        Update: Record<string, never>;
+        Relationships: [];
+      };
+
       admin_audit_logs: {
         Row: {
           id: string;

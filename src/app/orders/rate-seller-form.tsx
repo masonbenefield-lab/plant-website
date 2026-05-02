@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Star } from "lucide-react";
 import { toast } from "sonner";
+import { findProhibitedWord, censorWord, logViolation } from "@/lib/profanity";
 
 export default function RateSellerForm({
   orderId,
@@ -23,6 +24,14 @@ export default function RateSellerForm({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!score) return toast.error("Please select a star rating");
+    if (comment) {
+      const hit = findProhibitedWord(comment);
+      if (hit) {
+        toast.error(`Your review contains a prohibited word: "${censorWord(hit)}"`);
+        logViolation(hit, "review-comment", comment);
+        return;
+      }
+    }
     setSaving(true);
 
     const res = await fetch("/api/ratings", {
