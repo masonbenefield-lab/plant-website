@@ -264,6 +264,7 @@ export default function InventoryClient({
     if (m.type === "edit-listing") {
       setPrice(m.row.listing_price_cents ? String(m.row.listing_price_cents / 100) : "");
       setListQty(String(m.row.listing_quantity ?? 1));
+      setEditPotSize(m.row.pot_size ?? "");
     }
     if (m.type === "auction") {
       setStartingBid(""); setBuyNowPrice(""); setEndsAt("");
@@ -351,8 +352,9 @@ export default function InventoryClient({
     await supabase.from("listings").update({
       price_cents: dollarsToCents(price),
       quantity: Number(listQty),
+      pot_size: editPotSize || null,
     }).eq("id", modal.row.listing_id);
-    await supabase.from("inventory").update({ listing_quantity: Number(listQty) }).eq("id", modal.row.id);
+    await supabase.from("inventory").update({ listing_quantity: Number(listQty), pot_size: editPotSize || null }).eq("id", modal.row.id);
     setSubmitting(false);
     toast.success("Listing updated.");
     setModal(null);
@@ -1222,6 +1224,10 @@ export default function InventoryClient({
               <div className="space-y-1">
                 <Label htmlFor="edit-list-qty">Listed quantity</Label>
                 <Input id="edit-list-qty" type="number" min={1} value={listQty} onChange={e => setListQty(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label>Pot Size</Label>
+                <PotSizePicker value={editPotSize} onChange={setEditPotSize} />
               </div>
               <div className="flex flex-wrap gap-2 pt-1">
                 <Button onClick={submitEditListing} disabled={submitting || !price || !listQty} className="bg-green-700 hover:bg-green-800">
