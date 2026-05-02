@@ -20,6 +20,7 @@ export default async function DashboardPage() {
     { data: profile },
     { count: listingCount },
     { count: auctionCount },
+    { count: followerCount },
     { data: paidOrders },
     { data: revenueOrders },
     { data: thisMonthOrders },
@@ -28,6 +29,7 @@ export default async function DashboardPage() {
     supabase.from("profiles").select("username, bio, avatar_url, stripe_onboarded, plan").eq("id", user.id).single(),
     supabase.from("listings").select("*", { count: "exact", head: true }).eq("seller_id", user.id).eq("status", "active"),
     supabase.from("auctions").select("*", { count: "exact", head: true }).eq("seller_id", user.id).eq("status", "active"),
+    supabase.from("follows").select("*", { count: "exact", head: true }).eq("seller_id", user.id),
     supabase.from("orders").select("id, amount_cents, created_at, listing_id, auction_id, buyer_id, shipping_address").eq("seller_id", user.id).eq("status", "paid").order("created_at", { ascending: false }).limit(5),
     supabase.from("orders").select("amount_cents").eq("seller_id", user.id).in("status", ["paid", "shipped", "delivered"]),
     supabase.from("orders").select("amount_cents").eq("seller_id", user.id).in("status", ["paid", "shipped", "delivered"]).gte("created_at", startOfThisMonth),
@@ -122,7 +124,7 @@ export default async function DashboardPage() {
       )}
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         <StatCard label="Active Listings" value={listingCount ?? 0} />
         <StatCard label="Live Auctions" value={auctionCount ?? 0} />
         <StatCard
@@ -136,6 +138,7 @@ export default async function DashboardPage() {
           sub={`Platform only · All time: ${centsToDisplay(totalRevenue)}`}
           trend={revenueChangePct}
         />
+        <StatCard label="Followers" value={followerCount ?? 0} />
       </div>
 
       {/* Main content: recent orders + quick nav */}

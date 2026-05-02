@@ -125,9 +125,6 @@ export default async function SellerStorefront({
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div>
               <h1 className="text-2xl font-bold">{profile.username}</h1>
-              {followerCount != null && followerCount > 0 && (
-                <p className="text-xs text-muted-foreground mt-0.5">{followerCount} follower{followerCount !== 1 ? "s" : ""}</p>
-              )}
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               <ShareButton username={profile.username} />
