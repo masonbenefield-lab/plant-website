@@ -35,6 +35,14 @@ const CATEGORIES = [
   "Fern", "Herb", "Rare", "Seasonal", "Other",
 ];
 
+type AuctionSummary = {
+  id: string;
+  quantity: number;
+  current_bid_cents: number;
+  ends_at: string;
+  status: string;
+};
+
 type Row = {
   id: string;
   plant_name: string;
@@ -44,11 +52,7 @@ type Row = {
   listing_quantity: number | null;
   listing_price_cents: number | null;
   listing_status: string | null;
-  auction_id: string | null;
-  auction_quantity: number | null;
-  auction_bid_cents: number | null;
-  auction_ends_at: string | null;
-  auction_status: string | null;
+  auctions: AuctionSummary[];
   status: string;
   description: string;
   notes: string;
@@ -252,7 +256,10 @@ export default function InventoryClient({
   }
 
   function avail(row: Row) {
-    return row.quantity - (row.listing_quantity ?? 0) - (row.auction_quantity ?? 0);
+    const auctionQty = row.auctions
+      .filter(a => a.status === "active")
+      .reduce((sum, a) => sum + a.quantity, 0);
+    return row.quantity - (row.listing_quantity ?? 0) - auctionQty;
   }
 
   function openModal(m: ModalState) {
@@ -324,7 +331,8 @@ export default function InventoryClient({
     const val = parseInt(editingListingQtyValue, 10);
     setEditingListingQtyId(null);
     if (isNaN(val) || val < 0 || !row.listing_id) return;
-    const max = row.quantity - (row.auction_quantity ?? 0);
+    const auctionQty = row.auctions.filter(a => a.status === "active").reduce((sum, a) => sum + a.quantity, 0);
+    const max = row.quantity - auctionQty;
     const clamped = Math.min(val, max);
     const supabase = createClient();
     await supabase.from("listings").update({ quantity: clamped }).eq("id", row.listing_id);
@@ -396,11 +404,10 @@ export default function InventoryClient({
     router.refresh();
   }
 
-  async function unlinkAuction(row: Row) {
-    if (!row.auction_id) return;
+  async function unlinkAuction(row: Row, auctionId: string) {
     const supabase = createClient();
-    await supabase.from("inventory").update({ auction_id: null, auction_quantity: null }).eq("id", row.id);
-    toast.success("Auction unlinked from inventory");
+    await supabase.from("auctions").update({ inventory_id: null }).eq("id", auctionId);
+    toast.success("Auction unlinked");
     router.refresh();
   }
 
@@ -429,7 +436,6 @@ export default function InventoryClient({
       inventory_id: modal.row.id,
     }).select("id").single();
     if (error) { toast.error(error.message); setSubmitting(false); return; }
-    await supabase.from("inventory").update({ auction_id: newAuction.id, auction_quantity: qty }).eq("id", modal.row.id);
     setSubmitting(false);
     toast.success(`Auction started for ${modal.row.plant_name}!`);
     setModal(null);
@@ -604,8 +610,6 @@ export default function InventoryClient({
       images: a.images,
       category: a.category || null,
       pot_size: a.pot_size || null,
-      auction_id: a.id,
-      auction_quantity: a.quantity,
     }).select("id").single();
     if (error) { toast.error(error.message); setImportingId(null); return; }
     await supabase.from("auctions").update({ inventory_id: inv.id }).eq("id", a.id);
@@ -633,7 +637,6 @@ export default function InventoryClient({
         seller_id: user.id, plant_name: a.plant_name, variety: a.variety || null,
         quantity: a.quantity, description: a.description || null, images: a.images,
         category: a.category || null, pot_size: a.pot_size || null,
-        auction_id: a.id, auction_quantity: a.quantity,
       }).select("id").single();
       if (!error && inv) await supabase.from("auctions").update({ inventory_id: inv.id }).eq("id", a.id);
     }
@@ -647,7 +650,7 @@ export default function InventoryClient({
     const data = activeRows.map(r => ({
       "Plant Name": r.plant_name, "Variety": r.variety, "Pot Size": r.pot_size ?? "",
       "Category": r.category ?? "", "Total Stock": r.quantity,
-      "In Shop": r.listing_quantity ?? 0, "In Auction": r.auction_quantity ?? 0,
+      "In Shop": r.listing_quantity ?? 0, "In Auction": r.auctions.filter(a => a.status === "active").reduce((s, a) => s + a.quantity, 0),
       "Available": avail(r),
       "Shop Price": r.listing_price_cents ? (r.listing_price_cents / 100).toFixed(2) : "",
       "Status": r.status, "Date Added": new Date(r.created_at).toLocaleDateString(),
@@ -662,7 +665,9 @@ export default function InventoryClient({
   function renderVariantCard(row: Row) {
     const a = avail(row);
     const hasListing = !!row.listing_id;
-    const hasActiveAuction = !!row.auction_id && row.auction_status === "active";
+    const activeAuctions = row.auctions.filter(au => au.status === "active");
+    const endedAuctions = row.auctions.filter(au => au.status !== "active");
+    const totalAuctionQty = activeAuctions.reduce((sum, au) => sum + au.quantity, 0);
     const dropdownMenu = (
       <DropdownMenu>
         <DropdownMenuTrigger className="inline-flex items-center justify-center w-7 h-7 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
@@ -675,9 +680,6 @@ export default function InventoryClient({
             <DropdownMenuItem onClick={() => { setModal(null); toggleListingPause(row); }}>
               {row.listing_status === "active" ? "Pause listing" : "Resume listing"}
             </DropdownMenuItem>
-          )}
-          {row.auction_id && row.auction_status !== "active" && (
-            <DropdownMenuItem onClick={() => unlinkAuction(row)}>Unlink ended auction</DropdownMenuItem>
           )}
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => archiveItem(row.id)} disabled={loadingId === row.id} className="text-destructive focus:text-destructive">
@@ -716,12 +718,12 @@ export default function InventoryClient({
         </div>
 
         {/* Stock breakdown */}
-        {((row.listing_quantity ?? 0) > 0 || (row.auction_quantity ?? 0) > 0) && (
+        {((row.listing_quantity ?? 0) > 0 || totalAuctionQty > 0) && (
           <div className="flex gap-3 text-xs">
             {(row.listing_quantity ?? 0) > 0 && (
               row.listing_id && editingListingQtyId === row.id ? (
                 <input
-                  type="number" min={0} max={row.quantity - (row.auction_quantity ?? 0)}
+                  type="number" min={0} max={row.quantity - totalAuctionQty}
                   value={editingListingQtyValue}
                   onChange={e => setEditingListingQtyValue(e.target.value)}
                   onBlur={() => saveListingQtyEdit(row)}
@@ -739,7 +741,7 @@ export default function InventoryClient({
                 </button>
               )
             )}
-            {(row.auction_quantity ?? 0) > 0 && <span className="text-blue-600">{row.auction_quantity} in auction</span>}
+            {totalAuctionQty > 0 && <span className="text-blue-600">{totalAuctionQty} in auction</span>}
             <span className="text-muted-foreground">{a} avail</span>
           </div>
         )}
@@ -764,26 +766,32 @@ export default function InventoryClient({
           </button>
         ) : null}
 
-        {/* Auction */}
-        {hasActiveAuction ? (
-          <div className="flex items-center gap-2 flex-wrap text-sm">
-            <Gavel size={12} className="text-blue-600 shrink-0" />
-            <span className="font-medium">{centsToDisplay(row.auction_bid_cents ?? 0)}</span>
-            <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400 rounded-full px-2 py-0.5">live</span>
-            <span className="text-xs text-muted-foreground">Ends {new Date(row.auction_ends_at!).toLocaleDateString()}</span>
-            <Link href={`/auctions/${row.auction_id}`} target="_blank" className="text-xs hover:underline">View</Link>
-          </div>
-        ) : row.auction_id && row.auction_status !== "active" ? (
-          <div className="flex items-center gap-2 text-sm">
-            <Gavel size={12} className="text-muted-foreground shrink-0" />
-            <span className="text-xs text-muted-foreground capitalize">{row.auction_status}</span>
-            <Link href={`/auctions/${row.auction_id}`} target="_blank" className="text-xs text-muted-foreground hover:underline">View</Link>
-          </div>
-        ) : a > 0 ? (
-          <button onClick={() => openModal({ type: "auction", row })} className="inline-flex items-center gap-1.5 text-sm text-purple-700 hover:underline font-medium">
-            <Gavel size={13} /> Auction
-          </button>
-        ) : null}
+        {/* Auctions */}
+        <div className="space-y-1.5">
+          {activeAuctions.map(au => (
+            <div key={au.id} className="flex items-center gap-2 flex-wrap text-sm">
+              <Gavel size={12} className="text-blue-600 shrink-0" />
+              <span className="font-medium">{centsToDisplay(au.current_bid_cents)}</span>
+              <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400 rounded-full px-2 py-0.5">live · {au.quantity} qty</span>
+              <span className="text-xs text-muted-foreground">Ends {new Date(au.ends_at).toLocaleDateString()}</span>
+              <Link href={`/auctions/${au.id}`} target="_blank" className="text-xs hover:underline">View</Link>
+              <button onClick={() => unlinkAuction(row, au.id)} className="text-xs text-muted-foreground hover:text-red-500 ml-auto" title="Unlink">×</button>
+            </div>
+          ))}
+          {endedAuctions.map(au => (
+            <div key={au.id} className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Gavel size={11} className="shrink-0" />
+              <span className="capitalize">{au.status}</span>
+              <Link href={`/auctions/${au.id}`} target="_blank" className="hover:underline">View</Link>
+              <button onClick={() => unlinkAuction(row, au.id)} className="hover:underline hover:text-foreground">Unlink</button>
+            </div>
+          ))}
+          {a > 0 && (
+            <button onClick={() => openModal({ type: "auction", row })} className="inline-flex items-center gap-1.5 text-sm text-purple-700 hover:underline font-medium">
+              <Gavel size={13} /> {activeAuctions.length > 0 ? "Add Auction" : "Auction"}
+            </button>
+          )}
+        </div>
       </div>
     );
   }
@@ -792,7 +800,9 @@ export default function InventoryClient({
   function renderVariantRow(row: Row) {
     const a = avail(row);
     const hasListing = !!row.listing_id;
-    const hasActiveAuction = !!row.auction_id && row.auction_status === "active";
+    const activeAuctions = row.auctions.filter(au => au.status === "active");
+    const endedAuctions = row.auctions.filter(au => au.status !== "active");
+    const totalAuctionQty = activeAuctions.reduce((sum, au) => sum + au.quantity, 0);
 
     return (
       <tr key={row.id} className="border-t border-border/40 hover:bg-muted/20 transition-colors">
@@ -826,12 +836,12 @@ export default function InventoryClient({
               <Pencil size={11} className="opacity-0 group-hover:opacity-50 transition-opacity" />
             </button>
           )}
-          {((row.listing_quantity ?? 0) > 0 || (row.auction_quantity ?? 0) > 0) && (
+          {((row.listing_quantity ?? 0) > 0 || totalAuctionQty > 0) && (
             <div className="text-xs mt-0.5 space-y-0.5">
               {(row.listing_quantity ?? 0) > 0 && (
                 row.listing_id && editingListingQtyId === row.id ? (
                   <input
-                    type="number" min={0} max={row.quantity - (row.auction_quantity ?? 0)}
+                    type="number" min={0} max={row.quantity - totalAuctionQty}
                     value={editingListingQtyValue}
                     onChange={e => setEditingListingQtyValue(e.target.value)}
                     onBlur={() => saveListingQtyEdit(row)}
@@ -849,7 +859,7 @@ export default function InventoryClient({
                   </button>
                 )
               )}
-              {(row.auction_quantity ?? 0) > 0 && <div className="text-blue-600">{row.auction_quantity} in auction</div>}
+              {totalAuctionQty > 0 && <div className="text-blue-600">{totalAuctionQty} in auction</div>}
               <div className="text-muted-foreground">{a} available</div>
             </div>
           )}
@@ -890,34 +900,38 @@ export default function InventoryClient({
 
         {/* Auction */}
         <td className="px-3 py-3">
-          {hasActiveAuction ? (
-            <div className="space-y-0.5">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="font-medium text-sm">{centsToDisplay(row.auction_bid_cents ?? 0)}</span>
-                <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400 rounded-full px-2 py-0.5">live</span>
+          <div className="space-y-1.5">
+            {activeAuctions.map(au => (
+              <div key={au.id} className="space-y-0.5">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="font-medium text-sm">{centsToDisplay(au.current_bid_cents)}</span>
+                  <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400 rounded-full px-2 py-0.5">live · {au.quantity} qty</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span>Ends {new Date(au.ends_at).toLocaleDateString()}</span>
+                  <Link href={`/auctions/${au.id}`} target="_blank" className="hover:underline">View</Link>
+                  <button onClick={() => unlinkAuction(row, au.id)} className="hover:text-red-500 hover:underline" title="Unlink auction">Unlink</button>
+                </div>
               </div>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span>Ends {new Date(row.auction_ends_at!).toLocaleDateString()}</span>
-                <Link href={`/auctions/${row.auction_id}`} target="_blank" className="hover:underline">View</Link>
+            ))}
+            {endedAuctions.map(au => (
+              <div key={au.id} className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span className="capitalize">{au.status}</span>
+                <Link href={`/auctions/${au.id}`} target="_blank" className="hover:underline">View</Link>
+                <button onClick={() => unlinkAuction(row, au.id)} className="hover:underline hover:text-foreground">Unlink</button>
               </div>
-            </div>
-          ) : row.auction_id && row.auction_status !== "active" ? (
-            <div className="space-y-0.5">
-              <span className="text-xs text-muted-foreground capitalize">{row.auction_status}</span>
-              <div>
-                <Link href={`/auctions/${row.auction_id}`} target="_blank" className="text-xs text-muted-foreground hover:underline">View</Link>
-              </div>
-            </div>
-          ) : a > 0 ? (
-            <button
-              onClick={() => openModal({ type: "auction", row })}
-              className="inline-flex items-center gap-1.5 text-sm text-purple-700 hover:underline font-medium"
-            >
-              <Gavel size={13} /> Auction
-            </button>
-          ) : (
-            <span className="text-xs text-muted-foreground">—</span>
-          )}
+            ))}
+            {a > 0 ? (
+              <button
+                onClick={() => openModal({ type: "auction", row })}
+                className="inline-flex items-center gap-1.5 text-sm text-purple-700 hover:underline font-medium"
+              >
+                <Gavel size={13} /> {activeAuctions.length > 0 ? "Add Auction" : "Auction"}
+              </button>
+            ) : row.auctions.length === 0 ? (
+              <span className="text-xs text-muted-foreground">—</span>
+            ) : null}
+          </div>
         </td>
 
         {/* Actions */}
@@ -932,11 +946,6 @@ export default function InventoryClient({
               {hasListing && (
                 <DropdownMenuItem onClick={() => { setModal(null); toggleListingPause(row); }}>
                   {row.listing_status === "active" ? "Pause listing" : "Resume listing"}
-                </DropdownMenuItem>
-              )}
-              {row.auction_id && row.auction_status !== "active" && (
-                <DropdownMenuItem onClick={() => unlinkAuction(row)}>
-                  Unlink ended auction
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
@@ -960,7 +969,7 @@ export default function InventoryClient({
     const totalQty = group.variants.reduce((sum, v) => sum + v.quantity, 0);
     const totalAvail = group.variants.reduce((sum, v) => sum + avail(v), 0);
     const hasShop = group.variants.some(v => v.listing_id && v.listing_status === "active");
-    const hasLiveAuction = group.variants.some(v => v.auction_id && v.auction_status === "active");
+    const hasLiveAuction = group.variants.some(v => v.auctions.some(au => au.status === "active"));
     const first = group.variants[0];
 
     return (
