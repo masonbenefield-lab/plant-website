@@ -183,6 +183,10 @@ export default function InventoryClient({
   const [editingQtyId, setEditingQtyId] = useState<string | null>(null);
   const [editingQtyValue, setEditingQtyValue] = useState("");
 
+  // Inline listing qty edit
+  const [editingListingQtyId, setEditingListingQtyId] = useState<string | null>(null);
+  const [editingListingQtyValue, setEditingListingQtyValue] = useState("");
+
   // Listing modal
   const [price, setPrice] = useState("");
   const [listQty, setListQty] = useState("");
@@ -314,6 +318,18 @@ export default function InventoryClient({
     const supabase = createClient();
     const { error } = await supabase.from("inventory").update({ quantity: val }).eq("id", rowId);
     if (error) toast.error(error.message); else router.refresh();
+  }
+
+  async function saveListingQtyEdit(row: Row) {
+    const val = parseInt(editingListingQtyValue, 10);
+    setEditingListingQtyId(null);
+    if (isNaN(val) || val < 0 || !row.listing_id) return;
+    const max = row.quantity - (row.auction_quantity ?? 0);
+    const clamped = Math.min(val, max);
+    const supabase = createClient();
+    await supabase.from("listings").update({ quantity: clamped }).eq("id", row.listing_id);
+    await supabase.from("inventory").update({ listing_quantity: clamped }).eq("id", row.id);
+    router.refresh();
   }
 
   async function submitListing() {
@@ -702,7 +718,27 @@ export default function InventoryClient({
         {/* Stock breakdown */}
         {((row.listing_quantity ?? 0) > 0 || (row.auction_quantity ?? 0) > 0) && (
           <div className="flex gap-3 text-xs">
-            {(row.listing_quantity ?? 0) > 0 && <span className="text-green-600">{row.listing_quantity} in shop</span>}
+            {(row.listing_quantity ?? 0) > 0 && (
+              row.listing_id && editingListingQtyId === row.id ? (
+                <input
+                  type="number" min={0} max={row.quantity - (row.auction_quantity ?? 0)}
+                  value={editingListingQtyValue}
+                  onChange={e => setEditingListingQtyValue(e.target.value)}
+                  onBlur={() => saveListingQtyEdit(row)}
+                  onKeyDown={e => { if (e.key === "Enter") saveListingQtyEdit(row); if (e.key === "Escape") setEditingListingQtyId(null); }}
+                  autoFocus
+                  className="w-16 px-1 py-0 text-xs border rounded focus:outline-none focus:ring-1 focus:ring-green-600"
+                />
+              ) : (
+                <button
+                  onClick={() => { if (row.listing_id) { setEditingListingQtyId(row.id); setEditingListingQtyValue(String(row.listing_quantity ?? 0)); } }}
+                  className="text-green-600 hover:text-green-800 hover:underline tabular-nums"
+                  title="Click to edit shop quantity"
+                >
+                  {row.listing_quantity} in shop
+                </button>
+              )
+            )}
             {(row.auction_quantity ?? 0) > 0 && <span className="text-blue-600">{row.auction_quantity} in auction</span>}
             <span className="text-muted-foreground">{a} avail</span>
           </div>
@@ -792,7 +828,27 @@ export default function InventoryClient({
           )}
           {((row.listing_quantity ?? 0) > 0 || (row.auction_quantity ?? 0) > 0) && (
             <div className="text-xs mt-0.5 space-y-0.5">
-              {(row.listing_quantity ?? 0) > 0 && <div className="text-green-600">{row.listing_quantity} in shop</div>}
+              {(row.listing_quantity ?? 0) > 0 && (
+                row.listing_id && editingListingQtyId === row.id ? (
+                  <input
+                    type="number" min={0} max={row.quantity - (row.auction_quantity ?? 0)}
+                    value={editingListingQtyValue}
+                    onChange={e => setEditingListingQtyValue(e.target.value)}
+                    onBlur={() => saveListingQtyEdit(row)}
+                    onKeyDown={e => { if (e.key === "Enter") saveListingQtyEdit(row); if (e.key === "Escape") setEditingListingQtyId(null); }}
+                    autoFocus
+                    className="w-16 px-1 py-0 text-xs border rounded focus:outline-none focus:ring-1 focus:ring-green-600"
+                  />
+                ) : (
+                  <button
+                    onClick={() => { if (row.listing_id) { setEditingListingQtyId(row.id); setEditingListingQtyValue(String(row.listing_quantity ?? 0)); } }}
+                    className="text-green-600 hover:text-green-800 hover:underline tabular-nums block"
+                    title="Click to edit shop quantity"
+                  >
+                    {row.listing_quantity} in shop
+                  </button>
+                )
+              )}
               {(row.auction_quantity ?? 0) > 0 && <div className="text-blue-600">{row.auction_quantity} in auction</div>}
               <div className="text-muted-foreground">{a} available</div>
             </div>
