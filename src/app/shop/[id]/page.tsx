@@ -14,6 +14,7 @@ import WishlistButton from "@/components/wishlist-button";
 import ReportButton from "@/components/report-button";
 import ImageGallery from "@/components/image-gallery";
 import TrackView from "@/components/track-view";
+import SizePicker from "@/components/size-picker";
 
 export async function generateMetadata({
   params,
@@ -65,6 +66,21 @@ export default async function ListingPage({
     supabase.auth.getUser(),
   ]);
 
+  // Sibling listings: same seller + plant_name + variety, different sizes
+  let siblingQuery = supabase
+    .from("listings")
+    .select("id, pot_size, price_cents, quantity")
+    .eq("seller_id", listing.seller_id)
+    .eq("plant_name", listing.plant_name)
+    .eq("status", "active");
+  siblingQuery = listing.variety
+    ? siblingQuery.eq("variety", listing.variety)
+    : siblingQuery.is("variety", null);
+  const { data: sizeSiblings } = await siblingQuery.order("pot_size");
+
+  const siblingIds = new Set((sizeSiblings ?? []).map((s) => s.id));
+  const showSizePicker = (sizeSiblings ?? []).length > 1;
+
   const [wishlistRow, reportRow, { data: relatedListings }] = await Promise.all([
     user ? supabase.from("wishlists").select("id").eq("user_id", user.id).eq("listing_id", listing.id).maybeSingle() : Promise.resolve({ data: null }),
     user ? supabase.from("reports").select("id").eq("reporter_id", user.id).eq("listing_id", listing.id).maybeSingle() : Promise.resolve({ data: null }),
@@ -74,11 +90,13 @@ export default async function ListingPage({
       .eq("seller_id", listing.seller_id)
       .eq("status", "active")
       .neq("id", listing.id)
-      .limit(4),
+      .limit(8),
   ]);
 
   const isWishlisted = !!wishlistRow.data;
   const isReported = !!reportRow.data;
+
+  const filteredRelated = (relatedListings ?? []).filter((r) => !siblingIds.has(r.id)).slice(0, 4);
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-10">
@@ -110,6 +128,12 @@ export default async function ListingPage({
             </span>
             <Badge variant="secondary">{listing.quantity} available</Badge>
           </div>
+
+          {showSizePicker && (
+            <div className="mt-5">
+              <SizePicker siblings={sizeSiblings!} currentId={listing.id} />
+            </div>
+          )}
 
           {listing.description && (
             <p className="mt-5 text-sm leading-relaxed text-muted-foreground">
@@ -170,13 +194,13 @@ export default async function ListingPage({
       </div>
 
       {/* Related listings */}
-      {relatedListings && relatedListings.length > 0 && (
+      {filteredRelated.length > 0 && (
         <div className="mt-16">
           <h2 className="text-lg font-semibold mb-4">
             More from {seller?.username ?? "this seller"}
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {relatedListings.map((item) => (
+            {filteredRelated.map((item) => (
               <Link
                 key={item.id}
                 href={`/shop/${item.id}`}
