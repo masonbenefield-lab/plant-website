@@ -14,9 +14,10 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { listingId, auctionId, quantity: rawQty, shippingAddress } = body as {
+  const { listingId, auctionId, offerId, quantity: rawQty, shippingAddress } = body as {
     listingId?: string;
     auctionId?: string;
+    offerId?: string;
     quantity?: number;
     shippingAddress: {
       name: string;
@@ -61,8 +62,23 @@ export async function POST(request: Request) {
     }
 
     const feePercent = planFeePercent(sellerPlan?.plan, !!sellerPlan?.is_admin);
-    const onSale = !!(listing.sale_price_cents && listing.sale_ends_at && new Date(listing.sale_ends_at) > new Date());
-    const effectivePriceCents = onSale ? listing.sale_price_cents! : listing.price_cents;
+    // If checking out with an accepted offer, use offer price
+    let effectivePriceCents: number;
+    if (offerId) {
+      const { data: offer } = await supabase
+        .from("offers")
+        .select("amount_cents, buyer_id, status, expires_at")
+        .eq("id", offerId)
+        .eq("listing_id", listingId)
+        .single();
+      if (!offer || offer.buyer_id !== user.id || offer.status !== "accepted" || new Date(offer.expires_at) < new Date()) {
+        return NextResponse.json({ error: "Offer is invalid or expired" }, { status: 400 });
+      }
+      effectivePriceCents = offer.amount_cents;
+    } else {
+      const onSale = !!(listing.sale_price_cents && listing.sale_ends_at && new Date(listing.sale_ends_at) > new Date());
+      effectivePriceCents = onSale ? listing.sale_price_cents! : listing.price_cents;
+    }
     const amountCents = effectivePriceCents * quantity;
     const feeCents = Math.round(amountCents * (feePercent / 100));
 
@@ -87,6 +103,11 @@ export async function POST(request: Request) {
       .single();
 
     if (orderError) return NextResponse.json({ error: orderError.message }, { status: 500 });
+
+    // Mark the accepted offer as withdrawn (used) so it can't be checked out twice
+    if (offerId) {
+      await supabase.from("offers").update({ status: "withdrawn" }).eq("id", offerId);
+    }
 
     await supabase
       .from("listings")

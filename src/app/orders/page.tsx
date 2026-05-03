@@ -8,6 +8,21 @@ import { centsToDisplay } from "@/lib/stripe";
 import RateSellerForm from "./rate-seller-form";
 import DisputeButton from "./dispute-button";
 
+function detectCarrier(tracking: string): string {
+  if (/^1Z[0-9A-Z]{16}$/i.test(tracking)) return "UPS";
+  if (/^[0-9]{20,22}$/.test(tracking) || /^9[2345][0-9]{18,}$/.test(tracking)) return "USPS";
+  if (/^[0-9]{12}$/.test(tracking) || /^[0-9]{15}$/.test(tracking)) return "FedEx";
+  if (/^[A-Z]{2}[0-9]{9}[A-Z]{2}$/.test(tracking)) return "USPS";
+  return "Track";
+}
+
+function getCarrierUrl(tracking: string): string {
+  const carrier = detectCarrier(tracking);
+  if (carrier === "UPS") return `https://www.ups.com/track?tracknum=${tracking}`;
+  if (carrier === "FedEx") return `https://www.fedex.com/apps/fedextrack/?tracknumbers=${tracking}`;
+  return `https://tools.usps.com/go/TrackConfirmAction?tLabels=${tracking}`;
+}
+
 const STATUS_TABS = [
   { label: "All", value: "" },
   { label: "Pending", value: "pending" },
@@ -149,7 +164,16 @@ export default async function MyOrdersPage({
 
                 {order.tracking_number && (
                   <p className="text-sm mt-3 pt-3 border-t text-muted-foreground">
-                    Tracking: <span className="font-mono font-medium text-foreground">{order.tracking_number}</span>
+                    Tracking:{" "}
+                    <a
+                      href={getCarrierUrl(order.tracking_number)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-mono font-medium text-foreground hover:text-green-700 hover:underline"
+                    >
+                      {order.tracking_number}
+                    </a>
+                    <span className="ml-2 text-xs">({detectCarrier(order.tracking_number)}) ↗</span>
                   </p>
                 )}
 

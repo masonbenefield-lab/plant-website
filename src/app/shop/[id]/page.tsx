@@ -10,6 +10,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { centsToDisplay } from "@/lib/stripe";
 import { cn } from "@/lib/utils";
 import BuyButton from "./buy-button";
+import OfferButton from "./offer-button";
+import RestockNotifyButton from "./restock-notify-button";
 import WishlistButton from "@/components/wishlist-button";
 import ReportButton from "@/components/report-button";
 import ImageGallery from "@/components/image-gallery";
@@ -62,7 +64,7 @@ export default async function ListingPage({
   if (!listing) notFound();
 
   const [{ data: seller }, { data: { user } }] = await Promise.all([
-    supabase.from("profiles").select("id, username, avatar_url, stripe_onboarded, shipping_days, vacation_mode, vacation_until").eq("id", listing.seller_id).single(),
+    supabase.from("profiles").select("id, username, avatar_url, stripe_onboarded, shipping_days, vacation_mode, vacation_until, offers_enabled").eq("id", listing.seller_id).single(),
     supabase.auth.getUser(),
   ]);
 
@@ -81,9 +83,11 @@ export default async function ListingPage({
   const siblingIds = new Set((sizeSiblings ?? []).map((s) => s.id));
   const showSizePicker = (sizeSiblings ?? []).length > 1;
 
-  const [wishlistRow, reportRow, { data: relatedListings }] = await Promise.all([
+  const [wishlistRow, reportRow, offerRow, restockRow, { data: relatedListings }] = await Promise.all([
     user ? supabase.from("wishlists").select("id").eq("user_id", user.id).eq("listing_id", listing.id).maybeSingle() : Promise.resolve({ data: null }),
     user ? supabase.from("reports").select("id").eq("reporter_id", user.id).eq("listing_id", listing.id).maybeSingle() : Promise.resolve({ data: null }),
+    user ? supabase.from("offers").select("id, status").eq("buyer_id", user.id).eq("listing_id", listing.id).in("status", ["pending", "accepted"]).maybeSingle() : Promise.resolve({ data: null }),
+    user ? supabase.from("restock_notifications").select("id").eq("listing_id", listing.id).eq("user_id", user.id).maybeSingle() : Promise.resolve({ data: null }),
     supabase
       .from("listings")
       .select("id, plant_name, variety, price_cents, images, category")
@@ -95,6 +99,10 @@ export default async function ListingPage({
 
   const isWishlisted = !!wishlistRow.data;
   const isReported = !!reportRow.data;
+  const existingOffer = offerRow.data as { id: string; status: "pending" | "accepted" | "declined" | "withdrawn" } | null;
+  const alreadySubscribedRestock = !!restockRow.data;
+  const sellerOffersEnabled = (seller as { offers_enabled?: boolean } | null)?.offers_enabled !== false;
+  const isSoldOut = listing.status === "sold_out" || listing.quantity <= 0;
 
   const filteredRelated = (relatedListings ?? []).filter((r) => !siblingIds.has(r.id)).slice(0, 4);
 
@@ -175,24 +183,49 @@ export default async function ListingPage({
             </div>
           )}
 
-          <div className="mt-6">
+          <div className="mt-6 space-y-3">
             {!seller?.stripe_onboarded ? (
               <p className="text-sm text-muted-foreground">
                 This seller has not set up payments yet.
               </p>
+            ) : isSoldOut ? (
+              <>
+                <p className="text-sm font-medium text-muted-foreground">This item is sold out.</p>
+                <RestockNotifyButton
+                  listingId={listing.id}
+                  isLoggedIn={!!user}
+                  alreadySubscribed={alreadySubscribedRestock}
+                />
+              </>
             ) : user ? (
               user.id === seller?.id ? (
                 <Button disabled variant="outline">This is your listing</Button>
               ) : (
-                <BuyButton listingId={listing.id} maxQty={listing.quantity} />
+                <>
+                  <BuyButton listingId={listing.id} maxQty={listing.quantity} />
+                  {sellerOffersEnabled && (
+                    <OfferButton
+                      listingId={listing.id}
+                      listingPriceCents={listing.price_cents}
+                      existingOfferStatus={existingOffer?.status ?? null}
+                    />
+                  )}
+                </>
               )
             ) : (
-              <Link
-                href={`/login?redirectTo=/shop/${listing.id}`}
-                className={cn(buttonVariants(), "bg-green-700 hover:bg-green-800 w-full")}
-              >
-                Sign in to buy
-              </Link>
+              <>
+                <Link
+                  href={`/login?redirectTo=/shop/${listing.id}`}
+                  className={cn(buttonVariants(), "bg-green-700 hover:bg-green-800 w-full")}
+                >
+                  Sign in to buy
+                </Link>
+                <RestockNotifyButton
+                  listingId={listing.id}
+                  isLoggedIn={false}
+                  alreadySubscribed={false}
+                />
+              </>
             )}
           </div>
 

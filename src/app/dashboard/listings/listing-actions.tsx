@@ -157,8 +157,17 @@ export default function ListingActions({ listing }: { listing: Listing }) {
     const supabase = createClient();
     const newStatus = listing.status === "active" ? "paused" : "active";
     const { error } = await supabase.from("listings").update({ status: newStatus }).eq("id", listing.id);
-    if (error) toast.error(error.message);
-    else { toast.success(`Listing ${newStatus}`); router.refresh(); }
+    if (error) { toast.error(error.message); return; }
+    toast.success(`Listing ${newStatus}`);
+    if (newStatus === "active") {
+      // Fire-and-forget restock notifications
+      fetch("/api/listings/notify-restock", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ listingId: listing.id }),
+      }).catch(() => null);
+    }
+    router.refresh();
   }
 
   async function deleteListing() {

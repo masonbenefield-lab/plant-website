@@ -25,6 +25,8 @@ export interface Database {
           shipping_days: number | null;
           vacation_mode: boolean;
           vacation_until: string | null;
+          offers_enabled: boolean;
+          saved_shipping_address: Json | null;
           deleted_at: string | null;
           created_at: string;
         };
@@ -43,6 +45,8 @@ export interface Database {
           shipping_days?: number | null;
           vacation_mode?: boolean;
           vacation_until?: string | null;
+          offers_enabled?: boolean;
+          saved_shipping_address?: Json | null;
           deleted_at?: string | null;
           created_at?: string;
         };
@@ -62,8 +66,58 @@ export interface Database {
           shipping_days?: number | null;
           vacation_mode?: boolean;
           vacation_until?: string | null;
+          offers_enabled?: boolean;
+          saved_shipping_address?: Json | null;
           deleted_at?: string | null;
         };
+        Relationships: [];
+      };
+
+      offers: {
+        Row: {
+          id: string;
+          listing_id: string;
+          buyer_id: string;
+          seller_id: string;
+          amount_cents: number;
+          message: string | null;
+          status: "pending" | "accepted" | "declined" | "withdrawn";
+          expires_at: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          listing_id: string;
+          buyer_id: string;
+          seller_id: string;
+          amount_cents: number;
+          message?: string | null;
+          status?: "pending" | "accepted" | "declined" | "withdrawn";
+          expires_at?: string;
+          created_at?: string;
+        };
+        Update: {
+          status?: "pending" | "accepted" | "declined" | "withdrawn";
+        };
+        Relationships: [];
+      };
+
+      restock_notifications: {
+        Row: {
+          id: string;
+          listing_id: string;
+          user_id: string | null;
+          email: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          listing_id: string;
+          user_id?: string | null;
+          email: string;
+          created_at?: string;
+        };
+        Update: Record<string, never>;
         Relationships: [];
       };
       listings: {

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
+import { sendAuctionWon } from "@/lib/email";
 
 function adminClient() {
   return createSupabaseAdmin<Database>(
@@ -30,7 +31,21 @@ export async function GET(request: Request) {
   let closed = 0;
   for (const auction of expiredAuctions ?? []) {
     await supabase.from("auctions").update({ status: "ended" }).eq("id", auction.id);
-    if (!auction.current_bidder_id && auction.inventory_id) {
+
+    if (auction.current_bidder_id) {
+      // Email the winner
+      const { data: winnerAuth } = await supabase.auth.admin.getUserById(auction.current_bidder_id);
+      const winnerEmail = winnerAuth?.user?.email;
+      if (winnerEmail) {
+        await sendAuctionWon({
+          winnerEmail,
+          plantName: auction.plant_name,
+          amountCents: auction.current_bid_cents,
+          checkoutUrl: `${process.env.NEXT_PUBLIC_APP_URL}/checkout?auction=${auction.id}`,
+        }).catch(() => {});
+      }
+    } else if (auction.inventory_id) {
+      // No winner — release inventory
       await supabase.from("inventory").update({
         auction_id: null,
         auction_quantity: null,

@@ -42,6 +42,7 @@ export default function AccountForm({
   const [shippingDays, setShippingDays] = useState<number | "">(profile?.shipping_days ?? "");
   const [vacationMode, setVacationMode] = useState(profile?.vacation_mode ?? false);
   const [vacationUntil, setVacationUntil] = useState(profile?.vacation_until ?? "");
+  const [offersEnabled, setOffersEnabled] = useState((profile as { offers_enabled?: boolean } | null)?.offers_enabled !== false);
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState("");
@@ -132,6 +133,7 @@ export default function AccountForm({
         shipping_days: shippingDays === "" ? null : shippingDays,
         vacation_mode: vacationMode,
         vacation_until: vacationUntil || null,
+        offers_enabled: offersEnabled,
       }),
     });
     const data = await res.json();
@@ -364,6 +366,24 @@ export default function AccountForm({
                 <option value="14">Ships within 2 weeks</option>
               </select>
               <p className="text-xs text-muted-foreground">Shown to buyers on your listings and storefront.</p>
+            </div>
+
+            <div className="rounded-lg border p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">Accept offers on listings</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Allow buyers to send price offers on your fixed-price listings. You can accept or decline each one.</p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={offersEnabled}
+                  onClick={() => setOffersEnabled((v) => !v)}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${offersEnabled ? "bg-green-600" : "bg-input"}`}
+                >
+                  <span className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition-transform ${offersEnabled ? "translate-x-5" : "translate-x-0"}`} />
+                </button>
+              </div>
             </div>
 
             <div className="rounded-lg border p-4 space-y-3">

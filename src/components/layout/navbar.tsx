@@ -99,6 +99,7 @@ export default function Navbar({ user, avatarUrl, username, isAdmin }: NavbarPro
                 <DropdownMenuContent align="end" className="w-48">
                   <DropdownMenuItem><Link href="/dashboard" className="block w-full">Dashboard</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href="/dashboard/inventory" className="block w-full">Inventory</Link></DropdownMenuItem>
+                  <DropdownMenuItem><Link href="/dashboard/offers" className="block w-full">Offers</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href="/wishlist" className="block w-full">Wishlist</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href="/orders" className="block w-full">My Orders</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href="/feed" className="block w-full">Feed</Link></DropdownMenuItem>

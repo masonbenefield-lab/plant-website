@@ -28,11 +28,17 @@ interface ShippingAddress {
   country: string;
 }
 
+interface ShippingAddressData {
+  name: string; line1: string; line2: string; city: string; state: string; zip: string; country: string;
+}
+
 interface CheckoutFormProps {
   listingId?: string;
   auctionId?: string;
+  offerId?: string;
   priceCents: number;
   quantity?: number;
+  savedAddress?: ShippingAddressData | null;
 }
 
 function PaymentStep({
@@ -84,31 +90,25 @@ function PaymentStep({
 
 const SAVED_ADDRESS_KEY = "checkout_saved_address";
 
-export default function CheckoutForm({ listingId, auctionId, priceCents, quantity = 1 }: CheckoutFormProps) {
+export default function CheckoutForm({ listingId, auctionId, offerId, priceCents, quantity = 1, savedAddress }: CheckoutFormProps) {
   const router = useRouter();
   const [step, setStep] = useState<"address" | "payment">("address");
   const [clientSecret, setClientSecret] = useState("");
   const [orderId, setOrderId] = useState("");
   const [loading, setLoading] = useState(false);
   const [saveAddress, setSaveAddress] = useState(true);
-  const [address, setAddress] = useState<ShippingAddress>({
-    name: "",
-    line1: "",
-    line2: "",
-    city: "",
-    state: "",
-    zip: "",
-    country: "US",
-  });
+  const [address, setAddress] = useState<ShippingAddress>(
+    savedAddress ?? { name: "", line1: "", line2: "", city: "", state: "", zip: "", country: "US" }
+  );
 
+  // Fall back to localStorage if no server-side saved address
   useEffect(() => {
+    if (savedAddress) return;
     try {
       const stored = localStorage.getItem(SAVED_ADDRESS_KEY);
       if (stored) setAddress(JSON.parse(stored));
-    } catch {
-      // ignore
-    }
-  }, []);
+    } catch { /* ignore */ }
+  }, [savedAddress]);
 
   async function handleAddressSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -120,6 +120,7 @@ export default function CheckoutForm({ listingId, auctionId, priceCents, quantit
       body: JSON.stringify({
         listingId,
         auctionId,
+        offerId,
         quantity,
         shippingAddress: address,
       }),
@@ -132,7 +133,13 @@ export default function CheckoutForm({ listingId, auctionId, priceCents, quantit
       return;
     }
 
+    // Save address to profile via API for cross-device persistence
     if (saveAddress) {
+      fetch("/api/profile/save-address", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address }),
+      }).catch(() => {});
       try { localStorage.setItem(SAVED_ADDRESS_KEY, JSON.stringify(address)); } catch { /* ignore */ }
     } else {
       try { localStorage.removeItem(SAVED_ADDRESS_KEY); } catch { /* ignore */ }
