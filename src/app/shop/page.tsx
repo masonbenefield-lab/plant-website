@@ -41,7 +41,7 @@ export default async function ShopPage({
     .from("listings")
     .select("*", { count: "exact" })
     .eq("status", "active")
-    .neq("category", "Hidden");
+    .or("category.neq.Hidden,category.is.null");
 
   if (q) query = query.or(`plant_name.ilike.%${q}%,variety.ilike.%${q}%,description.ilike.%${q}%,category.ilike.%${q}%`);
   if (category) query = query.eq("category", category);

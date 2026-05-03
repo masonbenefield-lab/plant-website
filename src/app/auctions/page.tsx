@@ -39,7 +39,7 @@ export default async function AuctionsPage({
     .select("*", { count: "exact" })
     .eq("status", "active")
     .gt("ends_at", new Date().toISOString())
-    .neq("category", "Hidden");
+    .or("category.neq.Hidden,category.is.null");
 
   if (q) query = query.or(`plant_name.ilike.%${q}%,variety.ilike.%${q}%,description.ilike.%${q}%,category.ilike.%${q}%`);
   if (category) query = query.eq("category", category);
