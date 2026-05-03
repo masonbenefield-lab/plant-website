@@ -415,10 +415,13 @@ export default function InventoryClient({
     if (isNaN(val) || val < 0 || !row.listing_id) return;
     const auctionQty = row.auctions.filter(a => a.status === "active").reduce((sum, a) => sum + a.quantity, 0);
     const max = row.quantity - auctionQty;
-    const clamped = Math.min(val, max);
+    if (val > max) {
+      toast.error(`Only ${max} available — you can't list more than your total stock. Reverted.`);
+      return;
+    }
     const supabase = createClient();
-    await supabase.from("listings").update({ quantity: clamped }).eq("id", row.listing_id);
-    await supabase.from("inventory").update({ listing_quantity: clamped }).eq("id", row.id);
+    await supabase.from("listings").update({ quantity: val }).eq("id", row.listing_id);
+    await supabase.from("inventory").update({ listing_quantity: val }).eq("id", row.id);
     router.refresh();
   }
 
@@ -453,14 +456,21 @@ export default function InventoryClient({
 
   async function submitEditListing() {
     if (!modal || modal.type !== "edit-listing" || !modal.row.listing_id) return;
+    const qty = Number(listQty);
+    const auctionQty = modal.row.auctions.filter(a => a.status === "active").reduce((sum, a) => sum + a.quantity, 0);
+    const max = modal.row.quantity - auctionQty;
+    if (qty > max) {
+      toast.error(`Only ${max} available — you can't list more than your total stock.`);
+      return;
+    }
     setSubmitting(true);
     const supabase = createClient();
     await supabase.from("listings").update({
       price_cents: dollarsToCents(price),
-      quantity: Number(listQty),
+      quantity: qty,
       pot_size: editPotSize || null,
     }).eq("id", modal.row.listing_id);
-    await supabase.from("inventory").update({ listing_quantity: Number(listQty), pot_size: editPotSize || null }).eq("id", modal.row.id);
+    await supabase.from("inventory").update({ listing_quantity: qty, pot_size: editPotSize || null }).eq("id", modal.row.id);
     setSubmitting(false);
     toast.success("Listing updated.");
     setModal(null);
