@@ -979,9 +979,9 @@ export default function InventoryClient({
         </div>
 
         {/* Stock breakdown */}
-        {((row.listing_quantity ?? 0) > 0 || totalAuctionQty > 0) && (
+        {(!!row.listing_id || totalAuctionQty > 0) && (
           <div className="flex gap-3 text-xs">
-            {(row.listing_quantity ?? 0) > 0 && (
+            {!!row.listing_id && (
               row.listing_id && editingListingQtyId === row.id ? (
                 <input
                   type="number" min={0} max={row.quantity - totalAuctionQty}
@@ -994,11 +994,11 @@ export default function InventoryClient({
                 />
               ) : (
                 <button
-                  onClick={() => { if (row.listing_id) { setEditingListingQtyId(row.id); setEditingListingQtyValue(String(row.listing_quantity ?? 0)); } }}
-                  className="text-green-600 hover:text-green-800 hover:underline tabular-nums"
+                  onClick={() => { setEditingListingQtyId(row.id); setEditingListingQtyValue(String(row.listing_quantity ?? 0)); }}
+                  className={(row.listing_quantity ?? 0) === 0 ? "text-amber-600 hover:text-amber-800 hover:underline tabular-nums" : "text-green-600 hover:text-green-800 hover:underline tabular-nums"}
                   title="Click to edit shop quantity"
                 >
-                  {row.listing_quantity} in shop
+                  {row.listing_quantity ?? 0} in shop
                 </button>
               )
             )}
@@ -1133,9 +1133,9 @@ export default function InventoryClient({
               <Pencil size={11} className="opacity-0 group-hover:opacity-50 transition-opacity" />
             </button>
           )}
-          {((row.listing_quantity ?? 0) > 0 || totalAuctionQty > 0) && (
+          {(!!row.listing_id || totalAuctionQty > 0) && (
             <div className="text-xs mt-0.5 space-y-0.5">
-              {(row.listing_quantity ?? 0) > 0 && (
+              {!!row.listing_id && (
                 row.listing_id && editingListingQtyId === row.id ? (
                   <input
                     type="number" min={0} max={row.quantity - totalAuctionQty}
@@ -1148,11 +1148,11 @@ export default function InventoryClient({
                   />
                 ) : (
                   <button
-                    onClick={() => { if (row.listing_id) { setEditingListingQtyId(row.id); setEditingListingQtyValue(String(row.listing_quantity ?? 0)); } }}
-                    className="text-green-600 hover:text-green-800 hover:underline tabular-nums block"
+                    onClick={() => { setEditingListingQtyId(row.id); setEditingListingQtyValue(String(row.listing_quantity ?? 0)); }}
+                    className={(row.listing_quantity ?? 0) === 0 ? "text-amber-600 hover:text-amber-800 hover:underline tabular-nums block" : "text-green-600 hover:text-green-800 hover:underline tabular-nums block"}
                     title="Click to edit shop quantity"
                   >
-                    {row.listing_quantity} in shop
+                    {row.listing_quantity ?? 0} in shop
                   </button>
                 )
               )}
@@ -1670,7 +1670,7 @@ export default function InventoryClient({
               </div>
               <div className="space-y-1">
                 <Label htmlFor="edit-list-qty">Listed quantity</Label>
-                <Input id="edit-list-qty" type="number" min={1} value={listQty} onChange={e => setListQty(e.target.value)} />
+                <Input id="edit-list-qty" type="number" min={0} value={listQty} onChange={e => setListQty(e.target.value)} />
               </div>
               <div className="space-y-1">
                 <Label>Pot Size</Label>
