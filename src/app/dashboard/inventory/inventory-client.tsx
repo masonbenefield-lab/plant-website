@@ -34,10 +34,11 @@ import PriceSuggestion from "@/components/price-suggestion";
 import SellerAgreementDialog from "@/components/seller-agreement-dialog";
 import { findProhibitedWord, censorWord, logViolation } from "@/lib/profanity";
 
-const CATEGORIES = [
+const BASE_CATEGORIES = [
   "Tropical", "Succulent", "Cactus", "Carnivorous", "Orchid",
   "Fern", "Herb", "Rare", "Seasonal", "Other",
 ];
+const ADMIN_CATEGORIES = [...BASE_CATEGORIES, "Hidden"];
 
 type AuctionSummary = {
   id: string;
@@ -192,6 +193,7 @@ export default function InventoryClient({
   unlinkedAuctions,
   initialSearch = "",
   initialCategory = "",
+  isAdmin = false,
 }: {
   activeRows: Row[];
   archivedRows: Row[];
@@ -200,6 +202,7 @@ export default function InventoryClient({
   unlinkedAuctions: UnlinkedAuction[];
   initialSearch?: string;
   initialCategory?: string;
+  isAdmin?: boolean;
 }) {
   const router = useRouter();
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -274,6 +277,7 @@ export default function InventoryClient({
   const [editCostPrice, setEditCostPrice] = useState("");
   const [viewMode, setViewMode] = useState<"grouped" | "flat">("grouped");
   const [importOpen, setImportOpen] = useState(false);
+  const categories = isAdmin ? ADMIN_CATEGORIES : BASE_CATEGORIES;
   const [importRows, setImportRows] = useState<ImportRow[]>([]);
   const [importSubmitting, setImportSubmitting] = useState(false);
 
@@ -1428,7 +1432,7 @@ export default function InventoryClient({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="_all">All categories</SelectItem>
-            {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={sortBy} onValueChange={v => setSortBy(v as typeof sortBy)}>
@@ -1814,7 +1818,7 @@ export default function InventoryClient({
                   <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="_none">— None —</SelectItem>
-                    {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>

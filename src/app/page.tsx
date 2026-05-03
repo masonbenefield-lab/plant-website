@@ -59,6 +59,7 @@ export default async function LandingPage() {
       .from("listings")
       .select("id, plant_name, variety, price_cents, images")
       .eq("status", "active")
+      .neq("category", "Hidden")
       .order("created_at", { ascending: false })
       .limit(4),
     supabase
@@ -66,6 +67,7 @@ export default async function LandingPage() {
       .select("id, plant_name, variety, current_bid_cents, images, ends_at")
       .eq("status", "active")
       .gt("ends_at", new Date().toISOString())
+      .neq("category", "Hidden")
       .order("ends_at", { ascending: true })
       .limit(4),
     supabase
@@ -81,6 +83,7 @@ export default async function LandingPage() {
       .from("listings")
       .select("id, plant_name, variety, price_cents, images")
       .eq("status", "active")
+      .neq("category", "Hidden")
       .in("seller_id", nurserySellerIds)
       .order("created_at", { ascending: false })
       .limit(4);

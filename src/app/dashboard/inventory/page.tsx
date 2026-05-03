@@ -21,7 +21,7 @@ export default async function InventoryPage({
     { data: activeInventory },
     { data: archivedInventory },
   ] = await Promise.all([
-    supabase.from("profiles").select("seller_terms_accepted_at").eq("id", user.id).single(),
+    supabase.from("profiles").select("seller_terms_accepted_at, is_admin").eq("id", user.id).single(),
     supabase.from("inventory").select("*").eq("seller_id", user.id).is("archived_at", null).order("created_at", { ascending: false }),
     supabase.from("inventory").select("*").eq("seller_id", user.id).not("archived_at", "is", null).gte("archived_at", thirtyDaysAgo).order("archived_at", { ascending: false }),
   ]);
@@ -137,11 +137,13 @@ export default async function InventoryPage({
   ]);
 
   const termsAccepted = !!profile?.seller_terms_accepted_at;
+  const isAdmin = !!(profile as { is_admin?: boolean } | null)?.is_admin;
 
   return (
     <InventoryClient
       activeRows={activeRows}
       archivedRows={archivedRows}
+      isAdmin={isAdmin}
       termsAccepted={termsAccepted}
       unlinkedListings={(unlinkedListings ?? []).map(l => ({
         id: l.id,
