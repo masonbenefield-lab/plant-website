@@ -61,7 +61,9 @@ export async function POST(request: Request) {
     }
 
     const feePercent = planFeePercent(sellerPlan?.plan, !!sellerPlan?.is_admin);
-    const amountCents = listing.price_cents * quantity;
+    const onSale = !!(listing.sale_price_cents && listing.sale_ends_at && new Date(listing.sale_ends_at) > new Date());
+    const effectivePriceCents = onSale ? listing.sale_price_cents! : listing.price_cents;
+    const amountCents = effectivePriceCents * quantity;
     const feeCents = Math.round(amountCents * (feePercent / 100));
 
     const paymentIntent = await getStripe().paymentIntents.create({

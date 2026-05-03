@@ -57,6 +57,8 @@ type Row = {
   listing_price_cents: number | null;
   listing_status: string | null;
   listing_created_at: string | null;
+  listing_sale_price_cents: number | null;
+  listing_sale_ends_at: string | null;
   auctions: AuctionSummary[];
   low_stock_threshold: number | null;
   cost_cents: number | null;
@@ -148,6 +150,7 @@ type ModalState =
   | { type: "auction"; row: Row }
   | { type: "edit"; row: Row }
   | { type: "sold"; row: Row }
+  | { type: "sale"; row: Row }
   | { type: "add-variant"; plant_name: string; variety: string; category: string | null }
   | null;
 
@@ -216,6 +219,10 @@ export default function InventoryClient({
   const [localTermsAccepted, setLocalTermsAccepted] = useState(termsAccepted);
   const [agreementDialogOpen, setAgreementDialogOpen] = useState(false);
   const [pendingModal, setPendingModal] = useState<ModalState>(null);
+
+  // Sale modal
+  const [salePrice, setSalePrice] = useState("");
+  const [saleEndsAt, setSaleEndsAt] = useState("");
 
   // Inline qty edit
   const [editingQtyId, setEditingQtyId] = useState<string | null>(null);
@@ -330,6 +337,11 @@ export default function InventoryClient({
       setPendingModal(m);
       setAgreementDialogOpen(true);
       return;
+    }
+    if (m.type === "sale") {
+      const active = m.row.listing_sale_price_cents && m.row.listing_sale_ends_at && new Date(m.row.listing_sale_ends_at) > new Date();
+      setSalePrice(active ? String(m.row.listing_sale_price_cents! / 100) : "");
+      setSaleEndsAt(active && m.row.listing_sale_ends_at ? m.row.listing_sale_ends_at.slice(0, 16) : "");
     }
     if (m.type === "listing") {
       setPrice("");
@@ -553,6 +565,24 @@ export default function InventoryClient({
     }
     setSubmitting(false);
     toast.success("Item updated.");
+    setModal(null);
+    router.refresh();
+  }
+
+  async function submitSale(clear = false) {
+    if (!modal || modal.type !== "sale" || !modal.row.listing_id) return;
+    setSubmitting(true);
+    const res = await fetch("/api/listings/sale", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(clear
+        ? { listingId: modal.row.listing_id, clear: true }
+        : { listingId: modal.row.listing_id, salePrice, saleEndsAt }),
+    });
+    const data = await res.json();
+    setSubmitting(false);
+    if (data.error) { toast.error(data.error); return; }
+    toast.success(clear ? "Sale ended" : "Sale scheduled!");
     setModal(null);
     router.refresh();
   }
@@ -993,6 +1023,9 @@ export default function InventoryClient({
               )}>{row.listing_status}</span>
               <button onClick={() => openModal({ type: "edit-listing", row })} className="text-xs text-blue-600 hover:underline">Edit</button>
               <Link href={`/shop/${row.listing_id}`} target="_blank" className="text-xs text-muted-foreground hover:underline">View</Link>
+              <button onClick={() => openModal({ type: "sale", row })} className={`text-xs hover:underline font-medium ${row.listing_sale_price_cents && row.listing_sale_ends_at && new Date(row.listing_sale_ends_at) > new Date() ? "text-orange-600" : "text-muted-foreground"}`}>
+                {row.listing_sale_price_cents && row.listing_sale_ends_at && new Date(row.listing_sale_ends_at) > new Date() ? "✦ Sale active" : "Run a Special"}
+              </button>
             </div>
             <div className="flex items-center gap-3 flex-wrap">
               {row.listing_created_at && (
@@ -1150,6 +1183,9 @@ export default function InventoryClient({
                 <span>{row.listing_quantity} listed</span>
                 <button onClick={() => openModal({ type: "edit-listing", row })} className="text-blue-600 hover:underline">Edit</button>
                 <Link href={`/shop/${row.listing_id}`} target="_blank" className="text-muted-foreground hover:underline">View</Link>
+                <button onClick={() => openModal({ type: "sale", row })} className={`hover:underline font-medium ${row.listing_sale_price_cents && row.listing_sale_ends_at && new Date(row.listing_sale_ends_at) > new Date() ? "text-orange-600" : "text-muted-foreground"}`}>
+                  {row.listing_sale_price_cents && row.listing_sale_ends_at && new Date(row.listing_sale_ends_at) > new Date() ? "✦ Sale active" : "Run a Special"}
+                </button>
                 {row.listing_created_at && (
                   <span>{listingAge(row.listing_created_at)}</span>
                 )}
@@ -2021,6 +2057,64 @@ export default function InventoryClient({
             </div>
 
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Run a Special ── */}
+      <Dialog open={modal?.type === "sale"} onOpenChange={o => !o && setModal(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Run a Special</DialogTitle>
+            <DialogDescription>
+              {modal?.type === "sale" && `Set a limited-time sale price for ${modal.row.plant_name}${modal.row.variety ? ` ${modal.row.variety}` : ""}. Regular price: ${modal.row.listing_price_cents ? centsToDisplay(modal.row.listing_price_cents) : "—"}.`}
+            </DialogDescription>
+          </DialogHeader>
+          {modal?.type === "sale" && (() => {
+            const isActive = !!(modal.row.listing_sale_price_cents && modal.row.listing_sale_ends_at && new Date(modal.row.listing_sale_ends_at) > new Date());
+            return (
+              <div className="space-y-4 mt-1">
+                {isActive && (
+                  <div className="rounded-md bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 px-3 py-2 text-sm text-orange-800 dark:text-orange-300">
+                    Active sale: <strong>{centsToDisplay(modal.row.listing_sale_price_cents!)}</strong> — ends {new Date(modal.row.listing_sale_ends_at!).toLocaleString()}
+                  </div>
+                )}
+                <div className="space-y-1">
+                  <Label>Sale Price ($)</Label>
+                  <Input
+                    type="number"
+                    min={0.01}
+                    step={0.01}
+                    value={salePrice}
+                    onChange={(e) => setSalePrice(e.target.value)}
+                    placeholder={modal.row.listing_price_cents ? `Less than ${centsToDisplay(modal.row.listing_price_cents)}` : "Sale price"}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label>Sale Ends</Label>
+                  <Input
+                    type="datetime-local"
+                    value={saleEndsAt}
+                    min={new Date().toISOString().slice(0, 16)}
+                    onChange={(e) => setSaleEndsAt(e.target.value)}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  {isActive && (
+                    <Button variant="outline" onClick={() => submitSale(true)} disabled={submitting} className="flex-1 text-destructive border-destructive/40 hover:bg-destructive/10">
+                      End Sale Early
+                    </Button>
+                  )}
+                  <Button
+                    onClick={() => submitSale(false)}
+                    disabled={submitting || !salePrice || !saleEndsAt}
+                    className="flex-1 bg-orange-600 hover:bg-orange-700"
+                  >
+                    {submitting ? "Saving…" : isActive ? "Update Sale" : "Start Sale"}
+                  </Button>
+                </div>
+              </div>
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </div>

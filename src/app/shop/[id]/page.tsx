@@ -122,15 +122,33 @@ export default async function ListingPage({
             </div>
             <WishlistButton userId={user?.id ?? null} listingId={listing.id} initialWishlisted={isWishlisted} />
           </div>
-          <div className="flex items-center gap-3 mt-4">
-            <span className="text-3xl font-bold text-green-700">
-              {centsToDisplay(listing.price_cents)}
-            </span>
-            {listing.pot_size && showSizePicker && (
-              <span className="text-sm text-muted-foreground font-medium">{listing.pot_size}</span>
-            )}
-            <Badge variant="secondary">{listing.quantity} available</Badge>
-          </div>
+          {(() => {
+            const onSale = !!(listing.sale_price_cents && listing.sale_ends_at && new Date(listing.sale_ends_at) > new Date());
+            const displayPrice = onSale ? listing.sale_price_cents! : listing.price_cents;
+            const saleEndsAt = onSale ? new Date(listing.sale_ends_at!) : null;
+            const hoursLeft = saleEndsAt ? Math.ceil((saleEndsAt.getTime() - Date.now()) / 3600000) : null;
+            return (
+              <div className="mt-4 space-y-1">
+                <div className="flex items-center gap-3">
+                  <span className={`text-3xl font-bold ${onSale ? "text-red-600" : "text-green-700"}`}>
+                    {centsToDisplay(displayPrice)}
+                  </span>
+                  {onSale && (
+                    <span className="text-lg text-muted-foreground line-through">{centsToDisplay(listing.price_cents)}</span>
+                  )}
+                  {listing.pot_size && showSizePicker && (
+                    <span className="text-sm text-muted-foreground font-medium">{listing.pot_size}</span>
+                  )}
+                  <Badge variant="secondary">{listing.quantity} available</Badge>
+                </div>
+                {onSale && hoursLeft !== null && (
+                  <p className="text-xs font-medium text-red-600">
+                    🏷️ Sale ends in {hoursLeft < 1 ? "less than an hour" : hoursLeft < 24 ? `${hoursLeft}h` : `${Math.ceil(hoursLeft / 24)} day${Math.ceil(hoursLeft / 24) !== 1 ? "s" : ""}`}
+                  </p>
+                )}
+              </div>
+            );
+          })()}
 
           {showSizePicker && (
             <div className="mt-5">

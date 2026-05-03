@@ -160,6 +160,8 @@ export default async function ShopPage({
             {listings.map((listing) => {
               const seller = sellerMap[listing.seller_id];
               const isNew = Date.now() - new Date(listing.created_at).getTime() < NEW_THRESHOLD_MS;
+              const onSale = !!(listing.sale_price_cents && listing.sale_ends_at && new Date(listing.sale_ends_at) > new Date());
+              const displayPrice = onSale ? listing.sale_price_cents! : listing.price_cents;
               return (
                 <Card key={listing.id} className="overflow-hidden hover:shadow-md transition-shadow">
                   <Link href={`/shop/${listing.id}`} className="block">
@@ -176,7 +178,12 @@ export default async function ShopPage({
                         compact
                         className="absolute top-2 left-2 z-10"
                       />
-                      {isNew && (
+                      {onSale && (
+                        <span className="absolute top-2 right-2 z-10 bg-red-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
+                          SALE
+                        </span>
+                      )}
+                      {!onSale && isNew && (
                         <span className="absolute top-2 right-2 z-10 bg-green-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
                           New
                         </span>
@@ -193,9 +200,16 @@ export default async function ShopPage({
                         <p className="text-sm text-muted-foreground truncate">{listing.variety}</p>
                       )}
                       <div className="flex items-center justify-between mt-2">
-                        <span className="font-bold text-green-700">
-                          {centsToDisplay(listing.price_cents)}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className={`font-bold ${onSale ? "text-red-600" : "text-green-700"}`}>
+                            {centsToDisplay(displayPrice)}
+                          </span>
+                          {onSale && (
+                            <span className="text-xs text-muted-foreground line-through">
+                              {centsToDisplay(listing.price_cents)}
+                            </span>
+                          )}
+                        </div>
                         <Badge variant="secondary" className="text-xs">
                           {listing.quantity} left
                         </Badge>

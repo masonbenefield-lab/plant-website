@@ -81,6 +81,8 @@ export interface Database {
           category: string | null;
           pot_size: string | null;
           inventory_id: string | null;
+          sale_price_cents: number | null;
+          sale_ends_at: string | null;
           created_at: string;
         };
         Insert: {
@@ -97,6 +99,8 @@ export interface Database {
           category?: string | null;
           pot_size?: string | null;
           inventory_id?: string | null;
+          sale_price_cents?: number | null;
+          sale_ends_at?: string | null;
           created_at?: string;
         };
         Update: {
@@ -112,6 +116,8 @@ export interface Database {
           category?: string | null;
           pot_size?: string | null;
           inventory_id?: string | null;
+          sale_price_cents?: number | null;
+          sale_ends_at?: string | null;
         };
         Relationships: [];
       };
