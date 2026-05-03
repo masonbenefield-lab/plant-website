@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -315,7 +316,7 @@ export default function CreateInventoryPage() {
                 <div className="flex flex-wrap gap-2 mt-1">
                   {imageUrls.map((url, i) => (
                     <div key={i} className="relative group">
-                      <img src={url} alt="" className="w-20 h-20 object-cover rounded border" />
+                      <Image src={url} alt="" width={80} height={80} className="w-20 h-20 object-cover rounded border" />
                       <button
                         type="button"
                         onClick={() => setImageUrls((prev) => prev.filter((_, idx) => idx !== i))}

@@ -5,7 +5,7 @@ import { centsToDisplay } from "@/lib/stripe";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { TrendingUp, TrendingDown, Minus, Lock } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import RevenueChart from "./revenue-chart";
 
 type Order = {
@@ -80,24 +80,6 @@ export default async function AnalyticsPage() {
     adminProfile?.is_admin
       ? "nursery"
       : ((planProfile?.plan as "seedling" | "grower" | "nursery") ?? "seedling");
-
-  if (plan === "seedling") {
-    return (
-      <div className="max-w-2xl mx-auto px-4 py-16 text-center space-y-6">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-2">
-          <Lock size={28} className="text-muted-foreground" />
-        </div>
-        <h1 className="text-2xl font-bold">Analytics are a paid feature</h1>
-        <p className="text-muted-foreground leading-relaxed">
-          Upgrade to <strong>Grower</strong> to unlock revenue trends, order counts, average order value, and your top 5 best-performing listings.
-          Upgrade to <strong>Nursery</strong> for the full suite — monthly revenue charts, per-listing breakdowns, auction stats, and buyer geography.
-        </p>
-        <Link href="/pricing" className={cn(buttonVariants({ size: "lg" }), "bg-green-700 hover:bg-green-800 text-white")}>
-          View pricing
-        </Link>
-      </div>
-    );
-  }
 
   // --- Fetch all completed orders + off-platform sales ---
   const [{ data: rawOrders }, { data: rawManualSales }] = await Promise.all([
@@ -201,7 +183,7 @@ export default async function AnalyticsPage() {
   let auctionStats = { total: 0, sold: 0, avgBids: 0 };
   let allItemRows: { name: string; revenue: number; units: number; avg: number }[] = [];
 
-  if (plan === "nursery") {
+  if (plan === "grower" || plan === "nursery") {
     // Monthly revenue — last 6 months
     for (let i = 5; i >= 0; i--) {
       const mStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
@@ -215,6 +197,9 @@ export default async function AnalyticsPage() {
       });
     }
 
+  }
+
+  if (plan === "nursery") {
     // Buyer states
     const stateMap: Record<string, number> = {};
     for (const o of orders) {
@@ -324,8 +309,8 @@ export default async function AnalyticsPage() {
         </div>
       </div>
 
-      {/* Monthly chart — Nursery only */}
-      {plan === "nursery" && (
+      {/* Monthly chart — Grower+ */}
+      {(plan === "grower" || plan === "nursery") && (
         <div>
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">Revenue — last 6 months</h2>
           <Card>
@@ -524,13 +509,28 @@ export default async function AnalyticsPage() {
         )}
       </div>
 
+      {/* Seedling upgrade teaser */}
+      {plan === "seedling" && (
+        <Card className="border-dashed">
+          <CardContent className="py-8 text-center space-y-3">
+            <p className="font-semibold">Unlock deeper insights</p>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Upgrade to <strong>Grower</strong> for a monthly revenue chart. Upgrade to <strong>Nursery</strong> for per-listing breakdowns, auction performance, buyer geography, and category revenue.
+            </p>
+            <Link href="/pricing" className={cn(buttonVariants({ size: "sm" }), "bg-green-700 hover:bg-green-800 text-white")}>
+              View pricing
+            </Link>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Grower upgrade teaser */}
       {plan === "grower" && (
         <Card className="border-dashed">
           <CardContent className="py-8 text-center space-y-3">
             <p className="font-semibold">Want more depth?</p>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Upgrade to <strong>Nursery</strong> to unlock a monthly revenue chart, full per-listing breakdown, auction performance stats, buyer geography, and category revenue.
+              Upgrade to <strong>Nursery</strong> to unlock a full per-listing breakdown, auction performance stats, buyer geography, and category revenue.
             </p>
             <Link href="/pricing" className={cn(buttonVariants({ size: "sm" }), "bg-green-700 hover:bg-green-800 text-white")}>
               See Nursery plan

@@ -62,7 +62,7 @@ export default async function ListingPage({
   if (!listing) notFound();
 
   const [{ data: seller }, { data: { user } }] = await Promise.all([
-    supabase.from("profiles").select("id, username, avatar_url, stripe_onboarded").eq("id", listing.seller_id).single(),
+    supabase.from("profiles").select("id, username, avatar_url, stripe_onboarded, shipping_days, vacation_mode, vacation_until").eq("id", listing.seller_id).single(),
     supabase.auth.getUser(),
   ]);
 
@@ -126,6 +126,9 @@ export default async function ListingPage({
             <span className="text-3xl font-bold text-green-700">
               {centsToDisplay(listing.price_cents)}
             </span>
+            {listing.pot_size && showSizePicker && (
+              <span className="text-sm text-muted-foreground font-medium">{listing.pot_size}</span>
+            )}
             <Badge variant="secondary">{listing.quantity} available</Badge>
           </div>
 
@@ -139,6 +142,19 @@ export default async function ListingPage({
             <p className="mt-5 text-sm leading-relaxed text-muted-foreground">
               {listing.description}
             </p>
+          )}
+
+          {seller?.shipping_days && (
+            <p className="mt-3 text-xs text-muted-foreground">
+              🚚 Ships within {seller.shipping_days} day{seller.shipping_days !== 1 ? "s" : ""}
+            </p>
+          )}
+
+          {seller?.vacation_mode && (
+            <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 px-3 py-2 text-xs text-amber-800 dark:text-amber-300">
+              This seller is on vacation and not currently shipping.
+              {seller.vacation_until && ` Expected back ${new Date(seller.vacation_until).toLocaleDateString("en-US", { month: "long", day: "numeric" })}.`}
+            </div>
           )}
 
           <div className="mt-6">

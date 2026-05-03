@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { centsToDisplay } from "@/lib/stripe";
+import { Pagination } from "@/components/pagination";
 import OrderStatusSelect from "./order-status-select";
 import TrackingInput from "./tracking-input";
 import type { OrderStatus } from "@/lib/supabase/types";
@@ -15,18 +16,33 @@ const statusColors: Record<string, string> = {
   delivered: "bg-green-100 text-green-800",
 };
 
-export default async function OrdersDashboardPage() {
+const PAGE_SIZE = 25;
+
+export default async function OrdersDashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const { page: pageParam } = await searchParams;
+  const page = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
+  const from = (page - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: orders } = await supabase
+  const { data: orders, count } = await supabase
     .from("orders")
-    .select("*")
+    .select("*", { count: "exact" })
     .eq("seller_id", user.id)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .range(from, to);
 
-  if (!orders?.length) {
+  const total = count ?? 0;
+  const totalPages = Math.ceil(total / PAGE_SIZE);
+
+  if (!orders?.length && page === 1) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-10">
         <h1 className="text-2xl font-bold mb-8">Orders</h1>
@@ -122,6 +138,14 @@ export default async function OrdersDashboardPage() {
           );
         })}
       </div>
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        total={total}
+        pageSize={PAGE_SIZE}
+        prevHref={page > 1 ? `/dashboard/orders?page=${page - 1}` : null}
+        nextHref={page < totalPages ? `/dashboard/orders?page=${page + 1}` : null}
+      />
     </div>
   );
 }

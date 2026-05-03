@@ -82,11 +82,29 @@ export default async function ShopPage({
   }
 
   const sellerIds = [...new Set(listings?.map((l) => l.seller_id) ?? [])];
-  const { data: sellers } = sellerIds.length
-    ? await supabase.from("profiles").select("id, username").in("id", sellerIds)
-    : { data: [] };
+  const [{ data: sellers }, { data: sellerRatings }] = await (sellerIds.length
+    ? Promise.all([
+        supabase.from("profiles").select("id, username").in("id", sellerIds),
+        supabase.from("ratings").select("seller_id, score").in("seller_id", sellerIds),
+      ])
+    : Promise.all([{ data: [] as { id: string; username: string }[] }, { data: [] as { seller_id: string; score: number }[] }]));
 
   const sellerMap = Object.fromEntries((sellers ?? []).map((s) => [s.id, s]));
+
+  // Top seller: 10+ reviews with avg ≥ 4.5
+  const topSellerSet = new Set<string>();
+  if (sellerRatings?.length) {
+    const ratingsByseller: Record<string, number[]> = {};
+    for (const r of sellerRatings) {
+      if (!ratingsByseller[r.seller_id]) ratingsByseller[r.seller_id] = [];
+      ratingsByseller[r.seller_id].push(r.score);
+    }
+    for (const [sid, scores] of Object.entries(ratingsByseller)) {
+      if (scores.length >= 10 && scores.reduce((a, b) => a + b, 0) / scores.length >= 4.5) {
+        topSellerSet.add(sid);
+      }
+    }
+  }
 
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -185,13 +203,18 @@ export default async function ShopPage({
                     </CardContent>
                   </Link>
                   {seller && (
-                    <div className="px-4 pb-3">
+                    <div className="px-4 pb-3 flex items-center gap-2 flex-wrap">
                       <Link
                         href={`/sellers/${seller.username}`}
                         className="text-xs text-muted-foreground hover:text-green-700 hover:underline transition-colors"
                       >
                         by {seller.username}
                       </Link>
+                      {topSellerSet.has(listing.seller_id) && (
+                        <span className="text-xs font-semibold text-amber-700 bg-amber-100 dark:bg-amber-900/40 dark:text-amber-400 px-1.5 py-0.5 rounded-full">
+                          ⭐ Top Seller
+                        </span>
+                      )}
                     </div>
                   )}
                 </Card>

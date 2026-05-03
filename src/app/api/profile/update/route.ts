@@ -9,13 +9,16 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { username, bio, avatar_url, location, banner_url, show_follower_count } = await request.json() as {
+  const { username, bio, avatar_url, location, banner_url, show_follower_count, shipping_days, vacation_mode, vacation_until } = await request.json() as {
     username: string;
     bio?: string;
     avatar_url?: string;
     location?: string;
     banner_url?: string;
     show_follower_count?: boolean;
+    shipping_days?: number | null;
+    vacation_mode?: boolean;
+    vacation_until?: string | null;
   };
 
   if (!username || !USERNAME_RE.test(username)) {
@@ -55,7 +58,17 @@ export async function POST(request: Request) {
 
   const { error } = await supabase
     .from("profiles")
-    .update({ username, bio: bio ?? null, avatar_url: avatar_url ?? null, location: location ?? null, banner_url: banner_url ?? null, show_follower_count: show_follower_count ?? false })
+    .update({
+      username,
+      bio: bio ?? null,
+      avatar_url: avatar_url ?? null,
+      location: location ?? null,
+      banner_url: banner_url ?? null,
+      show_follower_count: show_follower_count ?? false,
+      shipping_days: shipping_days ?? null,
+      vacation_mode: vacation_mode ?? false,
+      vacation_until: vacation_until ?? null,
+    })
     .eq("id", user.id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

@@ -6,6 +6,14 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { centsToDisplay } from "@/lib/stripe";
 import RateSellerForm from "./rate-seller-form";
+import DisputeButton from "./dispute-button";
+
+const STATUS_TABS = [
+  { label: "All", value: "" },
+  { label: "Pending", value: "pending" },
+  { label: "In Transit", value: "shipped" },
+  { label: "Delivered", value: "delivered" },
+] as const;
 
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-100 text-yellow-800",
@@ -14,22 +22,48 @@ const statusColors: Record<string, string> = {
   delivered: "bg-green-100 text-green-800",
 };
 
-export default async function MyOrdersPage() {
+export default async function MyOrdersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string }>;
+}) {
+  const { status = "" } = await searchParams;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: orders } = await supabase
+  let ordersQuery = supabase
     .from("orders")
     .select("*")
     .eq("buyer_id", user.id)
     .order("created_at", { ascending: false });
+  if (status) ordersQuery = ordersQuery.eq("status", status as "pending" | "paid" | "shipped" | "delivered");
+  const { data: orders } = await ordersQuery;
+
+  const tabBar = (
+    <div className="flex gap-2 flex-wrap mb-6">
+      {STATUS_TABS.map(({ label, value }) => (
+        <Link
+          key={value}
+          href={value ? `/orders?status=${value}` : "/orders"}
+          className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+            status === value
+              ? "bg-green-700 text-white border-green-700"
+              : "text-muted-foreground border-border hover:border-foreground hover:text-foreground"
+          }`}
+        >
+          {label}
+        </Link>
+      ))}
+    </div>
+  );
 
   if (!orders?.length) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-10">
-        <h1 className="text-2xl font-bold mb-8">My Orders</h1>
-        <p className="text-muted-foreground">No orders yet.</p>
+        <h1 className="text-2xl font-bold mb-6">My Orders</h1>
+        {tabBar}
+        <p className="text-muted-foreground">{status ? "No orders with this status." : "No orders yet."}</p>
       </div>
     );
   }
@@ -57,7 +91,8 @@ export default async function MyOrdersPage() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-10">
-      <h1 className="text-2xl font-bold mb-8">My Orders</h1>
+      <h1 className="text-2xl font-bold mb-6">My Orders</h1>
+      {tabBar}
       <div className="space-y-4">
         {orders.map((order) => {
           const item = order.listing_id
@@ -116,6 +151,13 @@ export default async function MyOrdersPage() {
                   <p className="text-sm mt-3 pt-3 border-t text-muted-foreground">
                     Tracking: <span className="font-mono font-medium text-foreground">{order.tracking_number}</span>
                   </p>
+                )}
+
+                {/* Dispute button — visible on paid/shipped/delivered orders */}
+                {(order.status === "paid" || order.status === "shipped" || order.status === "delivered") && (
+                  <div className="mt-3 pt-3 border-t">
+                    <DisputeButton orderId={order.id} />
+                  </div>
                 )}
 
                 {order.status === "delivered" && !ratedOrderIds.has(order.id) && (

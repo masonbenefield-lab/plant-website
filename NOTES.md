@@ -266,3 +266,49 @@ Run `supabase/migrations/002_admin_audit_logs.sql` in Supabase SQL editor (alrea
   - Description textarea in `dashboard/listings/listing-actions.tsx` edit dialog (1000 char limit)
 - **Mobile nav Search link** — `components/layout/navbar.tsx`: added "Search" between Auctions and Pricing in the mobile hamburger menu
 - **Dashboard orders empty state** — `dashboard/orders/page.tsx`: replaced bare "No orders yet." with a card containing emoji, explanation, and links to View listings / Add a listing
+
+---
+
+## 2026-05-03 — Audit items #21–#30
+
+### Features built
+- **#21 Account deletion** — New API route `src/app/api/account/delete/route.ts` blocks deletion if seller has active auctions or unshipped orders; otherwise calls Supabase admin `deleteUser`. Added "Danger Zone" card to `account-form.tsx` with Dialog requiring user to type "DELETE" to confirm.
+- **#22 Shipping days** — Added `shipping_days smallint` to profiles in `src/lib/supabase/types.ts`. Dropdown in account settings (1–14 days). Displayed as "🚚 Ships within N days" on listing detail (`shop/[id]/page.tsx`) and seller storefront (`sellers/[username]/page.tsx`).
+- **#23 Vacation mode** — Added `vacation_mode boolean NOT NULL DEFAULT false` and `vacation_until date` to profiles in types. Toggle + optional return date in account settings. Yellow banner shown on seller storefront and listing detail when active.
+- **#24 Image audit** — Converted all remaining raw `<img>` tags to Next.js `<Image>` in `dashboard/create/create-form.tsx`, `dashboard/inventory/inventory-client.tsx`, and `dashboard/listings/page.tsx`.
+- **#26 Top Seller badge** — Shop and auctions browse pages now fetch ratings for visible sellers; sellers with 10+ reviews averaging ≥ 4.5★ get a "⭐ Top Seller" badge on their cards.
+- **#27 bid_count** — Added `bid_count integer NOT NULL DEFAULT 0` to auctions type. Auction cards on browse and live-auction-card now show "X bids" vs "Starting bid" with color differentiation.
+- **#28 Recently viewed** — `TrackView` and `RecentlyViewedStrip` components were already implemented (localStorage). Added "Clear" button to strip.
+- **#29 Dashboard pagination** — All three dashboard pages (`dashboard/listings`, `dashboard/orders`, `dashboard/auctions`) now accept `?page=N` param, fetch 25 items/page with `.range()`, and render `<Pagination>`.
+- **#30 Seller agreement modal** — Created `src/components/seller-agreement-dialog.tsx`. When a seller without accepted terms opens a listing/auction modal in `inventory-client.tsx`, shows the agreement in a Dialog instead of redirecting to the full page.
+
+### SQL migrations required
+Run in Supabase SQL editor:
+
+```sql
+-- #22 Shipping days
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS shipping_days smallint;
+
+-- #23 Vacation mode
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS vacation_mode boolean NOT NULL DEFAULT false;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS vacation_until date;
+
+-- #27 bid_count with auto-increment trigger
+ALTER TABLE auctions ADD COLUMN IF NOT EXISTS bid_count integer NOT NULL DEFAULT 0;
+
+CREATE OR REPLACE FUNCTION increment_bid_count()
+RETURNS TRIGGER AS $$
+BEGIN
+  UPDATE auctions SET bid_count = bid_count + 1 WHERE id = NEW.auction_id;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE TRIGGER on_bid_inserted
+  AFTER INSERT ON bids
+  FOR EACH ROW EXECUTE PROCEDURE increment_bid_count();
+
+-- Backfill bid_count for existing auctions
+UPDATE auctions a
+SET bid_count = (SELECT COUNT(*) FROM bids b WHERE b.auction_id = a.id);
+```

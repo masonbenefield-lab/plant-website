@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -25,10 +26,12 @@ import {
   ChevronRight, ChevronDown, MoreHorizontal, Plus,
   ImagePlus, X, Store, Gavel, Pencil, HelpCircle,
   AlertTriangle, GripVertical, Copy, StickyNote, ArrowUpDown,
+  LayoutList, LayoutGrid, Upload,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import PotSizePicker from "@/components/pot-size-picker";
 import PriceSuggestion from "@/components/price-suggestion";
+import SellerAgreementDialog from "@/components/seller-agreement-dialog";
 import { findProhibitedWord, censorWord, logViolation } from "@/lib/profanity";
 
 const CATEGORIES = [
@@ -126,6 +129,19 @@ function groupUnlinked(listings: UnlinkedListing[], auctions: UnlinkedAuction[])
   );
 }
 
+type ImportRow = {
+  plant_name: string;
+  variety: string;
+  pot_size: string;
+  quantity: number;
+  category: string;
+  description: string;
+  notes: string;
+  cost_price: string;
+  valid: boolean;
+  error?: string;
+};
+
 type ModalState =
   | { type: "listing"; row: Row }
   | { type: "edit-listing"; row: Row }
@@ -184,6 +200,7 @@ export default function InventoryClient({
 }) {
   const router = useRouter();
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const csvInputRef = useRef<HTMLInputElement>(null);
 
   const [openGroups, setOpenGroups] = useState<Set<string>>(() => {
     const groups = groupRows(activeRows);
@@ -196,6 +213,9 @@ export default function InventoryClient({
   const [modal, setModal] = useState<ModalState>(null);
   const [submitting, setSubmitting] = useState(false);
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [localTermsAccepted, setLocalTermsAccepted] = useState(termsAccepted);
+  const [agreementDialogOpen, setAgreementDialogOpen] = useState(false);
+  const [pendingModal, setPendingModal] = useState<ModalState>(null);
 
   // Inline qty edit
   const [editingQtyId, setEditingQtyId] = useState<string | null>(null);
@@ -214,6 +234,7 @@ export default function InventoryClient({
   const [buyNowPrice, setBuyNowPrice] = useState("");
   const [endsAt, setEndsAt] = useState("");
   const [auctionQty, setAuctionQty] = useState("");
+  const [auctionAck, setAuctionAck] = useState(false);
 
   // Edit item modal
   const [editPlantName, setEditPlantName] = useState("");
@@ -244,6 +265,10 @@ export default function InventoryClient({
   const [showHelp, setShowHelp] = useState(false);
   const [sortBy, setSortBy] = useState<"name" | "avail-asc" | "date-desc" | "price-asc">("name");
   const [editCostPrice, setEditCostPrice] = useState("");
+  const [viewMode, setViewMode] = useState<"grouped" | "flat">("grouped");
+  const [importOpen, setImportOpen] = useState(false);
+  const [importRows, setImportRows] = useState<ImportRow[]>([]);
+  const [importSubmitting, setImportSubmitting] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -252,6 +277,7 @@ export default function InventoryClient({
     const qs = params.toString();
     window.history.replaceState({}, "", qs ? `?${qs}` : window.location.pathname);
   }, [search, categoryFilter]);
+
 
   const activeGroups = useMemo(() => {
     const groups = groupRows(activeRows);
@@ -300,8 +326,9 @@ export default function InventoryClient({
 
   function openModal(m: ModalState) {
     if (!m) { setModal(null); return; }
-    if ((m.type === "listing" || m.type === "auction") && !termsAccepted) {
-      router.push("/seller-agreement?next=/dashboard/inventory");
+    if ((m.type === "listing" || m.type === "auction") && !localTermsAccepted) {
+      setPendingModal(m);
+      setAgreementDialogOpen(true);
       return;
     }
     if (m.type === "listing") {
@@ -722,6 +749,133 @@ export default function InventoryClient({
     XLSX.writeFile(wb, "inventory.xlsx");
   }
 
+  function parseImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const data = new Uint8Array(ev.target?.result as ArrayBuffer);
+      const wb = XLSX.read(data, { type: "array" });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const raw = XLSX.utils.sheet_to_json<Record<string, string>>(ws, { defval: "" });
+      const rows: ImportRow[] = raw.map(r => {
+        const plant_name = (r["Plant Name"] || r["plant_name"] || r["name"] || "").toString().trim();
+        const qty = parseInt((r["Quantity"] || r["quantity"] || r["qty"] || "0").toString(), 10);
+        const valid = !!plant_name && !isNaN(qty) && qty > 0;
+        return {
+          plant_name,
+          variety: (r["Variety"] || r["variety"] || "").toString().trim(),
+          pot_size: (r["Pot Size"] || r["pot_size"] || r["size"] || "").toString().trim(),
+          quantity: isNaN(qty) ? 0 : qty,
+          category: (r["Category"] || r["category"] || "").toString().trim(),
+          description: (r["Description"] || r["description"] || "").toString().trim(),
+          notes: (r["Notes"] || r["notes"] || "").toString().trim(),
+          cost_price: (r["Cost Price"] || r["cost_price"] || r["cost"] || "").toString().trim(),
+          valid,
+          error: !plant_name ? "Missing plant name" : !valid ? "Invalid quantity" : undefined,
+        };
+      });
+      setImportRows(rows);
+      setImportOpen(true);
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  async function submitImport() {
+    const validRows = importRows.filter(r => r.valid);
+    if (!validRows.length) return;
+    setImportSubmitting(true);
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setImportSubmitting(false); return; }
+    let success = 0;
+    for (const r of validRows) {
+      const { error } = await supabase.from("inventory").insert({
+        seller_id: user.id,
+        plant_name: r.plant_name,
+        variety: r.variety || null,
+        pot_size: r.pot_size || null,
+        quantity: r.quantity,
+        category: r.category || null,
+        description: r.description || null,
+        notes: r.notes || null,
+        cost_cents: r.cost_price ? dollarsToCents(r.cost_price) : null,
+        images: [],
+      });
+      if (!error) success++;
+    }
+    setImportSubmitting(false);
+    setImportOpen(false);
+    setImportRows([]);
+    toast.success(`${success} item${success !== 1 ? "s" : ""} added to inventory`);
+    router.refresh();
+  }
+
+  // ── Flat list row ─────────────────────────────────────────────────────────
+  function renderFlatRow(row: Row, plantName: string) {
+    const a = avail(row);
+    const hasListing = !!row.listing_id;
+    const activeAuctions = row.auctions.filter(au => au.status === "active");
+    const totalAuctionQty = activeAuctions.reduce((sum, au) => sum + au.quantity, 0);
+    return (
+      <tr
+        key={row.id}
+        className="border-t border-border/40 hover:bg-muted/20 transition-colors"
+      >
+        <td className="py-2.5 pl-4 pr-1 text-sm font-medium max-w-[160px] truncate">{plantName}</td>
+        <td className="px-2 py-2.5 text-sm text-muted-foreground max-w-[120px] truncate">{row.variety || "—"}</td>
+        <td className="px-2 py-2.5 text-sm">
+          {row.pot_size
+            ? <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs">{row.pot_size}</span>
+            : <span className="text-xs text-muted-foreground italic">—</span>}
+        </td>
+        <td className="px-2 py-2.5 text-sm tabular-nums">
+          <span className="font-medium">{row.quantity}</span>
+          {a !== row.quantity && <span className="text-xs text-muted-foreground ml-1">({a} avail)</span>}
+          {(row.listing_quantity ?? 0) > 0 && <span className="text-xs text-green-600 block">{row.listing_quantity} in shop</span>}
+          {totalAuctionQty > 0 && <span className="text-xs text-blue-600 block">{totalAuctionQty} in auction</span>}
+        </td>
+        <td className="px-2 py-2.5 text-sm">
+          <span className={cn(
+            "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
+            row.status === "In Shop" || row.status === "Shop + Auction" ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400" :
+            row.status.includes("Auction") ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400" :
+            row.status === "Paused" ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400" :
+            "bg-muted text-muted-foreground"
+          )}>
+            {row.status}
+          </span>
+        </td>
+        <td className="px-2 py-2.5 text-right w-16">
+          <DropdownMenu>
+            <DropdownMenuTrigger className="inline-flex items-center justify-center w-7 h-7 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
+              <MoreHorizontal size={15} />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-[160px]">
+              <DropdownMenuItem onClick={() => openModal({ type: "edit", row })}>Edit item</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => duplicateItem(row)}><Copy size={13} className="mr-1.5" /> Duplicate</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => openModal({ type: "sold", row })}>Mark as sold</DropdownMenuItem>
+              {hasListing && (
+                <DropdownMenuItem onClick={() => toggleListingPause(row)}>
+                  {row.listing_status === "active" ? "Pause listing" : "Resume listing"}
+                </DropdownMenuItem>
+              )}
+              {a > 0 && !hasListing && (
+                <DropdownMenuItem onClick={() => openModal({ type: "listing", row })}><Store size={13} className="mr-1.5" /> List in Shop</DropdownMenuItem>
+              )}
+              {a > 0 && (
+                <DropdownMenuItem onClick={() => openModal({ type: "auction", row })}><Gavel size={13} className="mr-1.5" /> {activeAuctions.length > 0 ? "Add Auction" : "Auction"}</DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => archiveItem(row.id)} disabled={loadingId === row.id} className="text-destructive focus:text-destructive">Archive</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </td>
+      </tr>
+    );
+  }
+
   // ── Mobile variant card ───────────────────────────────────────────────────
   function renderVariantCard(row: Row) {
     const a = avail(row);
@@ -871,7 +1025,6 @@ export default function InventoryClient({
               <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400 rounded-full px-2 py-0.5">live · {au.quantity} qty</span>
               <span className="text-xs text-muted-foreground">Ends {new Date(au.ends_at).toLocaleDateString()}</span>
               <Link href={`/auctions/${au.id}`} target="_blank" className="text-xs hover:underline">View</Link>
-              <button onClick={() => unlinkAuction(row, au.id)} className="text-xs text-muted-foreground hover:text-red-500 ml-auto" title="Unlink">×</button>
             </div>
           ))}
           {endedAuctions.map(au => (
@@ -1034,7 +1187,6 @@ export default function InventoryClient({
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <span>Ends {new Date(au.ends_at).toLocaleDateString()}</span>
                   <Link href={`/auctions/${au.id}`} target="_blank" className="hover:underline">View</Link>
-                  <button onClick={() => unlinkAuction(row, au.id)} className="hover:text-red-500 hover:underline" title="Unlink auction">Unlink</button>
                 </div>
               </div>
             ))}
@@ -1109,7 +1261,7 @@ export default function InventoryClient({
             ? <ChevronDown size={16} className="shrink-0 text-muted-foreground" />
             : <ChevronRight size={16} className="shrink-0 text-muted-foreground" />}
           {first?.images?.[0] && (
-            <img src={first.images[0]} alt="" className="w-8 h-8 rounded object-cover shrink-0 border" />
+            <Image src={first.images[0]} alt="" width={32} height={32} className="w-8 h-8 rounded object-cover shrink-0 border" />
           )}
           <div className="flex-1 min-w-0">
             <span className="font-semibold">{group.plant_name}</span>
@@ -1173,6 +1325,18 @@ export default function InventoryClient({
   // ── Main render ───────────────────────────────────────────────────────────
   return (
     <div className="max-w-5xl mx-auto px-4 py-10">
+      <SellerAgreementDialog
+        open={agreementDialogOpen}
+        onOpenChange={setAgreementDialogOpen}
+        onAccepted={() => {
+          setLocalTermsAccepted(true);
+          if (pendingModal) {
+            setPendingModal(null);
+            openModal(pendingModal);
+          }
+        }}
+      />
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <div className="flex items-center gap-2">
@@ -1190,8 +1354,28 @@ export default function InventoryClient({
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <div className="flex items-center rounded-md border overflow-hidden">
+            <button
+              onClick={() => setViewMode("grouped")}
+              className={cn("flex items-center gap-1 px-2.5 py-1.5 text-xs transition-colors", viewMode === "grouped" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground")}
+              title="Grouped view"
+            >
+              <LayoutGrid size={14} />
+            </button>
+            <button
+              onClick={() => setViewMode("flat")}
+              className={cn("flex items-center gap-1 px-2.5 py-1.5 text-xs transition-colors border-l", viewMode === "flat" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground")}
+              title="Flat list view"
+            >
+              <LayoutList size={14} />
+            </button>
+          </div>
+          <button onClick={() => csvInputRef.current?.click()} className={cn(buttonVariants({ variant: "outline", size: "sm" }), "flex items-center gap-1.5")}>
+            <Upload size={13} /> Import
+          </button>
+          <input ref={csvInputRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={parseImportFile} />
           <button onClick={exportExcel} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>Export</button>
-          <Link href="/dashboard/create" className={cn(buttonVariants({ size: "sm" }), "bg-green-700 hover:bg-green-800")}>+ Add to Inventory</Link>
+          <Link href="/dashboard/create" className={cn(buttonVariants({ size: "sm" }), "bg-green-700 hover:bg-green-800")}>+ Add</Link>
         </div>
       </div>
 
@@ -1239,6 +1423,26 @@ export default function InventoryClient({
           {!search.trim() && (
             <Link href="/dashboard/create" className={cn(buttonVariants(), "mt-6 bg-green-700 hover:bg-green-800")}>+ Add to Inventory</Link>
           )}
+        </div>
+      ) : viewMode === "flat" ? (
+        <div className="border rounded-lg overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-muted/30">
+                <th className="py-2.5 pl-4 pr-1 text-left text-xs font-medium text-muted-foreground">Plant</th>
+                <th className="px-2 py-2.5 text-left text-xs font-medium text-muted-foreground">Variety</th>
+                <th className="px-2 py-2.5 text-left text-xs font-medium text-muted-foreground">Size</th>
+                <th className="px-2 py-2.5 text-left text-xs font-medium text-muted-foreground">Stock</th>
+                <th className="px-2 py-2.5 text-left text-xs font-medium text-muted-foreground">Status</th>
+                <th className="px-2 py-2.5 w-16" />
+              </tr>
+            </thead>
+            <tbody>
+              {activeGroups.flatMap(g =>
+                g.variants.map(row => renderFlatRow(row, g.plant_name))
+              )}
+            </tbody>
+          </table>
         </div>
       ) : (
         <div>{activeGroups.map(renderGroup)}</div>
@@ -1449,7 +1653,7 @@ export default function InventoryClient({
       </Dialog>
 
       {/* ── Create Auction ── */}
-      <Dialog open={modal?.type === "auction"} onOpenChange={o => !o && setModal(null)}>
+      <Dialog open={modal?.type === "auction"} onOpenChange={o => { if (!o) { setModal(null); setAuctionAck(false); } }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Create Auction</DialogTitle>
@@ -1483,9 +1687,20 @@ export default function InventoryClient({
                   <Label htmlFor="modal-ends">End Date & Time *</Label>
                   <Input id="modal-ends" type="datetime-local" value={endsAt} onChange={e => setEndsAt(e.target.value)} min={new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16)} />
                 </div>
+                <div className="rounded-md border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-3 text-xs text-amber-800 dark:text-amber-300">
+                  <label className="flex items-start gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={auctionAck}
+                      onChange={e => setAuctionAck(e.target.checked)}
+                      className="mt-0.5 shrink-0"
+                    />
+                    <span>I understand that once this auction goes live it <strong>cannot be cancelled, modified, or removed</strong>.</span>
+                  </label>
+                </div>
                 <div className="flex gap-2 pt-1">
-                  <Button variant="outline" onClick={() => setModal(null)} className="flex-1">Cancel</Button>
-                  <Button onClick={submitAuction} disabled={submitting || !startingBid || !endsAt || !auctionQty} className="flex-1 bg-green-700 hover:bg-green-800">
+                  <Button variant="outline" onClick={() => { setModal(null); setAuctionAck(false); }} className="flex-1">Cancel</Button>
+                  <Button onClick={submitAuction} disabled={submitting || !startingBid || !endsAt || !auctionQty || !auctionAck} className="flex-1 bg-green-700 hover:bg-green-800">
                     {submitting ? "Starting…" : "Start Auction"}
                   </Button>
                 </div>
@@ -1600,7 +1815,7 @@ export default function InventoryClient({
                         }}
                         onDragEnd={() => setDragPhotoIdx(null)}
                       >
-                        <img src={url} alt="" className="w-16 h-16 rounded object-cover border" />
+                        <Image src={url} alt="" width={64} height={64} className="w-16 h-16 rounded object-cover border" />
                         {idx === 0 && (
                           <span className="absolute bottom-0 left-0 right-0 text-center text-[9px] font-semibold bg-black/60 text-white rounded-b py-0.5">Cover</span>
                         )}
@@ -1699,6 +1914,64 @@ export default function InventoryClient({
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ── CSV Import Preview ── */}
+      <Dialog open={importOpen} onOpenChange={o => { if (!o) { setImportOpen(false); setImportRows([]); } }}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Import Preview</DialogTitle>
+            <DialogDescription>
+              {importRows.filter(r => r.valid).length} of {importRows.length} rows are valid and will be added to inventory.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-2 border rounded-lg overflow-hidden">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="bg-muted/30">
+                  <th className="px-3 py-2 text-left font-medium text-muted-foreground">Plant Name</th>
+                  <th className="px-3 py-2 text-left font-medium text-muted-foreground">Variety</th>
+                  <th className="px-3 py-2 text-left font-medium text-muted-foreground">Size</th>
+                  <th className="px-3 py-2 text-left font-medium text-muted-foreground">Qty</th>
+                  <th className="px-3 py-2 text-left font-medium text-muted-foreground">Category</th>
+                  <th className="px-3 py-2 text-left font-medium text-muted-foreground">Cost</th>
+                  <th className="px-3 py-2 text-left font-medium text-muted-foreground">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {importRows.map((r, i) => (
+                  <tr key={i} className={cn("border-t border-border/40", !r.valid && "bg-red-50 dark:bg-red-900/10")}>
+                    <td className="px-3 py-2 font-medium">{r.plant_name || <span className="text-red-500 italic">missing</span>}</td>
+                    <td className="px-3 py-2 text-muted-foreground">{r.variety || "—"}</td>
+                    <td className="px-3 py-2 text-muted-foreground">{r.pot_size || "—"}</td>
+                    <td className={cn("px-3 py-2 tabular-nums", r.quantity <= 0 && "text-red-500")}>{r.quantity}</td>
+                    <td className="px-3 py-2 text-muted-foreground">{r.category || "—"}</td>
+                    <td className="px-3 py-2 text-muted-foreground">{r.cost_price ? `$${r.cost_price}` : "—"}</td>
+                    <td className="px-3 py-2">
+                      {r.valid
+                        ? <span className="text-green-600 font-medium">Ready</span>
+                        : <span className="text-red-500">{r.error}</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="mt-4 text-xs text-muted-foreground">
+            <p className="font-medium mb-1">Expected columns (case-insensitive):</p>
+            <p>Plant Name · Variety · Pot Size · Quantity · Category · Description · Notes · Cost Price</p>
+          </div>
+          <div className="flex gap-2 pt-2">
+            <Button variant="outline" onClick={() => { setImportOpen(false); setImportRows([]); }} className="flex-1">Cancel</Button>
+            <Button
+              onClick={submitImport}
+              disabled={importSubmitting || importRows.filter(r => r.valid).length === 0}
+              className="flex-1 bg-green-700 hover:bg-green-800"
+            >
+              {importSubmitting ? "Importing…" : `Add ${importRows.filter(r => r.valid).length} Items`}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 

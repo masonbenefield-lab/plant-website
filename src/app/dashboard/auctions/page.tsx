@@ -4,9 +4,20 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { centsToDisplay } from "@/lib/stripe";
-import AuctionActions from "./auction-actions";
+import { Pagination } from "@/components/pagination";
 
-export default async function DashboardAuctionsPage() {
+const PAGE_SIZE = 25;
+
+export default async function DashboardAuctionsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const { page: pageParam } = await searchParams;
+  const page = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
+  const from = (page - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
@@ -21,11 +32,15 @@ export default async function DashboardAuctionsPage() {
     redirect("/seller-agreement?next=/dashboard/auctions");
   }
 
-  const { data: auctions } = await supabase
+  const { data: auctions, count } = await supabase
     .from("auctions")
-    .select("*")
+    .select("*", { count: "exact" })
     .eq("seller_id", user.id)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .range(from, to);
+
+  const total = count ?? 0;
+  const totalPages = Math.ceil(total / PAGE_SIZE);
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-10">
@@ -67,13 +82,23 @@ export default async function DashboardAuctionsPage() {
                   </div>
                 </div>
                 {auction.status === "active" && (
-                  <AuctionActions auctionId={auction.id} />
+                  <Link href={`/auctions/${auction.id}`} className="text-sm text-muted-foreground hover:underline shrink-0">
+                    View →
+                  </Link>
                 )}
               </CardContent>
             </Card>
           ))}
         </div>
       )}
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        total={total}
+        pageSize={PAGE_SIZE}
+        prevHref={page > 1 ? `/dashboard/auctions?page=${page - 1}` : null}
+        nextHref={page < totalPages ? `/dashboard/auctions?page=${page + 1}` : null}
+      />
     </div>
   );
 }

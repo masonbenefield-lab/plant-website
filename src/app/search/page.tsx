@@ -12,9 +12,9 @@ const PAGE_SIZE = 20;
 export default async function SearchPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; tab?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; tab?: string; page?: string; cat?: string; sort?: string }>;
 }) {
-  const { q = "", tab = "all", page: pageParam } = await searchParams;
+  const { q = "", tab = "all", page: pageParam, cat = "", sort = "newest" } = await searchParams;
   const page = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
   const from = (page - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
@@ -23,20 +23,30 @@ export default async function SearchPage({
 
   const [{ data: listings, count: listingCount }, { data: auctions, count: auctionCount }] = q.trim()
     ? await Promise.all([
-        supabase
-          .from("listings")
-          .select("id, plant_name, variety, price_cents, images, status, category", { count: "exact" })
-          .eq("status", "active")
-          .or(`plant_name.ilike.%${q}%,variety.ilike.%${q}%,description.ilike.%${q}%,category.ilike.%${q}%`)
-          .order("created_at", { ascending: false })
-          .range(from, to),
-        supabase
-          .from("auctions")
-          .select("id, plant_name, variety, current_bid_cents, images, status, ends_at, category", { count: "exact" })
-          .eq("status", "active")
-          .or(`plant_name.ilike.%${q}%,variety.ilike.%${q}%,description.ilike.%${q}%,category.ilike.%${q}%`)
-          .order("ends_at", { ascending: true })
-          .range(from, to),
+        (() => {
+          let q2 = supabase
+            .from("listings")
+            .select("id, plant_name, variety, price_cents, images, status, category", { count: "exact" })
+            .eq("status", "active")
+            .or(`plant_name.ilike.%${q}%,variety.ilike.%${q}%,description.ilike.%${q}%,category.ilike.%${q}%`);
+          if (cat) q2 = q2.eq("category", cat);
+          if (sort === "price_asc") q2 = q2.order("price_cents", { ascending: true });
+          else if (sort === "price_desc") q2 = q2.order("price_cents", { ascending: false });
+          else q2 = q2.order("created_at", { ascending: false });
+          return q2.range(from, to);
+        })(),
+        (() => {
+          let q2 = supabase
+            .from("auctions")
+            .select("id, plant_name, variety, current_bid_cents, images, status, ends_at, category", { count: "exact" })
+            .eq("status", "active")
+            .or(`plant_name.ilike.%${q}%,variety.ilike.%${q}%,description.ilike.%${q}%,category.ilike.%${q}%`);
+          if (cat) q2 = q2.eq("category", cat);
+          if (sort === "price_asc") q2 = q2.order("current_bid_cents", { ascending: true });
+          else if (sort === "price_desc") q2 = q2.order("current_bid_cents", { ascending: false });
+          else q2 = q2.order("ends_at", { ascending: true });
+          return q2.range(from, to);
+        })(),
       ])
     : [{ data: [], count: 0 }, { data: [], count: 0 }];
 
@@ -53,6 +63,8 @@ export default async function SearchPage({
     const params = new URLSearchParams();
     if (q) params.set("q", q);
     if (tab !== "all") params.set("tab", tab);
+    if (cat) params.set("cat", cat);
+    if (sort !== "newest") params.set("sort", sort);
     if (p > 1) params.set("page", String(p));
     return `/search?${params.toString()}`;
   }
@@ -64,7 +76,7 @@ export default async function SearchPage({
     <div className="max-w-5xl mx-auto px-4 py-10">
       <h1 className="text-2xl font-bold mb-6">Search</h1>
 
-      <SearchInput initialQ={q} />
+      <SearchInput initialQ={q} initialCat={cat} initialSort={sort} tab={tab} />
 
       {q.trim() && (
         <p className="text-sm text-muted-foreground mt-4 mb-6">
@@ -82,10 +94,16 @@ export default async function SearchPage({
             { label: `All (${total})`, value: "all" },
             { label: `Shop (${listingTotal})`, value: "shop" },
             { label: `Auctions (${auctionTotal})`, value: "auctions" },
-          ].map(({ label, value }) => (
+          ].map(({ label, value }) => {
+            const p = new URLSearchParams();
+            p.set("q", q);
+            if (value !== "all") p.set("tab", value);
+            if (cat) p.set("cat", cat);
+            if (sort !== "newest") p.set("sort", sort);
+            return (
             <Link
               key={value}
-              href={`/search?q=${encodeURIComponent(q)}&tab=${value}`}
+              href={`/search?${p.toString()}`}
               className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
                 tab === value
                   ? "bg-green-700 text-white border-green-700"
@@ -94,7 +112,8 @@ export default async function SearchPage({
             >
               {label}
             </Link>
-          ))}
+            );
+          })}
         </div>
       )}
 

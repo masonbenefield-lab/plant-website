@@ -46,6 +46,9 @@ export default function AuctionBidPanel({
   const [placing, setPlacing] = useState(false);
   const [timeLeft, setTimeLeft] = useState("");
   const [connected, setConnected] = useState(true);
+  const [showAllBids, setShowAllBids] = useState(false);
+  const [allBids, setAllBids] = useState<Bid[]>([]);
+  const [loadingAllBids, setLoadingAllBids] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
@@ -191,6 +194,7 @@ export default function AuctionBidPanel({
     if (!auction.buy_now_price_cents) return;
 
     setPlacing(true);
+    const previousBidderId = auction.current_bidder_id;
     const supabase = createClient();
 
     const { error: bidError } = await supabase.from("bids").insert({
@@ -211,17 +215,31 @@ export default function AuctionBidPanel({
       toast.error(updateError.message);
     } else {
       toast.success("Purchase complete! Proceed to checkout.");
+      if (previousBidderId && previousBidderId !== userId) {
+        fetch("/api/bids/notify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ auctionId: auction.id, previousBidderId, newBidCents: auction.buy_now_price_cents }),
+        }).catch(() => {});
+      }
     }
   }
 
   const isEnded = auction.status !== "active" || new Date(auction.ends_at) <= new Date();
   const isWinner = isEnded && auction.current_bidder_id === userId;
+  const msLeft = new Date(auction.ends_at).getTime() - Date.now();
+  const isNearEnd = !isEnded && msLeft > 0 && msLeft < 5 * 60 * 1000;
 
   return (
     <div className="space-y-4">
       {!connected && (
         <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
           Connection interrupted — live updates paused. Bids may not reflect the latest state.
+        </p>
+      )}
+      {isNearEnd && (
+        <p className="text-xs text-orange-700 bg-orange-50 border border-orange-200 dark:bg-orange-900/20 dark:border-orange-800 dark:text-orange-400 rounded px-3 py-2 font-medium">
+          ⚠️ Bids placed in the final 2 minutes extend this auction by 2 minutes.
         </p>
       )}
       <Card className="bg-green-50 border-green-200">
@@ -314,7 +332,7 @@ export default function AuctionBidPanel({
         <div>
           <p className="text-sm font-medium mb-2">Recent bids</p>
           <div className="space-y-1">
-            {bids.map((bid, i) => (
+            {(showAllBids ? allBids : bids).map((bid, i) => (
               <div key={bid.id} className="flex items-center justify-between text-sm py-1 border-b last:border-0">
                 <span className="text-muted-foreground">
                   {i === 0 && "🏆 "}
@@ -324,6 +342,40 @@ export default function AuctionBidPanel({
               </div>
             ))}
           </div>
+          {!showAllBids && bids.length >= 10 && (
+            <button
+              onClick={async () => {
+                setLoadingAllBids(true);
+                const supabase = createClient();
+                const { data } = await supabase
+                  .from("bids")
+                  .select("id, amount_cents, created_at, bidder:profiles(username)")
+                  .eq("auction_id", auction.id)
+                  .order("amount_cents", { ascending: false });
+                type RawBid = { id: string; amount_cents: number; created_at: string; bidder: { username: string } | { username: string }[] | null };
+                setAllBids((data as RawBid[] ?? []).map(b => ({
+                  id: b.id,
+                  amount_cents: b.amount_cents,
+                  created_at: b.created_at,
+                  bidder: Array.isArray(b.bidder) ? (b.bidder[0] ?? null) : b.bidder,
+                })));
+                setShowAllBids(true);
+                setLoadingAllBids(false);
+              }}
+              disabled={loadingAllBids}
+              className="mt-2 text-xs text-muted-foreground hover:text-foreground hover:underline transition-colors"
+            >
+              {loadingAllBids ? "Loading…" : "Show all bids"}
+            </button>
+          )}
+          {showAllBids && (
+            <button
+              onClick={() => setShowAllBids(false)}
+              className="mt-2 text-xs text-muted-foreground hover:text-foreground hover:underline transition-colors"
+            >
+              Show fewer
+            </button>
+          )}
         </div>
       )}
     </div>

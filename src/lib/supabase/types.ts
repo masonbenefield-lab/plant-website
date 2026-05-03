@@ -22,6 +22,9 @@ export interface Database {
           is_admin: boolean;
           plan: "seedling" | "grower" | "nursery";
           show_follower_count: boolean;
+          shipping_days: number | null;
+          vacation_mode: boolean;
+          vacation_until: string | null;
           deleted_at: string | null;
           created_at: string;
         };
@@ -37,6 +40,9 @@ export interface Database {
           is_admin?: boolean;
           plan?: "seedling" | "grower" | "nursery";
           show_follower_count?: boolean;
+          shipping_days?: number | null;
+          vacation_mode?: boolean;
+          vacation_until?: string | null;
           deleted_at?: string | null;
           created_at?: string;
         };
@@ -53,6 +59,9 @@ export interface Database {
           is_admin?: boolean;
           plan?: "seedling" | "grower" | "nursery";
           show_follower_count?: boolean;
+          shipping_days?: number | null;
+          vacation_mode?: boolean;
+          vacation_until?: string | null;
           deleted_at?: string | null;
         };
         Relationships: [];
@@ -124,6 +133,7 @@ export interface Database {
           category: string | null;
           pot_size: string | null;
           inventory_id: string | null;
+          bid_count: number;
           created_at: string;
         };
         Insert: {
@@ -143,6 +153,7 @@ export interface Database {
           category?: string | null;
           pot_size?: string | null;
           inventory_id?: string | null;
+          bid_count?: number;
           created_at?: string;
         };
         Update: {
@@ -161,6 +172,7 @@ export interface Database {
           category?: string | null;
           pot_size?: string | null;
           inventory_id?: string | null;
+          bid_count?: number;
         };
         Relationships: [];
       };

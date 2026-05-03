@@ -36,11 +36,21 @@ export default function RecentlyViewedStrip({ excludeId }: { excludeId?: string 
       });
   }, [excludeId]);
 
+  function clearHistory() {
+    try { localStorage.removeItem("recently_viewed_listings"); } catch { /* ignore */ }
+    setListings([]);
+  }
+
   if (!listings.length) return null;
 
   return (
     <div className="mb-8">
-      <h2 className="text-base font-semibold mb-3 text-muted-foreground">Recently Viewed</h2>
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-base font-semibold text-muted-foreground">Recently Viewed</h2>
+        <button onClick={clearHistory} className="text-xs text-muted-foreground hover:text-foreground hover:underline transition-colors">
+          Clear
+        </button>
+      </div>
       <div className="flex gap-3 overflow-x-auto pb-2">
         {listings.map((listing) => (
           <Link

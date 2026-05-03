@@ -1,18 +1,16 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
-import Link from "next/link";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Star, MapPin } from "lucide-react";
-import { centsToDisplay } from "@/lib/stripe";
 import FollowButton from "@/components/follow-button";
 import ReportButton from "@/components/report-button";
 import ShareButton from "@/components/share-button";
 import RateSellerForm from "@/app/orders/rate-seller-form";
+import { StorefrontListings, StorefrontAuctions } from "./storefront-listings";
 
 export async function generateMetadata({
   params,
@@ -100,6 +98,16 @@ export default async function SellerStorefront({
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-10">
+      {/* Vacation notice */}
+      {profile.vacation_mode && (
+        <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
+          🏖️ This seller is currently on vacation and not shipping orders.
+          {profile.vacation_until && (
+            <> Expected back {new Date(profile.vacation_until).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}.</>
+          )}
+        </div>
+      )}
+
       {/* Banner */}
       {profile.banner_url && (
         <div className="relative w-full h-48 sm:h-56 md:h-64 lg:h-72 rounded-2xl overflow-hidden mb-6">
@@ -160,6 +168,11 @@ export default async function SellerStorefront({
                 {followerCount} follower{followerCount !== 1 ? "s" : ""}
               </span>
             )}
+            {profile.shipping_days && (
+              <span className="text-xs text-muted-foreground">
+                🚚 Ships within {profile.shipping_days} day{profile.shipping_days !== 1 ? "s" : ""}
+              </span>
+            )}
           </div>
           {avgScore !== null && (
             <div className="flex items-center gap-1 mt-2">
@@ -185,77 +198,27 @@ export default async function SellerStorefront({
         </TabsList>
 
         <TabsContent value="shop" className="mt-6">
-          {!listings?.length ? (
-            <p className="text-muted-foreground">No active listings.</p>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {listings.map((listing) => (
-                <Link key={listing.id} href={`/shop/${listing.id}`}>
-                  <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                    {listing.images[0] && (
-                      <div className="relative h-48 w-full overflow-hidden rounded-t-lg">
-                        <Image src={listing.images[0]} alt={listing.plant_name} fill className="object-cover" />
-                      </div>
-                    )}
-                    <CardContent className="p-4">
-                      {"category" in listing && listing.category && (
-                        <span className="inline-block text-xs font-medium text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/40 px-2 py-0.5 rounded-full mb-1.5">
-                          {listing.category}
-                        </span>
-                      )}
-                      <p className="font-semibold">{listing.plant_name}</p>
-                      {listing.variety && (
-                        <p className="text-sm text-muted-foreground">{listing.variety}</p>
-                      )}
-                      <div className="flex items-center justify-between mt-2">
-                        <span className="font-bold text-green-700">
-                          {centsToDisplay(listing.price_cents)}
-                        </span>
-                        <Badge variant="secondary">{listing.quantity} avail.</Badge>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
-            </div>
-          )}
+          <StorefrontListings listings={(listings ?? []).map(l => ({
+            id: l.id,
+            plant_name: l.plant_name,
+            variety: l.variety ?? null,
+            price_cents: l.price_cents,
+            images: l.images as string[],
+            quantity: l.quantity,
+            category: (l as { category?: string | null }).category ?? null,
+          }))} />
         </TabsContent>
 
         <TabsContent value="auctions" className="mt-6">
-          {!auctions?.length ? (
-            <p className="text-muted-foreground">No active auctions.</p>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {auctions.map((auction) => (
-                <Link key={auction.id} href={`/auctions/${auction.id}`}>
-                  <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                    {auction.images[0] && (
-                      <div className="relative h-48 w-full overflow-hidden rounded-t-lg">
-                        <Image src={auction.images[0]} alt={auction.plant_name} fill className="object-cover" />
-                      </div>
-                    )}
-                    <CardContent className="p-4">
-                      {"category" in auction && auction.category && (
-                        <span className="inline-block text-xs font-medium text-blue-700 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/40 px-2 py-0.5 rounded-full mb-1.5">
-                          {auction.category}
-                        </span>
-                      )}
-                      <p className="font-semibold">{auction.plant_name}</p>
-                      {auction.variety && (
-                        <p className="text-sm text-muted-foreground">{auction.variety}</p>
-                      )}
-                      <div className="flex items-center justify-between mt-2">
-                        <span className="font-bold text-green-700">
-                          Current: {centsToDisplay(auction.current_bid_cents)}
-                        </span>
-                        <Badge>Live</Badge>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
-            </div>
-          )}
+          <StorefrontAuctions auctions={(auctions ?? []).map(a => ({
+            id: a.id,
+            plant_name: a.plant_name,
+            variety: a.variety ?? null,
+            current_bid_cents: a.current_bid_cents,
+            images: a.images as string[],
+            ends_at: a.ends_at,
+            category: (a as { category?: string | null }).category ?? null,
+          }))} />
         </TabsContent>
 
         <TabsContent value="reviews" className="mt-6">

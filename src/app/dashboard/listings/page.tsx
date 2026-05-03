@@ -1,13 +1,26 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
+import Image from "next/image";
 import { centsToDisplay } from "@/lib/stripe";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Pagination } from "@/components/pagination";
 import ListingActions from "./listing-actions";
 import PauseAllButton from "./pause-all-button";
 
-export default async function DashboardListingsPage() {
+const PAGE_SIZE = 25;
+
+export default async function DashboardListingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const { page: pageParam } = await searchParams;
+  const page = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
+  const from = (page - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
@@ -22,11 +35,15 @@ export default async function DashboardListingsPage() {
     redirect("/seller-agreement?next=/dashboard/listings");
   }
 
-  const { data: listings } = await supabase
+  const { data: listings, count } = await supabase
     .from("listings")
-    .select("*")
+    .select("*", { count: "exact" })
     .eq("seller_id", user.id)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .range(from, to);
+
+  const total = count ?? 0;
+  const totalPages = Math.ceil(total / PAGE_SIZE);
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-10">
@@ -46,14 +63,17 @@ export default async function DashboardListingsPage() {
       ) : (
         <div className="space-y-3">
           {listings.map((listing) => (
+
             <Card key={listing.id}>
               <CardContent className="p-4 flex items-center gap-4">
                 {/* Photo thumbnail */}
                 <div className="w-16 h-16 rounded-lg overflow-hidden shrink-0 bg-green-50 border">
                   {listing.images?.[0] ? (
-                    <img
+                    <Image
                       src={listing.images[0]}
                       alt={listing.plant_name}
+                      width={64}
+                      height={64}
                       className="w-full h-full object-cover"
                     />
                   ) : (
@@ -87,6 +107,14 @@ export default async function DashboardListingsPage() {
           ))}
         </div>
       )}
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        total={total}
+        pageSize={PAGE_SIZE}
+        prevHref={page > 1 ? `/dashboard/listings?page=${page - 1}` : null}
+        nextHref={page < totalPages ? `/dashboard/listings?page=${page + 1}` : null}
+      />
     </div>
   );
 }

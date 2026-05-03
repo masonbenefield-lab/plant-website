@@ -2,16 +2,25 @@
 
 import { useState, useRef } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import type { Database } from "@/lib/supabase/types";
 import { findProhibitedWord, censorWord, logViolation } from "@/lib/profanity";
-import { MapPin, Lock } from "lucide-react";
+import { MapPin, Lock, Mail, KeyRound, Trash2 } from "lucide-react";
 import Link from "next/link";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
@@ -23,12 +32,20 @@ export default function AccountForm({
   profile: Profile | null;
   userId: string;
 }) {
+  const router = useRouter();
   const [username, setUsername] = useState(profile?.username ?? "");
   const [bio, setBio] = useState(profile?.bio ?? "");
   const [location, setLocation] = useState(profile?.location ?? "");
   const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url ?? "");
   const [bannerUrl, setBannerUrl] = useState(profile?.banner_url ?? "");
   const [showFollowerCount, setShowFollowerCount] = useState(profile?.show_follower_count ?? false);
+  const [shippingDays, setShippingDays] = useState<number | "">(profile?.shipping_days ?? "");
+  const [vacationMode, setVacationMode] = useState(profile?.vacation_mode ?? false);
+  const [vacationUntil, setVacationUntil] = useState(profile?.vacation_until ?? "");
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   const canUseBanner = profile?.is_admin || (profile?.plan && profile.plan !== "seedling");
   const [saving, setSaving] = useState(false);
@@ -36,6 +53,10 @@ export default function AccountForm({
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const bannerRef = useRef<HTMLInputElement>(null);
+
+  const [newEmail, setNewEmail] = useState("");
+  const [changingEmail, setChangingEmail] = useState(false);
+  const [sendingReset, setSendingReset] = useState(false);
 
   async function uploadBanner(file: File) {
     setUploadingBanner(true);
@@ -101,7 +122,17 @@ export default function AccountForm({
     const res = await fetch("/api/profile/update", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, bio, location, avatar_url: avatarUrl, banner_url: bannerUrl, show_follower_count: showFollowerCount }),
+      body: JSON.stringify({
+        username,
+        bio,
+        location,
+        avatar_url: avatarUrl,
+        banner_url: bannerUrl,
+        show_follower_count: showFollowerCount,
+        shipping_days: shippingDays === "" ? null : shippingDays,
+        vacation_mode: vacationMode,
+        vacation_until: vacationUntil || null,
+      }),
     });
     const data = await res.json();
     setSaving(false);
@@ -112,11 +143,50 @@ export default function AccountForm({
     }
   }
 
+  async function sendPasswordReset() {
+    setSendingReset(true);
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user?.email) { toast.error("No email on file"); setSendingReset(false); return; }
+    const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+      redirectTo: `${window.location.origin}/account`,
+    });
+    setSendingReset(false);
+    if (error) toast.error(error.message);
+    else toast.success("Password reset email sent — check your inbox");
+  }
+
+  async function changeEmail(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newEmail.trim()) return;
+    setChangingEmail(true);
+    const supabase = createClient();
+    const { error } = await supabase.auth.updateUser({ email: newEmail.trim() });
+    setChangingEmail(false);
+    if (error) toast.error(error.message);
+    else { toast.success("Confirmation sent to your new email address"); setNewEmail(""); }
+  }
+
   async function startStripeConnect() {
     const res = await fetch("/api/stripe/connect/onboard", { method: "POST" });
     const { url, error } = await res.json();
     if (error) return toast.error(error);
     window.location.href = url;
+  }
+
+  async function handleDeleteAccount() {
+    setDeleting(true);
+    const res = await fetch("/api/account/delete", { method: "POST" });
+    const data = await res.json();
+    if (data.error) {
+      toast.error(data.error);
+      setDeleting(false);
+      setDeleteDialogOpen(false);
+      return;
+    }
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/");
   }
 
   return (
@@ -277,10 +347,98 @@ export default function AccountForm({
               </button>
             </div>
 
+            <div className="space-y-1">
+              <Label htmlFor="shipping-days">Shipping timeline</Label>
+              <select
+                id="shipping-days"
+                value={shippingDays}
+                onChange={(e) => setShippingDays(e.target.value === "" ? "" : Number(e.target.value))}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <option value="">Not specified</option>
+                <option value="1">Ships within 1 day</option>
+                <option value="2">Ships within 2 days</option>
+                <option value="3">Ships within 3 days</option>
+                <option value="5">Ships within 5 days</option>
+                <option value="7">Ships within 1 week</option>
+                <option value="14">Ships within 2 weeks</option>
+              </select>
+              <p className="text-xs text-muted-foreground">Shown to buyers on your listings and storefront.</p>
+            </div>
+
+            <div className="rounded-lg border p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">Vacation mode</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Pause your storefront while you&apos;re away. Listings stay as-is and resume when you turn this off.</p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={vacationMode}
+                  onClick={() => setVacationMode((v) => !v)}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${vacationMode ? "bg-amber-500" : "bg-input"}`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition-transform ${vacationMode ? "translate-x-5" : "translate-x-0"}`}
+                  />
+                </button>
+              </div>
+              {vacationMode && (
+                <div className="space-y-1">
+                  <Label htmlFor="vacation-until">Back on (optional)</Label>
+                  <Input
+                    id="vacation-until"
+                    type="date"
+                    value={vacationUntil}
+                    onChange={(e) => setVacationUntil(e.target.value)}
+                    min={new Date().toISOString().split("T")[0]}
+                  />
+                  <p className="text-xs text-muted-foreground">Displayed on your storefront so buyers know when you return.</p>
+                </div>
+              )}
+            </div>
+
             <Button type="submit" disabled={saving} className="bg-green-700 hover:bg-green-800">
               {saving ? "Saving…" : "Save profile"}
             </Button>
           </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Mail size={18} /> Email Address</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <form onSubmit={changeEmail} className="space-y-3">
+            <div className="space-y-1">
+              <Label htmlFor="new-email">New email address</Label>
+              <Input
+                id="new-email"
+                type="email"
+                value={newEmail}
+                onChange={e => setNewEmail(e.target.value)}
+                placeholder="Enter new email…"
+              />
+              <p className="text-xs text-muted-foreground">A confirmation link will be sent to both your old and new address.</p>
+            </div>
+            <Button type="submit" variant="outline" disabled={changingEmail || !newEmail.trim()}>
+              {changingEmail ? "Sending…" : "Change Email"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><KeyRound size={18} /> Password</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground">We&apos;ll send a secure reset link to your email address.</p>
+          <Button variant="outline" onClick={sendPasswordReset} disabled={sendingReset}>
+            {sendingReset ? "Sending…" : "Send Password Reset Email"}
+          </Button>
         </CardContent>
       </Card>
 
@@ -306,6 +464,58 @@ export default function AccountForm({
           )}
         </CardContent>
       </Card>
+
+      <Card className="border-destructive/40">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-destructive">
+            <Trash2 size={18} /> Danger Zone
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Permanently delete your account and all associated data. This cannot be undone.
+            You must fulfill any pending orders and end all active auctions first.
+          </p>
+          <Button
+            variant="destructive"
+            onClick={() => { setDeleteConfirm(""); setDeleteDialogOpen(true); }}
+          >
+            Delete Account
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete your account?</DialogTitle>
+            <DialogDescription>
+              This permanently removes your profile, listings, and all data. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <p className="text-sm text-muted-foreground">
+              Type <span className="font-mono font-semibold">DELETE</span> to confirm.
+            </p>
+            <Input
+              value={deleteConfirm}
+              onChange={(e) => setDeleteConfirm(e.target.value)}
+              placeholder="DELETE"
+              autoComplete="off"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              disabled={deleteConfirm !== "DELETE" || deleting}
+              onClick={handleDeleteAccount}
+            >
+              {deleting ? "Deleting…" : "Delete Account"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

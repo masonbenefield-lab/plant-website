@@ -47,10 +47,26 @@ export default async function CheckoutPage({
 
   return (
     <div className="max-w-lg mx-auto px-4 py-10">
-      <h1 className="text-2xl font-bold mb-2">Checkout</h1>
-      <p className="text-muted-foreground mb-8">
-        {itemName}{quantity > 1 ? ` × ${quantity}` : ""} — <strong>{centsToDisplay(priceCents)}</strong>
-      </p>
+      <h1 className="text-2xl font-bold mb-6">Checkout</h1>
+
+      {/* Order summary */}
+      <div className="rounded-lg border bg-muted/30 p-4 mb-8 space-y-2">
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Order Summary</p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="font-semibold">{itemName}</p>
+            {auctionId && <p className="text-xs text-muted-foreground mt-0.5">Won at auction</p>}
+            {listingId && quantity > 1 && <p className="text-xs text-muted-foreground mt-0.5">Qty: {quantity}</p>}
+          </div>
+          <p className="text-lg font-bold text-green-700 shrink-0">{centsToDisplay(priceCents)}</p>
+        </div>
+        {listingId && quantity > 1 && (
+          <p className="text-xs text-muted-foreground border-t pt-2">
+            {centsToDisplay(priceCents / quantity)} × {quantity} = {centsToDisplay(priceCents)}
+          </p>
+        )}
+      </div>
+
       <CheckoutForm
         listingId={listingId}
         auctionId={auctionId}

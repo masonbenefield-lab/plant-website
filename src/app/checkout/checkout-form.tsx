@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { loadStripe } from "@stripe/stripe-js";
 import {
@@ -82,12 +82,15 @@ function PaymentStep({
   );
 }
 
+const SAVED_ADDRESS_KEY = "checkout_saved_address";
+
 export default function CheckoutForm({ listingId, auctionId, priceCents, quantity = 1 }: CheckoutFormProps) {
   const router = useRouter();
   const [step, setStep] = useState<"address" | "payment">("address");
   const [clientSecret, setClientSecret] = useState("");
   const [orderId, setOrderId] = useState("");
   const [loading, setLoading] = useState(false);
+  const [saveAddress, setSaveAddress] = useState(true);
   const [address, setAddress] = useState<ShippingAddress>({
     name: "",
     line1: "",
@@ -97,6 +100,15 @@ export default function CheckoutForm({ listingId, auctionId, priceCents, quantit
     zip: "",
     country: "US",
   });
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(SAVED_ADDRESS_KEY);
+      if (stored) setAddress(JSON.parse(stored));
+    } catch {
+      // ignore
+    }
+  }, []);
 
   async function handleAddressSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -120,6 +132,11 @@ export default function CheckoutForm({ listingId, auctionId, priceCents, quantit
       return;
     }
 
+    if (saveAddress) {
+      try { localStorage.setItem(SAVED_ADDRESS_KEY, JSON.stringify(address)); } catch { /* ignore */ }
+    } else {
+      try { localStorage.removeItem(SAVED_ADDRESS_KEY); } catch { /* ignore */ }
+    }
     setClientSecret(data.clientSecret);
     setOrderId(data.orderId ?? "");
     setStep("payment");
@@ -227,6 +244,15 @@ export default function CheckoutForm({ listingId, auctionId, priceCents, quantit
               />
             </div>
           </div>
+          <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={saveAddress}
+              onChange={(e) => setSaveAddress(e.target.checked)}
+              className="rounded"
+            />
+            Save this address for next time
+          </label>
           <Button
             type="submit"
             disabled={loading}
