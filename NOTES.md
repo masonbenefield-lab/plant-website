@@ -312,3 +312,68 @@ CREATE OR REPLACE TRIGGER on_bid_inserted
 UPDATE auctions a
 SET bid_count = (SELECT COUNT(*) FROM bids b WHERE b.auction_id = a.id);
 ```
+
+---
+
+## 2026-05-03 — Buyer features: Make an Offer, restock notifications, saved address, tracking links
+
+### Features built
+- **Make an Offer**: Buyers can submit custom-price offers on fixed-price listings (when seller allows it). Sellers review offers in new `/dashboard/offers` page; accepting locks the price and emails the buyer a checkout link. Declining emails the buyer. Offer checkout path validates offer server-side and uses `offer.amount_cents`.
+- **Offers toggle**: Sellers can disable offers per account in Account Settings. Defaults on. Stored as `offers_enabled` on profiles.
+- **Restock notifications**: Sold-out listings show a "Notify me when back" subscribe button. When seller activates a listing, emails are sent to all subscribers via `/api/listings/notify-restock` and rows are deleted.
+- **Saved shipping address**: Checkout pre-fills from profile `saved_shipping_address` JSONB column. Saved fire-and-forget when "Save address" is checked.
+- **Auction won email**: Winner emailed with checkout link when auction closes (via `sendAuctionWon`).
+- **Tracking carrier links**: Orders page auto-detects carrier (UPS/FedEx/USPS) via regex and links tracking number to carrier's tracking page.
+- **Admin Hidden category**: Inventory category picker shows "Hidden" only to admins. Hidden listings/auctions filtered from all public views using NULL-safe `.or("category.neq.Hidden,category.is.null")`.
+- **Listing pause/resume fix**: Added "Activate All" button, inline Resume button on each paused card, `force-dynamic` on listings/inventory pages.
+
+### New files
+- `src/app/api/offers/route.ts` — POST: create offer
+- `src/app/api/offers/[id]/route.ts` — PATCH: accept/decline/withdraw
+- `src/app/api/restock-notify/route.ts` — POST: subscribe to restock
+- `src/app/api/listings/notify-restock/route.ts` — POST: fire restock emails (called on listing activate)
+- `src/app/api/profile/save-address/route.ts` — POST: save shipping address to profile
+- `src/app/dashboard/offers/page.tsx` — Seller offers inbox
+- `src/app/dashboard/offers/offer-actions.tsx` — Accept/Decline buttons
+- `src/app/shop/[id]/offer-button.tsx` — Buyer offer dialog + pending/accepted state
+- `src/app/shop/[id]/restock-notify-button.tsx` — Restock subscribe button
+
+### SQL migrations required
+```sql
+-- Run these in Supabase SQL editor
+
+-- Offers table
+CREATE TABLE IF NOT EXISTS offers (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  listing_id uuid NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
+  buyer_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  seller_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  amount_cents integer NOT NULL,
+  message text,
+  status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','accepted','declined','withdrawn')),
+  expires_at timestamptz NOT NULL DEFAULT now() + interval '3 days',
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE offers ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Buyers and sellers can view their offers" ON offers FOR SELECT USING (auth.uid() = buyer_id OR auth.uid() = seller_id);
+CREATE POLICY "Buyers can create offers" ON offers FOR INSERT WITH CHECK (auth.uid() = buyer_id);
+
+-- Restock notifications
+CREATE TABLE IF NOT EXISTS restock_notifications (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  listing_id uuid NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
+  user_id uuid REFERENCES profiles(id) ON DELETE SET NULL,
+  email text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE(listing_id, email)
+);
+ALTER TABLE restock_notifications ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Anyone can insert restock notifications" ON restock_notifications FOR INSERT WITH CHECK (true);
+
+-- Profile columns
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS offers_enabled boolean NOT NULL DEFAULT true;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS saved_shipping_address jsonb;
+```
+
+### Environment variables
+- None new — uses existing `NEXT_PUBLIC_SITE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`
