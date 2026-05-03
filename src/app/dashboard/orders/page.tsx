@@ -42,7 +42,7 @@ export default async function OrdersDashboardPage({
   const total = count ?? 0;
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
-  if (!orders?.length && page === 1) {
+  if (!orders?.length) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-10">
         <h1 className="text-2xl font-bold mb-8">Orders</h1>
