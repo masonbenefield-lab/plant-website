@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
@@ -8,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Pagination } from "@/components/pagination";
 import ListingActions from "./listing-actions";
 import PauseAllButton from "./pause-all-button";
+import ResumeButton from "./resume-button";
 
 const PAGE_SIZE = 25;
 
@@ -92,6 +95,9 @@ export default async function DashboardListingsPage({
                     >
                       {listing.status}
                     </Badge>
+                    {listing.status === "paused" && (
+                      <ResumeButton listingId={listing.id} />
+                    )}
                   </div>
                   <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
                     <span>{centsToDisplay(listing.price_cents)}</span>
