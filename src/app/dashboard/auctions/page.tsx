@@ -24,13 +24,15 @@ export default async function DashboardAuctionsPage({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("seller_terms_accepted_at")
+    .select("seller_terms_accepted_at, stripe_onboarded")
     .eq("id", user.id)
     .single();
 
   if (!profile?.seller_terms_accepted_at) {
     redirect("/seller-agreement?next=/dashboard/auctions");
   }
+
+  const stripeOnboarded = !!profile?.stripe_onboarded;
 
   const { data: auctions, count } = await supabase
     .from("auctions")
@@ -50,6 +52,12 @@ export default async function DashboardAuctionsPage({
           Create from Inventory →
         </Link>
       </div>
+      {!stripeOnboarded && !!auctions?.length && (
+        <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
+          <strong>Your auctions are not visible to buyers yet.</strong> They appear on your personal storefront, but won&apos;t show in the public auctions page and cannot be bid on until you{" "}
+          <a href="/account#seller-payments" className="underline font-medium hover:opacity-80">connect your Stripe account</a>.
+        </div>
+      )}
       <p className="text-sm text-muted-foreground mb-6">To create a new auction, open an inventory item and click "Auction".</p>
 
       {!auctions?.length ? (

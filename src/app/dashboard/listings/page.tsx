@@ -30,13 +30,15 @@ export default async function DashboardListingsPage({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("seller_terms_accepted_at")
+    .select("seller_terms_accepted_at, stripe_onboarded")
     .eq("id", user.id)
     .single();
 
   if (!profile?.seller_terms_accepted_at) {
     redirect("/seller-agreement?next=/dashboard/listings");
   }
+
+  const stripeOnboarded = !!profile?.stripe_onboarded;
 
   const { data: listings, count } = await supabase
     .from("listings")
@@ -59,6 +61,12 @@ export default async function DashboardListingsPage({
           </Link>
         </div>
       </div>
+      {!stripeOnboarded && !!listings?.length && (
+        <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
+          <strong>Your listings are not visible to buyers yet.</strong> They appear on your personal storefront, but won&apos;t show in the public shop and cannot be purchased until you{" "}
+          <a href="/account#seller-payments" className="underline font-medium hover:opacity-80">connect your Stripe account</a>.
+        </div>
+      )}
       <p className="text-sm text-muted-foreground mb-6">To create a new listing, open an inventory item and click "List in Shop".</p>
 
       {!listings?.length ? (
