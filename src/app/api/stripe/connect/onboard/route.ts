@@ -15,22 +15,27 @@ export async function POST() {
 
   let accountId = profile?.stripe_account_id;
 
-  if (!accountId) {
-    const account = await getStripe().accounts.create({ type: "express" });
-    accountId = account.id;
-    await supabase
-      .from("profiles")
-      .update({ stripe_account_id: accountId })
-      .eq("id", user.id);
+  try {
+    if (!accountId) {
+      const account = await getStripe().accounts.create({ type: "express" });
+      accountId = account.id;
+      await supabase
+        .from("profiles")
+        .update({ stripe_account_id: accountId })
+        .eq("id", user.id);
+    }
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL!;
+    const accountLink = await getStripe().accountLinks.create({
+      account: accountId,
+      refresh_url: `${appUrl}/account?stripe=refresh`,
+      return_url: `${appUrl}/account?stripe=success`,
+      type: "account_onboarding",
+    });
+
+    return NextResponse.json({ url: accountLink.url });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Stripe error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
-
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL!;
-  const accountLink = await getStripe().accountLinks.create({
-    account: accountId,
-    refresh_url: `${appUrl}/account?stripe=refresh`,
-    return_url: `${appUrl}/account?stripe=success`,
-    type: "account_onboarding",
-  });
-
-  return NextResponse.json({ url: accountLink.url });
 }
