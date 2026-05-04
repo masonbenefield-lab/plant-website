@@ -192,7 +192,7 @@ export default async function DashboardPage() {
             <NavLink href="/dashboard/listings" label="Manage Listings" />
             <NavLink href="/dashboard/auctions" label="Manage Auctions" />
             <NavLink href="/dashboard/orders" label="View Orders" badge={paidCount > 0 ? paidCount : undefined} />
-            <NavLink href="/dashboard/analytics" label="Analytics" badge={plan === "seedling" ? "Grower+" : undefined} badgeColor="green" />
+            <NavLink href="/dashboard/analytics" label="Analytics" />
             <NavLink href="/account" label="Account Settings" badge={!checks.stripe ? "!" : undefined} badgeColor="orange" />
           </div>
         </div>

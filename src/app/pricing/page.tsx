@@ -384,8 +384,8 @@ const faqs = [
     a: "If you refund a buyer, Plantet's commission is returned to you automatically. However, Stripe's processing fee (2.9% + $0.30) is non-refundable — Stripe keeps it regardless of refunds. This is standard across all payment platforms including Etsy and eBay. For this reason, we recommend clearly communicating your return policy to buyers before they purchase.",
   },
   {
-    q: "What's included in basic analytics on the Grower plan?",
-    a: "Grower sellers get total sales volume, revenue over time, and their top 5 best-performing listings. Full analytics on the Nursery plan adds per-listing breakdown, conversion rates, and buyer geography.",
+    q: "What analytics do I get on each plan?",
+    a: "All plans include basic stats: revenue this month, order count, average order value, and total all-time revenue. Grower adds a 6-month revenue chart and your top 5 best-performing items. Nursery adds a full per-item breakdown, category performance, and buyer geography.",
   },
   {
     q: "Is there a free trial on paid plans?",
