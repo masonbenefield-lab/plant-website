@@ -59,6 +59,7 @@ export default function AccountForm({
   const [newEmail, setNewEmail] = useState("");
   const [changingEmail, setChangingEmail] = useState(false);
   const [sendingReset, setSendingReset] = useState(false);
+  const [connectingStripe, setConnectingStripe] = useState(false);
 
   async function uploadBanner(file: File) {
     setUploadingBanner(true);
@@ -172,10 +173,18 @@ export default function AccountForm({
   }
 
   async function startStripeConnect() {
-    const res = await fetch("/api/stripe/connect/onboard", { method: "POST" });
-    const { url, error } = await res.json();
-    if (error) return toast.error(error);
-    window.location.href = url;
+    setConnectingStripe(true);
+    try {
+      const res = await fetch("/api/stripe/connect/onboard", { method: "POST" });
+      const { url, error } = await res.json();
+      if (error) { toast.error(error); return; }
+      if (!url) { toast.error("Failed to start Stripe onboarding. Please try again."); return; }
+      window.location.href = url;
+    } catch {
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setConnectingStripe(false);
+    }
   }
 
   async function handleDeleteAccount() {
@@ -477,7 +486,7 @@ export default function AccountForm({
         </CardContent>
       </Card>
 
-      <Card>
+      <Card id="seller-payments">
         <CardHeader>
           <CardTitle>Seller Payments</CardTitle>
         </CardHeader>
@@ -492,8 +501,8 @@ export default function AccountForm({
                 Connect your bank account via Stripe to receive payments from buyers. Stripe handles all
                 payouts securely.
               </p>
-              <Button onClick={startStripeConnect} className="bg-green-700 hover:bg-green-800">
-                Connect Bank Account
+              <Button onClick={startStripeConnect} disabled={connectingStripe} className="bg-green-700 hover:bg-green-800">
+                {connectingStripe ? "Redirecting to Stripe..." : "Connect Bank Account"}
               </Button>
             </>
           )}

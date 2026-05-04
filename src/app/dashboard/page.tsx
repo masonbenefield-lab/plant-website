@@ -118,7 +118,7 @@ export default async function DashboardPage() {
           <CardContent className="space-y-2">
             <CheckItem done={checks.profile} label="Complete your profile" href="/account" hint="Add a bio and profile photo so buyers trust you" />
             <CheckItem done={checks.listing} label="Add your first item to inventory" href="/dashboard/inventory" hint="Head to your Inventory page — confused? Click the ? next to the Inventory heading for a walkthrough" />
-            <CheckItem done={checks.stripe} label="Connect your bank account" href="/account" hint="Required to receive payments via Stripe" />
+            <CheckItem done={checks.stripe} label="Connect your bank account" href="/account#seller-payments" hint="Required to receive payments via Stripe" />
           </CardContent>
         </Card>
       )}
