@@ -198,6 +198,7 @@ export default function InventoryClient({
   initialCategory = "",
   isAdmin = false,
   showWelcome = false,
+  stripeOnboarded = false,
 }: {
   activeRows: Row[];
   archivedRows: Row[];
@@ -208,6 +209,7 @@ export default function InventoryClient({
   initialCategory?: string;
   isAdmin?: boolean;
   showWelcome?: boolean;
+  stripeOnboarded?: boolean;
 }) {
   const router = useRouter();
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -1508,6 +1510,14 @@ export default function InventoryClient({
           }
         }}
       />
+
+      {!stripeOnboarded && activeRows.some(r => r.listing_id || r.auctions.length > 0) && (
+        <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
+          <strong>Your listings are not visible to buyers yet.</strong> They appear on your personal storefront, but won&apos;t show in the public shop or auctions until you{" "}
+          <a href="/account#seller-payments" className="underline font-medium hover:opacity-80">connect your Stripe account</a>.
+          Buyers also cannot purchase until this is set up.
+        </div>
+      )}
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
