@@ -58,8 +58,12 @@ export default async function SellerStorefront({
 
   const [{ data: listings }, { data: auctions }, { data: ratings }, { count: followerCount }] =
     await Promise.all([
-      supabase.from("listings").select("*").eq("seller_id", profile.id).eq("status", "active").or("category.neq.Hidden,category.is.null").order("created_at", { ascending: false }),
-      supabase.from("auctions").select("*").eq("seller_id", profile.id).eq("status", "active").or("category.neq.Hidden,category.is.null").order("created_at", { ascending: false }),
+      profile.stripe_onboarded
+        ? supabase.from("listings").select("*").eq("seller_id", profile.id).eq("status", "active").or("category.neq.Hidden,category.is.null").order("created_at", { ascending: false })
+        : Promise.resolve({ data: [] }),
+      profile.stripe_onboarded
+        ? supabase.from("auctions").select("*").eq("seller_id", profile.id).eq("status", "active").or("category.neq.Hidden,category.is.null").order("created_at", { ascending: false })
+        : Promise.resolve({ data: [] }),
       supabase.from("ratings").select("*").eq("seller_id", profile.id).order("created_at", { ascending: false }),
       supabase.from("follows").select("*", { count: "exact", head: true }).eq("seller_id", profile.id),
     ]);

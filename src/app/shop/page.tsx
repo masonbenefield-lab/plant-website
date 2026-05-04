@@ -26,6 +26,14 @@ export default async function ShopPage({
 
   const supabase = await createClient();
 
+  // Only show listings from Stripe-onboarded sellers
+  const { data: onboardedSellers } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("stripe_onboarded", true)
+    .is("deleted_at", null);
+  const onboardedSellerIds = onboardedSellers?.map((s) => s.id) ?? [];
+
   // Two-step location filter: find matching seller IDs first
   let locationSellerIds: string[] | null = null;
   if (location) {
@@ -41,7 +49,8 @@ export default async function ShopPage({
     .from("listings")
     .select("*", { count: "exact" })
     .eq("status", "active")
-    .or("category.neq.Hidden,category.is.null");
+    .or("category.neq.Hidden,category.is.null")
+    .in("seller_id", onboardedSellerIds.length ? onboardedSellerIds : ["00000000-0000-0000-0000-000000000000"]);
 
   if (q) query = query.or(`plant_name.ilike.%${q}%,variety.ilike.%${q}%,description.ilike.%${q}%,category.ilike.%${q}%`);
   if (category) query = query.eq("category", category);

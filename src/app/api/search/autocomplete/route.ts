@@ -8,12 +8,20 @@ export async function GET(request: Request) {
 
   const supabase = await createClient();
 
+  const { data: onboardedSellers } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("stripe_onboarded", true)
+    .is("deleted_at", null);
+  const onboardedIds = onboardedSellers?.map((s) => s.id) ?? [];
+
   const { data } = await supabase
     .from("listings")
     .select("plant_name, variety")
     .or(`plant_name.ilike.%${q}%,variety.ilike.%${q}%`)
     .or("category.neq.Hidden,category.is.null")
     .eq("status", "active")
+    .in("seller_id", onboardedIds.length ? onboardedIds : ["00000000-0000-0000-0000-000000000000"])
     .limit(20);
 
   // Build deduplicated list of suggestions
