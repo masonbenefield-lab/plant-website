@@ -143,7 +143,7 @@ export default async function SellerStorefront({
         <div className="flex-1">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div>
-              <h1 className="text-2xl font-bold">{profile.username}</h1>
+              <h1 className="text-2xl font-bold">{profile.display_name || profile.username}</h1>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               <ShareButton username={profile.username} />

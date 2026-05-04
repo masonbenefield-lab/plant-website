@@ -26,6 +26,7 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [username, setUsername] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -48,7 +49,7 @@ export default function SignupPage() {
       password,
       options: {
         emailRedirectTo: `${window.location.origin}/auth/callback`,
-        data: { username, plan: planParam },
+        data: { username, display_name: displayName.trim() || null, plan: planParam },
       },
     });
 
@@ -117,7 +118,18 @@ export default function SignupPage() {
                 pattern="[a-z0-9_-]+"
                 placeholder="your-shop-name"
               />
-              <p className="text-xs text-muted-foreground">Lowercase letters, numbers, hyphens, and underscores only.</p>
+              <p className="text-xs text-muted-foreground">Lowercase letters, numbers, hyphens, and underscores only. Used in your storefront URL.</p>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="display_name">Display Name</Label>
+              <Input
+                id="display_name"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                maxLength={50}
+                placeholder="Mason's Plant Shop"
+              />
+              <p className="text-xs text-muted-foreground">This is what buyers will see on your storefront. Can include spaces and capitals.</p>
             </div>
             <div className="space-y-1">
               <Label htmlFor="email">Email</Label>

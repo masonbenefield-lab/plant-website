@@ -9,8 +9,9 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { username, bio, avatar_url, location, banner_url, show_follower_count, shipping_days, vacation_mode, vacation_until, offers_enabled, announcement } = await request.json() as {
+  const { username, display_name, bio, avatar_url, location, banner_url, show_follower_count, shipping_days, vacation_mode, vacation_until, offers_enabled, announcement } = await request.json() as {
     username: string;
+    display_name?: string | null;
     bio?: string;
     avatar_url?: string;
     location?: string;
@@ -62,6 +63,7 @@ export async function POST(request: Request) {
     .from("profiles")
     .update({
       username,
+      display_name: display_name ?? null,
       bio: bio ?? null,
       avatar_url: avatar_url ?? null,
       location: location ?? null,

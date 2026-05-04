@@ -34,6 +34,7 @@ export default function AccountForm({
 }) {
   const router = useRouter();
   const [username, setUsername] = useState(profile?.username ?? "");
+  const [displayName, setDisplayName] = useState(profile?.display_name ?? "");
   const [bio, setBio] = useState(profile?.bio ?? "");
   const [location, setLocation] = useState(profile?.location ?? "");
   const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url ?? "");
@@ -127,6 +128,7 @@ export default function AccountForm({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         username,
+        display_name: displayName.trim() || null,
         bio,
         location,
         avatar_url: avatarUrl,
@@ -309,6 +311,19 @@ export default function AccountForm({
                 minLength={3}
                 maxLength={30}
               />
+              <p className="text-xs text-muted-foreground">Used in your storefront URL — lowercase only.</p>
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="display_name">Display Name</Label>
+              <Input
+                id="display_name"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                maxLength={50}
+                placeholder={username}
+              />
+              <p className="text-xs text-muted-foreground">What buyers see on your storefront. Defaults to your username if left blank.</p>
             </div>
 
             <div className="space-y-1">

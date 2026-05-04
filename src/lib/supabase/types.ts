@@ -12,6 +12,7 @@ export interface Database {
         Row: {
           id: string;
           username: string;
+          display_name: string | null;
           bio: string | null;
           avatar_url: string | null;
           location: string | null;
@@ -34,6 +35,7 @@ export interface Database {
         Insert: {
           id: string;
           username: string;
+          display_name?: string | null;
           bio?: string | null;
           avatar_url?: string | null;
           location?: string | null;
@@ -55,6 +57,7 @@ export interface Database {
         Update: {
           id?: string;
           username?: string;
+          display_name?: string | null;
           bio?: string | null;
           avatar_url?: string | null;
           location?: string | null;
