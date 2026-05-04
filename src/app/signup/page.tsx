@@ -117,6 +117,7 @@ export default function SignupPage() {
                 pattern="[a-z0-9_-]+"
                 placeholder="your-shop-name"
               />
+              <p className="text-xs text-muted-foreground">Lowercase letters, numbers, hyphens, and underscores only.</p>
             </div>
             <div className="space-y-1">
               <Label htmlFor="email">Email</Label>
