@@ -38,6 +38,15 @@ export async function POST(request: Request) {
       .single();
 
     if (order) {
+      // Delete any other pending orders from the same buyer for the same item (ghost duplicates)
+      await supabase
+        .from("orders")
+        .delete()
+        .eq("buyer_id", order.buyer_id)
+        .eq("status", "pending")
+        .neq("id", order.id)
+        .eq(order.listing_id ? "listing_id" : "auction_id", order.listing_id ?? order.auction_id ?? "");
+
       const { data: { user: buyer } } = await supabase.auth.admin.getUserById(order.buyer_id);
       if (buyer?.email) {
         let plantName = "your plant";
