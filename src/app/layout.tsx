@@ -5,6 +5,8 @@ import { Toaster } from "@/components/ui/sonner";
 import Navbar from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
 import { ThemeProvider } from "@/components/theme-provider";
+import { CartProvider } from "@/lib/cart";
+import { CartDrawer } from "@/components/cart-drawer";
 import { createClient } from "@/lib/supabase/server";
 
 const inter = Inter({
@@ -42,18 +44,21 @@ export default async function RootLayout({
     <html lang="en" className={`${inter.variable} h-full antialiased`} suppressHydrationWarning>
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <ThemeProvider>
-          <div className="w-full bg-yellow-400 text-yellow-900 text-center text-sm font-medium py-2 px-4">
-            🚧 Plantet is currently in development — payments are not active yet. Stay tuned!
-          </div>
-          <Navbar
-            user={user}
-            avatarUrl={profile?.avatar_url}
-            username={profile?.username}
-            isAdmin={profile?.is_admin ?? false}
-          />
-          <main className="flex-1">{children}</main>
-          <Footer />
-          <Toaster richColors />
+          <CartProvider>
+            <div className="w-full bg-yellow-400 text-yellow-900 text-center text-sm font-medium py-2 px-4">
+              🚧 Plantet is currently in development — payments are not active yet. Stay tuned!
+            </div>
+            <Navbar
+              user={user}
+              avatarUrl={profile?.avatar_url}
+              username={profile?.username}
+              isAdmin={profile?.is_admin ?? false}
+            />
+            <main className="flex-1">{children}</main>
+            <Footer />
+            <CartDrawer />
+            <Toaster richColors />
+          </CartProvider>
         </ThemeProvider>
       </body>
     </html>

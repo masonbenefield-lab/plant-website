@@ -11,10 +11,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Too many requests — please wait a moment" }, { status: 429 });
   }
 
-  const { orderId, score, comment } = await request.json() as {
+  const { orderId, score, comment, photos } = await request.json() as {
     orderId: string;
     score: number;
     comment?: string;
+    photos?: string[];
   };
 
   if (!orderId || !score || score < 1 || score > 5) {
@@ -42,6 +43,7 @@ export async function POST(request: Request) {
     order_id: orderId,
     score,
     comment: comment || null,
+    photos: photos?.length ? photos : null,
   });
 
   if (error) {

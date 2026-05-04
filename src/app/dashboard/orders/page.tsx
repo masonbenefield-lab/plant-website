@@ -97,32 +97,52 @@ export default async function OrdersDashboardPage({
             state: string;
             zip: string;
             country: string;
+            is_gift?: boolean;
+            gift_message?: string | null;
           };
+
+          const cartItems = order.cart_items as { listing_id: string; plant_name: string; variety: string | null; quantity: number; price_cents: number }[] | null;
+          const isCartOrder = !!cartItems?.length;
 
           return (
             <Card key={order.id}>
               <CardContent className="p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-semibold">
-                        {item?.plant_name}
-                        {item?.variety ? ` — ${item.variety}` : ""}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {order.auction_id ? "(auction)" : "(listing)"}
-                      </span>
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      {isCartOrder ? (
+                        cartItems!.map((ci) => (
+                          <span key={ci.listing_id} className="font-semibold">
+                            {ci.plant_name}{ci.variety ? ` — ${ci.variety}` : ""} ×{ci.quantity}
+                          </span>
+                        ))
+                      ) : (
+                        <>
+                          <span className="font-semibold">
+                            {item?.plant_name}
+                            {item?.variety ? ` — ${item.variety}` : ""}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {order.auction_id ? "(auction)" : "(listing)"}
+                          </span>
+                        </>
+                      )}
                     </div>
                     <p className="text-sm text-muted-foreground mb-3">
                       Buyer: <strong>{buyer?.username}</strong> · {centsToDisplay(order.amount_cents)}
                     </p>
                     <div className="bg-muted rounded-lg p-3 text-sm">
-                      <p className="font-medium mb-1">Ship to:</p>
+                      <p className="font-medium mb-1">
+                        Ship to:{addr.is_gift && <span className="ml-2 text-xs bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300 px-1.5 py-0.5 rounded-full font-medium">🎁 Gift</span>}
+                      </p>
                       <p>{addr.name}</p>
                       <p>{addr.line1}</p>
                       {addr.line2 && <p>{addr.line2}</p>}
                       <p>{addr.city}, {addr.state} {addr.zip}</p>
                       <p>{addr.country}</p>
+                      {addr.gift_message && (
+                        <p className="mt-2 pt-2 border-t border-border/50 italic text-muted-foreground">"{addr.gift_message}"</p>
+                      )}
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-3">

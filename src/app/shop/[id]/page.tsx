@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { centsToDisplay } from "@/lib/stripe";
 import { cn } from "@/lib/utils";
 import BuyButton from "./buy-button";
+import AddToCartButton from "./add-to-cart-button";
 import OfferButton from "./offer-button";
 import RestockNotifyButton from "./restock-notify-button";
 import WishlistButton from "@/components/wishlist-button";
@@ -148,6 +149,11 @@ export default async function ListingPage({
                     <span className="text-sm text-muted-foreground font-medium">{listing.pot_size}</span>
                   )}
                   <Badge variant="secondary">{listing.quantity} available</Badge>
+                  {(listing as { bundle_discount_pct?: number | null }).bundle_discount_pct && (
+                    <Badge variant="secondary" className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
+                      {(listing as { bundle_discount_pct: number }).bundle_discount_pct}% off 2+
+                    </Badge>
+                  )}
                 </div>
                 {onSale && hoursLeft !== null && (
                   <p className="text-xs font-medium text-red-600">
@@ -203,6 +209,17 @@ export default async function ListingPage({
               ) : (
                 <>
                   <BuyButton listingId={listing.id} maxQty={listing.quantity} />
+                  <AddToCartButton
+                    listingId={listing.id}
+                    plantName={listing.plant_name}
+                    variety={listing.variety ?? null}
+                    priceCents={listing.price_cents}
+                    imageUrl={(listing.images as string[])?.[0] ?? null}
+                    sellerId={listing.seller_id}
+                    sellerUsername={seller?.username ?? ""}
+                    maxQty={listing.quantity}
+                    bundleDiscountPct={(listing as { bundle_discount_pct?: number | null }).bundle_discount_pct ?? null}
+                  />
                   {sellerOffersEnabled && (
                     <OfferButton
                       listingId={listing.id}

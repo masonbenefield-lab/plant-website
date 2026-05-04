@@ -377,3 +377,67 @@ ALTER TABLE profiles ADD COLUMN IF NOT EXISTS saved_shipping_address jsonb;
 
 ### Environment variables
 - None new — uses existing `NEXT_PUBLIC_SITE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`
+
+---
+
+## 2026-05-03 — Buyer features: wishlist alerts, auction reminders, autocomplete, review photos, gift checkout, multi-item cart, bundle discounts
+
+### Features added
+
+#### 1. Wishlist price drop alert
+- `src/lib/email.ts` — added `sendPriceDropAlert()`
+- `src/app/api/listings/sale/route.ts` — after setting sale price, queries wishlists and emails each wisher
+
+#### 2. Auction end reminder (~1 hour before close)
+- `src/lib/email.ts` — added `sendAuctionEndingSoon()`
+- `src/app/api/auctions/close/route.ts` — pre-close block finds auctions ending within 60 min with `reminder_sent = false`, emails all bidders, marks `reminder_sent = true`
+
+#### 3. Search autocomplete
+- `src/app/api/search/autocomplete/route.ts` — GET endpoint returning up to 8 deduplicated plant name/variety suggestions
+- `src/components/shop-filter-bar.tsx` — added controlled search state, suggestion dropdown with click-outside handling
+
+#### 4. Review photos
+- `src/lib/supabase/types.ts` — added `photos: string[] | null` to ratings
+- `src/app/api/ratings/route.ts` — accepts `photos?: string[]` in body, includes in insert
+- `src/app/orders/rate-seller-form.tsx` — rewrote with photo upload (up to 3), Supabase Storage at `reviews/{userId}/...`, thumbnails with remove
+- `src/app/sellers/[username]/page.tsx` — renders clickable photo thumbnails from `rating.photos`
+
+#### 5. Gift checkout
+- `src/app/checkout/checkout-form.tsx` — added `isGift` checkbox, `giftMessage` textarea, recipient name label; passes `is_gift`/`gift_message` in shipping address
+- `src/app/dashboard/orders/page.tsx` — shows pink "🎁 Gift" badge + gift message; handles `cart_items` for multi-item orders
+
+#### 6. Multi-item cart (same-seller, localStorage-backed)
+- `src/lib/cart.tsx` — NEW: `CartItem` interface, `CartProvider`, `useCart`, `effectivePrice()`; same-seller enforcement; localStorage key `plantet_cart`
+- `src/components/cart-drawer.tsx` — NEW: `CartButton` (badge count), `CartDrawer` (backdrop + slide-in); shows per-item effective price + bundle deal badge
+- `src/app/layout.tsx` — wrapped with `<CartProvider>`, added `<CartDrawer />`
+- `src/components/layout/navbar.tsx` — added `<CartButton />`
+- `src/app/shop/[id]/add-to-cart-button.tsx` — NEW: calls `addItem`, handles seller_conflict toast
+- `src/app/shop/[id]/page.tsx` — added `<AddToCartButton>`, "X% off 2+" badge
+- `src/app/api/stripe/cart-checkout/route.ts` — NEW: validates same seller, quantities, applies sale + bundle discounts, creates single PaymentIntent, inserts order with `cart_items`, decrements stock
+- `src/app/checkout/cart/page.tsx` — NEW: two-step (address → payment), order summary sidebar, clears cart on success
+- `src/app/orders/page.tsx` — handles cart orders (🛒 thumbnail, all cart_items listed)
+
+#### 7. Bundle discounts
+- `src/lib/supabase/types.ts` — added `bundle_discount_pct: number | null` to listings
+- `src/app/dashboard/inventory/inventory-client.tsx` — bundle discount input in edit-listing modal; `submitEditListing` saves to DB (clamped 1–80)
+- `src/app/dashboard/inventory/page.tsx` — added `bundle_discount_pct` to listings select and row mapping
+- `src/app/shop/[id]/page.tsx` — passes `bundleDiscountPct` to `<AddToCartButton>`
+- `src/app/api/stripe/cart-checkout/route.ts` — applies bundle discount server-side when qty ≥ 2
+
+#### Bug fixes
+- `src/app/api/offers/[id]/route.ts` — fixed `never` type from PostgREST join; fetches listing separately
+- `src/app/dashboard/offers/page.tsx` — same fix; builds `listingMap` separately
+- `src/app/dashboard/inventory/inventory-client.tsx` — "0 in shop" now shows amber edit button instead of hiding it; over-listing now shows error toast and reverts instead of silently clamping
+- `src/app/api/listings/notify-restock/route.ts` — NEW: fires restock emails to subscribers when listing activates
+- `src/app/dashboard/listings/listing-actions.tsx` — `toggleStatus` calls notify-restock fire-and-forget on activation
+
+### SQL migrations to run in Supabase
+```sql
+ALTER TABLE auctions ADD COLUMN IF NOT EXISTS reminder_sent boolean NOT NULL DEFAULT false;
+ALTER TABLE ratings ADD COLUMN IF NOT EXISTS photos text[];
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS cart_items jsonb;
+ALTER TABLE listings ADD COLUMN IF NOT EXISTS bundle_discount_pct integer;
+```
+
+### Environment variables
+- None new — uses existing `NEXT_PUBLIC_SITE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`

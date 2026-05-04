@@ -160,6 +160,62 @@ export async function sendRestockNotification({
   });
 }
 
+export async function sendPriceDropAlert({
+  email,
+  plantName,
+  regularCents,
+  saleCents,
+  listingUrl,
+}: {
+  email: string;
+  plantName: string;
+  regularCents: number;
+  saleCents: number;
+  listingUrl: string;
+}) {
+  const resend = getResend();
+  await resend.emails.send({
+    from: FROM,
+    to: email,
+    subject: `Price drop on ${plantName} you wishlisted!`,
+    html: `
+      <p>Great news — <strong>${plantName}</strong> from your wishlist just went on sale!</p>
+      <p>
+        <span style="text-decoration:line-through;color:#888">${centsToDisplay(regularCents)}</span>
+        &nbsp;→&nbsp;
+        <strong style="color:#15803d">${centsToDisplay(saleCents)}</strong>
+      </p>
+      <p><a href="${listingUrl}" style="display:inline-block;padding:10px 20px;background:#15803d;color:#fff;border-radius:6px;text-decoration:none;font-weight:bold;">Shop Now</a></p>
+      <p style="color:#888;font-size:12px;">Sale is for a limited time — don't miss it.</p>
+    `,
+  });
+}
+
+export async function sendAuctionEndingSoon({
+  email,
+  plantName,
+  auctionUrl,
+  endsAt,
+}: {
+  email: string;
+  plantName: string;
+  auctionUrl: string;
+  endsAt: string;
+}) {
+  const resend = getResend();
+  const timeLeft = new Date(endsAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  await resend.emails.send({
+    from: FROM,
+    to: email,
+    subject: `⏰ Auction ending soon: ${plantName}`,
+    html: `
+      <p>The auction for <strong>${plantName}</strong> is ending soon — closes ${timeLeft}.</p>
+      <p>Don't miss your chance to win!</p>
+      <p><a href="${auctionUrl}" style="display:inline-block;padding:10px 20px;background:#15803d;color:#fff;border-radius:6px;text-decoration:none;font-weight:bold;">Place Your Bid</a></p>
+    `,
+  });
+}
+
 export async function sendOutbidNotification({
   bidderEmail,
   plantName,

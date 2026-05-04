@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { useCallback, useTransition, useState, useEffect, Suspense } from "react";
+import { useCallback, useTransition, useState, useEffect, useRef, Suspense } from "react";
 import { X, MapPin, Leaf } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -21,10 +21,29 @@ export default function ShopFilterBar() {
   const params = useSearchParams();
   const [, startTransition] = useTransition();
   const [showGuide, setShowGuide] = useState(true);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
+  const searchRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem("plant-guide-visible");
     if (stored === "false") setShowGuide(false);
+  }, []);
+
+  useEffect(() => {
+    setSearchValue(params.get("q") ?? "");
+  }, [params]);
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
   function toggleGuide() {
@@ -64,19 +83,60 @@ export default function ShopFilterBar() {
     debounceTimer = setTimeout(fn, ms);
   }
 
+  async function fetchSuggestions(val: string) {
+    if (val.length < 2) { setSuggestions([]); setShowSuggestions(false); return; }
+    const res = await fetch(`/api/search/autocomplete?q=${encodeURIComponent(val)}`);
+    const data = await res.json() as string[];
+    setSuggestions(data);
+    setShowSuggestions(data.length > 0);
+  }
+
+  function selectSuggestion(s: string) {
+    // If "Plant — Variety", search just by the plant name part
+    const q = s.includes(" — ") ? s.split(" — ")[0] : s;
+    setSearchValue(q);
+    setSuggestions([]);
+    setShowSuggestions(false);
+    update({ q });
+  }
+
   return (
     <div className="space-y-3 mb-6">
       {/* Filter row */}
       <div className="flex flex-wrap gap-3 items-end">
-        {/* Search */}
-        <div className="flex-1 min-w-[180px]">
+        {/* Search with autocomplete */}
+        <div className="flex-1 min-w-[180px] relative" ref={searchRef}>
           <label htmlFor="shop-search" className="sr-only">Search plants or varieties</label>
           <Input
             id="shop-search"
             placeholder="Search plants or varieties…"
-            defaultValue={q}
-            onChange={(e) => debounce(() => update({ q: e.target.value }))}
+            value={searchValue}
+            onChange={(e) => {
+              const val = e.target.value;
+              setSearchValue(val);
+              debounce(() => {
+                update({ q: val });
+                fetchSuggestions(val);
+              });
+            }}
+            onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
+            autoComplete="off"
           />
+          {showSuggestions && (
+            <ul className="absolute z-50 top-full mt-1 left-0 right-0 bg-background border border-border rounded-md shadow-lg overflow-hidden">
+              {suggestions.map((s) => (
+                <li key={s}>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => { e.preventDefault(); selectSuggestion(s); }}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors"
+                  >
+                    {s}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
         {/* Sort */}

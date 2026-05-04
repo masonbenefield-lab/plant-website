@@ -117,12 +117,17 @@ export default async function MyOrdersPage({
             : null;
           const seller = sellerMap[order.seller_id];
 
+          const cartItems = order.cart_items as { listing_id: string; plant_name: string; variety: string | null; quantity: number; price_cents: number }[] | null;
+          const isCartOrder = !!cartItems?.length;
+
           return (
             <Card key={order.id}>
               <CardContent className="p-5">
                 <div className="flex items-start gap-4">
-                  {/* Thumbnail */}
-                  {(() => {
+                  {/* Thumbnail or cart preview */}
+                  {isCartOrder ? (
+                    <div className="w-16 h-16 rounded-lg bg-muted border shrink-0 flex items-center justify-center text-2xl">🛒</div>
+                  ) : (() => {
                     const img = (item as { images?: string[] } | null)?.images?.[0];
                     return img ? (
                       <Link href={order.listing_id ? `/shop/${order.listing_id}` : `/auctions/${order.auction_id}`}>
@@ -141,10 +146,20 @@ export default async function MyOrdersPage({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <p className="font-semibold">
-                          {item?.plant_name}
-                          {item?.variety ? ` — ${item.variety}` : ""}
-                        </p>
+                        {isCartOrder ? (
+                          <div>
+                            {cartItems!.map((ci) => (
+                              <p key={ci.listing_id} className="font-semibold text-sm leading-snug">
+                                {ci.plant_name}{ci.variety ? ` — ${ci.variety}` : ""} ×{ci.quantity}
+                              </p>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="font-semibold">
+                            {item?.plant_name}
+                            {item?.variety ? ` — ${item.variety}` : ""}
+                          </p>
+                        )}
                         <p className="text-sm text-muted-foreground mt-0.5">
                           Seller:{" "}
                           {seller?.username ? (

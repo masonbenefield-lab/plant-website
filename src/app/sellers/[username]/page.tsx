@@ -265,6 +265,21 @@ export default async function SellerStorefront({
                         {rating.comment && (
                           <p className="text-sm text-muted-foreground">{rating.comment}</p>
                         )}
+                        {(rating.photos as string[] | null)?.length ? (
+                          <div className="flex gap-2 flex-wrap mt-2">
+                            {(rating.photos as string[]).map((url) => (
+                              <a key={url} href={url} target="_blank" rel="noopener noreferrer">
+                                <Image
+                                  src={url}
+                                  alt="Review photo"
+                                  width={80}
+                                  height={80}
+                                  className="rounded-md object-cover border hover:opacity-90 transition-opacity"
+                                />
+                              </a>
+                            ))}
+                          </div>
+                        ) : null}
                       </CardContent>
                     </Card>
                   );

@@ -137,6 +137,7 @@ export interface Database {
           inventory_id: string | null;
           sale_price_cents: number | null;
           sale_ends_at: string | null;
+          bundle_discount_pct: number | null;
           created_at: string;
         };
         Insert: {
@@ -155,6 +156,7 @@ export interface Database {
           inventory_id?: string | null;
           sale_price_cents?: number | null;
           sale_ends_at?: string | null;
+          bundle_discount_pct?: number | null;
           created_at?: string;
         };
         Update: {
@@ -172,6 +174,7 @@ export interface Database {
           inventory_id?: string | null;
           sale_price_cents?: number | null;
           sale_ends_at?: string | null;
+          bundle_discount_pct?: number | null;
         };
         Relationships: [];
       };
@@ -194,6 +197,7 @@ export interface Database {
           pot_size: string | null;
           inventory_id: string | null;
           bid_count: number;
+          reminder_sent: boolean;
           created_at: string;
         };
         Insert: {
@@ -214,6 +218,7 @@ export interface Database {
           pot_size?: string | null;
           inventory_id?: string | null;
           bid_count?: number;
+          reminder_sent?: boolean;
           created_at?: string;
         };
         Update: {
@@ -233,6 +238,7 @@ export interface Database {
           pot_size?: string | null;
           inventory_id?: string | null;
           bid_count?: number;
+          reminder_sent?: boolean;
         };
         Relationships: [];
       };
@@ -274,6 +280,7 @@ export interface Database {
           status: OrderStatus;
           amount_cents: number;
           tracking_number: string | null;
+          cart_items: { listing_id: string; plant_name: string; variety: string | null; quantity: number; price_cents: number }[] | null;
           created_at: string;
         };
         Insert: {
@@ -294,6 +301,7 @@ export interface Database {
           };
           status?: OrderStatus;
           amount_cents: number;
+          cart_items?: { listing_id: string; plant_name: string; variety: string | null; quantity: number; price_cents: number }[] | null;
           created_at?: string;
         };
         Update: {
@@ -372,6 +380,7 @@ export interface Database {
           order_id: string;
           score: number;
           comment: string | null;
+          photos: string[] | null;
           created_at: string;
         };
         Insert: {
@@ -381,6 +390,7 @@ export interface Database {
           order_id: string;
           score: number;
           comment?: string | null;
+          photos?: string[] | null;
           created_at?: string;
         };
         Update: Record<string, never>;

@@ -60,6 +60,7 @@ type Row = {
   listing_created_at: string | null;
   listing_sale_price_cents: number | null;
   listing_sale_ends_at: string | null;
+  listing_bundle_discount_pct: number | null;
   auctions: AuctionSummary[];
   low_stock_threshold: number | null;
   cost_cents: number | null;
@@ -238,6 +239,7 @@ export default function InventoryClient({
   // Listing modal
   const [price, setPrice] = useState("");
   const [listQty, setListQty] = useState("");
+  const [bundleDiscountPct, setBundleDiscountPct] = useState("");
 
   // Auction modal
   const [startingBid, setStartingBid] = useState("");
@@ -355,6 +357,7 @@ export default function InventoryClient({
       setPrice(m.row.listing_price_cents ? String(m.row.listing_price_cents / 100) : "");
       setListQty(String(m.row.listing_quantity ?? 1));
       setEditPotSize(m.row.pot_size ?? "");
+      setBundleDiscountPct(m.row.listing_bundle_discount_pct ? String(m.row.listing_bundle_discount_pct) : "");
     }
     if (m.type === "auction") {
       setStartingBid(""); setBuyNowPrice(""); setEndsAt("");
@@ -465,10 +468,12 @@ export default function InventoryClient({
     }
     setSubmitting(true);
     const supabase = createClient();
+    const discPct = bundleDiscountPct ? Math.min(80, Math.max(1, Number(bundleDiscountPct))) : null;
     await supabase.from("listings").update({
       price_cents: dollarsToCents(price),
       quantity: qty,
       pot_size: editPotSize || null,
+      bundle_discount_pct: discPct,
     }).eq("id", modal.row.listing_id);
     await supabase.from("inventory").update({ listing_quantity: qty, pot_size: editPotSize || null }).eq("id", modal.row.id);
     setSubmitting(false);
@@ -1685,6 +1690,13 @@ export default function InventoryClient({
               <div className="space-y-1">
                 <Label>Pot Size</Label>
                 <PotSizePicker value={editPotSize} onChange={setEditPotSize} />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="edit-bundle-disc">Bundle Discount <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                <div className="flex items-center gap-2">
+                  <Input id="edit-bundle-disc" type="number" min={1} max={80} step={1} value={bundleDiscountPct} onChange={e => setBundleDiscountPct(e.target.value)} placeholder="e.g. 10" className="w-28" />
+                  <span className="text-sm text-muted-foreground">% off when buying 2+</span>
+                </div>
               </div>
               <div className="flex flex-wrap gap-2 pt-1">
                 <Button onClick={submitEditListing} disabled={submitting || !price || !listQty} className="bg-green-700 hover:bg-green-800">

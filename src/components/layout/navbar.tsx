@@ -16,6 +16,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Search, Heart, Package, Rss } from "lucide-react";
+import { CartButton } from "@/components/cart-drawer";
 import type { User } from "@supabase/supabase-js";
 
 interface NavbarProps {
@@ -84,6 +85,7 @@ export default function Navbar({ user, avatarUrl, username, isAdmin }: NavbarPro
                 <Link href="/feed" className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="Feed">
                   <Rss size={17} />
                 </Link>
+                <CartButton />
               </div>
             )}
             {user ? (

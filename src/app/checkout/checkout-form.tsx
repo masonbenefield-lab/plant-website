@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { centsToDisplay } from "@/lib/stripe";
@@ -97,6 +98,8 @@ export default function CheckoutForm({ listingId, auctionId, offerId, priceCents
   const [orderId, setOrderId] = useState("");
   const [loading, setLoading] = useState(false);
   const [saveAddress, setSaveAddress] = useState(true);
+  const [isGift, setIsGift] = useState(false);
+  const [giftMessage, setGiftMessage] = useState("");
   const [address, setAddress] = useState<ShippingAddress>(
     savedAddress ?? { name: "", line1: "", line2: "", city: "", state: "", zip: "", country: "US" }
   );
@@ -122,7 +125,9 @@ export default function CheckoutForm({ listingId, auctionId, offerId, priceCents
         auctionId,
         offerId,
         quantity,
-        shippingAddress: address,
+        shippingAddress: isGift
+          ? { ...address, is_gift: true, gift_message: giftMessage || null }
+          : address,
       }),
     });
 
@@ -180,8 +185,31 @@ export default function CheckoutForm({ listingId, auctionId, offerId, priceCents
       </CardHeader>
       <CardContent>
         <form onSubmit={handleAddressSubmit} className="space-y-4">
+          {/* Gift option */}
+          <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={isGift}
+              onChange={(e) => setIsGift(e.target.checked)}
+              className="rounded"
+            />
+            <span>🎁 Send as a gift</span>
+          </label>
+          {isGift && (
+            <div className="space-y-1">
+              <Label htmlFor="gift-message">Gift Message <span className="text-muted-foreground font-normal">(optional)</span></Label>
+              <Textarea
+                id="gift-message"
+                value={giftMessage}
+                onChange={(e) => setGiftMessage(e.target.value)}
+                placeholder="Add a personal note to the recipient…"
+                rows={2}
+                maxLength={300}
+              />
+            </div>
+          )}
           <div className="space-y-1">
-            <Label htmlFor="name">Full Name</Label>
+            <Label htmlFor="name">{isGift ? "Recipient's Full Name" : "Full Name"}</Label>
             <Input
               id="name"
               value={address.name}
