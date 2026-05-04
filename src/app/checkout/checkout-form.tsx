@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { loadStripe } from "@stripe/stripe-js";
 import {
@@ -97,6 +97,7 @@ export default function CheckoutForm({ listingId, auctionId, offerId, priceCents
   const [clientSecret, setClientSecret] = useState("");
   const [orderId, setOrderId] = useState("");
   const [loading, setLoading] = useState(false);
+  const submittingRef = useRef(false);
   const [saveAddress, setSaveAddress] = useState(true);
   const [isGift, setIsGift] = useState(false);
   const [giftMessage, setGiftMessage] = useState("");
@@ -115,6 +116,8 @@ export default function CheckoutForm({ listingId, auctionId, offerId, priceCents
 
   async function handleAddressSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setLoading(true);
 
     const res = await fetch("/api/stripe/checkout", {
@@ -135,6 +138,7 @@ export default function CheckoutForm({ listingId, auctionId, offerId, priceCents
     if (data.error) {
       toast.error(data.error);
       setLoading(false);
+      submittingRef.current = false;
       return;
     }
 
