@@ -16,13 +16,13 @@ const tiers = [
     cta: "Get started free",
     ctaHref: "/signup",
     ctaStyle: "outline" as const,
-    commissionRate: 6.5,
+    commissionRate: 3,
     features: {
       inventory: "Free inventory management",
       listings: "10 active listings",
       photos: "5 photos per listing",
       auctions: "5 active auctions",
-      commission: "6.5% platform commission",
+      commission: "3% platform commission",
       banner: false,
       search: false,
       analytics: false,
@@ -40,13 +40,13 @@ const tiers = [
     cta: "Start Grower",
     ctaHref: "/signup?plan=grower",
     ctaStyle: "default" as const,
-    commissionRate: 5,
+    commissionRate: 2.5,
     features: {
       inventory: "Free inventory management",
       listings: "50 active listings",
       photos: "10 photos per listing",
       auctions: "Unlimited auctions",
-      commission: "5% platform commission",
+      commission: "2.5% platform commission",
       banner: true,
       search: true,
       analytics: "Basic analytics",
@@ -64,13 +64,13 @@ const tiers = [
     cta: "Start Nursery",
     ctaHref: "/signup?plan=nursery",
     ctaStyle: "default" as const,
-    commissionRate: 3,
+    commissionRate: 2,
     features: {
       inventory: "Free inventory management",
       listings: "Unlimited listings",
       photos: "Unlimited photos",
       auctions: "Unlimited auctions",
-      commission: "3% platform commission",
+      commission: "2% platform commission",
       banner: true,
       search: true,
       analytics: "Full sales analytics",
@@ -161,7 +161,7 @@ function BreakevenCalculator() {
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">{t.name}</p>
               <p className="text-xl font-bold">${t.cost.toFixed(2)}</p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                {t.sub > 0 ? `$${t.sub}/mo + ` : ""}{t.name === "Seedling" ? "6.5" : t.name === "Grower" ? "5" : "3"}% commission
+                {t.sub > 0 ? `$${t.sub}/mo + ` : ""}{t.name === "Seedling" ? "3" : t.name === "Grower" ? "2.5" : "2"}% commission
               </p>
               {bestPlan === t.name && (
                 <span className="inline-block mt-2 text-xs font-semibold text-green-700 dark:text-green-400">Best value</span>
@@ -330,9 +330,16 @@ export default function PricingPage() {
         <div className="max-w-2xl mx-auto bg-muted rounded-2xl border p-8 text-center">
           <p className="text-2xl mb-3">💳</p>
           <h2 className="font-bold text-lg mb-2">How commissions work</h2>
-          <p className="text-sm text-muted-foreground leading-relaxed">
+          <p className="text-sm text-muted-foreground leading-relaxed mb-4">
             A commission is only charged when you make a sale — never on listings. It&apos;s automatically deducted from the payment before it hits your bank account via Stripe, so you never have to think about it.
           </p>
+          <div className="text-left bg-background rounded-xl border p-4 text-sm space-y-2">
+            <p className="font-semibold text-foreground mb-1">Example: $25 sale on Seedling plan</p>
+            <div className="flex justify-between text-muted-foreground"><span>Sale price</span><span>$25.00</span></div>
+            <div className="flex justify-between text-muted-foreground"><span>Stripe processing fee (2.9% + $0.30)</span><span>− $1.03</span></div>
+            <div className="flex justify-between text-muted-foreground"><span>Plantet commission (3%)</span><span>− $0.75</span></div>
+            <div className="flex justify-between font-semibold text-foreground border-t pt-2"><span>You receive</span><span>$23.22</span></div>
+          </div>
         </div>
       </section>
 
@@ -366,7 +373,7 @@ const faqs = [
   },
   {
     q: "Is the commission charged on top of the sale price?",
-    a: "No. The commission is deducted from the payment you receive. If you sell a plant for $20 on the Seedling plan, you receive $18.70 after the 6.5% commission.",
+    a: "No. The commission is deducted from the payment you receive. If you sell a plant for $20 on the Seedling plan, you receive $18.48 after the 3% Plantet commission and Stripe's 2.9% + $0.30 processing fee.",
   },
   {
     q: "Do auction wins count toward my commission?",
