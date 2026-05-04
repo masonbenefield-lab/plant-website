@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
 import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
-import { sendOrderConfirmation } from "@/lib/email";
+import { sendOrderConfirmation, sendNewOrderAlert } from "@/lib/email";
 
 function adminClient() {
   return createSupabaseAdmin<Database>(
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
       .from("orders")
       .update({ status: "paid" })
       .eq("stripe_payment_intent_id", pi.id)
-      .select("id, buyer_id, amount_cents, listing_id, auction_id")
+      .select("id, buyer_id, seller_id, amount_cents, listing_id, auction_id, shipping_address")
       .single();
 
     if (order) {
@@ -58,6 +58,20 @@ export async function POST(request: Request) {
           if (auction) plantName = auction.plant_name;
         }
         await sendOrderConfirmation({ buyerEmail: buyer.email, plantName, amountCents: order.amount_cents, orderId: order.id }).catch(() => {});
+      }
+
+      // Notify seller
+      const { data: { user: seller } } = await supabase.auth.admin.getUserById(order.seller_id);
+      if (seller?.email && order.shipping_address) {
+        const addr = order.shipping_address as { name: string; line1: string; line2?: string; city: string; state: string; zip: string; country: string };
+        await sendNewOrderAlert({
+          sellerEmail: seller.email,
+          plantName,
+          amountCents: order.amount_cents,
+          orderId: order.id,
+          buyerName: addr.name,
+          shippingAddress: addr,
+        }).catch(() => {});
       }
     }
   }

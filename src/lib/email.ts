@@ -240,6 +240,43 @@ export async function sendOutbidNotification({
   });
 }
 
+export async function sendNewOrderAlert({
+  sellerEmail,
+  plantName,
+  amountCents,
+  orderId,
+  buyerName,
+  shippingAddress,
+}: {
+  sellerEmail: string;
+  plantName: string;
+  amountCents: number;
+  orderId: string;
+  buyerName: string;
+  shippingAddress: { name: string; line1: string; line2?: string; city: string; state: string; zip: string; country: string };
+}) {
+  const resend = getResend();
+  const addr = [
+    shippingAddress.name,
+    shippingAddress.line1,
+    shippingAddress.line2,
+    `${shippingAddress.city}, ${shippingAddress.state} ${shippingAddress.zip}`,
+    shippingAddress.country,
+  ].filter(Boolean).join("<br>");
+
+  await resend.emails.send({
+    from: FROM,
+    to: sellerEmail,
+    subject: `New order: ${plantName}`,
+    html: `
+      <p>You have a new order!</p>
+      <p><strong>${plantName}</strong> — ${centsToDisplay(amountCents)}</p>
+      <p><strong>Ship to:</strong><br>${addr}</p>
+      <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/orders">View order in your dashboard</a></p>
+    `,
+  });
+}
+
 export async function sendLowStockAlert({
   sellerEmail,
   plantName,
