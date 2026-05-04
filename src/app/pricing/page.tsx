@@ -380,6 +380,10 @@ const faqs = [
     a: "Yes, auctions are subject to the same commission rate as fixed-price listings based on your current plan.",
   },
   {
+    q: "What happens to fees if I issue a refund?",
+    a: "If you refund a buyer, Plantet's commission is returned to you automatically. However, Stripe's processing fee (2.9% + $0.30) is non-refundable — Stripe keeps it regardless of refunds. This is standard across all payment platforms including Etsy and eBay. For this reason, we recommend clearly communicating your return policy to buyers before they purchase.",
+  },
+  {
     q: "What's included in basic analytics on the Grower plan?",
     a: "Grower sellers get total sales volume, revenue over time, and their top 5 best-performing listings. Full analytics on the Nursery plan adds per-listing breakdown, conversion rates, and buyer geography.",
   },
