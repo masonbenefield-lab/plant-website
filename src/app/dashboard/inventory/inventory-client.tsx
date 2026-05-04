@@ -197,6 +197,7 @@ export default function InventoryClient({
   initialSearch = "",
   initialCategory = "",
   isAdmin = false,
+  showWelcome = false,
 }: {
   activeRows: Row[];
   archivedRows: Row[];
@@ -206,11 +207,13 @@ export default function InventoryClient({
   initialSearch?: string;
   initialCategory?: string;
   isAdmin?: boolean;
+  showWelcome?: boolean;
 }) {
   const router = useRouter();
   const imageInputRef = useRef<HTMLInputElement>(null);
   const csvInputRef = useRef<HTMLInputElement>(null);
 
+  const [welcomeOpen, setWelcomeOpen] = useState(showWelcome);
   const [openGroups, setOpenGroups] = useState<Set<string>>(() => {
     const groups = groupRows(activeRows);
     if (groups.length <= 5) return new Set(groups.map(g => g.key));
@@ -1453,6 +1456,47 @@ export default function InventoryClient({
   // ── Main render ───────────────────────────────────────────────────────────
   return (
     <div className="max-w-5xl mx-auto px-4 py-10">
+      {/* Inventory welcome modal — shown until first item is added */}
+      <Dialog open={welcomeOpen} onOpenChange={setWelcomeOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl">Welcome to your Inventory 👋</DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground mt-1">
+              Here&apos;s how it works in 3 steps:
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="flex gap-3">
+              <span className="flex-shrink-0 w-7 h-7 rounded-full bg-green-100 text-green-700 font-bold flex items-center justify-center text-sm">1</span>
+              <div>
+                <p className="font-medium text-sm">Add your plants to inventory</p>
+                <p className="text-xs text-muted-foreground">Click <strong>+ Add</strong> to create an inventory item. Enter the plant name, variety, and how many you have in stock.</p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <span className="flex-shrink-0 w-7 h-7 rounded-full bg-green-100 text-green-700 font-bold flex items-center justify-center text-sm">2</span>
+              <div>
+                <p className="font-medium text-sm">List it in your shop or start an auction</p>
+                <p className="text-xs text-muted-foreground">Each inventory row has a <strong>List in Shop</strong> and <strong>Create Auction</strong> button. Allocate some stock to each — you stay in control of how many go where.</p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <span className="flex-shrink-0 w-7 h-7 rounded-full bg-green-100 text-green-700 font-bold flex items-center justify-center text-sm">3</span>
+              <div>
+                <p className="font-medium text-sm">Stock updates automatically when you sell</p>
+                <p className="text-xs text-muted-foreground">When a buyer purchases, your inventory count decrements automatically. You can also log off-platform sales manually.</p>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground pt-1">Need help later? Click the <strong>?</strong> next to the Inventory heading anytime.</p>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button className="bg-green-700 hover:bg-green-800" onClick={() => setWelcomeOpen(false)}>
+              Got it, let&apos;s go!
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <SellerAgreementDialog
         open={agreementDialogOpen}
         onOpenChange={setAgreementDialogOpen}

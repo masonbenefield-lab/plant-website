@@ -151,6 +151,7 @@ export default async function InventoryPage({
       archivedRows={archivedRows}
       isAdmin={isAdmin}
       termsAccepted={termsAccepted}
+      showWelcome={activeRows.length === 0}
       unlinkedListings={(unlinkedListings ?? []).map(l => ({
         id: l.id,
         plant_name: l.plant_name,
