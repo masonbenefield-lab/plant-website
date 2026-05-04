@@ -102,8 +102,8 @@ function BreakevenCalculator() {
   const growerCost    = monthlySales * 0.025 + 9;
   const nurseryCost   = monthlySales * 0.02  + 29;
 
-  const growerBreakeven  = Math.ceil(9  / (0.065 - 0.05));   // $600
-  const nurseryBreakeven = Math.ceil(20 / (0.05  - 0.03));   // $1,000 above Grower
+  const growerBreakeven  = Math.ceil(9  / (0.03  - 0.025));  // $1,800
+  const nurseryBreakeven = Math.ceil(20 / (0.025 - 0.02));   // $4,000 above Grower
 
   const bestPlan =
     nurseryCost < growerCost && nurseryCost < seedlingCost ? "Nursery"
