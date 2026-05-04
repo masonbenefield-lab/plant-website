@@ -100,6 +100,7 @@ export async function POST(request: Request) {
     amount: totalCents,
     currency: "usd",
     application_fee_amount: feeCents,
+    on_behalf_of: sellerProfile.stripe_account_id,
     transfer_data: { destination: sellerProfile.stripe_account_id },
   });
 
