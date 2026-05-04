@@ -98,9 +98,9 @@ const comparisonRows = [
 function BreakevenCalculator() {
   const [monthlySales, setMonthlySales] = useState(500);
 
-  const seedlingCost  = monthlySales * 0.065;
-  const growerCost    = monthlySales * 0.05  + 9;
-  const nurseryCost   = monthlySales * 0.03  + 29;
+  const seedlingCost  = monthlySales * 0.03;
+  const growerCost    = monthlySales * 0.025 + 9;
+  const nurseryCost   = monthlySales * 0.02  + 29;
 
   const growerBreakeven  = Math.ceil(9  / (0.065 - 0.05));   // $600
   const nurseryBreakeven = Math.ceil(20 / (0.05  - 0.03));   // $1,000 above Grower
