@@ -43,6 +43,7 @@ export default function AccountForm({
   const [vacationMode, setVacationMode] = useState(profile?.vacation_mode ?? false);
   const [vacationUntil, setVacationUntil] = useState(profile?.vacation_until ?? "");
   const [offersEnabled, setOffersEnabled] = useState((profile as { offers_enabled?: boolean } | null)?.offers_enabled !== false);
+  const [announcement, setAnnouncement] = useState((profile as { announcement?: string | null } | null)?.announcement ?? "");
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState("");
@@ -134,6 +135,7 @@ export default function AccountForm({
         vacation_mode: vacationMode,
         vacation_until: vacationUntil || null,
         offers_enabled: offersEnabled,
+        announcement: announcement.trim() || null,
       }),
     });
     const data = await res.json();
@@ -417,6 +419,19 @@ export default function AccountForm({
                   <p className="text-xs text-muted-foreground">Displayed on your storefront so buyers know when you return.</p>
                 </div>
               )}
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="announcement">Storefront announcement (optional)</Label>
+              <Textarea
+                id="announcement"
+                value={announcement}
+                onChange={(e) => setAnnouncement(e.target.value)}
+                placeholder="e.g. 🌿 Spring sale! 20% off all tropicals this week"
+                rows={2}
+                maxLength={200}
+              />
+              <p className="text-xs text-muted-foreground">Shown as a banner at the top of your storefront. Max 200 characters. Clear to remove.</p>
             </div>
 
             <Button type="submit" disabled={saving} className="bg-green-700 hover:bg-green-800">

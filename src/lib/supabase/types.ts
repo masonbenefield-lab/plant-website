@@ -1,7 +1,7 @@
 export type Json = string | number | boolean | null | { [key: string]: Json } | Json[];
 
 export type ListingStatus = "active" | "paused" | "sold_out";
-export type AuctionStatus = "active" | "ended" | "cancelled";
+export type AuctionStatus = "active" | "ended" | "cancelled" | "scheduled";
 export type OrderStatus = "pending" | "paid" | "shipped" | "delivered";
 
 export interface Database {
@@ -27,6 +27,7 @@ export interface Database {
           vacation_until: string | null;
           offers_enabled: boolean;
           saved_shipping_address: Json | null;
+          announcement: string | null;
           deleted_at: string | null;
           created_at: string;
         };
@@ -47,6 +48,7 @@ export interface Database {
           vacation_until?: string | null;
           offers_enabled?: boolean;
           saved_shipping_address?: Json | null;
+          announcement?: string | null;
           deleted_at?: string | null;
           created_at?: string;
         };
@@ -68,6 +70,7 @@ export interface Database {
           vacation_until?: string | null;
           offers_enabled?: boolean;
           saved_shipping_address?: Json | null;
+          announcement?: string | null;
           deleted_at?: string | null;
         };
         Relationships: [];
@@ -138,6 +141,8 @@ export interface Database {
           sale_price_cents: number | null;
           sale_ends_at: string | null;
           bundle_discount_pct: number | null;
+          sold_out_behavior: "mark_sold_out" | "auto_pause";
+          care_guide_pdf_url: string | null;
           created_at: string;
         };
         Insert: {
@@ -157,6 +162,8 @@ export interface Database {
           sale_price_cents?: number | null;
           sale_ends_at?: string | null;
           bundle_discount_pct?: number | null;
+          sold_out_behavior?: "mark_sold_out" | "auto_pause";
+          care_guide_pdf_url?: string | null;
           created_at?: string;
         };
         Update: {
@@ -175,6 +182,8 @@ export interface Database {
           sale_price_cents?: number | null;
           sale_ends_at?: string | null;
           bundle_discount_pct?: number | null;
+          sold_out_behavior?: "mark_sold_out" | "auto_pause";
+          care_guide_pdf_url?: string | null;
         };
         Relationships: [];
       };
@@ -198,6 +207,8 @@ export interface Database {
           inventory_id: string | null;
           bid_count: number;
           reminder_sent: boolean;
+          reserve_price_cents: number | null;
+          starts_at: string | null;
           created_at: string;
         };
         Insert: {
@@ -219,6 +230,8 @@ export interface Database {
           inventory_id?: string | null;
           bid_count?: number;
           reminder_sent?: boolean;
+          reserve_price_cents?: number | null;
+          starts_at?: string | null;
           created_at?: string;
         };
         Update: {
@@ -239,6 +252,8 @@ export interface Database {
           inventory_id?: string | null;
           bid_count?: number;
           reminder_sent?: boolean;
+          reserve_price_cents?: number | null;
+          starts_at?: string | null;
         };
         Relationships: [];
       };
@@ -555,6 +570,43 @@ export interface Database {
           created_at?: string;
         };
         Update: Record<string, never>;
+        Relationships: [];
+      };
+
+      listing_templates: {
+        Row: {
+          id: string;
+          seller_id: string;
+          name: string;
+          plant_name: string;
+          variety: string | null;
+          category: string | null;
+          pot_size: string | null;
+          description: string | null;
+          price_cents: number | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          seller_id: string;
+          name: string;
+          plant_name: string;
+          variety?: string | null;
+          category?: string | null;
+          pot_size?: string | null;
+          description?: string | null;
+          price_cents?: number | null;
+          created_at?: string;
+        };
+        Update: {
+          name?: string;
+          plant_name?: string;
+          variety?: string | null;
+          category?: string | null;
+          pot_size?: string | null;
+          description?: string | null;
+          price_cents?: number | null;
+        };
         Relationships: [];
       };
     };

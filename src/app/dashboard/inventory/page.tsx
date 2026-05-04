@@ -32,8 +32,8 @@ export default async function InventoryPage({
 
   const [{ data: linkedListings }, { data: linkedAuctions }] = await Promise.all([
     listingIds.length
-      ? supabase.from("listings").select("id, price_cents, quantity, status, created_at, sale_price_cents, sale_ends_at, bundle_discount_pct").in("id", listingIds)
-      : Promise.resolve({ data: [] as { id: string; price_cents: number; quantity: number; status: string; created_at: string; sale_price_cents: number | null; sale_ends_at: string | null; bundle_discount_pct: number | null }[] }),
+      ? supabase.from("listings").select("id, price_cents, quantity, status, created_at, sale_price_cents, sale_ends_at, bundle_discount_pct, sold_out_behavior, care_guide_pdf_url").in("id", listingIds)
+      : Promise.resolve({ data: [] as { id: string; price_cents: number; quantity: number; status: string; created_at: string; sale_price_cents: number | null; sale_ends_at: string | null; bundle_discount_pct: number | null; sold_out_behavior: "mark_sold_out" | "auto_pause"; care_guide_pdf_url: string | null }[] }),
     inventoryIds.length
       ? supabase.from("auctions").select("id, inventory_id, current_bid_cents, ends_at, status, quantity").in("inventory_id", inventoryIds)
       : Promise.resolve({ data: [] as { id: string; inventory_id: string | null; current_bid_cents: number; ends_at: string; status: string; quantity: number }[] }),
@@ -82,6 +82,8 @@ export default async function InventoryPage({
       listing_sale_price_cents: listing?.sale_price_cents ?? null,
       listing_sale_ends_at: listing?.sale_ends_at ?? null,
       listing_bundle_discount_pct: (listing as { bundle_discount_pct?: number | null } | null)?.bundle_discount_pct ?? null,
+      listing_sold_out_behavior: (listing as { sold_out_behavior?: "mark_sold_out" | "auto_pause" } | null)?.sold_out_behavior ?? "mark_sold_out",
+      listing_care_guide_pdf_url: (listing as { care_guide_pdf_url?: string | null } | null)?.care_guide_pdf_url ?? null,
       auctions,
       low_stock_threshold: (item as { low_stock_threshold?: number | null }).low_stock_threshold ?? null,
       cost_cents: (item as { cost_cents?: number | null }).cost_cents ?? null,
@@ -109,6 +111,8 @@ export default async function InventoryPage({
     listing_sale_price_cents: null as number | null,
     listing_sale_ends_at: null as string | null,
     listing_bundle_discount_pct: null as number | null,
+    listing_sold_out_behavior: "mark_sold_out" as "mark_sold_out" | "auto_pause",
+    listing_care_guide_pdf_url: null as string | null,
     auctions: [] as { id: string; quantity: number; current_bid_cents: number; ends_at: string; status: string }[],
     low_stock_threshold: null as number | null,
     cost_cents: null as number | null,

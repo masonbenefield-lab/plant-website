@@ -48,9 +48,19 @@ export async function GET(request: Request) {
     await supabase.from("auctions").update({ reminder_sent: true }).eq("id", auction.id);
   }
 
+  // Activate scheduled auctions whose start time has passed
+  const { data: scheduledAuctions } = await supabase
+    .from("auctions")
+    .select("id")
+    .eq("status", "scheduled")
+    .lt("starts_at", new Date().toISOString());
+  for (const auction of scheduledAuctions ?? []) {
+    await supabase.from("auctions").update({ status: "active" }).eq("id", auction.id);
+  }
+
   const { data: expiredAuctions, error } = await supabase
     .from("auctions")
-    .select("id, current_bidder_id, seller_id, current_bid_cents, plant_name, inventory_id")
+    .select("id, current_bidder_id, seller_id, current_bid_cents, plant_name, inventory_id, reserve_price_cents")
     .eq("status", "active")
     .lt("ends_at", new Date().toISOString());
 
@@ -62,7 +72,9 @@ export async function GET(request: Request) {
   for (const auction of expiredAuctions ?? []) {
     await supabase.from("auctions").update({ status: "ended" }).eq("id", auction.id);
 
-    if (auction.current_bidder_id) {
+    const reserveMet = !auction.reserve_price_cents || auction.current_bid_cents >= auction.reserve_price_cents;
+
+    if (auction.current_bidder_id && reserveMet) {
       // Email the winner
       const { data: winnerAuth } = await supabase.auth.admin.getUserById(auction.current_bidder_id);
       const winnerEmail = winnerAuth?.user?.email;
@@ -75,7 +87,7 @@ export async function GET(request: Request) {
         }).catch(() => {});
       }
     } else if (auction.inventory_id) {
-      // No winner — release inventory
+      // No winner (no bids or reserve not met) — release inventory
       await supabase.from("inventory").update({
         auction_id: null,
         auction_quantity: null,

@@ -87,14 +87,19 @@ export default async function AuctionPage({
         <div>
           <div className="flex items-start justify-between gap-3 mb-1">
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-2xl font-bold">{auction.plant_name}</h1>
                 <Badge
                   variant={auction.status === "active" ? "default" : "secondary"}
-                  className={auction.status === "active" ? "bg-green-700" : ""}
+                  className={auction.status === "active" ? "bg-green-700" : auction.status === "scheduled" ? "bg-blue-600 text-white" : ""}
                 >
-                  {auction.status}
+                  {auction.status === "scheduled" ? "Upcoming" : auction.status}
                 </Badge>
+                {auction.status === "ended" && auction.reserve_price_cents && auction.current_bid_cents < auction.reserve_price_cents && (
+                  <Badge variant="secondary" className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                    Reserve not met
+                  </Badge>
+                )}
               </div>
               {auction.variety && (
                 <p className="text-muted-foreground mt-1">{auction.variety}</p>
@@ -114,6 +119,11 @@ export default async function AuctionPage({
             </p>
           )}
 
+          {auction.status === "scheduled" && auction.starts_at && (
+            <div className="mb-4 rounded-md border border-blue-200 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-800 px-3 py-2 text-sm text-blue-800 dark:text-blue-300">
+              🕐 This auction opens on {new Date(auction.starts_at).toLocaleString("en-US", { month: "long", day: "numeric", hour: "numeric", minute: "2-digit" })}
+            </div>
+          )}
           <AuctionBidPanel
             auction={{
               id: auction.id,

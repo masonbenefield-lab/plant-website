@@ -61,6 +61,8 @@ type Row = {
   listing_sale_price_cents: number | null;
   listing_sale_ends_at: string | null;
   listing_bundle_discount_pct: number | null;
+  listing_sold_out_behavior: "mark_sold_out" | "auto_pause";
+  listing_care_guide_pdf_url: string | null;
   auctions: AuctionSummary[];
   low_stock_threshold: number | null;
   cost_cents: number | null;
@@ -240,11 +242,22 @@ export default function InventoryClient({
   const [price, setPrice] = useState("");
   const [listQty, setListQty] = useState("");
   const [bundleDiscountPct, setBundleDiscountPct] = useState("");
+  const [soldOutBehavior, setSoldOutBehavior] = useState<"mark_sold_out" | "auto_pause">("mark_sold_out");
+  const [careGuidePdfUrl, setCareGuidePdfUrl] = useState<string | null>(null);
+  const [careGuidePdfUploading, setCareGuidePdfUploading] = useState(false);
+
+  // Listing templates
+  type ListingTemplate = { id: string; name: string; plant_name: string; variety: string | null; category: string | null; pot_size: string | null; description: string | null; price_cents: number | null };
+  const [templates, setTemplates] = useState<ListingTemplate[]>([]);
+  const [saveTemplateName, setSaveTemplateName] = useState("");
+  const [savingTemplate, setSavingTemplate] = useState(false);
 
   // Auction modal
   const [startingBid, setStartingBid] = useState("");
   const [buyNowPrice, setBuyNowPrice] = useState("");
   const [endsAt, setEndsAt] = useState("");
+  const [startsAt, setStartsAt] = useState("");
+  const [reservePrice, setReservePrice] = useState("");
   const [auctionQty, setAuctionQty] = useState("");
   const [auctionAck, setAuctionAck] = useState(false);
 
@@ -358,9 +371,11 @@ export default function InventoryClient({
       setListQty(String(m.row.listing_quantity ?? 1));
       setEditPotSize(m.row.pot_size ?? "");
       setBundleDiscountPct(m.row.listing_bundle_discount_pct ? String(m.row.listing_bundle_discount_pct) : "");
+      setSoldOutBehavior(m.row.listing_sold_out_behavior ?? "mark_sold_out");
+      setCareGuidePdfUrl(m.row.listing_care_guide_pdf_url ?? null);
     }
     if (m.type === "auction") {
-      setStartingBid(""); setBuyNowPrice(""); setEndsAt("");
+      setStartingBid(""); setBuyNowPrice(""); setEndsAt(""); setStartsAt(""); setReservePrice("");
       setAuctionQty(String(Math.max(1, avail(m.row))));
     }
     if (m.type === "edit") {
@@ -375,6 +390,11 @@ export default function InventoryClient({
       setEditLowStockThreshold(m.row.low_stock_threshold != null ? String(m.row.low_stock_threshold) : "");
       setEditCostPrice(m.row.cost_cents != null ? String(m.row.cost_cents / 100) : "");
       setDragPhotoIdx(null);
+      setSaveTemplateName("");
+      // Load seller's templates
+      createClient().from("listing_templates").select("id, name, plant_name, variety, category, pot_size, description, price_cents").then(({ data }) => {
+        if (data) setTemplates(data);
+      });
     }
     if (m.type === "sold") {
       setSoldPrice(""); setSoldQuantity("1"); setSoldNote("");
@@ -474,6 +494,8 @@ export default function InventoryClient({
       quantity: qty,
       pot_size: editPotSize || null,
       bundle_discount_pct: discPct,
+      sold_out_behavior: soldOutBehavior,
+      care_guide_pdf_url: careGuidePdfUrl,
     }).eq("id", modal.row.listing_id);
     await supabase.from("inventory").update({ listing_quantity: qty, pot_size: editPotSize || null }).eq("id", modal.row.id);
     setSubmitting(false);
@@ -517,6 +539,8 @@ export default function InventoryClient({
     const a = avail(modal.row);
     const qty = Math.min(Math.max(1, Number(auctionQty) || a), a);
     if (qty < 1) { toast.error("No stock available for auction"); setSubmitting(false); return; }
+    const scheduledStart = startsAt ? new Date(startsAt) : null;
+    const isScheduled = scheduledStart && scheduledStart > new Date();
     const { data: newAuction, error } = await supabase.from("auctions").insert({
       seller_id: user.id,
       plant_name: modal.row.plant_name,
@@ -527,6 +551,9 @@ export default function InventoryClient({
       current_bid_cents: dollarsToCents(startingBid),
       buy_now_price_cents: buyNowPrice ? dollarsToCents(buyNowPrice) : null,
       ends_at: new Date(endsAt).toISOString(),
+      starts_at: scheduledStart ? scheduledStart.toISOString() : null,
+      status: isScheduled ? "scheduled" : "active",
+      reserve_price_cents: reservePrice ? dollarsToCents(reservePrice) : null,
       images: modal.row.images,
       category: modal.row.category || null,
       pot_size: modal.row.pot_size || null,
@@ -534,9 +561,55 @@ export default function InventoryClient({
     }).select("id").single();
     if (error) { toast.error(error.message); setSubmitting(false); return; }
     setSubmitting(false);
-    toast.success(`Auction started for ${modal.row.plant_name}!`);
+    toast.success(isScheduled ? `Auction scheduled for ${modal.row.plant_name}!` : `Auction started for ${modal.row.plant_name}!`);
     setModal(null);
     router.refresh();
+  }
+
+  async function saveAsTemplate() {
+    if (!modal || modal.type !== "edit" || !saveTemplateName.trim()) return;
+    setSavingTemplate(true);
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setSavingTemplate(false); return; }
+    const { error } = await supabase.from("listing_templates").insert({
+      seller_id: user.id,
+      name: saveTemplateName.trim(),
+      plant_name: editPlantName.trim(),
+      variety: editVariety.trim() || null,
+      category: editCategory || null,
+      pot_size: editPotSize || null,
+      description: editDescription.trim() || null,
+    });
+    setSavingTemplate(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Template saved!");
+    setSaveTemplateName("");
+    createClient().from("listing_templates").select("id, name, plant_name, variety, category, pot_size, description, price_cents").then(({ data }) => {
+      if (data) setTemplates(data);
+    });
+  }
+
+  async function deleteTemplate(id: string) {
+    const supabase = createClient();
+    await supabase.from("listing_templates").delete().eq("id", id);
+    setTemplates(prev => prev.filter(t => t.id !== id));
+    toast.success("Template deleted");
+  }
+
+  async function uploadCareGuidePdf(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    if (file.size > 10 * 1024 * 1024) { toast.error("PDF must be under 10 MB"); return; }
+    setCareGuidePdfUploading(true);
+    const supabase = createClient();
+    const path = `care-guides/${Date.now()}-${Math.random().toString(36).slice(2)}.pdf`;
+    const { error } = await supabase.storage.from("listings").upload(path, file, { contentType: "application/pdf" });
+    if (error) { toast.error("Upload failed: " + error.message); setCareGuidePdfUploading(false); return; }
+    const { data } = supabase.storage.from("listings").getPublicUrl(path);
+    setCareGuidePdfUrl(data.publicUrl);
+    setCareGuidePdfUploading(false);
   }
 
   async function submitEdit() {
@@ -1698,6 +1771,35 @@ export default function InventoryClient({
                   <span className="text-sm text-muted-foreground">% off when buying 2+</span>
                 </div>
               </div>
+              <div className="space-y-1">
+                <Label>When sold out</Label>
+                <Select value={soldOutBehavior} onValueChange={v => setSoldOutBehavior(v as "mark_sold_out" | "auto_pause")}>
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="mark_sold_out">Stay visible as "Sold Out"</SelectItem>
+                    <SelectItem value="auto_pause">Auto-hide listing</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">Sold Out keeps the page for SEO. Auto-hide removes it from the shop.</p>
+              </div>
+              <div className="space-y-1">
+                <Label>Care Guide PDF <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                {careGuidePdfUrl ? (
+                  <div className="flex items-center gap-2">
+                    <a href={careGuidePdfUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-green-700 hover:underline truncate flex-1">View uploaded PDF</a>
+                    <button onClick={() => setCareGuidePdfUrl(null)} className="text-xs text-muted-foreground hover:text-destructive">Remove</button>
+                  </div>
+                ) : (
+                  <label className="flex items-center gap-2 cursor-pointer text-sm text-muted-foreground hover:text-foreground">
+                    <Upload size={14} />
+                    {careGuidePdfUploading ? "Uploading…" : "Upload PDF (max 10 MB)"}
+                    <input type="file" accept=".pdf,application/pdf" className="hidden" onChange={uploadCareGuidePdf} disabled={careGuidePdfUploading} />
+                  </label>
+                )}
+                <p className="text-xs text-muted-foreground">Buyers get a download link in their order confirmation.</p>
+              </div>
               <div className="flex flex-wrap gap-2 pt-1">
                 <Button onClick={submitEditListing} disabled={submitting || !price || !listQty} className="bg-green-700 hover:bg-green-800">
                   {submitting ? "Saving…" : "Save Changes"}
@@ -1744,6 +1846,14 @@ export default function InventoryClient({
                 <div className="space-y-1">
                   <Label htmlFor="modal-buy-now">Buy Now Price ($) <span className="font-normal text-muted-foreground">(optional)</span></Label>
                   <Input id="modal-buy-now" type="number" min={0.01} step={0.01} value={buyNowPrice} onChange={e => setBuyNowPrice(e.target.value)} placeholder="Leave blank to disable" />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="modal-reserve">Reserve Price ($) <span className="font-normal text-muted-foreground">(optional)</span></Label>
+                  <Input id="modal-reserve" type="number" min={0.01} step={0.01} value={reservePrice} onChange={e => setReservePrice(e.target.value)} placeholder="Hidden minimum to sell" />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="modal-starts">Scheduled Start <span className="font-normal text-muted-foreground">(optional — goes live immediately if blank)</span></Label>
+                  <Input id="modal-starts" type="datetime-local" value={startsAt} onChange={e => setStartsAt(e.target.value)} min={new Date(Date.now() + 5 * 60 * 1000).toISOString().slice(0, 16)} />
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="modal-ends">End Date & Time *</Label>
@@ -1926,6 +2036,51 @@ export default function InventoryClient({
                   />
                   <p className="text-xs text-muted-foreground">Warn when available ≤ this</p>
                 </div>
+              </div>
+              {/* Templates */}
+              {templates.length > 0 && (
+                <div className="space-y-1 border-t pt-3">
+                  <Label>Load template</Label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {templates.map(t => (
+                      <div key={t.id} className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditPlantName(t.plant_name);
+                            setEditVariety(t.variety ?? "");
+                            setEditCategory(t.category ?? "");
+                            setEditPotSize(t.pot_size ?? "");
+                            setEditDescription(t.description ?? "");
+                            toast.success(`Loaded "${t.name}"`);
+                          }}
+                          className="text-xs bg-muted hover:bg-muted/70 px-2 py-1 rounded border"
+                        >
+                          {t.name}
+                        </button>
+                        <button type="button" onClick={() => deleteTemplate(t.id)} className="text-muted-foreground hover:text-destructive">
+                          <X size={10} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className="space-y-1 border-t pt-3">
+                <Label>Save as template <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={saveTemplateName}
+                    onChange={e => setSaveTemplateName(e.target.value)}
+                    placeholder="Template name, e.g. Monstera"
+                    className="text-sm"
+                    onKeyDown={e => e.key === "Enter" && saveAsTemplate()}
+                  />
+                  <Button type="button" variant="outline" size="sm" onClick={saveAsTemplate} disabled={savingTemplate || !saveTemplateName.trim()}>
+                    {savingTemplate ? "…" : "Save"}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">Saves current name, variety, category, pot size, and description as a reusable template.</p>
               </div>
               <div className="flex gap-2 pt-1">
                 <Button variant="outline" onClick={() => setModal(null)} className="flex-1">Cancel</Button>

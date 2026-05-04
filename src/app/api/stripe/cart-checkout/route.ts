@@ -1,8 +1,18 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
+import type { Database } from "@/lib/supabase/types";
 import { getStripe } from "@/lib/stripe";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { planFeePercent } from "@/lib/plan-limits";
+import { sendLowStockAlert } from "@/lib/email";
+
+function adminClient() {
+  return createSupabaseAdmin<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 interface CartItem {
   listingId: string;
@@ -109,23 +119,42 @@ export async function POST(request: Request) {
   if (orderError) return NextResponse.json({ error: orderError.message }, { status: 500 });
 
   // Decrement stock for each item
+  const admin = adminClient();
   for (const cartItem of items) {
     const listing = listings.find((l) => l.id === cartItem.listingId)!;
     const newQty = listing.quantity - cartItem.quantity;
+    const soldOut = newQty <= 0;
+    const soldOutBehavior = (listing as { sold_out_behavior?: string }).sold_out_behavior ?? "mark_sold_out";
     await supabase.from("listings").update({
       quantity: newQty,
-      status: newQty <= 0 ? "sold_out" : "active",
+      status: soldOut ? (soldOutBehavior === "auto_pause" ? "paused" : "sold_out") : "active",
     }).eq("id", listing.id);
 
     if (listing.inventory_id) {
-      const { data: inv } = await supabase.from("inventory").select("quantity, listing_quantity").eq("id", listing.inventory_id).single();
+      const { data: inv } = await supabase.from("inventory").select("quantity, listing_quantity, low_stock_threshold, plant_name, variety").eq("id", listing.inventory_id).single();
       if (inv) {
         const newListingQty = Math.max(0, (inv.listing_quantity ?? 0) - cartItem.quantity);
+        const newInvQty = Math.max(0, inv.quantity - cartItem.quantity);
         await supabase.from("inventory").update({
-          quantity: Math.max(0, inv.quantity - cartItem.quantity),
+          quantity: newInvQty,
           listing_quantity: newListingQty,
           ...(newListingQty <= 0 ? { listing_id: null } : {}),
         }).eq("id", listing.inventory_id);
+
+        const threshold = (inv as { low_stock_threshold?: number | null }).low_stock_threshold;
+        if (threshold && newInvQty <= threshold && newInvQty > 0) {
+          const { data: sellerAuth } = await admin.auth.admin.getUserById(listing.seller_id);
+          const sellerEmail = sellerAuth?.user?.email;
+          if (sellerEmail) {
+            sendLowStockAlert({
+              sellerEmail,
+              plantName: inv.plant_name,
+              variety: inv.variety ?? null,
+              quantity: newInvQty,
+              inventoryId: listing.inventory_id,
+            }).catch(() => {});
+          }
+        }
       }
     }
   }

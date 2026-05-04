@@ -441,3 +441,87 @@ ALTER TABLE listings ADD COLUMN IF NOT EXISTS bundle_discount_pct integer;
 
 ### Environment variables
 - None new — uses existing `NEXT_PUBLIC_SITE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`
+
+---
+
+## 2026-05-04 — Seller audit features (8 items)
+
+### Features added
+
+#### 1. Reserve price on auctions
+- `src/lib/supabase/types.ts` — added `reserve_price_cents: number | null` to auctions
+- `src/app/dashboard/inventory/inventory-client.tsx` — "Reserve Price" optional input in Create Auction modal
+- `src/app/api/auctions/close/route.ts` — if `current_bid_cents < reserve_price_cents`, treat as no winner (release inventory)
+- `src/app/auctions/[id]/page.tsx` — "Reserve not met" amber badge when auction ends below reserve
+
+#### 2. Scheduled auction start
+- `src/lib/supabase/types.ts` — added `AuctionStatus` "scheduled", `starts_at: string | null` to auctions
+- `src/app/dashboard/inventory/inventory-client.tsx` — "Scheduled Start" optional datetime input; creates auction with `status: 'scheduled'` if starts_at is in future
+- `src/app/api/auctions/close/route.ts` — cron now activates `scheduled` auctions whose `starts_at` has passed
+- `src/app/auctions/[id]/page.tsx` — "Upcoming" badge + scheduled start info banner
+
+#### 3. Bulk order status update
+- `src/app/api/orders/bulk-status/route.ts` — NEW: POST endpoint validates seller ownership, bulk-updates status
+- `src/app/dashboard/orders/bulk-order-actions.tsx` — NEW: `BulkOrderActions` (bar with status select + Apply), `OrderCheckbox`
+- `src/app/dashboard/orders/orders-client.tsx` — NEW: client component with select-all checkbox + `BulkOrderActions`
+- `src/app/dashboard/orders/page.tsx` — server component delegates rendering to `OrdersClient`
+
+#### 4. Listing templates
+- `src/lib/supabase/types.ts` — added `listing_templates` table
+- `src/app/dashboard/inventory/inventory-client.tsx` — "Load template" chips + "Save as template" input in Edit Item modal; `saveAsTemplate()`, `deleteTemplate()` functions
+
+#### 5. Low stock email alert
+- `src/lib/email.ts` — added `sendLowStockAlert()`
+- `src/app/api/stripe/checkout/route.ts` — after inventory decrement, emails seller when qty ≤ low_stock_threshold
+- `src/app/api/stripe/cart-checkout/route.ts` — same check for cart orders
+
+#### 6. Auto-pause when sold out
+- `src/lib/supabase/types.ts` — added `sold_out_behavior: "mark_sold_out" | "auto_pause"` to listings
+- `src/app/dashboard/inventory/inventory-client.tsx` — "When sold out" select in Edit Listing modal (Stay visible vs Auto-hide)
+- `src/app/api/stripe/checkout/route.ts` — respects `sold_out_behavior` when setting listing status on sell-through
+- `src/app/api/stripe/cart-checkout/route.ts` — same
+
+#### 7. Storefront announcement banner
+- `src/lib/supabase/types.ts` — added `announcement: string | null` to profiles
+- `src/app/account/account-form.tsx` — "Storefront announcement" textarea + saves to profile
+- `src/app/api/profile/update/route.ts` — accepts `announcement` field
+- `src/app/sellers/[username]/page.tsx` — green banner shown when profile.announcement is set
+
+#### 8. Plant care PDFs
+- `src/lib/supabase/types.ts` — added `care_guide_pdf_url: string | null` to listings
+- `src/app/dashboard/inventory/inventory-client.tsx` — PDF upload in Edit Listing modal (`uploadCareGuidePdf()`); view/remove link
+- `src/app/orders/page.tsx` — "📄 Download care guide" link shown to buyer when listing has PDF
+
+### SQL migrations to run in Supabase
+```sql
+-- Auctions
+ALTER TABLE auctions ADD COLUMN IF NOT EXISTS reserve_price_cents integer;
+ALTER TABLE auctions ADD COLUMN IF NOT EXISTS starts_at timestamptz;
+ALTER TYPE auction_status ADD VALUE IF NOT EXISTS 'scheduled';
+
+-- Profiles
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS announcement text;
+
+-- Listings
+ALTER TABLE listings ADD COLUMN IF NOT EXISTS sold_out_behavior text NOT NULL DEFAULT 'mark_sold_out';
+ALTER TABLE listings ADD COLUMN IF NOT EXISTS care_guide_pdf_url text;
+
+-- Listing templates
+CREATE TABLE IF NOT EXISTS listing_templates (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  seller_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  name text NOT NULL,
+  plant_name text NOT NULL,
+  variety text,
+  category text,
+  pot_size text,
+  description text,
+  price_cents integer,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE listing_templates ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Sellers manage own templates" ON listing_templates FOR ALL USING (auth.uid() = seller_id) WITH CHECK (auth.uid() = seller_id);
+```
+
+### Environment variables
+- None new

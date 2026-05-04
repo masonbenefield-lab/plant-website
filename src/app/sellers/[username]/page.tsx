@@ -108,6 +108,13 @@ export default async function SellerStorefront({
         </div>
       )}
 
+      {/* Storefront announcement */}
+      {(profile as { announcement?: string | null }).announcement && (
+        <div className="mb-6 rounded-lg border border-green-200 bg-green-50 dark:bg-green-950/30 dark:border-green-800 px-4 py-3 text-sm text-green-900 dark:text-green-200 font-medium">
+          {(profile as { announcement?: string | null }).announcement}
+        </div>
+      )}
+
       {/* Banner */}
       {profile.banner_url && (
         <div className="relative w-full h-48 sm:h-56 md:h-64 lg:h-72 rounded-2xl overflow-hidden mb-6">

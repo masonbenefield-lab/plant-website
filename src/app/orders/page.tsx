@@ -90,7 +90,7 @@ export default async function MyOrdersPage({
   const [{ data: listings }, { data: auctionItems }, { data: sellers }, { data: existingRatings }] =
     await Promise.all([
       listingIds.length
-        ? supabase.from("listings").select("id, plant_name, variety, images").in("id", listingIds)
+        ? supabase.from("listings").select("id, plant_name, variety, images, care_guide_pdf_url").in("id", listingIds)
         : { data: [] },
       auctionIds.length
         ? supabase.from("auctions").select("id, plant_name, variety, images").in("id", auctionIds)
@@ -189,6 +189,19 @@ export default async function MyOrdersPage({
                       {order.tracking_number}
                     </a>
                     <span className="ml-2 text-xs">({detectCarrier(order.tracking_number)}) ↗</span>
+                  </p>
+                )}
+
+                {order.listing_id && (listingMap[order.listing_id] as { care_guide_pdf_url?: string | null } | null)?.care_guide_pdf_url && (
+                  <p className="text-sm mt-2">
+                    <a
+                      href={(listingMap[order.listing_id] as { care_guide_pdf_url: string }).care_guide_pdf_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-green-700 hover:underline font-medium"
+                    >
+                      📄 Download care guide
+                    </a>
                   </p>
                 )}
 

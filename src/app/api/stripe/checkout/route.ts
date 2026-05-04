@@ -1,8 +1,18 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
+import type { Database } from "@/lib/supabase/types";
 import { getStripe } from "@/lib/stripe";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { planFeePercent } from "@/lib/plan-limits";
+import { sendLowStockAlert } from "@/lib/email";
+
+function adminClient() {
+  return createSupabaseAdmin<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -109,27 +119,48 @@ export async function POST(request: Request) {
       await supabase.from("offers").update({ status: "withdrawn" }).eq("id", offerId);
     }
 
+    const newListingQty = listing.quantity - quantity;
+    const soldOut = newListingQty <= 0;
+    const soldOutBehavior = (listing as { sold_out_behavior?: string }).sold_out_behavior ?? "mark_sold_out";
     await supabase
       .from("listings")
       .update({
-        quantity: listing.quantity - quantity,
-        status: listing.quantity - quantity <= 0 ? "sold_out" : "active",
+        quantity: newListingQty,
+        status: soldOut ? (soldOutBehavior === "auto_pause" ? "paused" : "sold_out") : "active",
       })
       .eq("id", listingId);
 
     if (listing.inventory_id) {
       const { data: inv } = await supabase
         .from("inventory")
-        .select("quantity, listing_quantity")
+        .select("quantity, listing_quantity, low_stock_threshold, plant_name, variety")
         .eq("id", listing.inventory_id)
         .single();
       if (inv) {
-        const newListingQty = Math.max(0, (inv.listing_quantity ?? 0) - quantity);
+        const newInvListingQty = Math.max(0, (inv.listing_quantity ?? 0) - quantity);
+        const newInvQty = Math.max(0, inv.quantity - quantity);
         await supabase.from("inventory").update({
-          quantity: Math.max(0, inv.quantity - quantity),
-          listing_quantity: newListingQty,
-          ...(newListingQty <= 0 ? { listing_id: null } : {}),
+          quantity: newInvQty,
+          listing_quantity: newInvListingQty,
+          ...(newInvListingQty <= 0 ? { listing_id: null } : {}),
         }).eq("id", listing.inventory_id);
+
+        // Low stock alert
+        const threshold = (inv as { low_stock_threshold?: number | null }).low_stock_threshold;
+        if (threshold && newInvQty <= threshold && newInvQty > 0) {
+          const admin = adminClient();
+          const { data: sellerAuth } = await admin.auth.admin.getUserById(listing.seller_id);
+          const sellerEmail = sellerAuth?.user?.email;
+          if (sellerEmail) {
+            sendLowStockAlert({
+              sellerEmail,
+              plantName: inv.plant_name,
+              variety: inv.variety ?? null,
+              quantity: newInvQty,
+              inventoryId: listing.inventory_id,
+            }).catch(() => {});
+          }
+        }
       }
     }
 

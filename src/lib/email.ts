@@ -239,3 +239,30 @@ export async function sendOutbidNotification({
     `,
   });
 }
+
+export async function sendLowStockAlert({
+  sellerEmail,
+  plantName,
+  variety,
+  quantity,
+  inventoryId,
+}: {
+  sellerEmail: string;
+  plantName: string;
+  variety: string | null;
+  quantity: number;
+  inventoryId: string;
+}) {
+  const resend = getResend();
+  const name = variety ? `${plantName} — ${variety}` : plantName;
+  await resend.emails.send({
+    from: FROM,
+    to: sellerEmail,
+    subject: `Low stock alert: ${name}`,
+    html: `
+      <p>Your stock for <strong>${name}</strong> has dropped to <strong>${quantity} unit${quantity !== 1 ? "s" : ""}</strong>.</p>
+      <p>Head to your inventory to restock:</p>
+      <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/inventory">View inventory</a></p>
+    `,
+  });
+}
