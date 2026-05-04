@@ -126,17 +126,17 @@ export async function POST(request: Request) {
     const newQty = listing.quantity - cartItem.quantity;
     const soldOut = newQty <= 0;
     const soldOutBehavior = (listing as { sold_out_behavior?: string }).sold_out_behavior ?? "mark_sold_out";
-    await supabase.from("listings").update({
+    await admin.from("listings").update({
       quantity: newQty,
       status: soldOut ? (soldOutBehavior === "auto_pause" ? "paused" : "sold_out") : "active",
     }).eq("id", listing.id);
 
     if (listing.inventory_id) {
-      const { data: inv } = await supabase.from("inventory").select("quantity, listing_quantity, low_stock_threshold, plant_name, variety").eq("id", listing.inventory_id).single();
+      const { data: inv } = await admin.from("inventory").select("quantity, listing_quantity, low_stock_threshold, plant_name, variety").eq("id", listing.inventory_id).single();
       if (inv) {
         const newListingQty = Math.max(0, (inv.listing_quantity ?? 0) - cartItem.quantity);
         const newInvQty = Math.max(0, inv.quantity - cartItem.quantity);
-        await supabase.from("inventory").update({
+        await admin.from("inventory").update({
           quantity: newInvQty,
           listing_quantity: newListingQty,
           ...(newListingQty <= 0 ? { listing_id: null } : {}),

@@ -120,10 +120,11 @@ export async function POST(request: Request) {
       await supabase.from("offers").update({ status: "withdrawn" }).eq("id", offerId);
     }
 
+    const admin = adminClient();
     const newListingQty = listing.quantity - quantity;
     const soldOut = newListingQty <= 0;
     const soldOutBehavior = (listing as { sold_out_behavior?: string }).sold_out_behavior ?? "mark_sold_out";
-    await supabase
+    await admin
       .from("listings")
       .update({
         quantity: newListingQty,
@@ -132,7 +133,7 @@ export async function POST(request: Request) {
       .eq("id", listingId);
 
     if (listing.inventory_id) {
-      const { data: inv } = await supabase
+      const { data: inv } = await admin
         .from("inventory")
         .select("quantity, listing_quantity, low_stock_threshold, plant_name, variety")
         .eq("id", listing.inventory_id)
@@ -140,7 +141,7 @@ export async function POST(request: Request) {
       if (inv) {
         const newInvListingQty = Math.max(0, (inv.listing_quantity ?? 0) - quantity);
         const newInvQty = Math.max(0, inv.quantity - quantity);
-        await supabase.from("inventory").update({
+        await admin.from("inventory").update({
           quantity: newInvQty,
           listing_quantity: newInvListingQty,
           ...(newInvListingQty <= 0 ? { listing_id: null } : {}),
@@ -149,7 +150,6 @@ export async function POST(request: Request) {
         // Low stock alert
         const threshold = (inv as { low_stock_threshold?: number | null }).low_stock_threshold;
         if (threshold && newInvQty <= threshold && newInvQty > 0) {
-          const admin = adminClient();
           const { data: sellerAuth } = await admin.auth.admin.getUserById(listing.seller_id);
           const sellerEmail = sellerAuth?.user?.email;
           if (sellerEmail) {
@@ -218,13 +218,14 @@ export async function POST(request: Request) {
     if (orderError) return NextResponse.json({ error: orderError.message }, { status: 500 });
 
     if (auction.inventory_id) {
-      const { data: inv } = await supabase
+      const admin = adminClient();
+      const { data: inv } = await admin
         .from("inventory")
         .select("quantity")
         .eq("id", auction.inventory_id)
         .single();
       if (inv) {
-        await supabase.from("inventory").update({
+        await admin.from("inventory").update({
           quantity: Math.max(0, inv.quantity - (auction.quantity ?? 1)),
           auction_id: null,
           auction_quantity: null,

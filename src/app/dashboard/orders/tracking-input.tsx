@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -21,15 +20,17 @@ export default function TrackingInput({
   async function save() {
     if (value.trim() === (initialValue ?? "")) return;
     setSaving(true);
-    const supabase = createClient();
-    const { error } = await supabase
-      .from("orders")
-      .update({ tracking_number: value.trim() || null })
-      .eq("id", orderId);
+    const res = await fetch("/api/orders/update-tracking", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderId, trackingNumber: value.trim() || null }),
+    });
     setSaving(false);
-    if (error) toast.error(error.message);
-    else {
-      toast.success("Tracking number saved");
+    if (!res.ok) {
+      const { error } = await res.json().catch(() => ({ error: "Failed to save" }));
+      toast.error(error ?? "Failed to save");
+    } else {
+      toast.success("Tracking saved — buyer notified");
       router.refresh();
     }
   }

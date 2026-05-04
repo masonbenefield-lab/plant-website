@@ -277,6 +277,31 @@ export async function sendNewOrderAlert({
   });
 }
 
+export async function sendShippingNotification({
+  buyerEmail,
+  plantName,
+  trackingNumber,
+  orderId,
+}: {
+  buyerEmail: string;
+  plantName: string;
+  trackingNumber: string;
+  orderId: string;
+}) {
+  const resend = getResend();
+  await resend.emails.send({
+    from: FROM,
+    to: buyerEmail,
+    subject: `Your order has shipped — ${plantName}`,
+    html: `
+      <p>Great news — your order has shipped!</p>
+      <p><strong>${plantName}</strong></p>
+      <p>Tracking number: <strong>${trackingNumber}</strong></p>
+      <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/orders/confirmed?id=${orderId}">View your order</a></p>
+    `,
+  });
+}
+
 export async function sendLowStockAlert({
   sellerEmail,
   plantName,
