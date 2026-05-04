@@ -28,8 +28,8 @@ export async function POST() {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL!;
     const accountLink = await getStripe().accountLinks.create({
       account: accountId,
-      refresh_url: `${appUrl}/account?stripe=refresh`,
-      return_url: `${appUrl}/account?stripe=success`,
+      refresh_url: `${appUrl}/api/stripe/connect/callback`,
+      return_url: `${appUrl}/api/stripe/connect/callback`,
       type: "account_onboarding",
     });
 
