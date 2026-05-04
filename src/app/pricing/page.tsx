@@ -25,7 +25,7 @@ const tiers = [
       commission: "3% platform commission",
       banner: false,
       search: false,
-      analytics: false,
+      analytics: "Basic stats",
       bulk: false,
       support: "Standard support",
       featured: false,
