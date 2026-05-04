@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { useCallback, useTransition, useState, useEffect, Suspense } from "react";
+import { useCallback, useTransition, useState, useEffect, useRef, Suspense } from "react";
 import { X, MapPin, Leaf } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -68,10 +68,10 @@ export default function AuctionFilterBar() {
     [params, pathname, router]
   );
 
-  let debounceTimer: ReturnType<typeof setTimeout>;
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   function debounce(fn: () => void, ms = 400) {
-    clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(fn, ms);
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(fn, ms);
   }
 
   return (

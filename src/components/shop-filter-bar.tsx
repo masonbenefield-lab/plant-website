@@ -23,17 +23,14 @@ export default function ShopFilterBar() {
   const [showGuide, setShowGuide] = useState(true);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [searchValue, setSearchValue] = useState("");
+  const [searchValue, setSearchValue] = useState(() => params.get("q") ?? "");
   const searchRef = useRef<HTMLDivElement>(null);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem("plant-guide-visible");
     if (stored === "false") setShowGuide(false);
   }, []);
-
-  useEffect(() => {
-    setSearchValue(params.get("q") ?? "");
-  }, [params]);
 
   // Close suggestions when clicking outside
   useEffect(() => {
@@ -77,10 +74,9 @@ export default function ShopFilterBar() {
     [params, pathname, router]
   );
 
-  let debounceTimer: ReturnType<typeof setTimeout>;
   function debounce(fn: () => void, ms = 400) {
-    clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(fn, ms);
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(fn, ms);
   }
 
   async function fetchSuggestions(val: string) {
