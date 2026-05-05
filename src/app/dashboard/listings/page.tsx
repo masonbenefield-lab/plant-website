@@ -11,15 +11,16 @@ import { Pagination } from "@/components/pagination";
 import ListingActions from "./listing-actions";
 import PauseAllButton from "./pause-all-button";
 import ResumeButton from "./resume-button";
+import DashboardSearch from "@/components/dashboard-search";
 
 const PAGE_SIZE = 25;
 
 export default async function DashboardListingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; q?: string }>;
 }) {
-  const { page: pageParam } = await searchParams;
+  const { page: pageParam, q } = await searchParams;
   const page = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
   const from = (page - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
@@ -40,19 +41,22 @@ export default async function DashboardListingsPage({
 
   const stripeOnboarded = !!profile?.stripe_onboarded;
 
-  const { data: listings, count } = await supabase
+  let listingsQuery = supabase
     .from("listings")
     .select("*", { count: "exact" })
     .eq("seller_id", user.id)
-    .order("created_at", { ascending: false })
-    .range(from, to);
+    .order("created_at", { ascending: false });
+
+  if (q) listingsQuery = listingsQuery.or(`plant_name.ilike.%${q}%,variety.ilike.%${q}%`);
+
+  const { data: listings, count } = await listingsQuery.range(from, to);
 
   const total = count ?? 0;
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-10">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">My Listings</h1>
         <div className="flex items-center gap-2">
           <PauseAllButton sellerId={user.id} />
@@ -60,6 +64,9 @@ export default async function DashboardListingsPage({
             Create from Inventory →
           </Link>
         </div>
+      </div>
+      <div className="mb-6">
+        <DashboardSearch placeholder="Search listings…" basePath="/dashboard/listings" />
       </div>
       {!stripeOnboarded && !!listings?.length && (
         <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
@@ -126,8 +133,8 @@ export default async function DashboardListingsPage({
         totalPages={totalPages}
         total={total}
         pageSize={PAGE_SIZE}
-        prevHref={page > 1 ? `/dashboard/listings?page=${page - 1}` : null}
-        nextHref={page < totalPages ? `/dashboard/listings?page=${page + 1}` : null}
+        prevHref={page > 1 ? `/dashboard/listings?page=${page - 1}${q ? `&q=${encodeURIComponent(q)}` : ""}` : null}
+        nextHref={page < totalPages ? `/dashboard/listings?page=${page + 1}${q ? `&q=${encodeURIComponent(q)}` : ""}` : null}
       />
     </div>
   );
