@@ -54,7 +54,7 @@ const tiers = [
       bulk: "Basic bulk tools",
       support: "Standard support",
       featured: false,
-      digest: "Featured in buyer digest",
+      digest: "Eligible for monthly buyer digest",
     },
   },
   {
@@ -79,7 +79,7 @@ const tiers = [
       bulk: "Advanced bulk tools",
       support: "Priority support",
       featured: true,
-      digest: "Digest + follower highlights",
+      digest: "Eligible for digest + follower highlights",
     },
   },
 ];
