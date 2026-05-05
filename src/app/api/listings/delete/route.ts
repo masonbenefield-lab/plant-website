@@ -29,17 +29,17 @@ export async function POST(request: Request) {
 
   if (!listing) return NextResponse.json({ error: "Listing not found" }, { status: 404 });
 
-  // Block deletion if completed orders exist — those records must stay for buyer history
-  const { data: completedOrders } = await admin
+  // Block deletion only if there are active orders (paid or in transit)
+  const { data: activeOrders } = await admin
     .from("orders")
     .select("id")
     .eq("listing_id", listingId)
-    .in("status", ["paid", "shipped", "delivered"])
+    .in("status", ["paid", "shipped"])
     .limit(1);
 
-  if (completedOrders?.length) {
+  if (activeOrders?.length) {
     return NextResponse.json({
-      error: "This listing has completed orders and cannot be deleted. Pause it instead to hide it from the shop.",
+      error: "This listing has an active order (paid or in transit) and cannot be deleted yet. Pause it instead to hide it from the shop.",
     }, { status: 409 });
   }
 
