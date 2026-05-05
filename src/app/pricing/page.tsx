@@ -367,14 +367,14 @@ export default function PricingPage() {
               <span className="text-lg mt-0.5">🌿</span>
               <div>
                 <p className="text-sm font-semibold">Grower — Fresh Picks</p>
-                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">Your newest listings appear in the "Fresh Picks" section shown to every subscriber that month. Great for reaching buyers who don't follow you yet.</p>
+                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">Your newest listings are eligible for the "Fresh Picks" section shown to every subscriber. Up to 6 sellers are featured per digest (1 listing each), rotating monthly so exposure is spread across the community.</p>
               </div>
             </div>
             <div className="flex items-start gap-3 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4">
               <span className="text-lg mt-0.5">🌳</span>
               <div>
                 <p className="text-sm font-semibold text-green-800 dark:text-green-300">Nursery — Fresh Picks + Follower Highlights</p>
-                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">Your listings appear in Fresh Picks <em>and</em> in a personalized "From shops you follow" section delivered directly to every buyer who follows your store — the most targeted exposure on the platform.</p>
+                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">Eligible for Fresh Picks <em>and</em> featured in a personalized "From shops you follow" section sent directly to every buyer who follows your store. One listing per digest, delivered to your most engaged audience.</p>
               </div>
             </div>
           </div>
@@ -431,6 +431,6 @@ const faqs = [
   },
   {
     q: "How does the monthly buyer digest work?",
-    a: "Once a month, Plantet sends a curated email to all buyers who've opted in. Grower sellers are included in the 'Fresh Picks' section seen by every subscriber. Nursery sellers are also featured in a personalized 'From shops you follow' section sent to buyers who follow their store. Seedling sellers are not included in the digest.",
+    a: "Once a month, Plantet sends a curated email to opted-in buyers. Up to 6 Grower+ sellers are featured in the 'Fresh Picks' section (1 listing each), rotating monthly so exposure is spread across the community. Nursery sellers are also eligible for a personalized 'From shops you follow' section sent to buyers who follow their store. Seedling sellers are not included.",
   },
 ];

@@ -48,6 +48,7 @@ export async function GET(request: Request) {
   const growerPlusIds = (growerPlusSellers ?? []).map((s) => s.id);
 
   // 4 — global: fresh listings from Grower+ sellers only (past 7 days, with images)
+  // Fetch more than needed so the 1-per-seller cap still fills 6 slots
   const { data: freshRaw } = growerPlusIds.length
     ? await admin
         .from("listings")
@@ -58,8 +59,19 @@ export async function GET(request: Request) {
         .not("images", "eq", "{}")
         .not("images", "is", null)
         .order("created_at", { ascending: false })
-        .limit(24)
+        .limit(120)
     : { data: [] };
+
+  // One listing per seller, up to 6 slots
+  const seenFreshSellers = new Set<string>();
+  const freshPool = (freshRaw ?? [])
+    .filter((l) => (l.images as string[])?.[0])
+    .filter((l) => {
+      if (seenFreshSellers.has(l.seller_id)) return false;
+      seenFreshSellers.add(l.seller_id);
+      return true;
+    })
+    .slice(0, 6);
 
   // 5 — global: hot auctions (most bids, still active)
   const { data: auctionsRaw } = await admin
@@ -84,17 +96,15 @@ export async function GET(request: Request) {
     (sellers ?? []).map((s) => [s.id, s.username])
   );
 
-  const freshListings: DigestListing[] = (freshRaw ?? [])
-    .filter((l) => (l.images as string[])?.[0])
-    .map((l) => ({
-      id: l.id,
-      seller_id: l.seller_id,
-      plant_name: l.plant_name,
-      variety: l.variety,
-      price_cents: l.price_cents,
-      images: l.images as string[],
-      seller_username: sellerMap[l.seller_id] ?? "",
-    }));
+  const freshListings: DigestListing[] = freshPool.map((l) => ({
+    id: l.id,
+    seller_id: l.seller_id,
+    plant_name: l.plant_name,
+    variety: l.variety,
+    price_cents: l.price_cents,
+    images: l.images as string[],
+    seller_username: sellerMap[l.seller_id] ?? "",
+  }));
 
   // bid counts for hot auctions
   const auctionIds = (auctionsRaw ?? []).map((a) => a.id);
@@ -175,11 +185,17 @@ export async function GET(request: Request) {
     const email = emailMap[profile.id];
     if (!email) continue;
 
-    // listings from Nursery followed sellers for this user
+    // listings from Nursery followed sellers for this user — 1 per seller, up to 6
     const mySellerIds = followerToSellers[profile.id] ?? new Set();
     const myNurserySellerIds = new Set([...mySellerIds].filter((id) => nurseryFollowedIds.has(id)));
+    const seenFollowedSellers = new Set<string>();
     const followedForUser: DigestListing[] = (followedListingsRaw ?? [])
-      .filter((l) => myNurserySellerIds.has(l.seller_id))
+      .filter((l) => {
+        if (!myNurserySellerIds.has(l.seller_id)) return false;
+        if (seenFollowedSellers.has(l.seller_id)) return false;
+        seenFollowedSellers.add(l.seller_id);
+        return true;
+      })
       .slice(0, 6)
       .map((l) => ({
         id: l.id,
