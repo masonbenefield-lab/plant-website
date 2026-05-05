@@ -141,50 +141,28 @@ export default function AuctionBidPanel({
     }
 
     setPlacing(true);
-    const previousBidderId = auction.current_bidder_id;
-    const supabase = createClient();
-
-    const { error: bidError } = await supabase.from("bids").insert({
-      auction_id: auction.id,
-      bidder_id: userId,
-      amount_cents: cents,
+    const res = await fetch("/api/bids/place", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ auctionId: auction.id, amountCents: cents }),
     });
+    const data = await res.json();
+    setPlacing(false);
 
-    if (bidError) {
-      toast.error(bidError.message);
-      setPlacing(false);
+    if (!res.ok) {
+      toast.error(data.error ?? "Failed to place bid");
       return;
     }
 
-    const now = new Date();
-    const endsAt = new Date(auction.ends_at);
-    const SNIPE_WINDOW_MS = 2 * 60 * 1000;
-    const extended = endsAt.getTime() - now.getTime() < SNIPE_WINDOW_MS;
-    if (extended) toast.info("Auction extended — bid placed in final 2 minutes");
-
-    const { error: updateError } = await supabase
-      .from("auctions")
-      .update({
-        current_bid_cents: cents,
-        current_bidder_id: userId,
-        ...(extended ? { ends_at: new Date(now.getTime() + SNIPE_WINDOW_MS).toISOString() } : {}),
-      })
-      .eq("id", auction.id)
-      .eq("status", "active");
-
-    setPlacing(false);
-    if (updateError) {
-      toast.error(updateError.message);
-    } else {
-      toast.success(`Bid of ${centsToDisplay(cents)} placed!`);
-      setBidAmount("");
-      if (previousBidderId && previousBidderId !== userId) {
-        fetch("/api/bids/notify", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ auctionId: auction.id, previousBidderId, newBidCents: cents }),
-        }).catch(() => {});
-      }
+    toast.success(`Bid of ${centsToDisplay(cents)} placed!`);
+    if (data.extended) toast.info("Auction extended — bid placed in final 2 minutes");
+    setBidAmount("");
+    if (data.previousBidderId && data.previousBidderId !== userId) {
+      fetch("/api/bids/notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ auctionId: auction.id, previousBidderId: data.previousBidderId, newBidCents: cents }),
+      }).catch(() => {});
     }
   }
 
@@ -194,35 +172,27 @@ export default function AuctionBidPanel({
     if (!auction.buy_now_price_cents) return;
 
     setPlacing(true);
-    const previousBidderId = auction.current_bidder_id;
-    const supabase = createClient();
-
-    const { error: bidError } = await supabase.from("bids").insert({
-      auction_id: auction.id,
-      bidder_id: userId,
-      amount_cents: auction.buy_now_price_cents,
+    const res = await fetch("/api/bids/buy-now", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ auctionId: auction.id }),
     });
-    if (bidError) { toast.error(bidError.message); setPlacing(false); return; }
-
-    const { error: updateError } = await supabase.from("auctions").update({
-      current_bid_cents: auction.buy_now_price_cents,
-      current_bidder_id: userId,
-      status: "ended",
-    }).eq("id", auction.id).eq("status", "active");
-
+    const data = await res.json();
     setPlacing(false);
-    if (updateError) {
-      toast.error(updateError.message);
-    } else {
-      toast.success("Purchase complete! Proceed to checkout.");
-      if (previousBidderId && previousBidderId !== userId) {
-        fetch("/api/bids/notify", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ auctionId: auction.id, previousBidderId, newBidCents: auction.buy_now_price_cents }),
-        }).catch(() => {});
-      }
+
+    if (!res.ok) {
+      toast.error(data.error ?? "Failed to complete purchase");
+      return;
     }
+
+    if (data.previousBidderId && data.previousBidderId !== userId) {
+      fetch("/api/bids/notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ auctionId: auction.id, previousBidderId: data.previousBidderId, newBidCents: data.buyNowCents }),
+      }).catch(() => {});
+    }
+    router.push(`/checkout?auction=${auction.id}`);
   }
 
   const isEnded = auction.status !== "active" || new Date(auction.ends_at) <= new Date();
