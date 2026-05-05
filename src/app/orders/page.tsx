@@ -37,6 +37,8 @@ const statusColors: Record<string, string> = {
   delivered: "bg-green-100 text-green-800",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function MyOrdersPage({
   searchParams,
 }: {
@@ -53,7 +55,8 @@ export default async function MyOrdersPage({
     .eq("buyer_id", user.id)
     .order("created_at", { ascending: false });
   if (status) ordersQuery = ordersQuery.eq("status", status as "pending" | "paid" | "shipped" | "delivered");
-  const { data: orders } = await ordersQuery;
+  const { data: orders, error: ordersError } = await ordersQuery;
+  if (ordersError) console.error("[MyOrders] query error:", ordersError.message, ordersError.code);
 
   const tabBar = (
     <div className="flex gap-2 flex-wrap mb-6">
