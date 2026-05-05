@@ -29,6 +29,7 @@ const tiers = [
       bulk: false,
       support: "Standard support",
       featured: false,
+      digest: false,
     },
   },
   {
@@ -53,6 +54,7 @@ const tiers = [
       bulk: "Basic bulk tools",
       support: "Standard support",
       featured: false,
+      digest: "Featured in buyer digest",
     },
   },
   {
@@ -77,6 +79,7 @@ const tiers = [
       bulk: "Advanced bulk tools",
       support: "Priority support",
       featured: true,
+      digest: "Digest + follower highlights",
     },
   },
 ];
@@ -93,6 +96,7 @@ const comparisonRows = [
   { label: "Bulk listing tools",          key: "bulk" },
   { label: "Support",                     key: "support" },
   { label: "Featured homepage placement", key: "featured" },
+  { label: "Monthly buyer digest",        key: "digest" },
 ];
 
 function BreakevenCalculator() {
@@ -343,6 +347,40 @@ export default function PricingPage() {
         </div>
       </section>
 
+      {/* Digest callout */}
+      <section className="px-4 pb-16">
+        <div className="max-w-2xl mx-auto bg-muted rounded-2xl border p-8">
+          <p className="text-2xl mb-3 text-center">📬</p>
+          <h2 className="font-bold text-lg mb-2 text-center">The monthly buyer digest</h2>
+          <p className="text-sm text-muted-foreground leading-relaxed mb-6 text-center">
+            Every month, Plantet sends a curated email to all opted-in buyers featuring new plant listings, hot auctions, and picks from shops they follow. Paid plans get their listings in front of real buyers automatically.
+          </p>
+          <div className="space-y-3">
+            <div className="flex items-start gap-3 rounded-xl bg-background border p-4">
+              <span className="text-lg mt-0.5">🌱</span>
+              <div>
+                <p className="text-sm font-semibold">Seedling — not included</p>
+                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">Seedling listings are not featured in the digest. Upgrade to a paid plan to get discovered by buyers who've never visited your storefront.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 rounded-xl bg-background border p-4">
+              <span className="text-lg mt-0.5">🌿</span>
+              <div>
+                <p className="text-sm font-semibold">Grower — Fresh Picks</p>
+                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">Your newest listings appear in the "Fresh Picks" section shown to every subscriber that month. Great for reaching buyers who don't follow you yet.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4">
+              <span className="text-lg mt-0.5">🌳</span>
+              <div>
+                <p className="text-sm font-semibold text-green-800 dark:text-green-300">Nursery — Fresh Picks + Follower Highlights</p>
+                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">Your listings appear in Fresh Picks <em>and</em> in a personalized "From shops you follow" section delivered directly to every buyer who follows your store — the most targeted exposure on the platform.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* FAQ */}
       <section className="px-4 pb-20">
         <div className="max-w-2xl mx-auto">
@@ -390,5 +428,9 @@ const faqs = [
   {
     q: "Is there a free trial on paid plans?",
     a: "We don't offer a time-limited trial, but the free Seedling plan lets you get started with no commitment. Upgrade when you're ready to unlock more.",
+  },
+  {
+    q: "How does the monthly buyer digest work?",
+    a: "Once a month, Plantet sends a curated email to all buyers who've opted in. Grower sellers are included in the 'Fresh Picks' section seen by every subscriber. Nursery sellers are also featured in a personalized 'From shops you follow' section sent to buyers who follow their store. Seedling sellers are not included in the digest.",
   },
 ];
