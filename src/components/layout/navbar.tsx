@@ -79,7 +79,7 @@ export default function Navbar({ user, avatarUrl, username, isAdmin }: NavbarPro
                 <Link href="/wishlist" className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="Wishlist">
                   <Heart size={17} />
                 </Link>
-                <Link href="/orders" className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="My Orders">
+                <Link href="/orders" className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="My Purchases">
                   <Package size={17} />
                 </Link>
                 <Link href="/feed" className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="Feed">
@@ -103,7 +103,7 @@ export default function Navbar({ user, avatarUrl, username, isAdmin }: NavbarPro
                   <DropdownMenuItem><Link href="/dashboard/inventory" className="block w-full">Inventory</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href="/dashboard/offers" className="block w-full">Offers</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href="/wishlist" className="block w-full">Wishlist</Link></DropdownMenuItem>
-                  <DropdownMenuItem><Link href="/orders" className="block w-full">My Orders</Link></DropdownMenuItem>
+                  <DropdownMenuItem><Link href="/orders" className="block w-full">My Purchases</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href="/feed" className="block w-full">Feed</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href={`/sellers/${username}`} className="block w-full">My Storefront</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href="/account" className="block w-full">Account Settings</Link></DropdownMenuItem>
@@ -173,7 +173,7 @@ export default function Navbar({ user, avatarUrl, username, isAdmin }: NavbarPro
               <MobileLink href="/dashboard" onClick={closeMenu}>Dashboard</MobileLink>
               <MobileLink href="/dashboard/inventory" onClick={closeMenu}>Inventory</MobileLink>
               <MobileLink href="/wishlist" onClick={closeMenu}>Wishlist</MobileLink>
-              <MobileLink href="/orders" onClick={closeMenu}>My Orders</MobileLink>
+              <MobileLink href="/orders" onClick={closeMenu}>My Purchases</MobileLink>
               <MobileLink href={`/sellers/${username}`} onClick={closeMenu}>My Storefront</MobileLink>
               <MobileLink href="/account" onClick={closeMenu}>Account Settings</MobileLink>
               {isAdmin && <MobileLink href="/admin" onClick={closeMenu}>Admin Panel</MobileLink>}

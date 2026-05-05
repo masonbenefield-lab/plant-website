@@ -79,7 +79,7 @@ export default async function MyOrdersPage({
   if (!orders?.length) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-10">
-        <h1 className="text-2xl font-bold mb-6">My Orders</h1>
+        <h1 className="text-2xl font-bold mb-6">My Purchases</h1>
         {tabBar}
         <p className="text-muted-foreground">{status ? "No orders with this status." : "No orders yet."}</p>
       </div>
@@ -109,7 +109,7 @@ export default async function MyOrdersPage({
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-10">
-      <h1 className="text-2xl font-bold mb-6">My Orders</h1>
+      <h1 className="text-2xl font-bold mb-6">My Purchases</h1>
       {tabBar}
       <div className="space-y-4">
         {orders.map((order) => {

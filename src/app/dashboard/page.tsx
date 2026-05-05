@@ -149,7 +149,7 @@ export default async function DashboardPage() {
         {/* Recent orders */}
         <div className="lg:col-span-2 space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold">Orders awaiting shipment</h2>
+            <h2 className="font-semibold">Sales awaiting shipment</h2>
             <Link href="/dashboard/orders" className="text-sm text-green-700 hover:underline">View all</Link>
           </div>
           {recentOrders.length === 0 ? (
@@ -193,7 +193,7 @@ export default async function DashboardPage() {
             <NavLink href="/dashboard/inventory" label="Inventory" />
             <NavLink href="/dashboard/listings" label="Manage Listings" />
             <NavLink href="/dashboard/auctions" label="Manage Auctions" />
-            <NavLink href="/dashboard/orders" label="View Orders" badge={paidCount > 0 ? paidCount : undefined} />
+            <NavLink href="/dashboard/orders" label="My Sales" badge={paidCount > 0 ? paidCount : undefined} />
             <NavLink href="/dashboard/analytics" label="Analytics" />
             <NavLink href="/account" label="Account Settings" badge={!checks.stripe ? "!" : undefined} badgeColor="orange" />
           </div>

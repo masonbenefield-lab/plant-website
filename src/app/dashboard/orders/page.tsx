@@ -32,10 +32,10 @@ export default async function OrdersDashboardPage({
   if (!orders?.length) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-10">
-        <h1 className="text-2xl font-bold mb-8">Orders</h1>
+        <h1 className="text-2xl font-bold mb-8">My Sales</h1>
         <div className="text-center py-16 border rounded-xl bg-muted/30">
           <p className="text-4xl mb-4">📦</p>
-          <p className="font-semibold mb-1">No orders yet</p>
+          <p className="font-semibold mb-1">No sales yet</p>
           <p className="text-sm text-muted-foreground mb-6">Orders from buyers will appear here once someone purchases one of your listings.</p>
           <div className="flex justify-center gap-3">
             <Link href="/dashboard/listings" className="text-sm text-green-700 hover:underline">View your listings</Link>
@@ -67,7 +67,7 @@ export default async function OrdersDashboardPage({
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-10">
-      <h1 className="text-2xl font-bold mb-8">Orders</h1>
+      <h1 className="text-2xl font-bold mb-8">My Sales</h1>
       <OrdersClient
         orders={orders}
         listingMap={listingMap}

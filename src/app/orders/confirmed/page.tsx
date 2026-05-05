@@ -96,7 +96,7 @@ export default async function OrderConfirmedPage({
 
       <div className="flex flex-col sm:flex-row gap-3 justify-center">
         <Link href="/orders" className={cn(buttonVariants({ variant: "outline" }))}>
-          View all orders
+          View my purchases
         </Link>
         <Link href="/shop" className={cn(buttonVariants(), "bg-green-700 hover:bg-green-800")}>
           Continue shopping
