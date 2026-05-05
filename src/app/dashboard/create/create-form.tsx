@@ -12,10 +12,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { PLANT_CATEGORIES } from "@/lib/categories";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Plus, X } from "lucide-react";
 import PotSizePicker from "@/components/pot-size-picker";
 import { findProhibitedWord, censorWord, logViolation } from "@/lib/profanity";
 import { getPlanLimits, type PlanLimits } from "@/lib/plan-limits";
+
+type SizeEntry = { id: number; potSize: string; quantity: string };
+
+let nextId = 1;
 
 export default function CreateInventoryPage() {
   const router = useRouter();
@@ -27,6 +31,27 @@ export default function CreateInventoryPage() {
   const [profileWarning, setProfileWarning] = useState<"incomplete" | "unverified" | null>(null);
   const [planLimits, setPlanLimits] = useState<PlanLimits>({ listings: null, auctions: null, photos: null });
 
+  const [plantName, setPlantName] = useState("");
+  const [variety, setVariety] = useState("");
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("");
+  const [existingGroup, setExistingGroup] = useState<{ plant_name: string; count: number } | null>(null);
+
+  // Multiple sizes — each becomes its own inventory row
+  const [sizes, setSizes] = useState<SizeEntry[]>([{ id: 0, potSize: "", quantity: "1" }]);
+
+  function addSize() {
+    setSizes(prev => [...prev, { id: nextId++, potSize: "", quantity: "1" }]);
+  }
+
+  function removeSize(id: number) {
+    setSizes(prev => prev.filter(s => s.id !== id));
+  }
+
+  function updateSize(id: number, field: keyof Omit<SizeEntry, "id">, value: string) {
+    setSizes(prev => prev.map(s => s.id === id ? { ...s, [field]: value } : s));
+  }
+
   useEffect(() => {
     async function checkProfile() {
       const supabase = createClient();
@@ -37,28 +62,11 @@ export default function CreateInventoryPage() {
         supabase.from("profiles").select("bio, avatar_url").eq("id", user.id).single(),
         supabase.from("profiles").select("plan, is_admin").eq("id", user.id).single(),
       ]);
-      if (!profile?.bio?.trim() || !profile?.avatar_url) {
-        setProfileWarning("incomplete");
-      }
+      if (!profile?.bio?.trim() || !profile?.avatar_url) setProfileWarning("incomplete");
       setPlanLimits(getPlanLimits(planProfile?.plan, !!planProfile?.is_admin));
     }
     checkProfile();
   }, []);
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setDragging(false);
-    const files = e.dataTransfer.files;
-    if (files.length) uploadImages(files);
-  }, []);  // eslint-disable-line react-hooks/exhaustive-deps
-
-  const [plantName, setPlantName] = useState("");
-  const [variety, setVariety] = useState("");
-  const [quantity, setQuantity] = useState("1");
-  const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("");
-  const [potSize, setPotSize] = useState("");
-  const [existingGroup, setExistingGroup] = useState<{ plant_name: string; count: number } | null>(null);
 
   useEffect(() => {
     if (!plantName.trim()) { setExistingGroup(null); return; }
@@ -81,6 +89,12 @@ export default function CreateInventoryPage() {
     return () => clearTimeout(timer);
   }, [plantName, variety]);
 
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragging(false);
+    if (e.dataTransfer.files.length) uploadImages(e.dataTransfer.files);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   async function uploadImages(files: FileList) {
     const photoLimit = planLimits.photos;
     if (photoLimit !== null && imageUrls.length >= photoLimit) {
@@ -97,15 +111,11 @@ export default function CreateInventoryPage() {
     for (const file of toUpload) {
       const path = `${user.id}/${Date.now()}-${file.name}`;
       const { error } = await supabase.storage.from("listings").upload(path, file, { upsert: true });
-      if (error) {
-        toast.error(`Upload failed: ${error.message}`);
-        setUploading(false);
-        return;
-      }
+      if (error) { toast.error(`Upload failed: ${error.message}`); setUploading(false); return; }
       const { data } = supabase.storage.from("listings").getPublicUrl(path);
       urls.push(data.publicUrl);
     }
-    setImageUrls((prev) => [...prev, ...urls]);
+    setImageUrls(prev => [...prev, ...urls]);
     setUploading(false);
   }
 
@@ -125,28 +135,34 @@ export default function CreateInventoryPage() {
         return;
       }
     }
+
     setSaving(true);
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { toast.error("Not logged in"); setSaving(false); return; }
 
-    const { error } = await supabase.from("inventory").insert({
+    // Insert one row per size entry
+    const rows = sizes.map(s => ({
       seller_id: user.id,
-      plant_name: plantName,
-      variety: variety || null,
-      quantity: Number(quantity),
-      description: description || null,
+      plant_name: plantName.trim(),
+      variety: variety.trim() || null,
+      quantity: Math.max(1, Number(s.quantity) || 1),
+      description: description.trim() || null,
       images: imageUrls,
       category: category || null,
-      pot_size: potSize || null,
-    });
+      pot_size: s.potSize || null,
+    }));
+
+    const { error } = await supabase.from("inventory").insert(rows);
     setSaving(false);
     if (error) { toast.error(error.message); return; }
-    toast.success("Saved to inventory!");
+
+    const label = sizes.length > 1 ? `${sizes.length} sizes added` : "Saved to inventory!";
+    toast.success(label);
     router.push("/dashboard/inventory");
   }
 
-  const canSubmit = plantName.trim() && Number(quantity) >= 1;
+  const canSubmit = plantName.trim() && sizes.every(s => Number(s.quantity) >= 1);
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-10">
@@ -220,24 +236,6 @@ export default function CreateInventoryPage() {
             </div>
 
             <div className="space-y-1">
-              <Label htmlFor="quantity">Quantity *</Label>
-              <Input
-                id="quantity"
-                type="number"
-                min={1}
-                value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
-                required
-                className="max-w-[140px]"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <Label>Pot Size <span className="font-normal text-muted-foreground">(optional)</span></Label>
-              <PotSizePicker value={potSize} onChange={setPotSize} />
-            </div>
-
-            <div className="space-y-1">
               <Label htmlFor="description">Description</Label>
               <Textarea
                 id="description"
@@ -284,46 +282,20 @@ export default function CreateInventoryPage() {
                 } ${uploading ? "pointer-events-none opacity-60" : ""}`}
               >
                 {uploading ? (
-                  <>
-                    <span className="text-2xl">⏳</span>
-                    <p className="text-sm text-muted-foreground">Uploading…</p>
-                  </>
+                  <><span className="text-2xl">⏳</span><p className="text-sm text-muted-foreground">Uploading…</p></>
                 ) : planLimits.photos !== null && imageUrls.length >= planLimits.photos ? (
-                  <>
-                    <span className="text-3xl">📷</span>
-                    <p className="text-sm font-medium">Photo limit reached</p>
-                    <p className="text-xs text-muted-foreground">
-                      <Link href="/pricing" className="underline">Upgrade</Link> for more photos
-                    </p>
-                  </>
+                  <><span className="text-3xl">📷</span><p className="text-sm font-medium">Photo limit reached</p><p className="text-xs text-muted-foreground"><Link href="/pricing" className="underline">Upgrade</Link> for more photos</p></>
                 ) : (
-                  <>
-                    <span className="text-3xl">📷</span>
-                    <p className="text-sm font-medium">Drag & drop photos here</p>
-                    <p className="text-xs text-muted-foreground">or click to browse</p>
-                  </>
+                  <><span className="text-3xl">📷</span><p className="text-sm font-medium">Drag & drop photos here</p><p className="text-xs text-muted-foreground">or click to browse</p></>
                 )}
               </div>
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/*"
-                multiple
-                className="hidden"
-                onChange={(e) => { if (e.target.files) uploadImages(e.target.files); }}
-              />
+              <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { if (e.target.files) uploadImages(e.target.files); }} />
               {imageUrls.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-1">
                   {imageUrls.map((url, i) => (
                     <div key={i} className="relative group">
                       <Image src={url} alt="" width={80} height={80} className="w-20 h-20 object-cover rounded border" />
-                      <button
-                        type="button"
-                        onClick={() => setImageUrls((prev) => prev.filter((_, idx) => idx !== i))}
-                        className="absolute -top-1.5 -right-1.5 hidden group-hover:flex items-center justify-center w-5 h-5 rounded-full bg-red-500 text-white text-xs leading-none"
-                      >
-                        ×
-                      </button>
+                      <button type="button" onClick={() => setImageUrls(prev => prev.filter((_, idx) => idx !== i))} className="absolute -top-1.5 -right-1.5 hidden group-hover:flex items-center justify-center w-5 h-5 rounded-full bg-red-500 text-white text-xs leading-none">×</button>
                     </div>
                   ))}
                 </div>
@@ -332,12 +304,58 @@ export default function CreateInventoryPage() {
           </CardContent>
         </Card>
 
+        {/* Sizes */}
+        <Card className="mb-6">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">Sizes & Quantities</CardTitle>
+              <p className="text-xs text-muted-foreground">Each size is saved as a separate inventory row</p>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {sizes.map((size, idx) => (
+              <div key={size.id} className="flex items-start gap-3 p-3 rounded-lg border bg-muted/20">
+                <div className="flex-1 space-y-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Pot Size <span className="font-normal text-muted-foreground">(optional)</span></Label>
+                    <PotSizePicker value={size.potSize} onChange={(v) => updateSize(size.id, "potSize", v)} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs" htmlFor={`qty-${size.id}`}>Quantity *</Label>
+                    <Input
+                      id={`qty-${size.id}`}
+                      type="number"
+                      min={1}
+                      value={size.quantity}
+                      onChange={(e) => updateSize(size.id, "quantity", e.target.value)}
+                      className="max-w-[120px]"
+                    />
+                  </div>
+                </div>
+                {sizes.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeSize(size.id)}
+                    className="mt-1 p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                    aria-label={`Remove size ${idx + 1}`}
+                  >
+                    <X size={16} />
+                  </button>
+                )}
+              </div>
+            ))}
+            <Button type="button" variant="outline" size="sm" onClick={addSize} className="flex items-center gap-1.5 text-xs">
+              <Plus size={14} /> Add another size
+            </Button>
+          </CardContent>
+        </Card>
+
         <div className="flex items-center gap-3">
           <Button type="submit" disabled={saving || !canSubmit} className="bg-green-700 hover:bg-green-800">
-            {saving ? "Saving…" : "Save to Inventory"}
+            {saving ? "Saving…" : sizes.length > 1 ? `Save ${sizes.length} sizes to Inventory` : "Save to Inventory"}
           </Button>
           {!canSubmit && (
-            <p className="text-xs text-muted-foreground">Fill in plant name and quantity to save.</p>
+            <p className="text-xs text-muted-foreground">Fill in plant name and all quantities to save.</p>
           )}
         </div>
       </form>
