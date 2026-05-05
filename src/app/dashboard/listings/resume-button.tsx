@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 
 export default function ResumeButton({ listingId }: { listingId: string }) {
@@ -11,14 +10,23 @@ export default function ResumeButton({ listingId }: { listingId: string }) {
 
   async function resume() {
     setLoading(true);
-    const supabase = createClient();
-    const { error } = await supabase
-      .from("listings")
-      .update({ status: "active" })
-      .eq("id", listingId);
+    const res = await fetch("/api/listings/toggle-status", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ listingId }),
+    });
+    const data = await res.json();
     setLoading(false);
-    if (error) toast.error(error.message);
-    else { toast.success("Listing activated"); router.refresh(); }
+    if (!res.ok) { toast.error(data.error ?? "Failed to activate"); return; }
+    toast.success("Listing activated");
+    if (data.notifyRestock) {
+      fetch("/api/listings/notify-restock", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ listingId }),
+      }).catch(() => null);
+    }
+    router.refresh();
   }
 
   return (

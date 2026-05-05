@@ -154,13 +154,15 @@ export default function ListingActions({ listing }: { listing: Listing }) {
   }
 
   async function toggleStatus() {
-    const supabase = createClient();
-    const newStatus = listing.status === "active" ? "paused" : "active";
-    const { error } = await supabase.from("listings").update({ status: newStatus }).eq("id", listing.id);
-    if (error) { toast.error(error.message); return; }
-    toast.success(`Listing ${newStatus}`);
-    if (newStatus === "active") {
-      // Fire-and-forget restock notifications
+    const res = await fetch("/api/listings/toggle-status", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ listingId: listing.id }),
+    });
+    const data = await res.json();
+    if (!res.ok) { toast.error(data.error ?? "Failed to update listing"); return; }
+    toast.success(`Listing ${data.newStatus}`);
+    if (data.notifyRestock) {
       fetch("/api/listings/notify-restock", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
