@@ -18,9 +18,9 @@ export function getPlanLimits(plan: Plan | null | undefined, isAdmin: boolean): 
 export function planFeePercent(plan: Plan | null | undefined, isAdmin: boolean): number {
   if (isAdmin) return 0;
   switch (plan) {
-    case "nursery": return 2;
-    case "grower":  return 2.5;
-    default:        return 3;
+    case "nursery": return 3;
+    case "grower":  return 4.5;
+    default:        return 6.5;
   }
 }
 
