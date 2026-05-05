@@ -29,7 +29,7 @@ export async function POST(request: Request) {
 
   if (!listing) return NextResponse.json({ error: "Listing not found" }, { status: 404 });
 
-  // Block deletion only if there are active orders (paid or in transit)
+  // Block deletion if there are active orders (paid or in transit)
   const { data: activeOrders } = await admin
     .from("orders")
     .select("id")
@@ -40,6 +40,23 @@ export async function POST(request: Request) {
   if (activeOrders?.length) {
     return NextResponse.json({
       error: "This listing has an active order (paid or in transit) and cannot be deleted yet. Pause it instead to hide it from the shop.",
+    }, { status: 409 });
+  }
+
+  // Enforce 30-day lock after delivery
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const { data: recentDelivered } = await admin
+    .from("orders")
+    .select("id, delivered_at")
+    .eq("listing_id", listingId)
+    .eq("status", "delivered")
+    .gt("delivered_at", thirtyDaysAgo)
+    .limit(1);
+
+  if (recentDelivered?.length) {
+    return NextResponse.json({
+      error: "This listing had a recent delivery. You can delete it 30 days after delivery, or use the auto-delete option to have it removed automatically.",
+      code: "RECENT_DELIVERY",
     }, { status: 409 });
   }
 

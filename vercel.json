@@ -3,6 +3,10 @@
     {
       "path": "/api/auctions/close",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/cleanup-listings",
+      "schedule": "0 2 * * *"
     }
   ]
 }

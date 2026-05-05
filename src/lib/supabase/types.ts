@@ -146,6 +146,7 @@ export interface Database {
           bundle_discount_pct: number | null;
           sold_out_behavior: "mark_sold_out" | "auto_pause";
           care_guide_pdf_url: string | null;
+          scheduled_delete_at: string | null;
           created_at: string;
         };
         Insert: {
@@ -167,6 +168,7 @@ export interface Database {
           bundle_discount_pct?: number | null;
           sold_out_behavior?: "mark_sold_out" | "auto_pause";
           care_guide_pdf_url?: string | null;
+          scheduled_delete_at?: string | null;
           created_at?: string;
         };
         Update: {
@@ -187,6 +189,7 @@ export interface Database {
           bundle_discount_pct?: number | null;
           sold_out_behavior?: "mark_sold_out" | "auto_pause";
           care_guide_pdf_url?: string | null;
+          scheduled_delete_at?: string | null;
         };
         Relationships: [];
       };
@@ -298,6 +301,7 @@ export interface Database {
           status: OrderStatus;
           amount_cents: number;
           tracking_number: string | null;
+          delivered_at: string | null;
           cart_items: { listing_id: string; plant_name: string; variety: string | null; quantity: number; price_cents: number }[] | null;
           created_at: string;
         };
@@ -327,6 +331,7 @@ export interface Database {
           stripe_payment_intent_id?: string | null;
           status?: OrderStatus;
           tracking_number?: string | null;
+          delivered_at?: string | null;
         };
         Relationships: [];
       };

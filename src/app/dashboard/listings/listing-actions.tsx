@@ -40,6 +40,8 @@ export default function ListingActions({ listing }: { listing: Listing }) {
   const [saleOpen, setSaleOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [scheduling, setScheduling] = useState(false);
+  const [showAutoDelete, setShowAutoDelete] = useState(false);
   const [saleSaving, setSaleSaving] = useState(false);
   const [salePrice, setSalePrice] = useState("");
   const [saleEndsAt, setSaleEndsAt] = useState("");
@@ -108,6 +110,11 @@ export default function ListingActions({ listing }: { listing: Listing }) {
       .from("listings")
       .update({ images: updatedImages })
       .eq("id", listing.id);
+
+    // Keep inventory photos in sync
+    if (!updateError && listing.inventory_id) {
+      await supabase.from("inventory").update({ images: updatedImages }).eq("id", listing.inventory_id);
+    }
 
     setUploading(false);
     e.target.value = "";
@@ -181,9 +188,32 @@ export default function ListingActions({ listing }: { listing: Listing }) {
     });
     const data = await res.json();
     setDeleting(false);
-    if (!res.ok) { toast.error(data.error ?? "Failed to delete listing"); return; }
+    if (!res.ok) {
+      if (data.code === "RECENT_DELIVERY") {
+        setShowAutoDelete(true);
+        return;
+      }
+      toast.error(data.error ?? "Failed to delete listing");
+      return;
+    }
     toast.success("Listing deleted");
     setDeleteOpen(false);
+    router.refresh();
+  }
+
+  async function scheduleDelete() {
+    setScheduling(true);
+    const res = await fetch("/api/listings/schedule-delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ listingId: listing.id }),
+    });
+    const data = await res.json();
+    setScheduling(false);
+    if (!res.ok) { toast.error(data.error ?? "Failed to schedule deletion"); return; }
+    toast.success("Listing hidden and will be auto-deleted in 30 days");
+    setDeleteOpen(false);
+    setShowAutoDelete(false);
     router.refresh();
   }
 
@@ -210,20 +240,42 @@ export default function ListingActions({ listing }: { listing: Listing }) {
       </DropdownMenu>
 
       {/* Delete confirmation dialog */}
-      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+      <Dialog open={deleteOpen} onOpenChange={(open) => { setDeleteOpen(open); if (!open) setShowAutoDelete(false); }}>
         <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Delete listing?</DialogTitle>
-            <DialogDescription>
-              This will permanently remove <strong>{listing.plant_name}</strong>. This cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex gap-2 mt-2">
-            <Button variant="outline" onClick={() => setDeleteOpen(false)} className="flex-1">Cancel</Button>
-            <Button variant="destructive" onClick={deleteListing} disabled={deleting} className="flex-1">
-              {deleting ? "Deleting…" : "Delete"}
-            </Button>
-          </div>
+          {!showAutoDelete ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>Delete listing?</DialogTitle>
+                <DialogDescription>
+                  This will permanently remove <strong>{listing.plant_name}</strong>. This cannot be undone.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="flex gap-2 mt-2">
+                <Button variant="outline" onClick={() => setDeleteOpen(false)} className="flex-1">Cancel</Button>
+                <Button variant="destructive" onClick={deleteListing} disabled={deleting} className="flex-1">
+                  {deleting ? "Checking…" : "Delete"}
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <DialogHeader>
+                <DialogTitle>Recent delivery — 30 day hold</DialogTitle>
+                <DialogDescription>
+                  This listing had a recent delivery. You can&apos;t delete it for 30 days, but you can hide it now and have it auto-deleted automatically.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-3 py-2 text-sm text-amber-800 dark:text-amber-300 mt-1">
+                Choosing &quot;Hide &amp; Auto-delete&quot; will immediately pause this listing so it&apos;s invisible to buyers, then permanently delete it in 30 days.
+              </div>
+              <div className="flex gap-2 mt-2">
+                <Button variant="outline" onClick={() => { setDeleteOpen(false); setShowAutoDelete(false); }} className="flex-1">Cancel</Button>
+                <Button onClick={scheduleDelete} disabled={scheduling} className="flex-1 bg-amber-600 hover:bg-amber-700 text-white">
+                  {scheduling ? "Scheduling…" : "Hide & Auto-delete"}
+                </Button>
+              </div>
+            </>
+          )}
         </DialogContent>
       </Dialog>
 

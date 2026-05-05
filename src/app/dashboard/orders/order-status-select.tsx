@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import {
   Select,
   SelectContent,
@@ -25,12 +24,13 @@ export default function OrderStatusSelect({
 
   async function handleChange(value: string | null) {
     if (!value) return;
-    const supabase = createClient();
-    const { error } = await supabase
-      .from("orders")
-      .update({ status: value as OrderStatus })
-      .eq("id", orderId);
-    if (error) toast.error(error.message);
+    const res = await fetch("/api/orders/update-status", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderId, status: value as OrderStatus }),
+    });
+    const data = await res.json();
+    if (!res.ok) toast.error(data.error ?? "Failed to update order");
     else {
       toast.success("Order updated");
       router.refresh();

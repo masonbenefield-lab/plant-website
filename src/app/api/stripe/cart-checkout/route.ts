@@ -139,7 +139,7 @@ export async function POST(request: Request) {
         await admin.from("inventory").update({
           quantity: newInvQty,
           listing_quantity: newListingQty,
-          ...(newListingQty <= 0 ? { listing_id: null } : {}),
+          ...(soldOut ? { listing_id: null } : {}),
         }).eq("id", listing.inventory_id);
 
         const threshold = (inv as { low_stock_threshold?: number | null }).low_stock_threshold;

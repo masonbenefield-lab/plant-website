@@ -525,3 +525,34 @@ CREATE POLICY "Sellers manage own templates" ON listing_templates FOR ALL USING 
 
 ### Environment variables
 - None new
+
+---
+
+## 2026-05-04 — 30-day delivery lock + auto-delete for listings
+
+### Features built
+- **30-day lock after delivery**: Listing delete now blocked for 30 days after a delivered order. Returns `RECENT_DELIVERY` error code when blocked.
+- **Auto-delete option**: When deletion is blocked by the lock, delete dialog switches to an "auto-delete" screen offering to pause the listing immediately and schedule it for deletion in 30 days.
+- **`delivered_at` stamping**: Order status route now stamps `delivered_at = now()` when order is marked "delivered" via the order status dropdown.
+- **Cron cleanup job**: `/api/cron/cleanup-listings` runs daily at 2am UTC, deletes all listings whose `scheduled_delete_at` has passed, clears inventory links first.
+- **Seller agreement page**: Shows read-only document when visited without `?next=` param; checkbox/sign UI only appears during onboarding flow.
+
+### Files changed
+- `src/lib/supabase/types.ts` — added `scheduled_delete_at: string | null` to listings, `delivered_at: string | null` to orders
+- `src/app/api/orders/update-status/route.ts` — new route: updates order status, stamps `delivered_at` when marking delivered
+- `src/app/dashboard/orders/order-status-select.tsx` — calls new route instead of direct Supabase write
+- `src/app/api/listings/delete/route.ts` — added 30-day lock check using `delivered_at`
+- `src/app/api/listings/schedule-delete/route.ts` — new route: pauses listing + sets `scheduled_delete_at = now() + 30 days`
+- `src/app/dashboard/listings/listing-actions.tsx` — delete dialog shows auto-delete screen on `RECENT_DELIVERY` error
+- `src/app/api/cron/cleanup-listings/route.ts` — new cron route for daily cleanup of scheduled deletions
+- `vercel.json` — added cron at `0 2 * * *` for cleanup-listings
+- `.env.local.example` — added `CRON_SECRET` variable
+
+### SQL migrations (already run by user)
+```sql
+ALTER TABLE listings ADD COLUMN IF NOT EXISTS scheduled_delete_at timestamptz;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivered_at timestamptz;
+```
+
+### Environment variables
+- `CRON_SECRET` — add a random secret string; set same value in Vercel env vars under the project settings
