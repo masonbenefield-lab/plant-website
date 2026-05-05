@@ -28,6 +28,7 @@ export default function SignupPage() {
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [ageConfirmed, setAgeConfirmed] = useState(false);
+  const [emailOptIn, setEmailOptIn] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -49,7 +50,7 @@ export default function SignupPage() {
       password,
       options: {
         emailRedirectTo: `${window.location.origin}/auth/callback`,
-        data: { username, display_name: displayName.trim() || null, plan: planParam },
+        data: { username, display_name: displayName.trim() || null, plan: planParam, email_marketing_opt_in: emailOptIn },
       },
     });
 
@@ -181,6 +182,17 @@ export default function SignupPage() {
                   Privacy Policy
                 </Link>
                 .
+              </span>
+            </label>
+            <label className="flex items-start gap-2 cursor-pointer text-sm text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={emailOptIn}
+                onChange={(e) => setEmailOptIn(e.target.checked)}
+                className="mt-0.5 accent-green-700"
+              />
+              <span>
+                Send me a monthly plant digest — new arrivals, hot auctions, and picks from shops I follow. Unsubscribe anytime.
               </span>
             </label>
             <Button type="submit" className="w-full bg-green-700 hover:bg-green-800" disabled={loading || !ageConfirmed}>

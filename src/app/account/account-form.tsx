@@ -45,6 +45,7 @@ export default function AccountForm({
   const [vacationUntil, setVacationUntil] = useState(profile?.vacation_until ?? "");
   const [offersEnabled, setOffersEnabled] = useState((profile as { offers_enabled?: boolean } | null)?.offers_enabled !== false);
   const [announcement, setAnnouncement] = useState((profile as { announcement?: string | null } | null)?.announcement ?? "");
+  const [emailOptIn, setEmailOptIn] = useState(profile?.email_marketing_opt_in ?? false);
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState("");
@@ -139,6 +140,7 @@ export default function AccountForm({
         vacation_until: vacationUntil || null,
         offers_enabled: offersEnabled,
         announcement: announcement.trim() || null,
+        email_marketing_opt_in: emailOptIn,
       }),
     });
     const data = await res.json();
@@ -462,6 +464,34 @@ export default function AccountForm({
               {saving ? "Saving…" : "Save profile"}
             </Button>
           </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Mail size={18} /> Email Preferences</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-start justify-between gap-4 rounded-lg border px-4 py-4">
+            <div>
+              <p className="text-sm font-medium">Monthly plant digest</p>
+              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                Receive a monthly email with new arrivals from shops you follow, fresh picks from around the marketplace, and hot auctions. Sent once per month — unsubscribe anytime.
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={emailOptIn}
+              onClick={() => setEmailOptIn((v) => !v)}
+              className={`mt-0.5 relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${emailOptIn ? "bg-green-600" : "bg-input"}`}
+            >
+              <span className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition-transform ${emailOptIn ? "translate-x-5" : "translate-x-0"}`} />
+            </button>
+          </div>
+          <p className="text-xs text-muted-foreground mt-3">
+            Save your profile above to apply changes to email preferences.
+          </p>
         </CardContent>
       </Card>
 

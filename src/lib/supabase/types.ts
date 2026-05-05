@@ -29,6 +29,8 @@ export interface Database {
           offers_enabled: boolean;
           saved_shipping_address: Json | null;
           announcement: string | null;
+          email_marketing_opt_in: boolean;
+          last_digest_sent: string | null;
           deleted_at: string | null;
           created_at: string;
         };
@@ -51,6 +53,8 @@ export interface Database {
           offers_enabled?: boolean;
           saved_shipping_address?: Json | null;
           announcement?: string | null;
+          email_marketing_opt_in?: boolean;
+          last_digest_sent?: string | null;
           deleted_at?: string | null;
           created_at?: string;
         };
@@ -74,6 +78,8 @@ export interface Database {
           offers_enabled?: boolean;
           saved_shipping_address?: Json | null;
           announcement?: string | null;
+          email_marketing_opt_in?: boolean;
+          last_digest_sent?: string | null;
           deleted_at?: string | null;
         };
         Relationships: [];

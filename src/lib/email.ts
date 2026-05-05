@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { createHmac } from "crypto";
 import { centsToDisplay } from "./stripe";
 
 const FROM = "Plantet <noreply@plantet.shop>";
@@ -301,6 +302,241 @@ export async function sendShippingNotification({
     `,
   });
 }
+
+// ─── Monthly digest ────────────────────────────────────────────────────────
+
+export interface DigestListing {
+  id: string;
+  plant_name: string;
+  variety: string | null;
+  price_cents: number;
+  images: string[];
+  seller_username: string;
+}
+
+export interface DigestAuction {
+  id: string;
+  plant_name: string;
+  variety: string | null;
+  current_bid_cents: number;
+  ends_at: string;
+  images: string[];
+  bid_count: number;
+  seller_username: string;
+}
+
+export function makeUnsubToken(userId: string): string {
+  return createHmac("sha256", process.env.CRON_SECRET!)
+    .update(userId)
+    .digest("hex")
+    .slice(0, 32);
+}
+
+function unsubUrl(userId: string): string {
+  const base = (process.env.NEXT_PUBLIC_APP_URL ?? "https://plantet.com").replace(/\/$/, "");
+  return `${base}/api/unsubscribe?uid=${userId}&sig=${makeUnsubToken(userId)}`;
+}
+
+function plantCardHtml(listing: DigestListing, siteUrl: string): string {
+  const img = listing.images?.[0];
+  const name = listing.variety ? `${listing.plant_name} — ${listing.variety}` : listing.plant_name;
+  return `
+    <td width="33%" style="padding:0 8px 16px 0;vertical-align:top;">
+      <a href="${siteUrl}/shop/${listing.id}" style="text-decoration:none;display:block;">
+        ${img
+          ? `<img src="${img}" width="168" alt="${listing.plant_name}" style="width:100%;height:150px;object-fit:cover;border-radius:10px;display:block;border:0;" />`
+          : `<div style="width:100%;height:150px;border-radius:10px;background:#dcfce7;display:flex;align-items:center;justify-content:center;"></div>`}
+        <p style="margin:8px 0 2px;font-size:13px;font-weight:600;color:#111827;line-height:1.3;">${name}</p>
+        <p style="margin:0 0 2px;font-size:13px;font-weight:700;color:#15803d;">${centsToDisplay(listing.price_cents)}</p>
+        <p style="margin:0;font-size:11px;color:#9ca3af;">by @${listing.seller_username}</p>
+      </a>
+    </td>`;
+}
+
+function listingSection(title: string, listings: DigestListing[], siteUrl: string): string {
+  if (!listings.length) return "";
+  const rows: string[] = [];
+  for (let i = 0; i < listings.length; i += 3) {
+    const group = listings.slice(i, i + 3);
+    const cards = group.map((l) => plantCardHtml(l, siteUrl)).join("");
+    const padding = group.length < 3
+      ? Array(3 - group.length).fill('<td width="33%" style="padding:0;"></td>').join("")
+      : "";
+    rows.push(`<tr>${cards}${padding}</tr>`);
+  }
+  return `
+    <tr>
+      <td style="padding:0 32px 6px;">
+        <p style="margin:0;font-size:11px;font-weight:700;color:#6b7280;letter-spacing:0.08em;text-transform:uppercase;">${title}</p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:0 24px 28px;">
+        <table width="100%" cellpadding="0" cellspacing="0">${rows.join("")}</table>
+      </td>
+    </tr>`;
+}
+
+function auctionSection(auctions: DigestAuction[], siteUrl: string): string {
+  if (!auctions.length) return "";
+  const cards = auctions.map((a) => {
+    const img = a.images?.[0];
+    const name = a.variety ? `${a.plant_name} — ${a.variety}` : a.plant_name;
+    const endsDate = new Date(a.ends_at);
+    const hoursLeft = Math.max(0, Math.ceil((endsDate.getTime() - Date.now()) / 3_600_000));
+    const timeLabel = hoursLeft < 24 ? `${hoursLeft}h left` : `${Math.ceil(hoursLeft / 24)}d left`;
+    return `
+      <tr>
+        <td style="padding:0 32px 12px;">
+          <a href="${siteUrl}/auctions/${a.id}" style="text-decoration:none;display:block;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                ${img
+                  ? `<td width="100" style="vertical-align:top;">
+                      <img src="${img}" width="100" alt="${a.plant_name}" style="width:100px;height:100px;object-fit:cover;display:block;border:0;" />
+                    </td>`
+                  : `<td width="100" style="vertical-align:top;background:#dcfce7;width:100px;height:100px;"></td>`}
+                <td style="padding:12px 16px;vertical-align:top;">
+                  <p style="margin:0 0 4px;font-size:14px;font-weight:600;color:#111827;">${name}</p>
+                  <p style="margin:0 0 6px;font-size:13px;color:#15803d;font-weight:700;">Current bid: ${centsToDisplay(a.current_bid_cents)}</p>
+                  <p style="margin:0;font-size:12px;color:#9ca3af;">${a.bid_count} bid${a.bid_count !== 1 ? "s" : ""} · ${timeLabel} · by @${a.seller_username}</p>
+                </td>
+                <td style="padding:12px 16px;vertical-align:middle;text-align:right;">
+                  <span style="display:inline-block;background:#15803d;color:#fff;font-size:12px;font-weight:600;padding:8px 14px;border-radius:6px;white-space:nowrap;">Bid now →</span>
+                </td>
+              </tr>
+            </table>
+          </a>
+        </td>
+      </tr>`;
+  }).join("");
+
+  return `
+    <tr>
+      <td style="padding:0 32px 6px;">
+        <p style="margin:0;font-size:11px;font-weight:700;color:#6b7280;letter-spacing:0.08em;text-transform:uppercase;">🔥 Hot auctions</p>
+      </td>
+    </tr>
+    ${cards}
+    <tr><td style="padding:0 0 12px;"></td></tr>`;
+}
+
+function buildDigestHtml({
+  username,
+  userId,
+  month,
+  followedListings,
+  freshListings,
+  hotAuctions,
+}: {
+  username: string;
+  userId: string;
+  month: string;
+  followedListings: DigestListing[];
+  freshListings: DigestListing[];
+  hotAuctions: DigestAuction[];
+}): string {
+  const siteUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://plantet.com").replace(/\/$/, "");
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Your monthly plant digest — Plantet</title>
+</head>
+<body style="margin:0;padding:0;background:#f0fdf4;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;-webkit-font-smoothing:antialiased;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0fdf4;">
+    <tr>
+      <td align="center" style="padding:32px 16px 48px;">
+
+        <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.07);">
+
+          <!-- Header -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#14532d 0%,#166534 60%,#15803d 100%);padding:40px 32px 36px;text-align:center;">
+              <p style="margin:0 0 10px;color:#bbf7d0;font-size:13px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;">🌿 Plantet</p>
+              <h1 style="margin:0 0 8px;color:#ffffff;font-size:26px;font-weight:700;line-height:1.25;">Your Monthly Plant Digest</h1>
+              <p style="margin:0;color:#86efac;font-size:14px;font-weight:500;">${month}</p>
+            </td>
+          </tr>
+
+          <!-- Greeting -->
+          <tr>
+            <td style="padding:32px 32px 24px;">
+              <p style="margin:0 0 8px;font-size:18px;font-weight:600;color:#111827;">Hey ${username} 👋</p>
+              <p style="margin:0;font-size:14px;color:#6b7280;line-height:1.65;">Here's what's been growing this month on Plantet — fresh listings, new arrivals from shops you follow, and auctions you don't want to miss.</p>
+            </td>
+          </tr>
+
+          ${listingSection("From shops you follow", followedListings, siteUrl)}
+          ${listingSection("Fresh picks this week", freshListings, siteUrl)}
+          ${auctionSection(hotAuctions, siteUrl)}
+
+          <!-- Main CTA -->
+          <tr>
+            <td style="padding:8px 32px 40px;text-align:center;">
+              <a href="${siteUrl}/shop" style="display:inline-block;background:#15803d;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:14px 36px;border-radius:8px;">Browse the full shop →</a>
+            </td>
+          </tr>
+
+          <!-- Divider -->
+          <tr>
+            <td style="padding:0 32px;">
+              <div style="height:1px;background:#e5e7eb;"></div>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:24px 32px;text-align:center;">
+              <p style="margin:0 0 6px;font-size:12px;color:#9ca3af;line-height:1.6;">You're receiving this because you opted in to Plantet marketing emails.</p>
+              <p style="margin:0;font-size:12px;color:#9ca3af;">
+                <a href="${unsubUrl(userId)}" style="color:#6b7280;text-decoration:underline;">Unsubscribe</a>
+                &nbsp;·&nbsp;
+                <a href="${siteUrl}/privacy-policy" style="color:#6b7280;text-decoration:underline;">Privacy Policy</a>
+                &nbsp;·&nbsp;
+                © ${new Date().getFullYear()} Plantet
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+export async function sendMonthlyDigest({
+  recipientEmail,
+  username,
+  userId,
+  month,
+  followedListings,
+  freshListings,
+  hotAuctions,
+}: {
+  recipientEmail: string;
+  username: string;
+  userId: string;
+  month: string;
+  followedListings: DigestListing[];
+  freshListings: DigestListing[];
+  hotAuctions: DigestAuction[];
+}) {
+  const resend = getResend();
+  const html = buildDigestHtml({ username, userId, month, followedListings, freshListings, hotAuctions });
+  await resend.emails.send({
+    from: FROM,
+    to: recipientEmail,
+    subject: `🌿 Your monthly plant digest — ${month}`,
+    html,
+  });
+}
+
+// ─── Low stock alert ────────────────────────────────────────────────────────
 
 export async function sendLowStockAlert({
   sellerEmail,
