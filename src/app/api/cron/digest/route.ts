@@ -47,6 +47,7 @@ export async function GET(request: Request) {
     .eq("status", "active")
     .gte("created_at", sevenDaysAgo)
     .not("images", "eq", "{}")
+    .not("images", "is", null)
     .order("created_at", { ascending: false })
     .limit(24);
 
@@ -73,14 +74,16 @@ export async function GET(request: Request) {
     (sellers ?? []).map((s) => [s.id, s.username])
   );
 
-  const freshListings: DigestListing[] = (freshRaw ?? []).map((l) => ({
-    id: l.id,
-    plant_name: l.plant_name,
-    variety: l.variety,
-    price_cents: l.price_cents,
-    images: l.images as string[],
-    seller_username: sellerMap[l.seller_id] ?? "",
-  }));
+  const freshListings: DigestListing[] = (freshRaw ?? [])
+    .filter((l) => (l.images as string[])?.[0])
+    .map((l) => ({
+      id: l.id,
+      plant_name: l.plant_name,
+      variety: l.variety,
+      price_cents: l.price_cents,
+      images: l.images as string[],
+      seller_username: sellerMap[l.seller_id] ?? "",
+    }));
 
   // bid counts for hot auctions
   const auctionIds = (auctionsRaw ?? []).map((a) => a.id);

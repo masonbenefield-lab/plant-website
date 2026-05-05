@@ -344,8 +344,8 @@ function plantCardHtml(listing: DigestListing, siteUrl: string): string {
     <td width="33%" style="padding:0 8px 16px 0;vertical-align:top;">
       <a href="${siteUrl}/shop/${listing.id}" style="text-decoration:none;display:block;">
         ${img
-          ? `<img src="${img}" width="168" alt="${listing.plant_name}" style="width:100%;height:150px;object-fit:cover;border-radius:10px;display:block;border:0;" />`
-          : `<div style="width:100%;height:150px;border-radius:10px;background:#dcfce7;display:flex;align-items:center;justify-content:center;"></div>`}
+          ? `<img src="${img}" width="168" height="150" alt="${listing.plant_name}" style="width:100%;height:150px;object-fit:cover;border-radius:10px;display:block;border:0;" />`
+          : `<table width="100%" cellpadding="0" cellspacing="0"><tr><td height="150" style="height:150px;background:#dcfce7;border-radius:10px;text-align:center;vertical-align:middle;font-size:32px;">🌿</td></tr></table>`}
         <p style="margin:8px 0 2px;font-size:13px;font-weight:600;color:#111827;line-height:1.3;">${name}</p>
         <p style="margin:0 0 2px;font-size:13px;font-weight:700;color:#15803d;">${centsToDisplay(listing.price_cents)}</p>
         <p style="margin:0;font-size:11px;color:#9ca3af;">by @${listing.seller_username}</p>
@@ -393,9 +393,9 @@ function auctionSection(auctions: DigestAuction[], siteUrl: string): string {
               <tr>
                 ${img
                   ? `<td width="100" style="vertical-align:top;">
-                      <img src="${img}" width="100" alt="${a.plant_name}" style="width:100px;height:100px;object-fit:cover;display:block;border:0;" />
+                      <img src="${img}" width="100" height="100" alt="${a.plant_name}" style="width:100px;height:100px;object-fit:cover;display:block;border:0;" />
                     </td>`
-                  : `<td width="100" style="vertical-align:top;background:#dcfce7;width:100px;height:100px;"></td>`}
+                  : `<td width="100" height="100" style="width:100px;height:100px;background:#dcfce7;text-align:center;vertical-align:middle;font-size:28px;">🌿</td>`}
                 <td style="padding:12px 16px;vertical-align:top;">
                   <p style="margin:0 0 4px;font-size:14px;font-weight:600;color:#111827;">${name}</p>
                   <p style="margin:0 0 6px;font-size:13px;color:#15803d;font-weight:700;">Current bid: ${centsToDisplay(a.current_bid_cents)}</p>
