@@ -18,6 +18,7 @@ import ReportButton from "@/components/report-button";
 import ImageGallery from "@/components/image-gallery";
 import TrackView from "@/components/track-view";
 import SizePicker from "@/components/size-picker";
+import ListingShareButton from "@/components/listing-share-button";
 
 export async function generateMetadata({
   params,
@@ -38,12 +39,16 @@ export async function generateMetadata({
     ? `${data.plant_name} ${data.variety} — Plantet`
     : `${data.plant_name} — Plantet`;
   const description = data.description || `Buy ${data.plant_name} on Plantet for ${centsToDisplay(data.price_cents)}`;
-  const image = (data.images as string[])?.[0];
+  const siteUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://plantet.com";
 
   return {
     title,
     description,
-    openGraph: { title, description, ...(image ? { images: [{ url: image }] } : {}) },
+    openGraph: {
+      title,
+      description,
+      images: [{ url: `${siteUrl}/api/og?type=listing&id=${id}`, width: 1200, height: 630 }],
+    },
   };
 }
 
@@ -129,7 +134,10 @@ export default async function ListingPage({
                 </span>
               )}
             </div>
-            <WishlistButton userId={user?.id ?? null} listingId={listing.id} initialWishlisted={isWishlisted} />
+            <div className="flex items-center gap-2">
+              <ListingShareButton title={listing.plant_name} />
+              <WishlistButton userId={user?.id ?? null} listingId={listing.id} initialWishlisted={isWishlisted} />
+            </div>
           </div>
           {(() => {
             const onSale = !!(listing.sale_price_cents && listing.sale_ends_at && new Date(listing.sale_ends_at) > new Date());

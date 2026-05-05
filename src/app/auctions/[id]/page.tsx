@@ -9,6 +9,7 @@ import AuctionBidPanel from "./auction-bid-panel";
 import WishlistButton from "@/components/wishlist-button";
 import ReportButton from "@/components/report-button";
 import ImageGallery from "@/components/image-gallery";
+import ListingShareButton from "@/components/listing-share-button";
 
 export async function generateMetadata({
   params,
@@ -31,12 +32,16 @@ export async function generateMetadata({
   const description =
     data.description ||
     `Bid on ${data.plant_name} on Plantet. Current bid: ${centsToDisplay(data.current_bid_cents)}`;
-  const image = (data.images as string[])?.[0];
+  const siteUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://plantet.com";
 
   return {
     title,
     description,
-    openGraph: { title, description, ...(image ? { images: [{ url: image }] } : {}) },
+    openGraph: {
+      title,
+      description,
+      images: [{ url: `${siteUrl}/api/og?type=auction&id=${id}`, width: 1200, height: 630 }],
+    },
   };
 }
 
@@ -111,7 +116,10 @@ export default async function AuctionPage({
                 </span>
               )}
             </div>
-            <WishlistButton userId={user?.id ?? null} auctionId={auction.id} initialWishlisted={isWishlisted} />
+            <div className="flex items-center gap-2">
+              <ListingShareButton title={auction.plant_name} />
+              <WishlistButton userId={user?.id ?? null} auctionId={auction.id} initialWishlisted={isWishlisted} />
+            </div>
           </div>
 
           {auction.description && (
