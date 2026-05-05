@@ -174,10 +174,14 @@ export default function ListingActions({ listing }: { listing: Listing }) {
 
   async function deleteListing() {
     setDeleting(true);
-    const supabase = createClient();
-    const { error } = await supabase.from("listings").delete().eq("id", listing.id);
+    const res = await fetch("/api/listings/delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ listingId: listing.id }),
+    });
+    const data = await res.json();
     setDeleting(false);
-    if (error) { toast.error(error.message); return; }
+    if (!res.ok) { toast.error(data.error ?? "Failed to delete listing"); return; }
     toast.success("Listing deleted");
     setDeleteOpen(false);
     router.refresh();
