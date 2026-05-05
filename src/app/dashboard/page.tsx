@@ -125,20 +125,22 @@ export default async function DashboardPage() {
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-        <StatCard label="Active Listings" value={listingCount ?? 0} />
-        <StatCard label="Live Auctions" value={auctionCount ?? 0} />
+        <StatCard label="Active Listings" value={listingCount ?? 0} href="/dashboard/listings" />
+        <StatCard label="Live Auctions" value={auctionCount ?? 0} href="/dashboard/auctions" />
         <StatCard
           label="Orders to Ship"
           value={paidCount}
           highlight={paidCount > 0}
+          href="/dashboard/orders"
         />
         <StatCard
           label="This Month"
           value={centsToDisplay(thisMonthRevenue)}
           sub={`Platform only · All time: ${centsToDisplay(totalRevenue)}`}
           trend={revenueChangePct}
+          href="/dashboard/analytics"
         />
-        <StatCard label="Followers" value={followerCount ?? 0} />
+        <StatCard label="Followers" value={followerCount ?? 0} href={profile?.username ? `/sellers/${profile.username}` : undefined} />
       </div>
 
       {/* Main content: recent orders + quick nav */}
@@ -202,9 +204,9 @@ export default async function DashboardPage() {
   );
 }
 
-function StatCard({ label, value, highlight, sub, trend }: { label: string; value: number | string; highlight?: boolean; sub?: string; trend?: number | null }) {
-  return (
-    <Card className={highlight ? "border-blue-300 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-800" : ""}>
+function StatCard({ label, value, highlight, sub, trend, href }: { label: string; value: number | string; highlight?: boolean; sub?: string; trend?: number | null; href?: string }) {
+  const card = (
+    <Card className={cn(highlight ? "border-blue-300 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-800" : "", href && "hover:bg-muted/40 transition-colors cursor-pointer")}>
       <CardHeader className="pb-1">
         <CardTitle className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{label}</CardTitle>
       </CardHeader>
@@ -220,6 +222,8 @@ function StatCard({ label, value, highlight, sub, trend }: { label: string; valu
       </CardContent>
     </Card>
   );
+  if (href) return <Link href={href}>{card}</Link>;
+  return card;
 }
 
 function CheckItem({ done, label, href, hint }: { done: boolean; label: string; href: string; hint: string }) {
