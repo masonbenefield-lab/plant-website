@@ -378,6 +378,7 @@ export default function InventoryClient({
       setBundleDiscountPct(m.row.listing_bundle_discount_pct ? String(m.row.listing_bundle_discount_pct) : "");
       setSoldOutBehavior(m.row.listing_sold_out_behavior ?? "mark_sold_out");
       setCareGuidePdfUrl(m.row.listing_care_guide_pdf_url ?? null);
+      setEditImages([...m.row.images]);
     }
     if (m.type === "auction") {
       if (!stripeOnboarded) {
@@ -509,8 +510,9 @@ export default function InventoryClient({
       bundle_discount_pct: discPct,
       sold_out_behavior: soldOutBehavior,
       care_guide_pdf_url: careGuidePdfUrl,
+      images: editImages,
     }).eq("id", modal.row.listing_id);
-    await supabase.from("inventory").update({ listing_quantity: qty, pot_size: editPotSize || null }).eq("id", modal.row.id);
+    await supabase.from("inventory").update({ listing_quantity: qty, pot_size: editPotSize || null, images: editImages }).eq("id", modal.row.id);
     setSubmitting(false);
     toast.success("Listing updated.");
     setModal(null);
@@ -1803,7 +1805,7 @@ export default function InventoryClient({
 
       {/* ── Edit Listing ── */}
       <Dialog open={modal?.type === "edit-listing"} onOpenChange={o => !o && setModal(null)}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Listing</DialogTitle>
             {modal?.type === "edit-listing" && (
@@ -1861,6 +1863,35 @@ export default function InventoryClient({
                   </label>
                 )}
                 <p className="text-xs text-muted-foreground">Buyers get a download link in their order confirmation.</p>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>Photos</Label>
+                  {editImages.length > 1 && <span className="text-xs text-muted-foreground">First photo is the cover</span>}
+                </div>
+                {editImages.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {editImages.map((url, idx) => (
+                      <div key={url + idx} className="relative group">
+                        <Image src={url} alt="" width={64} height={64} className="w-16 h-16 rounded object-cover border" />
+                        {idx === 0 && (
+                          <span className="absolute bottom-0 left-0 right-0 text-center text-[9px] font-semibold bg-black/60 text-white rounded-b py-0.5">Cover</span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setEditImages(prev => prev.filter((_, i) => i !== idx))}
+                          className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X size={10} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageAdd} />
+                <Button type="button" variant="outline" size="sm" onClick={() => imageInputRef.current?.click()} disabled={imageUploading} className="flex items-center gap-1.5 text-xs">
+                  <ImagePlus size={14} />{imageUploading ? "Uploading…" : "Add Photo"}
+                </Button>
               </div>
               <div className="flex flex-wrap gap-2 pt-1">
                 <Button onClick={submitEditListing} disabled={submitting || !price || !listQty} className="bg-green-700 hover:bg-green-800">
