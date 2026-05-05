@@ -307,6 +307,7 @@ export async function sendShippingNotification({
 
 export interface DigestListing {
   id: string;
+  seller_id: string;
   plant_name: string;
   variety: string | null;
   price_cents: number;

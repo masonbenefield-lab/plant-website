@@ -40,18 +40,28 @@ export async function GET(request: Request) {
     if (u.email) emailMap[u.id] = u.email;
   }
 
-  // 3 — global: fresh listings (past 7 days, with images, joined with seller username)
-  const { data: freshRaw } = await admin
-    .from("listings")
-    .select("id, plant_name, variety, price_cents, images, seller_id")
-    .eq("status", "active")
-    .gte("created_at", sevenDaysAgo)
-    .not("images", "eq", "{}")
-    .not("images", "is", null)
-    .order("created_at", { ascending: false })
-    .limit(24);
+  // 3 — get Grower+ seller IDs (only these appear in fresh picks)
+  const { data: growerPlusSellers } = await admin
+    .from("profiles")
+    .select("id")
+    .in("plan", ["grower", "nursery"]);
+  const growerPlusIds = (growerPlusSellers ?? []).map((s) => s.id);
 
-  // 4 — global: hot auctions (most bids, still active)
+  // 4 — global: fresh listings from Grower+ sellers only (past 7 days, with images)
+  const { data: freshRaw } = growerPlusIds.length
+    ? await admin
+        .from("listings")
+        .select("id, plant_name, variety, price_cents, images, seller_id")
+        .eq("status", "active")
+        .in("seller_id", growerPlusIds)
+        .gte("created_at", sevenDaysAgo)
+        .not("images", "eq", "{}")
+        .not("images", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(24)
+    : { data: [] };
+
+  // 5 — global: hot auctions (most bids, still active)
   const { data: auctionsRaw } = await admin
     .from("auctions")
     .select("id, plant_name, variety, current_bid_cents, ends_at, images, seller_id")
@@ -60,7 +70,7 @@ export async function GET(request: Request) {
     .order("current_bid_cents", { ascending: false })
     .limit(5);
 
-  // 5 — seller usernames for all fresh + auction sellers
+  // 6 — seller usernames for all fresh + auction sellers
   const sellerIds = [
     ...new Set([
       ...(freshRaw ?? []).map((l) => l.seller_id),
@@ -78,6 +88,7 @@ export async function GET(request: Request) {
     .filter((l) => (l.images as string[])?.[0])
     .map((l) => ({
       id: l.id,
+      seller_id: l.seller_id,
       plant_name: l.plant_name,
       variety: l.variety,
       price_cents: l.price_cents,
@@ -109,28 +120,41 @@ export async function GET(request: Request) {
       seller_username: sellerMap[a.seller_id] ?? "",
     }));
 
-  // 6 — per-user follow data (one query for all users)
+  // 7 — per-user follow data (one query for all users)
   const { data: allFollows } = await admin
     .from("follows")
     .select("follower_id, seller_id")
     .in("follower_id", userIds);
 
   const followedSellerIds = [...new Set((allFollows ?? []).map((f) => f.seller_id))];
-  const { data: followedListingsRaw } = followedSellerIds.length
+
+  // Only Nursery sellers appear in the "from shops you follow" section
+  const { data: nurseryFollowed } = followedSellerIds.length
+    ? await admin
+        .from("profiles")
+        .select("id")
+        .eq("plan", "nursery")
+        .in("id", followedSellerIds)
+    : { data: [] };
+  const nurseryFollowedIds = new Set((nurseryFollowed ?? []).map((p) => p.id));
+
+  const { data: followedListingsRaw } = nurseryFollowedIds.size
     ? await admin
         .from("listings")
         .select("id, plant_name, variety, price_cents, images, seller_id")
         .eq("status", "active")
-        .in("seller_id", followedSellerIds)
+        .in("seller_id", [...nurseryFollowedIds])
         .gte("created_at", thirtyDaysAgo)
+        .not("images", "eq", "{}")
+        .not("images", "is", null)
         .order("created_at", { ascending: false })
         .limit(100)
     : { data: [] };
 
   // seller usernames for followed listings
-  const followedSellerUsernames = [...new Set((followedListingsRaw ?? []).map((l) => l.seller_id))];
-  const { data: followedSellers } = followedSellerUsernames.length
-    ? await admin.from("profiles").select("id, username").in("id", followedSellerUsernames)
+  const followedSellerSids = [...new Set((followedListingsRaw ?? []).map((l) => l.seller_id))];
+  const { data: followedSellers } = followedSellerSids.length
+    ? await admin.from("profiles").select("id, username").in("id", followedSellerSids)
     : { data: [] };
   const followedSellerMap: Record<string, string> = Object.fromEntries(
     (followedSellers ?? []).map((s) => [s.id, s.username])
@@ -143,7 +167,7 @@ export async function GET(request: Request) {
     followerToSellers[f.follower_id].add(f.seller_id);
   }
 
-  // 7 — send emails in batches
+  // 8 — send emails in batches
   let sent = 0;
   const sentIds: string[] = [];
 
@@ -151,13 +175,15 @@ export async function GET(request: Request) {
     const email = emailMap[profile.id];
     if (!email) continue;
 
-    // listings from followed sellers for this user
+    // listings from Nursery followed sellers for this user
     const mySellerIds = followerToSellers[profile.id] ?? new Set();
+    const myNurserySellerIds = new Set([...mySellerIds].filter((id) => nurseryFollowedIds.has(id)));
     const followedForUser: DigestListing[] = (followedListingsRaw ?? [])
-      .filter((l) => mySellerIds.has(l.seller_id))
+      .filter((l) => myNurserySellerIds.has(l.seller_id))
       .slice(0, 6)
       .map((l) => ({
         id: l.id,
+        seller_id: l.seller_id,
         plant_name: l.plant_name,
         variety: l.variety,
         price_cents: l.price_cents,
@@ -165,9 +191,9 @@ export async function GET(request: Request) {
         seller_username: followedSellerMap[l.seller_id] ?? "",
       }));
 
-    // fresh picks: exclude listings from followed sellers to avoid duplication
+    // fresh picks: exclude listings from sellers this user already sees in followed section
     const freshForUser = freshListings
-      .filter((l) => !mySellerIds.has(l.seller_username)) // rough dedup by username
+      .filter((l) => !mySellerIds.has(l.seller_id))
       .slice(0, 6);
 
     // skip if there's nothing at all to show
@@ -190,7 +216,7 @@ export async function GET(request: Request) {
     }
   }
 
-  // 8 — mark digest sent
+  // 9 — mark digest sent
   if (sentIds.length) {
     await admin
       .from("profiles")
