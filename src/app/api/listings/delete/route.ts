@@ -22,7 +22,7 @@ export async function POST(request: Request) {
   // Verify seller owns this listing
   const { data: listing } = await admin
     .from("listings")
-    .select("id, seller_id, inventory_id")
+    .select("id, seller_id, inventory_id, plant_name, variety, price_cents")
     .eq("id", listingId)
     .eq("seller_id", user.id)
     .single();
@@ -60,12 +60,34 @@ export async function POST(request: Request) {
     }, { status: 409 });
   }
 
-  // Delete any pending orders for this listing before deleting the listing
+  // Delete pending orders
   await admin
     .from("orders")
     .delete()
     .eq("listing_id", listingId)
     .eq("status", "pending");
+
+  // For any remaining orders (delivered, etc.), move listing info into cart_items
+  // so the order_has_source constraint is satisfied when the FK cascade nulls listing_id
+  const { data: remainingOrders } = await admin
+    .from("orders")
+    .select("id, amount_cents")
+    .eq("listing_id", listingId);
+
+  if (remainingOrders?.length) {
+    for (const order of remainingOrders) {
+      const qty = listing.price_cents > 0 ? Math.round(order.amount_cents / listing.price_cents) || 1 : 1;
+      await admin.from("orders").update({
+        cart_items: [{
+          listing_id: listingId,
+          plant_name: listing.plant_name,
+          variety: listing.variety ?? null,
+          quantity: qty,
+          price_cents: listing.price_cents,
+        }],
+      }).eq("id", order.id);
+    }
+  }
 
   // Clear inventory link if one exists
   if (listing.inventory_id) {
