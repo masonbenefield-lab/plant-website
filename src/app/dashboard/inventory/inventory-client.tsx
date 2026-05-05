@@ -380,6 +380,14 @@ export default function InventoryClient({
       setCareGuidePdfUrl(m.row.listing_care_guide_pdf_url ?? null);
     }
     if (m.type === "auction") {
+      if (!stripeOnboarded) {
+        toast.error("Connect your bank account before creating an auction.", {
+          description: "Go to Account Settings → Seller Payments to set up Stripe.",
+          action: { label: "Go to Settings", onClick: () => window.location.href = "/account#seller-payments" },
+          duration: 6000,
+        });
+        return;
+      }
       setStartingBid(""); setBuyNowPrice(""); setEndsAt(""); setStartsAt(""); setReservePrice("");
       setAuctionQty(String(Math.max(1, avail(m.row))));
     }
