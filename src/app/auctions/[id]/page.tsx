@@ -32,7 +32,7 @@ export async function generateMetadata({
   const description =
     data.description ||
     `Bid on ${data.plant_name} on Plantet. Current bid: ${centsToDisplay(data.current_bid_cents)}`;
-  const siteUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://plantet.com";
+  const siteUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://plantet.com").replace(/\/$/, "");
 
   return {
     title,

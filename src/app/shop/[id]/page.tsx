@@ -39,7 +39,7 @@ export async function generateMetadata({
     ? `${data.plant_name} ${data.variety} — Plantet`
     : `${data.plant_name} — Plantet`;
   const description = data.description || `Buy ${data.plant_name} on Plantet for ${centsToDisplay(data.price_cents)}`;
-  const siteUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://plantet.com";
+  const siteUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://plantet.com").replace(/\/$/, "");
 
   return {
     title,
