@@ -13,7 +13,8 @@ const LAST_UPDATED = "April 29, 2026";
 function AgreementContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const next = searchParams.get("next") ?? "/dashboard/create";
+  const next = searchParams.get("next");
+  const isSignMode = next !== null;
   const [agreed, setAgreed] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -27,7 +28,7 @@ function AgreementContent() {
       return;
     }
     toast.success("Agreement accepted — welcome to selling on Plantet!");
-    router.push(next);
+    router.push(next ?? "/dashboard/create");
     router.refresh();
   }
 
@@ -169,32 +170,34 @@ function AgreementContent() {
 
       </div>
 
-      {/* Agreement action */}
-      <div className="mt-10 border-t pt-8 space-y-4">
-        <label className="flex items-start gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={agreed}
-            onChange={(e) => setAgreed(e.target.checked)}
-            className="mt-0.5 h-4 w-4 accent-green-700"
-          />
-          <span className="text-sm">
-            I have read and agree to the Plantet Seller Agreement. I confirm I am at least 18 years old and will comply with all applicable laws regarding the sale and shipment of plants.
-          </span>
-        </label>
-        <div className="flex items-center gap-4">
-          <Button
-            onClick={handleAccept}
-            disabled={!agreed || saving}
-            className="bg-green-700 hover:bg-green-800"
-          >
-            {saving ? "Saving…" : "I Agree — Start Selling"}
-          </Button>
-          <Link href="/dashboard" className="text-sm text-muted-foreground hover:underline">
-            Not now
-          </Link>
+      {/* Agreement action — only shown during seller onboarding */}
+      {isSignMode && (
+        <div className="mt-10 border-t pt-8 space-y-4">
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={agreed}
+              onChange={(e) => setAgreed(e.target.checked)}
+              className="mt-0.5 h-4 w-4 accent-green-700"
+            />
+            <span className="text-sm">
+              I have read and agree to the Plantet Seller Agreement. I confirm I am at least 18 years old and will comply with all applicable laws regarding the sale and shipment of plants.
+            </span>
+          </label>
+          <div className="flex items-center gap-4">
+            <Button
+              onClick={handleAccept}
+              disabled={!agreed || saving}
+              className="bg-green-700 hover:bg-green-800"
+            >
+              {saving ? "Saving…" : "I Agree — Start Selling"}
+            </Button>
+            <Link href="/dashboard" className="text-sm text-muted-foreground hover:underline">
+              Not now
+            </Link>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
