@@ -18,7 +18,7 @@ import PotSizePicker from "@/components/pot-size-picker";
 import { findProhibitedWord, censorWord, logViolation } from "@/lib/profanity";
 import { getPlanLimits, type PlanLimits } from "@/lib/plan-limits";
 
-type SizeEntry = { id: number; potSize: string; quantity: string };
+type SizeEntry = { id: number; potSize: string; quantity: string; listInShop: boolean; shopPrice: string; shopQuantity: string };
 
 let nextId = 1;
 
@@ -39,22 +39,17 @@ export default function CreateInventoryPage() {
   const [existingGroup, setExistingGroup] = useState<{ plant_name: string; count: number } | null>(null);
 
   // Multiple sizes — each becomes its own inventory row
-  const [sizes, setSizes] = useState<SizeEntry[]>([{ id: 0, potSize: "", quantity: "1" }]);
-
-  // Optional: list in shop immediately (only when single size)
-  const [listInShop, setListInShop] = useState(false);
-  const [shopPrice, setShopPrice] = useState("");
-  const [shopQuantity, setShopQuantity] = useState("");
+  const [sizes, setSizes] = useState<SizeEntry[]>([{ id: 0, potSize: "", quantity: "1", listInShop: false, shopPrice: "", shopQuantity: "" }]);
 
   function addSize() {
-    setSizes(prev => [...prev, { id: nextId++, potSize: "", quantity: "1" }]);
+    setSizes(prev => [...prev, { id: nextId++, potSize: "", quantity: "1", listInShop: false, shopPrice: "", shopQuantity: "" }]);
   }
 
   function removeSize(id: number) {
     setSizes(prev => prev.filter(s => s.id !== id));
   }
 
-  function updateSize(id: number, field: keyof Omit<SizeEntry, "id">, value: string) {
+  function updateSize(id: number, field: keyof Omit<SizeEntry, "id">, value: string | boolean) {
     setSizes(prev => prev.map(s => s.id === id ? { ...s, [field]: value } : s));
   }
 
@@ -147,13 +142,9 @@ export default function CreateInventoryPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { toast.error("Not logged in"); setSaving(false); return; }
 
-    const shouldList = listInShop && sizes.length === 1 && shopPrice;
-    const listedQty = Math.min(
-      Math.max(1, Number(shopQuantity) || 1),
-      Math.max(1, Number(sizes[0]?.quantity) || 1)
-    );
+    const anyListing = sizes.some(s => s.listInShop && s.shopPrice);
 
-    // Insert one row per size entry
+    // Insert all inventory rows and get IDs back
     const rows = sizes.map(s => ({
       seller_id: user.id,
       plant_name: plantName.trim(),
@@ -165,52 +156,60 @@ export default function CreateInventoryPage() {
       pot_size: s.potSize || null,
     }));
 
-    if (shouldList) {
-      // Need the inventory id back to link the listing
-      const { data: invRows, error: invErr } = await supabase
-        .from("inventory")
-        .insert(rows)
-        .select("id");
-      if (invErr || !invRows?.length) { toast.error(invErr?.message ?? "Failed to save"); setSaving(false); return; }
+    const { data: invRows, error: invErr } = await supabase
+      .from("inventory")
+      .insert(rows)
+      .select("id");
 
-      const inventoryId = invRows[0].id;
-      const { data: listing, error: listErr } = await supabase
-        .from("listings")
-        .insert({
-          seller_id: user.id,
-          plant_name: plantName.trim(),
-          variety: variety.trim() || null,
-          quantity: listedQty,
-          description: description.trim() || null,
-          images: imageUrls,
-          category: category || "Other",
-          pot_size: sizes[0].potSize || null,
-          price_cents: dollarsToCents(shopPrice),
-          inventory_id: inventoryId,
-          status: "active",
-        })
-        .select("id")
-        .single();
+    if (invErr || !invRows?.length) { toast.error(invErr?.message ?? "Failed to save"); setSaving(false); return; }
 
-      if (listErr || !listing) { toast.error(listErr?.message ?? "Failed to create listing"); setSaving(false); return; }
+    // For each size that should be listed, create a listing and link it
+    if (anyListing) {
+      for (let i = 0; i < sizes.length; i++) {
+        const s = sizes[i];
+        if (!s.listInShop || !s.shopPrice) continue;
+        const inventoryId = invRows[i].id;
+        const invQty = Math.max(1, Number(s.quantity) || 1);
+        const listedQty = Math.min(Math.max(1, Number(s.shopQuantity) || invQty), invQty);
 
-      await supabase.from("inventory").update({
-        listing_id: listing.id,
-        listing_quantity: listedQty,
-      }).eq("id", inventoryId);
+        const { data: listing, error: listErr } = await supabase
+          .from("listings")
+          .insert({
+            seller_id: user.id,
+            plant_name: plantName.trim(),
+            variety: variety.trim() || null,
+            quantity: listedQty,
+            description: description.trim() || null,
+            images: imageUrls,
+            category: category || "Other",
+            pot_size: s.potSize || null,
+            price_cents: dollarsToCents(s.shopPrice),
+            inventory_id: inventoryId,
+            status: "active",
+          })
+          .select("id")
+          .single();
 
-      setSaving(false);
-      toast.success("Saved to inventory and listed in shop!");
+        if (listErr || !listing) { toast.error(`Failed to create listing: ${listErr?.message}`); continue; }
+
+        await supabase.from("inventory").update({
+          listing_id: listing.id,
+          listing_quantity: listedQty,
+        }).eq("id", inventoryId);
+      }
+    }
+
+    setSaving(false);
+    const listedCount = sizes.filter(s => s.listInShop && s.shopPrice).length;
+    if (sizes.length > 1) {
+      toast.success(listedCount > 0 ? `${sizes.length} sizes saved — ${listedCount} listed in shop` : `${sizes.length} sizes added to inventory`);
     } else {
-      const { error } = await supabase.from("inventory").insert(rows);
-      setSaving(false);
-      if (error) { toast.error(error.message); return; }
-      const label = sizes.length > 1 ? `${sizes.length} sizes added to inventory` : "Saved to inventory!";
-      toast.success(label);
+      toast.success(listedCount > 0 ? "Saved to inventory and listed in shop!" : "Saved to inventory!");
     }
     router.push("/dashboard/inventory");
   }
 
+  const anyListing = sizes.some(s => s.listInShop && s.shopPrice);
   const canSubmit = plantName.trim() && sizes.every(s => Number(s.quantity) >= 1);
 
   return (
@@ -363,34 +362,81 @@ export default function CreateInventoryPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {sizes.map((size, idx) => (
-              <div key={size.id} className="flex items-start gap-3 p-3 rounded-lg border bg-muted/20">
-                <div className="flex-1 space-y-3">
-                  <div className="space-y-1">
-                    <Label className="text-xs">Pot Size <span className="font-normal text-muted-foreground">(optional)</span></Label>
-                    <PotSizePicker value={size.potSize} onChange={(v) => updateSize(size.id, "potSize", v)} />
+              <div key={size.id} className="p-3 rounded-lg border bg-muted/20 space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className="flex-1 space-y-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Pot Size <span className="font-normal text-muted-foreground">(optional)</span></Label>
+                      <PotSizePicker value={size.potSize} onChange={(v) => updateSize(size.id, "potSize", v)} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs" htmlFor={`qty-${size.id}`}>Quantity *</Label>
+                      <Input
+                        id={`qty-${size.id}`}
+                        type="number"
+                        min={1}
+                        value={size.quantity}
+                        onChange={(e) => updateSize(size.id, "quantity", e.target.value)}
+                        className="max-w-[120px]"
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs" htmlFor={`qty-${size.id}`}>Quantity *</Label>
-                    <Input
-                      id={`qty-${size.id}`}
-                      type="number"
-                      min={1}
-                      value={size.quantity}
-                      onChange={(e) => updateSize(size.id, "quantity", e.target.value)}
-                      className="max-w-[120px]"
-                    />
-                  </div>
+                  {sizes.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeSize(size.id)}
+                      className="mt-1 p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                      aria-label={`Remove size ${idx + 1}`}
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
                 </div>
-                {sizes.length > 1 && (
+
+                {/* Per-size: list in shop toggle */}
+                <div className="border-t pt-3 space-y-3">
                   <button
                     type="button"
-                    onClick={() => removeSize(size.id)}
-                    className="mt-1 p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                    aria-label={`Remove size ${idx + 1}`}
+                    onClick={() => updateSize(size.id, "listInShop", !size.listInShop)}
+                    className="flex items-center gap-2.5 text-left"
                   >
-                    <X size={16} />
+                    <div className={`w-8 h-5 rounded-full transition-colors flex items-center px-0.5 ${size.listInShop ? "bg-green-600" : "bg-muted-foreground/30"}`}>
+                      <div className={`w-4 h-4 rounded-full bg-white shadow transition-transform ${size.listInShop ? "translate-x-3" : "translate-x-0"}`} />
+                    </div>
+                    <span className="text-xs font-medium flex items-center gap-1"><Store size={12} /> List in Shop</span>
                   </button>
-                )}
+
+                  {size.listInShop && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs" htmlFor={`price-${size.id}`}>Price ($) *</Label>
+                        <Input
+                          id={`price-${size.id}`}
+                          type="number"
+                          min={0.01}
+                          step={0.01}
+                          placeholder="0.00"
+                          value={size.shopPrice}
+                          onChange={e => updateSize(size.id, "shopPrice", e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs" htmlFor={`shop-qty-${size.id}`}>
+                          Listed qty <span className="font-normal text-muted-foreground">(max {size.quantity || 1})</span>
+                        </Label>
+                        <Input
+                          id={`shop-qty-${size.id}`}
+                          type="number"
+                          min={1}
+                          max={Number(size.quantity) || 1}
+                          placeholder={size.quantity || "1"}
+                          value={size.shopQuantity}
+                          onChange={e => updateSize(size.id, "shopQuantity", e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             ))}
             <Button type="button" variant="outline" size="sm" onClick={addSize} className="flex items-center gap-1.5 text-xs">
@@ -399,70 +445,12 @@ export default function CreateInventoryPage() {
           </CardContent>
         </Card>
 
-        {/* Optional: List in Shop */}
-        <Card className="mb-6">
-          <CardContent className="pt-5">
-            <button
-              type="button"
-              onClick={() => setListInShop(v => !v)}
-              className="flex items-center gap-3 w-full text-left group"
-            >
-              <div className={`w-10 h-6 rounded-full transition-colors flex items-center px-1 ${listInShop ? "bg-green-600" : "bg-muted-foreground/30"}`}>
-                <div className={`w-4 h-4 rounded-full bg-white shadow transition-transform ${listInShop ? "translate-x-4" : "translate-x-0"}`} />
-              </div>
-              <div>
-                <p className="font-medium flex items-center gap-1.5 text-sm"><Store size={14} /> List in Shop immediately</p>
-                <p className="text-xs text-muted-foreground">Set a price and it goes live right away</p>
-              </div>
-            </button>
-
-            {listInShop && sizes.length > 1 && (
-              <p className="mt-3 text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md px-3 py-2">
-                Instant listing is only available when adding a single size. Save first, then list each size from your Inventory page.
-              </p>
-            )}
-
-            {listInShop && sizes.length === 1 && (
-              <div className="mt-4 space-y-3 pl-1">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <Label htmlFor="shop-price">Price per item ($) *</Label>
-                    <Input
-                      id="shop-price"
-                      type="number"
-                      min={0.01}
-                      step={0.01}
-                      placeholder="0.00"
-                      value={shopPrice}
-                      onChange={e => setShopPrice(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="shop-qty">
-                      Listed quantity
-                      <span className="ml-1 font-normal text-muted-foreground text-xs">(max {sizes[0].quantity || 1})</span>
-                    </Label>
-                    <Input
-                      id="shop-qty"
-                      type="number"
-                      min={1}
-                      max={Number(sizes[0].quantity) || 1}
-                      value={shopQuantity || sizes[0].quantity}
-                      onChange={e => setShopQuantity(e.target.value)}
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
         <div className="flex items-center gap-3">
-          <Button type="submit" disabled={saving || !canSubmit || (listInShop && sizes.length === 1 && !shopPrice)} className="bg-green-700 hover:bg-green-800">
+          <Button type="submit" disabled={saving || !canSubmit} className="bg-green-700 hover:bg-green-800">
             {saving
               ? "Saving…"
-              : listInShop && sizes.length === 1 && shopPrice
-              ? "Save & List in Shop"
+              : anyListing
+              ? `Save & List in Shop`
               : sizes.length > 1
               ? `Save ${sizes.length} sizes to Inventory`
               : "Save to Inventory"}
