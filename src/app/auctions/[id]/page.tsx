@@ -68,9 +68,10 @@ export default async function AuctionPage({
     : { data: [] };
   const bidderMap = Object.fromEntries((bidders ?? []).map((b) => [b.id, b]));
 
-  const [wishlistRow, reportRow] = await Promise.all([
+  const [wishlistRow, reportRow, buyerProfile] = await Promise.all([
     user ? supabase.from("wishlists").select("id").eq("user_id", user.id).eq("auction_id", auction.id).maybeSingle() : Promise.resolve({ data: null }),
     user ? supabase.from("reports").select("id").eq("reporter_id", user.id).eq("auction_id", auction.id).maybeSingle() : Promise.resolve({ data: null }),
+    user ? supabase.from("profiles").select("stripe_onboarded").eq("id", user.id).single() : Promise.resolve({ data: null }),
   ]);
   const isWishlisted = !!wishlistRow.data;
   const isReported = !!reportRow.data;
@@ -136,6 +137,7 @@ export default async function AuctionPage({
               current_bidder_id: auction.current_bidder_id,
             }}
             userId={user?.id ?? null}
+            buyerStripeOnboarded={!!buyerProfile?.data?.stripe_onboarded}
             recentBids={
               (bids ?? []).map((b) => ({
                 id: b.id,

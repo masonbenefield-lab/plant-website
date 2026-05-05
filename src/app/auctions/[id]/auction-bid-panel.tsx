@@ -33,10 +33,12 @@ interface Bid {
 export default function AuctionBidPanel({
   auction: initialAuction,
   userId,
+  buyerStripeOnboarded,
   recentBids: initialBids,
 }: {
   auction: AuctionData;
   userId: string | null;
+  buyerStripeOnboarded: boolean;
   recentBids: Bid[];
 }) {
   const router = useRouter();
@@ -248,7 +250,17 @@ export default function AuctionBidPanel({
         </a>
       )}
 
-      {!isEnded && auction.buy_now_price_cents && userId && userId !== auction.seller_id && (
+      {!isEnded && userId && userId !== auction.seller_id && !buyerStripeOnboarded && (
+        <div className="rounded-md border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
+          <p className="font-medium">Payment method required to bid</p>
+          <p className="text-xs mt-0.5">You need a connected payment account before you can bid or buy.</p>
+          <a href="/account#seller-payments" className="text-xs font-semibold underline underline-offset-2 mt-1 inline-block">
+            Set up payments →
+          </a>
+        </div>
+      )}
+
+      {!isEnded && auction.buy_now_price_cents && userId && userId !== auction.seller_id && buyerStripeOnboarded && (
         <div className="rounded-lg border border-orange-200 bg-orange-50 dark:bg-orange-900/10 dark:border-orange-800 p-3 flex items-center justify-between gap-3">
           <div>
             <p className="text-sm font-medium">Buy Now</p>
@@ -264,7 +276,7 @@ export default function AuctionBidPanel({
         </div>
       )}
 
-      {!isEnded && userId && userId !== auction.seller_id && (
+      {!isEnded && userId && userId !== auction.seller_id && buyerStripeOnboarded && (
         <form onSubmit={placeBid} className="flex gap-2">
           <div className="flex-1">
             <Label htmlFor="bid" className="sr-only">Bid amount</Label>

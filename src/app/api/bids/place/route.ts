@@ -19,6 +19,16 @@ export async function POST(request: Request) {
 
   const admin = adminClient();
 
+  const { data: bidderProfile } = await admin
+    .from("profiles")
+    .select("stripe_onboarded")
+    .eq("id", user.id)
+    .single();
+
+  if (!bidderProfile?.stripe_onboarded) {
+    return NextResponse.json({ error: "Connect a payment account before bidding" }, { status: 403 });
+  }
+
   const { data: auction, error: auctionErr } = await admin
     .from("auctions")
     .select("id, seller_id, current_bid_cents, current_bidder_id, status, ends_at")
