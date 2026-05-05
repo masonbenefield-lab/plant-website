@@ -34,7 +34,7 @@ export default function CreateInventoryPage() {
   const [plantName, setPlantName] = useState("");
   const [variety, setVariety] = useState("");
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("");
+  const [category, setCategory] = useState("Other");
   const [existingGroup, setExistingGroup] = useState<{ plant_name: string; count: number } | null>(null);
 
   // Multiple sizes — each becomes its own inventory row
@@ -149,7 +149,7 @@ export default function CreateInventoryPage() {
       quantity: Math.max(1, Number(s.quantity) || 1),
       description: description.trim() || null,
       images: imageUrls,
-      category: category || null,
+      category: category || "Other",
       pot_size: s.potSize || null,
     }));
 
