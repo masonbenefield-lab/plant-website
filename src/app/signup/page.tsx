@@ -116,10 +116,10 @@ export default function SignupPage() {
                 required
                 minLength={3}
                 maxLength={30}
-                pattern="[a-z0-9_-]+"
+                pattern="[a-z0-9._-]+"
                 placeholder="your-shop-name"
               />
-              <p className="text-xs text-muted-foreground">Lowercase letters, numbers, hyphens, and underscores only. Used in your storefront URL.</p>
+              <p className="text-xs text-muted-foreground">Lowercase letters, numbers, periods, hyphens, and underscores only. Used in your storefront URL.</p>
             </div>
             <div className="space-y-1">
               <Label htmlFor="display_name">Display Name</Label>

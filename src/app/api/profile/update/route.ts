@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { containsSlur } from "@/lib/profanity";
 
-const USERNAME_RE = /^[a-z0-9_-]{3,30}$/;
+const USERNAME_RE = /^[a-z0-9._-]{3,30}$/;
 
 export async function POST(request: Request) {
   const supabase = await createClient();
