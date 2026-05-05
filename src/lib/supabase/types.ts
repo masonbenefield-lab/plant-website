@@ -332,6 +332,7 @@ export interface Database {
           status?: OrderStatus;
           tracking_number?: string | null;
           delivered_at?: string | null;
+          cart_items?: { listing_id: string; plant_name: string; variety: string | null; quantity: number; price_cents: number }[] | null;
         };
         Relationships: [];
       };
