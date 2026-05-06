@@ -3,19 +3,24 @@ import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdmin } from "@supabase/supabase-js";
 import { getStripe } from "@/lib/stripe";
 
-const PRICE_IDS: Record<string, Record<string, string>> = {
-  grower:  { monthly: process.env.STRIPE_GROWER_PRICE_ID!,         annual: process.env.STRIPE_GROWER_ANNUAL_PRICE_ID! },
-  nursery: { monthly: process.env.STRIPE_NURSERY_PRICE_ID!,        annual: process.env.STRIPE_NURSERY_ANNUAL_PRICE_ID! },
-};
-
 export async function POST(request: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { plan, billing } = await request.json() as { plan: "grower" | "nursery"; billing: "monthly" | "annual" };
+
+  // Read at request time so env vars are always current
+  const PRICE_IDS: Record<string, Record<string, string | undefined>> = {
+    grower:  { monthly: process.env.STRIPE_GROWER_PRICE_ID,  annual: process.env.STRIPE_GROWER_ANNUAL_PRICE_ID },
+    nursery: { monthly: process.env.STRIPE_NURSERY_PRICE_ID, annual: process.env.STRIPE_NURSERY_ANNUAL_PRICE_ID },
+  };
+
   const priceId = PRICE_IDS[plan]?.[billing];
-  if (!priceId) return NextResponse.json({ error: "Invalid plan or billing period" }, { status: 400 });
+  if (!priceId) {
+    const missing = `STRIPE_${plan.toUpperCase()}_${billing === "annual" ? "ANNUAL_" : ""}PRICE_ID`;
+    return NextResponse.json({ error: `Stripe price not configured. Set the ${missing} environment variable.` }, { status: 400 });
+  }
 
   const admin = createAdmin(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
   const { data: profile } = await admin.from("profiles").select("stripe_customer_id, stripe_subscription_id, plan").eq("id", user.id).single();
