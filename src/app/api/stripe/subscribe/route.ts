@@ -58,6 +58,8 @@ export async function POST(request: Request) {
       cancel_url: `${appUrl}/account?subscription=cancelled`,
       metadata: { supabase_user_id: user.id, plan, billing },
       subscription_data: { metadata: { supabase_user_id: user.id, plan } },
+      automatic_tax: { enabled: true },
+      customer_update: { address: "auto" },
     });
 
     return NextResponse.json({ url: session.url });
