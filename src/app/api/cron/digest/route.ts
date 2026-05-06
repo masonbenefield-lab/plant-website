@@ -185,7 +185,7 @@ export async function GET(request: Request) {
         .select("id, plant_name, variety, price_cents, images, seller_id")
         .eq("status", "active")
         .in("seller_id", [...nurseryFollowedIds])
-        .gte("created_at", thirtyDaysAgo)
+        .or(`created_at.gte.${thirtyDaysAgo},last_activated_at.gte.${thirtyDaysAgo}`)
         .not("images", "eq", "{}")
         .not("images", "is", null)
         .order("created_at", { ascending: false })

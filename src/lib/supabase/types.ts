@@ -162,6 +162,7 @@ export interface Database {
           sold_out_behavior: "mark_sold_out" | "auto_pause";
           care_guide_pdf_url: string | null;
           scheduled_delete_at: string | null;
+          last_activated_at: string | null;
           created_at: string;
         };
         Insert: {
@@ -184,6 +185,7 @@ export interface Database {
           sold_out_behavior?: "mark_sold_out" | "auto_pause";
           care_guide_pdf_url?: string | null;
           scheduled_delete_at?: string | null;
+          last_activated_at?: string | null;
           created_at?: string;
         };
         Update: {
@@ -205,6 +207,7 @@ export interface Database {
           sold_out_behavior?: "mark_sold_out" | "auto_pause";
           care_guide_pdf_url?: string | null;
           scheduled_delete_at?: string | null;
+          last_activated_at?: string | null;
         };
         Relationships: [];
       };

@@ -21,7 +21,7 @@ export async function POST(request: Request) {
 
   const { data: listing, error: listingErr } = await admin
     .from("listings")
-    .select("id, seller_id, status, quantity, inventory_id")
+    .select("id, seller_id, status, quantity, inventory_id, last_activated_at")
     .eq("id", listingId)
     .eq("seller_id", user.id)
     .single();
@@ -30,9 +30,18 @@ export async function POST(request: Request) {
 
   const newStatus = listing.status === "active" ? "paused" : "active";
 
+  const updatePayload: Record<string, unknown> = { status: newStatus };
+  if (newStatus === "active") {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const lastActivated = listing.last_activated_at ? new Date(listing.last_activated_at) : null;
+    if (!lastActivated || lastActivated < sevenDaysAgo) {
+      updatePayload.last_activated_at = new Date().toISOString();
+    }
+  }
+
   const { error: updateErr } = await admin
     .from("listings")
-    .update({ status: newStatus })
+    .update(updatePayload)
     .eq("id", listingId);
 
   if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 });

@@ -585,3 +585,56 @@ ALTER TABLE orders ADD CONSTRAINT order_has_source
 - `src/app/api/stripe/cart-checkout/route.ts` — same fix
 - `src/app/dashboard/inventory/inventory-client.tsx` — photo section in Edit Listing modal
 - `src/app/api/listings/delete/route.ts` — populate cart_items on remaining orders before deletion
+
+---
+
+## 2026-05-06 — Weekly digest, pricing audit fixes, Stripe subscriptions, last_activated_at
+
+### Features built
+- **Weekly digest** — Changed cron from monthly to weekly (Sundays 3pm UTC). Subject/copy updated from "Monthly" to "Weekly". Followed section now allows up to 4 listings per seller (was 1), up to 12 total.
+- **Digest fallback pool** — If fewer than 6 fresh picks exist, fills remaining slots from any active Grower+ listings with no age restriction.
+- **45-day re-engagement email** — New cron (`/api/cron/reengagement`, runs daily) emails opted-in users who haven't signed in in 45+ days with 6 featured listings. Respects per-user cooldown via `last_reengagement_sent`.
+- **Pricing audit fixes** — Updated pricing page copy (monthly→weekly, per-seller digest limits, priority support wording). Added live DB count checks before listing/auction creation (server-side limit enforcement). Bulk status tool gated to Grower+ (50-item batch) and Nursery (200-item batch).
+- **Priority search placement** — Shop and auctions pages post-sort by plan (Nursery first, Grower second) after each Supabase page fetch. No extra query needed — seller plan is fetched alongside listings.
+- **Stripe subscription flow** — New `/api/stripe/subscribe` route creates Checkout Session for Grower/Nursery plans; existing subscribers redirected to billing portal. New `/api/stripe/billing-portal` route. `account-form.tsx` shows current plan badge + upgrade/manage buttons.
+- **Stripe webhook handlers** — Added `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `charge.refunded` handlers.
+- **Stripe Tax** — `automatic_tax: { enabled: true }` and `customer_update: { address: "auto" }` added to checkout session. Parked until TX LLC registered.
+- **`last_activated_at` — digest restock/reactivation logic** — Listings track when they were last activated. Digest followed section now shows listings activated within the last 30 days (not just newly created). Activating a listing that has been inactive for 7+ days bumps `last_activated_at`. Restocking a sold-out listing (qty 0 → >0 in Edit Listing modal) auto-activates it and bumps `last_activated_at` if 7+ days since last activation. Quick pause/resume button in inventory also respects the 7-day rule.
+
+### Files changed
+- `vercel.json` — digest cron changed to `0 15 * * 0`; added reengagement cron `0 14 * * *`
+- `src/app/api/cron/digest/route.ts` — weekly cadence, fallback pool, 4-per-seller followed cap, OR filter on `last_activated_at`
+- `src/app/api/cron/reengagement/route.ts` — new file
+- `src/lib/email.ts` — monthly→weekly copy, `sendReengagementEmail()`
+- `src/lib/supabase/types.ts` — added `last_reengagement_sent`, `stripe_customer_id`, `stripe_subscription_id` to profiles; `last_activated_at` to listings; `"refunded"` to OrderStatus
+- `src/app/pricing/page.tsx` — digest copy, support tier wording
+- `src/app/dashboard/inventory/page.tsx` — fetches `last_activated_at` from listings, passes through row mapping
+- `src/app/dashboard/inventory/inventory-client.tsx` — `last_activated_at` in Row type; restock auto-activate in `submitEditListing`; `last_activated_at` bump in `toggleListingPause`; live plan limit checks
+- `src/app/api/listings/toggle-status/route.ts` — sets `last_activated_at` when activating if 7+ days inactive
+- `src/app/api/orders/bulk-status/route.ts` — Seedling blocked; batch limit 50 (Grower) vs 200 (Nursery)
+- `src/app/shop/page.tsx` — priority sort by plan after fetch
+- `src/app/auctions/page.tsx` — priority sort by plan after fetch
+- `src/app/api/stripe/subscribe/route.ts` — new file
+- `src/app/api/stripe/billing-portal/route.ts` — new file
+- `src/app/api/stripe/webhook/route.ts` — subscription + refund webhook handlers
+- `src/app/account/account-form.tsx` — PlanBillingCard component
+
+### SQL migrations required
+Run in Supabase SQL editor:
+```sql
+-- Digest restock/reactivation tracking
+ALTER TABLE listings ADD COLUMN IF NOT EXISTS last_activated_at timestamptz;
+
+-- Stripe subscription fields on profiles (if not already present)
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS stripe_customer_id text;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS stripe_subscription_id text;
+
+-- Re-engagement email tracking
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS last_reengagement_sent timestamptz;
+```
+
+### Environment variables
+- `STRIPE_GROWER_PRICE_ID` — Stripe price ID for Grower monthly plan (starts `price_`)
+- `STRIPE_GROWER_ANNUAL_PRICE_ID` — Stripe price ID for Grower annual plan
+- `STRIPE_NURSERY_PRICE_ID` — Stripe price ID for Nursery monthly plan
+- `STRIPE_NURSERY_ANNUAL_PRICE_ID` — Stripe price ID for Nursery annual plan

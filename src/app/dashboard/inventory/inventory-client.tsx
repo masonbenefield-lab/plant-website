@@ -64,6 +64,7 @@ type Row = {
   listing_bundle_discount_pct: number | null;
   listing_sold_out_behavior: "mark_sold_out" | "auto_pause";
   listing_care_guide_pdf_url: string | null;
+  listing_last_activated_at: string | null;
   auctions: AuctionSummary[];
   low_stock_threshold: number | null;
   cost_cents: number | null;
@@ -516,6 +517,10 @@ export default function InventoryClient({
     setSubmitting(true);
     const supabase = createClient();
     const discPct = bundleDiscountPct ? Math.min(80, Math.max(1, Number(bundleDiscountPct))) : null;
+    const isRestock = modal.row.listing_status === "sold_out" && qty > 0;
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const lastActivated = modal.row.listing_last_activated_at ? new Date(modal.row.listing_last_activated_at) : null;
+    const shouldBumpActivatedAt = !lastActivated || lastActivated < sevenDaysAgo;
     await supabase.from("listings").update({
       price_cents: dollarsToCents(price),
       quantity: qty,
@@ -524,6 +529,8 @@ export default function InventoryClient({
       sold_out_behavior: soldOutBehavior,
       care_guide_pdf_url: careGuidePdfUrl,
       images: editImages,
+      ...(isRestock ? { status: "active" as const } : {}),
+      ...(isRestock && shouldBumpActivatedAt ? { last_activated_at: new Date().toISOString() } : {}),
     }).eq("id", modal.row.listing_id);
     await supabase.from("inventory").update({ listing_quantity: qty, pot_size: editPotSize || null, images: editImages }).eq("id", modal.row.id);
     setSubmitting(false);
@@ -536,7 +543,15 @@ export default function InventoryClient({
     if (!row.listing_id) return;
     const supabase = createClient();
     const newStatus = row.listing_status === "active" ? "paused" : "active";
-    await supabase.from("listings").update({ status: newStatus }).eq("id", row.listing_id);
+    const updates: Record<string, unknown> = { status: newStatus };
+    if (newStatus === "active") {
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const lastActivated = row.listing_last_activated_at ? new Date(row.listing_last_activated_at) : null;
+      if (!lastActivated || lastActivated < sevenDaysAgo) {
+        updates.last_activated_at = new Date().toISOString();
+      }
+    }
+    await supabase.from("listings").update(updates).eq("id", row.listing_id);
     toast.success(newStatus === "paused" ? "Listing paused" : "Listing resumed");
     router.refresh();
   }
