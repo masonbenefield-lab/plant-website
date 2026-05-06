@@ -53,6 +53,15 @@ export default function PrivacyPolicyPage() {
               comment text, and the order it relates to.</p>
             </div>
             <div>
+              <h3 className="font-medium text-foreground">Seller Analytics</h3>
+              <p>Sellers on qualifying plans may access analytics about their own orders — for example, a
+              breakdown of which states their buyers ship to. These reports are derived exclusively from
+              orders placed through the seller&apos;s own storefront. The data is aggregated and presented
+              at the state or region level only; no individual buyer name, address, or identity is ever
+              exposed to the seller. We apply a minimum-order threshold so that a single buyer cannot be
+              singled out from a small sample.</p>
+            </div>
+            <div>
               <h3 className="font-medium text-foreground">Usage &amp; Technical Data</h3>
               <p>Our hosting provider (Vercel) and database provider (Supabase) may collect standard server
               logs including IP addresses, browser type, pages visited, and timestamps. We do not sell or
@@ -70,6 +79,7 @@ export default function PrivacyPolicyPage() {
             <li>To send transactional emails (order confirmations, bid notifications, shipping updates) via Resend</li>
             <li>To detect and prevent fraud, abuse, and prohibited content</li>
             <li>To comply with legal obligations</li>
+            <li>To provide sellers with aggregated, anonymized analytics about their own orders (e.g. top shipping states) — no personally identifiable buyer information is included in these summaries</li>
           </ul>
           <p className="mt-3 text-muted-foreground leading-relaxed">
             We do not sell your personal information to third parties. We do not use your data for
