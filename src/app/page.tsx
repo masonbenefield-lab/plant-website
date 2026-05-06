@@ -9,10 +9,10 @@ import HeroSearch from "@/components/hero-search";
 import LiveAuctionCard from "@/components/live-auction-card";
 
 const fallbackListings = [
-  { emoji: "🌿", name: "Monstera Deliciosa", price: "$24", tag: "In Shop", bg: "bg-green-100",   href: "/shop" },
-  { emoji: "🌸", name: "Pink Princess",      price: "$85", tag: "Auction", bg: "bg-pink-100",    href: "/auctions" },
-  { emoji: "🌵", name: "Blue Torch Cactus",  price: "$18", tag: "In Shop", bg: "bg-amber-100",   href: "/shop" },
-  { emoji: "🪴", name: "Golden Pothos",       price: "$12", tag: "In Shop", bg: "bg-emerald-100", href: "/shop" },
+  { emoji: "🌿", name: "Monstera Deliciosa", price: "$24", regularPrice: null, onSale: false, tag: "In Shop", bg: "bg-green-100",   href: "/shop" },
+  { emoji: "🌸", name: "Pink Princess",      price: "$85", regularPrice: null, onSale: false, tag: "Auction", bg: "bg-pink-100",    href: "/auctions" },
+  { emoji: "🌵", name: "Blue Torch Cactus",  price: "$18", regularPrice: null, onSale: false, tag: "In Shop", bg: "bg-amber-100",   href: "/shop" },
+  { emoji: "🪴", name: "Golden Pothos",       price: "$12", regularPrice: null, onSale: false, tag: "In Shop", bg: "bg-emerald-100", href: "/shop" },
 ];
 
 const features = [
@@ -163,11 +163,11 @@ export default async function LandingPage() {
                     <p className="font-semibold text-card-foreground text-sm leading-tight truncate">{l.name}</p>
                     <div className="flex items-center justify-between mt-1.5 gap-1">
                       <div className="flex items-center gap-1.5 min-w-0">
-                        {"onSale" in l && l.onSale && (
+                        {l.onSale && (
                           <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-red-600 text-white">SALE</span>
                         )}
                         <span className="text-green-600 dark:text-green-400 font-bold text-sm">{l.price}</span>
-                        {"regularPrice" in l && l.regularPrice && (
+                        {l.regularPrice && (
                           <span className="text-muted-foreground text-xs line-through">{l.regularPrice}</span>
                         )}
                       </div>
