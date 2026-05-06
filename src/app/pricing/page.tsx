@@ -299,7 +299,11 @@ export default function PricingPage() {
                           <Check size={16} className={cn("mt-0.5 shrink-0", isPopular ? "text-green-300" : "text-green-600")} />
                         )}
                         <span className={cn(isFalse && !isPopular && "text-muted-foreground/60", isFalse && isPopular && "text-green-300/60")}>
-                          {isString ? val : row.label}
+                          {row.key === "digest" && isString ? (
+                            <a href="#weekly-digest" className={cn("underline underline-offset-2 decoration-dotted hover:opacity-80", isPopular ? "text-white" : "")}>
+                              {val}
+                            </a>
+                          ) : isString ? val : row.label}
                         </span>
                       </li>
                     );
@@ -348,7 +352,7 @@ export default function PricingPage() {
       </section>
 
       {/* Digest callout */}
-      <section className="px-4 pb-16">
+      <section id="weekly-digest" className="px-4 pb-16">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-10">
             <p className="text-2xl mb-3">📬</p>
