@@ -15,8 +15,11 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const month = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" });
-  const twentyFiveDaysAgo = new Date(Date.now() - 25 * 24 * 60 * 60 * 1000).toISOString();
+  const now = new Date();
+  const weekStart = new Date(now);
+  weekStart.setDate(now.getDate() - now.getDay());
+  const month = `Week of ${weekStart.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}`;
+  const sixDaysAgo = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString();
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
@@ -25,7 +28,7 @@ export async function GET(request: Request) {
     .from("profiles")
     .select("id, username, email_marketing_opt_in, last_digest_sent")
     .eq("email_marketing_opt_in", true)
-    .or(`last_digest_sent.is.null,last_digest_sent.lt.${twentyFiveDaysAgo}`);
+    .or(`last_digest_sent.is.null,last_digest_sent.lt.${sixDaysAgo}`);
 
   if (profileErr || !profiles?.length) {
     return NextResponse.json({ sent: 0, error: profileErr?.message ?? "No eligible users" });
@@ -73,6 +76,33 @@ export async function GET(request: Request) {
     })
     .slice(0, 6);
 
+  // Fallback: if fewer than 6 slots, fill with any active Grower+ listings (no age restriction)
+  const extraSellerIds: string[] = [];
+  if (freshPool.length < 6 && growerPlusIds.length) {
+    const existingIds = new Set(freshPool.map((l) => l.id));
+    const seenFallbackSellers = new Set(freshPool.map((l) => l.seller_id));
+    const needed = 6 - freshPool.length;
+    const { data: fb } = await admin
+      .from("listings")
+      .select("id, plant_name, variety, price_cents, images, seller_id")
+      .eq("status", "active")
+      .in("seller_id", growerPlusIds)
+      .not("images", "eq", "{}")
+      .not("images", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(120);
+    const extras = (fb ?? [])
+      .filter((l) => !existingIds.has(l.id) && (l.images as string[])?.[0])
+      .filter((l) => {
+        if (seenFallbackSellers.has(l.seller_id)) return false;
+        seenFallbackSellers.add(l.seller_id);
+        return true;
+      })
+      .slice(0, needed);
+    extraSellerIds.push(...extras.map((l) => l.seller_id));
+    freshPool.push(...extras);
+  }
+
   // 5 — global: hot auctions (most bids, still active)
   const { data: auctionsRaw } = await admin
     .from("auctions")
@@ -86,6 +116,7 @@ export async function GET(request: Request) {
   const sellerIds = [
     ...new Set([
       ...(freshRaw ?? []).map((l) => l.seller_id),
+      ...extraSellerIds,
       ...(auctionsRaw ?? []).map((a) => a.seller_id),
     ]),
   ];

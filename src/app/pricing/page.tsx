@@ -54,7 +54,7 @@ const tiers = [
       bulk: "Basic bulk tools",
       support: "Standard support",
       featured: false,
-      digest: "Eligible for monthly buyer digest",
+      digest: "Eligible for weekly buyer digest",
     },
   },
   {
@@ -96,7 +96,7 @@ const comparisonRows = [
   { label: "Bulk listing tools",          key: "bulk" },
   { label: "Support",                     key: "support" },
   { label: "Featured homepage placement", key: "featured" },
-  { label: "Monthly buyer digest",        key: "digest" },
+  { label: "Weekly buyer digest",          key: "digest" },
 ];
 
 function BreakevenCalculator() {
@@ -351,9 +351,9 @@ export default function PricingPage() {
       <section className="px-4 pb-16">
         <div className="max-w-2xl mx-auto bg-muted rounded-2xl border p-8">
           <p className="text-2xl mb-3 text-center">📬</p>
-          <h2 className="font-bold text-lg mb-2 text-center">The monthly buyer digest</h2>
+          <h2 className="font-bold text-lg mb-2 text-center">The weekly buyer digest</h2>
           <p className="text-sm text-muted-foreground leading-relaxed mb-6 text-center">
-            Every month, Plantet sends a curated email to all opted-in buyers featuring new plant listings, hot auctions, and picks from shops they follow. Paid plans get their listings in front of real buyers automatically.
+            Every week, Plantet sends a curated email to all opted-in buyers featuring new plant listings, hot auctions, and picks from shops they follow. Paid plans get their listings in front of real buyers automatically.
           </p>
           <div className="space-y-3">
             <div className="flex items-start gap-3 rounded-xl bg-background border p-4">
@@ -367,7 +367,7 @@ export default function PricingPage() {
               <span className="text-lg mt-0.5">🌿</span>
               <div>
                 <p className="text-sm font-semibold">Grower — Fresh Picks</p>
-                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">Your newest listings are eligible for the "Fresh Picks" section shown to every subscriber. Up to 6 sellers are featured per digest (1 listing each), rotating monthly so exposure is spread across the community.</p>
+                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">Your newest listings are eligible for the "Fresh Picks" section shown to every subscriber. Up to 6 sellers are featured per digest (1 listing each), rotating weekly so exposure is spread across the community.</p>
               </div>
             </div>
             <div className="flex items-start gap-3 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4">
@@ -430,7 +430,7 @@ const faqs = [
     a: "We don't offer a time-limited trial, but the free Seedling plan lets you get started with no commitment. Upgrade when you're ready to unlock more.",
   },
   {
-    q: "How does the monthly buyer digest work?",
-    a: "Once a month, Plantet sends a curated email to opted-in buyers. Up to 6 Grower+ sellers are featured in the 'Fresh Picks' section (1 listing each), rotating monthly so exposure is spread across the community. Nursery sellers are also eligible for a personalized 'From shops you follow' section sent to buyers who follow their store. Seedling sellers are not included.",
+    q: "How does the weekly buyer digest work?",
+    a: "Every Sunday, Plantet sends a curated email to opted-in buyers. Up to 6 Grower+ sellers are featured in the 'Fresh Picks' section (1 listing each), rotating weekly so exposure is spread across the community. Nursery sellers are also eligible for a personalized 'From shops you follow' section sent to buyers who follow their store. Seedling sellers are not included.",
   },
 ];

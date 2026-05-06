@@ -303,7 +303,7 @@ export async function sendShippingNotification({
   });
 }
 
-// ─── Monthly digest ────────────────────────────────────────────────────────
+// ─── Weekly digest ─────────────────────────────────────────────────────────
 
 export interface DigestListing {
   id: string;
@@ -457,7 +457,7 @@ function buildDigestHtml({
           <tr>
             <td style="background:linear-gradient(135deg,#14532d 0%,#166534 60%,#15803d 100%);padding:40px 32px 36px;text-align:center;">
               <p style="margin:0 0 10px;color:#bbf7d0;font-size:13px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;">🌿 Plantet</p>
-              <h1 style="margin:0 0 8px;color:#ffffff;font-size:26px;font-weight:700;line-height:1.25;">Your Monthly Plant Digest</h1>
+              <h1 style="margin:0 0 8px;color:#ffffff;font-size:26px;font-weight:700;line-height:1.25;">Your Weekly Plant Digest</h1>
               <p style="margin:0;color:#86efac;font-size:14px;font-weight:500;">${month}</p>
             </td>
           </tr>
@@ -466,7 +466,7 @@ function buildDigestHtml({
           <tr>
             <td style="padding:32px 32px 24px;">
               <p style="margin:0 0 8px;font-size:18px;font-weight:600;color:#111827;">Hey ${username} 👋</p>
-              <p style="margin:0;font-size:14px;color:#6b7280;line-height:1.65;">Here's what's been growing this month on Plantet — fresh listings, new arrivals from shops you follow, and auctions you don't want to miss.</p>
+              <p style="margin:0;font-size:14px;color:#6b7280;line-height:1.65;">Here's what's been growing this week on Plantet — fresh listings, new arrivals from shops you follow, and auctions you don't want to miss.</p>
             </td>
           </tr>
 
@@ -532,7 +532,99 @@ export async function sendMonthlyDigest({
   await resend.emails.send({
     from: FROM,
     to: recipientEmail,
-    subject: `🌿 Your monthly plant digest — ${month}`,
+    subject: `🌿 Your weekly plant digest — ${month}`,
+    html,
+  });
+}
+
+// ─── Re-engagement email ────────────────────────────────────────────────────
+
+export async function sendReengagementEmail({
+  recipientEmail,
+  username,
+  userId,
+  freshListings,
+}: {
+  recipientEmail: string;
+  username: string;
+  userId: string;
+  freshListings: DigestListing[];
+}) {
+  const siteUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://plantet.com").replace(/\/$/, "");
+  const listingsHtml = freshListings.length ? listingSection("What's new on Plantet", freshListings, siteUrl) : "";
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>We miss you — Plantet</title>
+</head>
+<body style="margin:0;padding:0;background:#f0fdf4;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0fdf4;">
+    <tr>
+      <td align="center" style="padding:32px 16px 48px;">
+        <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.07);">
+
+          <!-- Header -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#14532d 0%,#166534 60%,#15803d 100%);padding:40px 32px 36px;text-align:center;">
+              <p style="margin:0 0 10px;color:#bbf7d0;font-size:13px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;">🌿 Plantet</p>
+              <h1 style="margin:0 0 8px;color:#ffffff;font-size:26px;font-weight:700;line-height:1.25;">We've missed you!</h1>
+              <p style="margin:0;color:#86efac;font-size:14px;font-weight:500;">It's been a while — come see what's growing</p>
+            </td>
+          </tr>
+
+          <!-- Greeting -->
+          <tr>
+            <td style="padding:32px 32px 24px;">
+              <p style="margin:0 0 8px;font-size:18px;font-weight:600;color:#111827;">Hey ${username} 👋</p>
+              <p style="margin:0;font-size:14px;color:#6b7280;line-height:1.65;">We noticed you haven't stopped by in a while. The shop has been growing — here are some fresh finds we think you'll love.</p>
+            </td>
+          </tr>
+
+          ${listingsHtml}
+
+          <!-- Main CTA -->
+          <tr>
+            <td style="padding:8px 32px 40px;text-align:center;">
+              <a href="${siteUrl}/shop" style="display:inline-block;background:#15803d;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:14px 36px;border-radius:8px;">See what's new →</a>
+            </td>
+          </tr>
+
+          <!-- Divider -->
+          <tr>
+            <td style="padding:0 32px;">
+              <div style="height:1px;background:#e5e7eb;"></div>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:24px 32px;text-align:center;">
+              <p style="margin:0 0 6px;font-size:12px;color:#9ca3af;line-height:1.6;">You're receiving this because you opted in to Plantet marketing emails.</p>
+              <p style="margin:0;font-size:12px;color:#9ca3af;">
+                <a href="${unsubUrl(userId)}" style="color:#6b7280;text-decoration:underline;">Unsubscribe</a>
+                &nbsp;·&nbsp;
+                <a href="${siteUrl}/privacy-policy" style="color:#6b7280;text-decoration:underline;">Privacy Policy</a>
+                &nbsp;·&nbsp;
+                &copy; ${new Date().getFullYear()} Plantet
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  const resend = getResend();
+  await resend.emails.send({
+    from: FROM,
+    to: recipientEmail,
+    subject: "We've missed you on Plantet 🌱",
     html,
   });
 }

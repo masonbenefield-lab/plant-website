@@ -31,6 +31,7 @@ export interface Database {
           announcement: string | null;
           email_marketing_opt_in: boolean;
           last_digest_sent: string | null;
+          last_reengagement_sent: string | null;
           deleted_at: string | null;
           created_at: string;
         };
@@ -55,6 +56,7 @@ export interface Database {
           announcement?: string | null;
           email_marketing_opt_in?: boolean;
           last_digest_sent?: string | null;
+          last_reengagement_sent?: string | null;
           deleted_at?: string | null;
           created_at?: string;
         };
@@ -80,6 +82,7 @@ export interface Database {
           announcement?: string | null;
           email_marketing_opt_in?: boolean;
           last_digest_sent?: string | null;
+          last_reengagement_sent?: string | null;
           deleted_at?: string | null;
         };
         Relationships: [];

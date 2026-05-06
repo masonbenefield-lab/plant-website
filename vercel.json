@@ -10,7 +10,11 @@
     },
     {
       "path": "/api/cron/digest",
-      "schedule": "0 10 1 * *"
+      "schedule": "0 15 * * 0"
+    },
+    {
+      "path": "/api/cron/reengagement",
+      "schedule": "0 14 * * *"
     }
   ]
 }

@@ -556,3 +556,32 @@ ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivered_at timestamptz;
 
 ### Environment variables
 - `CRON_SECRET` — add a random secret string; set same value in Vercel env vars under the project settings
+
+---
+
+## 2026-05-05 — Bug fixes: photo sync, inventory unlink, listing delete
+
+### Bugs fixed
+- **Photo sync**: Adding a photo to a listing from My Listings now also updates the linked inventory item's images
+- **Inventory unlink on purchase**: Inventory was incorrectly unlinking from the listing whenever `listing_quantity` hit 0, even if the listing still had stock. Now only unlinks when the listing fully sells out. Fixed in both checkout and cart-checkout routes.
+- **Photo editing in inventory**: "Edit Listing" modal in inventory now includes a photo section (add/remove), synced to both listing and inventory on save
+- **Listing delete constraint violation**: `order_has_source` constraint blocked deletion when delivered orders referenced the listing. Delete route now populates `cart_items` on those orders before deleting, preserving order history.
+
+### SQL migrations run
+```sql
+-- Fix order_has_source constraint to also allow cart_items as a valid source
+ALTER TABLE orders DROP CONSTRAINT order_has_source;
+ALTER TABLE orders ADD CONSTRAINT order_has_source 
+  CHECK (
+    (listing_id IS NOT NULL) OR 
+    (auction_id IS NOT NULL) OR 
+    (cart_items IS NOT NULL)
+  );
+```
+
+### Files changed
+- `src/app/dashboard/listings/listing-actions.tsx` — sync inventory photos on upload
+- `src/app/api/stripe/checkout/route.ts` — only unlink inventory when listing sells out
+- `src/app/api/stripe/cart-checkout/route.ts` — same fix
+- `src/app/dashboard/inventory/inventory-client.tsx` — photo section in Edit Listing modal
+- `src/app/api/listings/delete/route.ts` — populate cart_items on remaining orders before deletion
