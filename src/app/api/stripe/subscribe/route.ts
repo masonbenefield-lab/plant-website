@@ -29,35 +29,41 @@ export async function POST(request: Request) {
   const stripe = getStripe();
   const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/$/, "");
 
-  // If already on a paid plan, send them to the portal to change
-  if (profile?.stripe_subscription_id) {
-    const session = await stripe.billingPortal.sessions.create({
-      customer: profile.stripe_customer_id!,
-      return_url: `${appUrl}/account`,
+  try {
+    // If already on a paid plan, send them to the portal to change
+    if (profile?.stripe_subscription_id) {
+      const session = await stripe.billingPortal.sessions.create({
+        customer: profile.stripe_customer_id!,
+        return_url: `${appUrl}/account`,
+      });
+      return NextResponse.json({ url: session.url });
+    }
+
+    // Create or retrieve Stripe customer
+    let customerId = profile?.stripe_customer_id ?? null;
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        email: authUser?.email,
+        metadata: { supabase_user_id: user.id },
+      });
+      customerId = customer.id;
+      await admin.from("profiles").update({ stripe_customer_id: customerId }).eq("id", user.id);
+    }
+
+    const session = await stripe.checkout.sessions.create({
+      customer: customerId,
+      mode: "subscription",
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: `${appUrl}/account?subscription=success`,
+      cancel_url: `${appUrl}/account?subscription=cancelled`,
+      metadata: { supabase_user_id: user.id, plan, billing },
+      subscription_data: { metadata: { supabase_user_id: user.id, plan } },
     });
+
     return NextResponse.json({ url: session.url });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Stripe error";
+    console.error("[subscribe]", message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
-
-  // Create or retrieve Stripe customer
-  let customerId = profile?.stripe_customer_id ?? null;
-  if (!customerId) {
-    const customer = await stripe.customers.create({
-      email: authUser?.email,
-      metadata: { supabase_user_id: user.id },
-    });
-    customerId = customer.id;
-    await admin.from("profiles").update({ stripe_customer_id: customerId }).eq("id", user.id);
-  }
-
-  const session = await stripe.checkout.sessions.create({
-    customer: customerId,
-    mode: "subscription",
-    line_items: [{ price: priceId, quantity: 1 }],
-    success_url: `${appUrl}/account?subscription=success`,
-    cancel_url: `${appUrl}/account?subscription=cancelled`,
-    metadata: { supabase_user_id: user.id, plan, billing },
-    subscription_data: { metadata: { supabase_user_id: user.id, plan } },
-  });
-
-  return NextResponse.json({ url: session.url });
 }
