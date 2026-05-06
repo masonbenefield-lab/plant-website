@@ -58,12 +58,8 @@ export default async function SellerStorefront({
 
   const [{ data: listings }, { data: auctions }, { data: ratings }, { count: followerCount }] =
     await Promise.all([
-      profile.stripe_onboarded
-        ? supabase.from("listings").select("*").eq("seller_id", profile.id).eq("status", "active").or("category.neq.Hidden,category.is.null").order("created_at", { ascending: false })
-        : Promise.resolve({ data: [] }),
-      profile.stripe_onboarded
-        ? supabase.from("auctions").select("*").eq("seller_id", profile.id).eq("status", "active").or("category.neq.Hidden,category.is.null").order("created_at", { ascending: false })
-        : Promise.resolve({ data: [] }),
+      supabase.from("listings").select("*").eq("seller_id", profile.id).eq("status", "active").or("category.neq.Hidden,category.is.null").order("created_at", { ascending: false }),
+      supabase.from("auctions").select("*").eq("seller_id", profile.id).eq("status", "active").or("category.neq.Hidden,category.is.null").order("created_at", { ascending: false }),
       supabase.from("ratings").select("*").eq("seller_id", profile.id).order("created_at", { ascending: false }),
       supabase.from("follows").select("*", { count: "exact", head: true }).eq("seller_id", profile.id),
     ]);
@@ -102,6 +98,13 @@ export default async function SellerStorefront({
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-10">
+      {/* Payments not set up notice */}
+      {!profile.stripe_onboarded && (
+        <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-800 px-4 py-3 text-sm text-blue-800 dark:text-blue-300">
+          💳 <strong>{profile.username}</strong> hasn&apos;t connected their payment account yet — you can browse what they have available, but purchases aren&apos;t possible until they finish setup.
+        </div>
+      )}
+
       {/* Vacation notice */}
       {profile.vacation_mode && (
         <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
@@ -209,27 +212,33 @@ export default async function SellerStorefront({
         </TabsList>
 
         <TabsContent value="shop" className="mt-6">
-          <StorefrontListings listings={(listings ?? []).map(l => ({
-            id: l.id,
-            plant_name: l.plant_name,
-            variety: l.variety ?? null,
-            price_cents: l.price_cents,
-            images: l.images as string[],
-            quantity: l.quantity,
-            category: (l as { category?: string | null }).category ?? null,
-          }))} />
+          <StorefrontListings
+            paymentsEnabled={!!profile.stripe_onboarded}
+            listings={(listings ?? []).map(l => ({
+              id: l.id,
+              plant_name: l.plant_name,
+              variety: l.variety ?? null,
+              price_cents: l.price_cents,
+              images: l.images as string[],
+              quantity: l.quantity,
+              category: (l as { category?: string | null }).category ?? null,
+            }))}
+          />
         </TabsContent>
 
         <TabsContent value="auctions" className="mt-6">
-          <StorefrontAuctions auctions={(auctions ?? []).map(a => ({
-            id: a.id,
-            plant_name: a.plant_name,
-            variety: a.variety ?? null,
-            current_bid_cents: a.current_bid_cents,
-            images: a.images as string[],
-            ends_at: a.ends_at,
-            category: (a as { category?: string | null }).category ?? null,
-          }))} />
+          <StorefrontAuctions
+            paymentsEnabled={!!profile.stripe_onboarded}
+            auctions={(auctions ?? []).map(a => ({
+              id: a.id,
+              plant_name: a.plant_name,
+              variety: a.variety ?? null,
+              current_bid_cents: a.current_bid_cents,
+              images: a.images as string[],
+              ends_at: a.ends_at,
+              category: (a as { category?: string | null }).category ?? null,
+            }))}
+          />
         </TabsContent>
 
         <TabsContent value="reviews" className="mt-6">

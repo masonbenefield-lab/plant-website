@@ -66,7 +66,7 @@ function CategoryPills({
   );
 }
 
-export function StorefrontListings({ listings }: { listings: Listing[] }) {
+export function StorefrontListings({ listings, paymentsEnabled = true }: { listings: Listing[]; paymentsEnabled?: boolean }) {
   const [cat, setCat] = useState("");
   const categories = [...new Set(listings.map((l) => l.category).filter(Boolean))] as string[];
   const filtered = cat ? listings.filter((l) => l.category === cat) : listings;
@@ -77,9 +77,9 @@ export function StorefrontListings({ listings }: { listings: Listing[] }) {
     <>
       <CategoryPills categories={categories} active={cat} onChange={setCat} />
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filtered.map((listing) => (
-          <Link key={listing.id} href={`/shop/${listing.id}`}>
-            <Card className="hover:shadow-md transition-shadow cursor-pointer">
+        {filtered.map((listing) => {
+          const card = (
+            <Card className={paymentsEnabled ? "hover:shadow-md transition-shadow cursor-pointer" : "opacity-90"}>
               {(listing.images as string[])[0] && (
                 <div className="relative h-48 w-full overflow-hidden rounded-t-lg">
                   <Image src={(listing.images as string[])[0]} alt={listing.plant_name} fill className="object-cover" />
@@ -95,12 +95,18 @@ export function StorefrontListings({ listings }: { listings: Listing[] }) {
                 {listing.variety && <p className="text-sm text-muted-foreground">{listing.variety}</p>}
                 <div className="flex items-center justify-between mt-2">
                   <span className="font-bold text-green-700">{centsToDisplay(listing.price_cents)}</span>
-                  <Badge variant="secondary">{listing.quantity} avail.</Badge>
+                  {paymentsEnabled
+                    ? <Badge variant="secondary">{listing.quantity} avail.</Badge>
+                    : <span className="text-xs text-muted-foreground italic">Not available yet</span>
+                  }
                 </div>
               </CardContent>
             </Card>
-          </Link>
-        ))}
+          );
+          return paymentsEnabled
+            ? <Link key={listing.id} href={`/shop/${listing.id}`}>{card}</Link>
+            : <div key={listing.id}>{card}</div>;
+        })}
         {filtered.length === 0 && (
           <p className="text-muted-foreground col-span-full">No listings in this category.</p>
         )}
@@ -109,7 +115,7 @@ export function StorefrontListings({ listings }: { listings: Listing[] }) {
   );
 }
 
-export function StorefrontAuctions({ auctions }: { auctions: Auction[] }) {
+export function StorefrontAuctions({ auctions, paymentsEnabled = true }: { auctions: Auction[]; paymentsEnabled?: boolean }) {
   const [cat, setCat] = useState("");
   const categories = [...new Set(auctions.map((a) => a.category).filter(Boolean))] as string[];
   const filtered = cat ? auctions.filter((a) => a.category === cat) : auctions;
@@ -120,9 +126,9 @@ export function StorefrontAuctions({ auctions }: { auctions: Auction[] }) {
     <>
       <CategoryPills categories={categories} active={cat} onChange={setCat} />
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filtered.map((auction) => (
-          <Link key={auction.id} href={`/auctions/${auction.id}`}>
-            <Card className="hover:shadow-md transition-shadow cursor-pointer">
+        {filtered.map((auction) => {
+          const card = (
+            <Card className={paymentsEnabled ? "hover:shadow-md transition-shadow cursor-pointer" : "opacity-90"}>
               {(auction.images as string[])[0] && (
                 <div className="relative h-48 w-full overflow-hidden rounded-t-lg">
                   <Image src={(auction.images as string[])[0]} alt={auction.plant_name} fill className="object-cover" />
@@ -137,15 +143,21 @@ export function StorefrontAuctions({ auctions }: { auctions: Auction[] }) {
                 <p className="font-semibold">{auction.plant_name}</p>
                 {auction.variety && <p className="text-sm text-muted-foreground">{auction.variety}</p>}
                 <div className="flex items-center justify-between mt-2">
-                  <span className="font-bold text-green-700">Bid: {centsToDisplay(auction.current_bid_cents)}</span>
-                  <span className="text-xs text-muted-foreground">
-                    Ends {new Date(auction.ends_at).toLocaleDateString()}
+                  <span className="font-bold text-green-700">
+                    {paymentsEnabled ? `Bid: ${centsToDisplay(auction.current_bid_cents)}` : centsToDisplay(auction.current_bid_cents)}
                   </span>
+                  {paymentsEnabled
+                    ? <span className="text-xs text-muted-foreground">Ends {new Date(auction.ends_at).toLocaleDateString()}</span>
+                    : <span className="text-xs text-muted-foreground italic">Not available yet</span>
+                  }
                 </div>
               </CardContent>
             </Card>
-          </Link>
-        ))}
+          );
+          return paymentsEnabled
+            ? <Link key={auction.id} href={`/auctions/${auction.id}`}>{card}</Link>
+            : <div key={auction.id}>{card}</div>;
+        })}
         {filtered.length === 0 && (
           <p className="text-muted-foreground col-span-full">No auctions in this category.</p>
         )}
