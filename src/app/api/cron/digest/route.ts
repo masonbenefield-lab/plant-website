@@ -216,18 +216,19 @@ export async function GET(request: Request) {
     const email = emailMap[profile.id];
     if (!email) continue;
 
-    // listings from Nursery followed sellers for this user — 1 per seller, up to 6
+    // listings from Nursery followed sellers for this user — up to 4 per seller, 12 total
     const mySellerIds = followerToSellers[profile.id] ?? new Set();
     const myNurserySellerIds = new Set([...mySellerIds].filter((id) => nurseryFollowedIds.has(id)));
-    const seenFollowedSellers = new Set<string>();
+    const followedSellerCount: Record<string, number> = {};
     const followedForUser: DigestListing[] = (followedListingsRaw ?? [])
       .filter((l) => {
         if (!myNurserySellerIds.has(l.seller_id)) return false;
-        if (seenFollowedSellers.has(l.seller_id)) return false;
-        seenFollowedSellers.add(l.seller_id);
+        const count = followedSellerCount[l.seller_id] ?? 0;
+        if (count >= 4) return false;
+        followedSellerCount[l.seller_id] = count + 1;
         return true;
       })
-      .slice(0, 6)
+      .slice(0, 12)
       .map((l) => ({
         id: l.id,
         seller_id: l.seller_id,

@@ -374,7 +374,7 @@ export default function PricingPage() {
               <span className="text-lg mt-0.5">🌳</span>
               <div>
                 <p className="text-sm font-semibold text-green-800 dark:text-green-300">Nursery — Fresh Picks + Follower Highlights</p>
-                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">Eligible for Fresh Picks <em>and</em> featured in a personalized "From shops you follow" section sent directly to every buyer who follows your store. One listing per digest, delivered to your most engaged audience.</p>
+                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">Eligible for Fresh Picks <em>and</em> featured in a personalized "From shops you follow" section sent directly to every buyer who follows your store. Up to 4 of your newest listings per digest, delivered straight to your most engaged audience.</p>
               </div>
             </div>
           </div>
@@ -431,6 +431,6 @@ const faqs = [
   },
   {
     q: "How does the weekly buyer digest work?",
-    a: "Every Sunday, Plantet sends a curated email to opted-in buyers. Up to 6 Grower+ sellers are featured in the 'Fresh Picks' section (1 listing each), rotating weekly so exposure is spread across the community. Nursery sellers are also eligible for a personalized 'From shops you follow' section sent to buyers who follow their store. Seedling sellers are not included.",
+    a: "Every Sunday, Plantet sends a curated email to opted-in buyers. Up to 6 Grower+ sellers are featured in the 'Fresh Picks' section (1 listing each), rotating weekly so exposure is spread across the community. Nursery sellers are also eligible for a personalized 'From shops you follow' section — buyers who follow your store see up to 4 of your newest listings that week. Seedling sellers are not included.",
   },
 ];
