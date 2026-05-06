@@ -29,7 +29,7 @@ const tiers = [
       bulk: false,
       support: "Email support",
       featured: false,
-      digest: false,
+      digest: "Not included",
     },
   },
   {
