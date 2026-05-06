@@ -29,7 +29,7 @@ const tiers = [
       bulk: false,
       support: "Email support",
       featured: false,
-      digest: "Not included",
+      digest: false,
     },
   },
   {
@@ -299,9 +299,9 @@ export default function PricingPage() {
                           <Check size={16} className={cn("mt-0.5 shrink-0", isPopular ? "text-green-300" : "text-green-600")} />
                         )}
                         <span className={cn(isFalse && !isPopular && "text-muted-foreground/60", isFalse && isPopular && "text-green-300/60")}>
-                          {row.key === "digest" && isString ? (
+                          {row.key === "digest" ? (
                             <a href="#weekly-digest" className={cn("underline underline-offset-2 decoration-dotted hover:opacity-80", isPopular ? "text-white" : "")}>
-                              {val}
+                              {isString ? val : row.label}
                             </a>
                           ) : row.key === "commission" && isString ? (
                             <a href="#commission" className={cn("underline underline-offset-2 decoration-dotted hover:opacity-80", isPopular ? "text-white" : "")}>
