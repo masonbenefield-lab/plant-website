@@ -422,7 +422,7 @@ function auctionSection(auctions: DigestAuction[], siteUrl: string): string {
     <tr><td style="padding:0 0 12px;"></td></tr>`;
 }
 
-function buildDigestHtml({
+export function buildDigestHtml({
   username,
   userId,
   month,

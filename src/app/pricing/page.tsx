@@ -349,33 +349,64 @@ export default function PricingPage() {
 
       {/* Digest callout */}
       <section className="px-4 pb-16">
-        <div className="max-w-2xl mx-auto bg-muted rounded-2xl border p-8">
-          <p className="text-2xl mb-3 text-center">📬</p>
-          <h2 className="font-bold text-lg mb-2 text-center">The weekly buyer digest</h2>
-          <p className="text-sm text-muted-foreground leading-relaxed mb-6 text-center">
-            Every week, Plantet sends a curated email to all opted-in buyers featuring new plant listings, hot auctions, and picks from shops they follow. Paid plans get their listings in front of real buyers automatically.
-          </p>
-          <div className="space-y-3">
-            <div className="flex items-start gap-3 rounded-xl bg-background border p-4">
-              <span className="text-lg mt-0.5">🌱</span>
-              <div>
-                <p className="text-sm font-semibold">Seedling — not included</p>
-                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">Seedling listings are not featured in the digest. Upgrade to a paid plan to get discovered by buyers who've never visited your storefront.</p>
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-10">
+            <p className="text-2xl mb-3">📬</p>
+            <h2 className="font-bold text-2xl mb-3">The weekly buyer digest</h2>
+            <p className="text-sm text-muted-foreground leading-relaxed max-w-xl mx-auto">
+              Every Sunday, Plantet sends a curated email to opted-in buyers with fresh listings, hot auctions, and picks from shops they follow. Paid plans get in front of real buyers automatically — no ad spend needed.
+            </p>
+          </div>
+
+          <div className="flex flex-col lg:flex-row gap-10 items-start justify-center">
+            {/* Tier breakdown */}
+            <div className="flex-1 max-w-lg space-y-3">
+              <div className="flex items-start gap-3 rounded-xl bg-muted border p-4">
+                <span className="text-lg mt-0.5">🌱</span>
+                <div>
+                  <p className="text-sm font-semibold">Seedling — not included</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">Seedling listings are not featured in the digest. Upgrade to a paid plan to get discovered by buyers who&apos;ve never visited your storefront.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 rounded-xl bg-muted border p-4">
+                <span className="text-lg mt-0.5">🌿</span>
+                <div>
+                  <p className="text-sm font-semibold">Grower — Fresh Picks</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">Your newest listings are eligible for the &quot;Fresh Picks&quot; section shown to every subscriber. Up to 6 Grower+ sellers are featured per digest (1 listing each), rotating weekly.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4">
+                <span className="text-lg mt-0.5">🌳</span>
+                <div>
+                  <p className="text-sm font-semibold text-green-800 dark:text-green-300">Nursery — Fresh Picks + Follower Highlights</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">Eligible for Fresh Picks <em>and</em> a personalized &quot;From shops you follow&quot; section sent to every buyer following your store. Up to 4 of your newest listings per digest, delivered straight to your most engaged audience.</p>
+                </div>
               </div>
             </div>
-            <div className="flex items-start gap-3 rounded-xl bg-background border p-4">
-              <span className="text-lg mt-0.5">🌿</span>
-              <div>
-                <p className="text-sm font-semibold">Grower — Fresh Picks</p>
-                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">Your newest listings are eligible for the "Fresh Picks" section shown to every subscriber. Up to 6 sellers are featured per digest (1 listing each), rotating weekly so exposure is spread across the community.</p>
+
+            {/* Live email preview */}
+            <div className="flex flex-col items-center gap-3 shrink-0">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Live preview</p>
+              <div
+                className="relative rounded-2xl overflow-hidden shadow-2xl border bg-[#f0fdf4]"
+                style={{ width: 300, height: 500 }}
+              >
+                <iframe
+                  src="/api/digest-preview"
+                  title="Weekly digest preview"
+                  sandbox="allow-same-origin"
+                  style={{
+                    width: 600,
+                    height: 1000,
+                    transform: "scale(0.5)",
+                    transformOrigin: "top left",
+                    border: "none",
+                    pointerEvents: "none",
+                  }}
+                />
+                <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#f0fdf4] to-transparent pointer-events-none" />
               </div>
-            </div>
-            <div className="flex items-start gap-3 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4">
-              <span className="text-lg mt-0.5">🌳</span>
-              <div>
-                <p className="text-sm font-semibold text-green-800 dark:text-green-300">Nursery — Fresh Picks + Follower Highlights</p>
-                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">Eligible for Fresh Picks <em>and</em> featured in a personalized "From shops you follow" section sent directly to every buyer who follows your store. Up to 4 of your newest listings per digest, delivered straight to your most engaged audience.</p>
-              </div>
+              <p className="text-xs text-muted-foreground text-center max-w-[240px]">What your buyers see every Sunday in their inbox</p>
             </div>
           </div>
         </div>
