@@ -59,7 +59,9 @@ export default async function SellerStorefront({
   const [{ data: listings }, { data: auctions }, { data: ratings }, { count: followerCount }] =
     await Promise.all([
       supabase.from("listings").select("*").eq("seller_id", profile.id).eq("status", "active").or("category.neq.Hidden,category.is.null").order("created_at", { ascending: false }),
-      supabase.from("auctions").select("*").eq("seller_id", profile.id).eq("status", "active").or("category.neq.Hidden,category.is.null").order("created_at", { ascending: false }),
+      profile.stripe_onboarded
+        ? supabase.from("auctions").select("*").eq("seller_id", profile.id).eq("status", "active").or("category.neq.Hidden,category.is.null").order("created_at", { ascending: false })
+        : Promise.resolve({ data: [] }),
       supabase.from("ratings").select("*").eq("seller_id", profile.id).order("created_at", { ascending: false }),
       supabase.from("follows").select("*", { count: "exact", head: true }).eq("seller_id", profile.id),
     ]);
@@ -207,7 +209,9 @@ export default async function SellerStorefront({
       <Tabs defaultValue="shop">
         <TabsList>
           <TabsTrigger value="shop">Shop ({listings?.length ?? 0})</TabsTrigger>
-          <TabsTrigger value="auctions">Auctions ({auctions?.length ?? 0})</TabsTrigger>
+          {profile.stripe_onboarded && (
+            <TabsTrigger value="auctions">Auctions ({auctions?.length ?? 0})</TabsTrigger>
+          )}
           <TabsTrigger value="reviews">Reviews ({ratings?.length ?? 0})</TabsTrigger>
         </TabsList>
 
