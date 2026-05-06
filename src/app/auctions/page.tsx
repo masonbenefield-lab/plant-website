@@ -97,12 +97,23 @@ export default async function AuctionsPage({
   const sellerIds = [...new Set(auctions?.map((a) => a.seller_id) ?? [])];
   const [{ data: sellers }, { data: sellerRatings }] = await (sellerIds.length
     ? Promise.all([
-        supabase.from("profiles").select("id, username").in("id", sellerIds),
+        supabase.from("profiles").select("id, username, plan").in("id", sellerIds),
         supabase.from("ratings").select("seller_id, score").in("seller_id", sellerIds),
       ])
-    : Promise.all([{ data: [] as { id: string; username: string }[] }, { data: [] as { seller_id: string; score: number }[] }]));
+    : Promise.all([{ data: [] as { id: string; username: string; plan: string }[] }, { data: [] as { seller_id: string; score: number }[] }]));
 
   const sellerMap = Object.fromEntries((sellers ?? []).map((s) => [s.id, s]));
+
+  // Priority placement: on default sort (ending_soon), Nursery > Grower > Seedling within page
+  const planOrder = (plan: string | undefined) => plan === "nursery" ? 0 : plan === "grower" ? 1 : 2;
+  const sortedAuctions = (!sort || sort === "ending_soon")
+    ? [...(auctions ?? [])].sort((a, b) => {
+        const pa = planOrder(sellerMap[a.seller_id]?.plan);
+        const pb = planOrder(sellerMap[b.seller_id]?.plan);
+        if (pa !== pb) return pa - pb;
+        return new Date(a.ends_at).getTime() - new Date(b.ends_at).getTime();
+      })
+    : (auctions ?? []);
 
   const topSellerSet = new Set<string>();
   if (sellerRatings?.length) {
@@ -138,7 +149,7 @@ export default async function AuctionsPage({
         <AuctionFilterBar />
       </Suspense>
 
-      {!auctions?.length ? (
+      {!sortedAuctions?.length ? (
         <div className="text-center py-16">
           <p className="text-muted-foreground text-lg mb-2">No auctions found</p>
           <p className="text-sm text-muted-foreground">Try adjusting your filters or check back soon.</p>
@@ -147,7 +158,7 @@ export default async function AuctionsPage({
         <>
           <p className="text-sm text-muted-foreground mb-4">{total} auction{total !== 1 ? "s" : ""}</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            {auctions.map((auction) => {
+            {sortedAuctions.map((auction) => {
               const seller = sellerMap[auction.seller_id];
               const endsAt = new Date(auction.ends_at);
               const timeLeft = endsAt.getTime() - Date.now();

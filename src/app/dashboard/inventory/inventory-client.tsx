@@ -33,6 +33,7 @@ import PotSizePicker from "@/components/pot-size-picker";
 import PriceSuggestion from "@/components/price-suggestion";
 import SellerAgreementDialog from "@/components/seller-agreement-dialog";
 import { findProhibitedWord, censorWord, logViolation } from "@/lib/profanity";
+import type { PlanLimits } from "@/lib/plan-limits";
 
 const BASE_CATEGORIES = [
   "Tropical", "Succulent", "Cactus", "Carnivorous", "Orchid",
@@ -199,6 +200,7 @@ export default function InventoryClient({
   isAdmin = false,
   showWelcome = false,
   stripeOnboarded = false,
+  planLimits = { listings: 10, auctions: 5, photos: 5 },
 }: {
   activeRows: Row[];
   archivedRows: Row[];
@@ -210,6 +212,7 @@ export default function InventoryClient({
   isAdmin?: boolean;
   showWelcome?: boolean;
   stripeOnboarded?: boolean;
+  planLimits?: PlanLimits;
 }) {
   const router = useRouter();
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -468,6 +471,16 @@ export default function InventoryClient({
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { toast.error("Not logged in"); setSubmitting(false); return; }
+
+    if (planLimits.listings !== null) {
+      const { count } = await supabase.from("listings").select("id", { count: "exact", head: true }).eq("seller_id", user.id).eq("status", "active");
+      if ((count ?? 0) >= planLimits.listings) {
+        toast.error(`You've reached your ${planLimits.listings}-listing limit. Upgrade your plan to add more.`);
+        setSubmitting(false);
+        return;
+      }
+    }
+
     const a = avail(modal.row);
     const qty = Math.min(Math.max(1, Number(listQty) || a), a);
     if (qty < 1) { toast.error("No stock available to list"); setSubmitting(false); return; }
@@ -551,6 +564,16 @@ export default function InventoryClient({
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { toast.error("Not logged in"); setSubmitting(false); return; }
+
+    if (planLimits.auctions !== null) {
+      const { count } = await supabase.from("auctions").select("id", { count: "exact", head: true }).eq("seller_id", user.id).eq("status", "active");
+      if ((count ?? 0) >= planLimits.auctions) {
+        toast.error(`You've reached your ${planLimits.auctions}-auction limit. Upgrade your plan to add more.`);
+        setSubmitting(false);
+        return;
+      }
+    }
+
     const a = avail(modal.row);
     const qty = Math.min(Math.max(1, Number(auctionQty) || a), a);
     if (qty < 1) { toast.error("No stock available for auction"); setSubmitting(false); return; }

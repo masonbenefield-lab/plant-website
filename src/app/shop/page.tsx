@@ -94,12 +94,23 @@ export default async function ShopPage({
   const sellerIds = [...new Set(listings?.map((l) => l.seller_id) ?? [])];
   const [{ data: sellers }, { data: sellerRatings }] = await (sellerIds.length
     ? Promise.all([
-        supabase.from("profiles").select("id, username").in("id", sellerIds),
+        supabase.from("profiles").select("id, username, plan").in("id", sellerIds),
         supabase.from("ratings").select("seller_id, score").in("seller_id", sellerIds),
       ])
-    : Promise.all([{ data: [] as { id: string; username: string }[] }, { data: [] as { seller_id: string; score: number }[] }]));
+    : Promise.all([{ data: [] as { id: string; username: string; plan: string }[] }, { data: [] as { seller_id: string; score: number }[] }]));
 
   const sellerMap = Object.fromEntries((sellers ?? []).map((s) => [s.id, s]));
+
+  // Priority placement: on default sort (newest), Nursery > Grower > Seedling within page
+  const planOrder = (plan: string | undefined) => plan === "nursery" ? 0 : plan === "grower" ? 1 : 2;
+  const sortedListings = (!sort || sort === "newest")
+    ? [...(listings ?? [])].sort((a, b) => {
+        const pa = planOrder(sellerMap[a.seller_id]?.plan);
+        const pb = planOrder(sellerMap[b.seller_id]?.plan);
+        if (pa !== pb) return pa - pb;
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      })
+    : (listings ?? []);
 
   // Top seller: 10+ reviews with avg ≥ 4.5
   const topSellerSet = new Set<string>();
@@ -142,7 +153,7 @@ export default async function ShopPage({
         <RecentlyViewedStrip />
       </Suspense>
 
-      {!listings?.length ? (
+      {!sortedListings?.length ? (
         <div className="text-center py-16">
           <p className="text-muted-foreground text-lg mb-2">No listings found</p>
           {hasFilters ? (
@@ -167,7 +178,7 @@ export default async function ShopPage({
         <>
           <p className="text-sm text-muted-foreground mb-4">{total} listing{total !== 1 ? "s" : ""}</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            {listings.map((listing) => {
+            {sortedListings.map((listing) => {
               const seller = sellerMap[listing.seller_id];
               const isNew = Date.now() - new Date(listing.created_at).getTime() < NEW_THRESHOLD_MS;
               const onSale = !!(listing.sale_price_cents && listing.sale_ends_at && new Date(listing.sale_ends_at) > new Date());

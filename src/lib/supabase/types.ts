@@ -2,7 +2,7 @@ export type Json = string | number | boolean | null | { [key: string]: Json } | 
 
 export type ListingStatus = "active" | "paused" | "sold_out";
 export type AuctionStatus = "active" | "ended" | "cancelled" | "scheduled";
-export type OrderStatus = "pending" | "paid" | "shipped" | "delivered";
+export type OrderStatus = "pending" | "paid" | "shipped" | "delivered" | "refunded";
 
 export interface Database {
   public: {
@@ -20,6 +20,8 @@ export interface Database {
           seller_terms_accepted_at: string | null;
           stripe_account_id: string | null;
           stripe_onboarded: boolean;
+          stripe_customer_id: string | null;
+          stripe_subscription_id: string | null;
           is_admin: boolean;
           plan: "seedling" | "grower" | "nursery";
           show_follower_count: boolean;
@@ -45,6 +47,8 @@ export interface Database {
           banner_url?: string | null;
           stripe_account_id?: string | null;
           stripe_onboarded?: boolean;
+          stripe_customer_id?: string | null;
+          stripe_subscription_id?: string | null;
           is_admin?: boolean;
           plan?: "seedling" | "grower" | "nursery";
           show_follower_count?: boolean;
@@ -71,6 +75,8 @@ export interface Database {
           seller_terms_accepted_at?: string | null;
           stripe_account_id?: string | null;
           stripe_onboarded?: boolean;
+          stripe_customer_id?: string | null;
+          stripe_subscription_id?: string | null;
           is_admin?: boolean;
           plan?: "seedling" | "grower" | "nursery";
           show_follower_count?: boolean;

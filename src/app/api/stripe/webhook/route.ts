@@ -86,5 +86,55 @@ export async function POST(request: Request) {
       .eq("status", "pending");
   }
 
+  // Subscription created via Checkout — update plan and store IDs
+  if (event.type === "checkout.session.completed") {
+    const session = event.data.object;
+    if (session.mode === "subscription" && session.metadata?.supabase_user_id) {
+      const userId = session.metadata.supabase_user_id;
+      const plan = session.metadata.plan as "grower" | "nursery";
+      const subscriptionId = session.subscription as string;
+      await supabase
+        .from("profiles")
+        .update({ plan, stripe_subscription_id: subscriptionId, stripe_customer_id: session.customer as string })
+        .eq("id", userId);
+    }
+  }
+
+  // Subscription updated (upgrade/downgrade via portal)
+  if (event.type === "customer.subscription.updated") {
+    const sub = event.data.object;
+    const userId = sub.metadata?.supabase_user_id;
+    if (userId && sub.items?.data?.[0]?.price?.id) {
+      const priceId = sub.items.data[0].price.id;
+      let plan: "grower" | "nursery" | "seedling" = "seedling";
+      if (priceId === process.env.STRIPE_GROWER_PRICE_ID || priceId === process.env.STRIPE_GROWER_ANNUAL_PRICE_ID) plan = "grower";
+      if (priceId === process.env.STRIPE_NURSERY_PRICE_ID || priceId === process.env.STRIPE_NURSERY_ANNUAL_PRICE_ID) plan = "nursery";
+      await supabase.from("profiles").update({ plan, stripe_subscription_id: sub.id }).eq("id", userId);
+    }
+  }
+
+  // Subscription cancelled — revert to seedling
+  if (event.type === "customer.subscription.deleted") {
+    const sub = event.data.object;
+    const userId = sub.metadata?.supabase_user_id;
+    if (userId) {
+      await supabase.from("profiles").update({ plan: "seedling", stripe_subscription_id: null }).eq("id", userId);
+    }
+  }
+
+  // When a charge is fully refunded, mark the order as refunded.
+  // Stripe Connect automatically reverses the application fee on full refunds,
+  // so the platform commission is returned to the seller without extra handling.
+  if (event.type === "charge.refunded") {
+    const charge = event.data.object;
+    if (charge.refunded && charge.payment_intent) {
+      await supabase
+        .from("orders")
+        .update({ status: "refunded" })
+        .eq("stripe_payment_intent_id", charge.payment_intent as string)
+        .neq("status", "refunded");
+    }
+  }
+
   return NextResponse.json({ received: true });
 }

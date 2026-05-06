@@ -62,6 +62,8 @@ export default function AccountForm({
   const [changingEmail, setChangingEmail] = useState(false);
   const [sendingReset, setSendingReset] = useState(false);
   const [connectingStripe, setConnectingStripe] = useState(false);
+  const [subscribing, setSubscribing] = useState(false);
+  const [openingPortal, setOpeningPortal] = useState(false);
 
   async function uploadBanner(file: File) {
     setUploadingBanner(true);
@@ -189,6 +191,95 @@ export default function AccountForm({
     } finally {
       setConnectingStripe(false);
     }
+  }
+
+  async function startSubscription(plan: "grower" | "nursery", billing: "monthly" | "annual") {
+    setSubscribing(true);
+    try {
+      const res = await fetch("/api/stripe/subscribe", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ plan, billing }) });
+      const { url, error } = await res.json();
+      if (error) { toast.error(error); return; }
+      window.location.href = url;
+    } catch {
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setSubscribing(false);
+    }
+  }
+
+  async function openBillingPortal() {
+    setOpeningPortal(true);
+    try {
+      const res = await fetch("/api/stripe/billing-portal", { method: "POST" });
+      const { url, error } = await res.json();
+      if (error) { toast.error(error); return; }
+      window.location.href = url;
+    } catch {
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setOpeningPortal(false);
+    }
+  }
+
+  function PlanBillingCard({ profile }: { profile: Profile | null }) {
+    const plan = profile?.plan ?? "seedling";
+    const hasSubscription = !!(profile as { stripe_subscription_id?: string | null } | null)?.stripe_subscription_id;
+
+    const planLabel = plan === "nursery" ? "Nursery" : plan === "grower" ? "Grower" : "Seedling";
+    const planColor = plan === "nursery" ? "text-blue-700 bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300"
+      : plan === "grower" ? "text-green-700 bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800 dark:text-green-300"
+      : "text-muted-foreground bg-muted border-border";
+
+    return (
+      <Card id="plan-billing">
+        <CardHeader>
+          <CardTitle>Plan &amp; Billing</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">Current plan</span>
+            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${planColor}`}>{planLabel}</span>
+          </div>
+
+          {plan === "seedling" && (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">Upgrade to unlock lower commissions, more listings, and buyer digest exposure.</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-lg border p-3 space-y-2">
+                  <p className="text-sm font-semibold">Grower — $9/mo</p>
+                  <p className="text-xs text-muted-foreground">50 listings · 4.5% commission · digest exposure</p>
+                  <Button size="sm" className="w-full bg-green-700 hover:bg-green-800" disabled={subscribing} onClick={() => startSubscription("grower", "monthly")}>
+                    {subscribing ? "Redirecting…" : "Upgrade"}
+                  </Button>
+                </div>
+                <div className="rounded-lg border p-3 space-y-2">
+                  <p className="text-sm font-semibold">Nursery — $29/mo</p>
+                  <p className="text-xs text-muted-foreground">Unlimited · 3% commission · full digest + homepage</p>
+                  <Button size="sm" className="w-full bg-green-700 hover:bg-green-800" disabled={subscribing} onClick={() => startSubscription("nursery", "monthly")}>
+                    {subscribing ? "Redirecting…" : "Upgrade"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {plan !== "seedling" && (
+            <div className="space-y-3">
+              {hasSubscription ? (
+                <>
+                  <p className="text-sm text-muted-foreground">Manage your subscription, change plans, update payment method, or cancel through the Stripe billing portal.</p>
+                  <Button variant="outline" disabled={openingPortal} onClick={openBillingPortal}>
+                    {openingPortal ? "Redirecting…" : "Manage subscription →"}
+                  </Button>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">Your plan was set during signup. To manage billing, contact support.</p>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
   }
 
   async function handleDeleteAccount() {
@@ -553,6 +644,8 @@ export default function AccountForm({
           )}
         </CardContent>
       </Card>
+
+      <PlanBillingCard profile={profile} />
 
       <Card className="border-destructive/40">
         <CardHeader>

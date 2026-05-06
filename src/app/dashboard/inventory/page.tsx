@@ -21,7 +21,7 @@ export default async function InventoryPage({
     { data: activeInventory },
     { data: archivedInventory },
   ] = await Promise.all([
-    supabase.from("profiles").select("seller_terms_accepted_at, is_admin, stripe_onboarded").eq("id", user.id).single(),
+    supabase.from("profiles").select("seller_terms_accepted_at, is_admin, stripe_onboarded, plan").eq("id", user.id).single(),
     supabase.from("inventory").select("*").eq("seller_id", user.id).is("archived_at", null).order("created_at", { ascending: false }),
     supabase.from("inventory").select("*").eq("seller_id", user.id).not("archived_at", "is", null).gte("archived_at", thirtyDaysAgo).order("archived_at", { ascending: false }),
   ]);
@@ -146,11 +146,15 @@ export default async function InventoryPage({
   const isAdmin = !!(profile as { is_admin?: boolean } | null)?.is_admin;
   const stripeOnboarded = !!(profile as { stripe_onboarded?: boolean } | null)?.stripe_onboarded;
 
+  const { getPlanLimits } = await import("@/lib/plan-limits");
+  const planLimits = getPlanLimits((profile as { plan?: string } | null)?.plan as "seedling" | "grower" | "nursery" | null, isAdmin);
+
   return (
     <InventoryClient
       activeRows={activeRows}
       archivedRows={archivedRows}
       isAdmin={isAdmin}
+      planLimits={planLimits}
       termsAccepted={termsAccepted}
       showWelcome={activeRows.length === 0}
       stripeOnboarded={stripeOnboarded}
