@@ -543,15 +543,13 @@ export default function InventoryClient({
     if (!row.listing_id) return;
     const supabase = createClient();
     const newStatus = row.listing_status === "active" ? "paused" : "active";
-    const updates: Record<string, unknown> = { status: newStatus };
-    if (newStatus === "active") {
-      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-      const lastActivated = row.listing_last_activated_at ? new Date(row.listing_last_activated_at) : null;
-      if (!lastActivated || lastActivated < sevenDaysAgo) {
-        updates.last_activated_at = new Date().toISOString();
-      }
-    }
-    await supabase.from("listings").update(updates).eq("id", row.listing_id);
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const lastActivated = row.listing_last_activated_at ? new Date(row.listing_last_activated_at) : null;
+    const bumpActivatedAt = newStatus === "active" && (!lastActivated || lastActivated < sevenDaysAgo);
+    await supabase.from("listings").update({
+      status: newStatus,
+      ...(bumpActivatedAt ? { last_activated_at: new Date().toISOString() } : {}),
+    }).eq("id", row.listing_id);
     toast.success(newStatus === "paused" ? "Listing paused" : "Listing resumed");
     router.refresh();
   }
