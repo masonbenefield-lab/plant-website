@@ -11,6 +11,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { centsToDisplay } from "@/lib/stripe";
+import { findProhibitedWord, censorWord, logViolation } from "@/lib/profanity";
 
 export default function OfferButton({
   listingId,
@@ -35,6 +36,14 @@ export default function OfferButton({
   async function submitOffer() {
     const parsed = parseFloat(amount);
     if (isNaN(parsed) || parsed <= 0) { toast.error("Enter a valid amount"); return; }
+    if (message) {
+      const hit = findProhibitedWord(message);
+      if (hit) {
+        toast.error(`Your message contains a prohibited word: "${censorWord(hit)}"`);
+        logViolation(hit, "offer-message", message);
+        return;
+      }
+    }
     setSubmitting(true);
     const res = await fetch("/api/offers", {
       method: "POST",

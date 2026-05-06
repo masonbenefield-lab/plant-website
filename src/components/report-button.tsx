@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { findProhibitedWord, censorWord, logViolation } from "@/lib/profanity";
 
 const LISTING_REASONS = [
   "Inaccurate description",
@@ -58,7 +59,14 @@ export default function ReportButton({
     e.preventDefault();
     if (!userId) { window.location.href = "/login"; return; }
     if (!reason) return;
-
+    if (details) {
+      const hit = findProhibitedWord(details);
+      if (hit) {
+        toast.error(`Your details contain a prohibited word: "${censorWord(hit)}"`);
+        logViolation(hit, "report-details", details);
+        return;
+      }
+    }
     setLoading(true);
     const supabase = createClient();
 

@@ -1,5 +1,6 @@
-// Racial slur blocklist for username and bio validation.
+// Prohibited word list: racial slurs + explicit sexual content.
 // Normalized before matching (leetspeak, punctuation stripped).
+// Avoid adding words with common legitimate plant uses (e.g. bare "cock", "pussy").
 
 const SLURS: string[] = [
   // Anti-Black
@@ -21,9 +22,22 @@ const SLURS: string[] = [
   // Anti-white (included for symmetry)
   "cracker", "honky", "honkey", "peckerwood",
   // Anti-Italian / other European ethnic
-  "wop", "dago", "guinea", "greaseball", "mick", "polack", "kraut", "hymie",
-  // General
+  "wop", "dago", "guinea", "greaseball", "mick", "polack", "kraut",
+  // General slurs
   "whitey",
+
+  // Explicit sexual content
+  "fuck", "fucker", "fucked", "fucking", "fuckhead", "motherfucker", "motherfucking",
+  "cunt",
+  "whore", "slut",
+  "bitch",
+  "porn", "porno", "pornography",
+  "blowjob", "blow job",
+  "handjob", "hand job",
+  "cumshot", "cum shot",
+  "jizz",
+  "dickhead", "asshole", "arsehole",
+  "shithead", "bullshit",
 ].filter(Boolean).map((s) => s.toLowerCase());
 
 function normalize(text: string): string {

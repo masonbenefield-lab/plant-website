@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { centsToDisplay } from "@/lib/stripe";
 import { useCart } from "@/lib/cart";
+import { findProhibitedWord, censorWord, logViolation } from "@/lib/profanity";
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 const SAVED_ADDRESS_KEY = "checkout_saved_address";
@@ -81,6 +82,14 @@ export default function CartCheckoutPage() {
 
   async function handleAddressSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (isGift && giftMessage) {
+      const hit = findProhibitedWord(giftMessage);
+      if (hit) {
+        toast.error(`Your gift message contains a prohibited word: "${censorWord(hit)}"`);
+        logViolation(hit, "gift-message-cart", giftMessage);
+        return;
+      }
+    }
     setLoading(true);
 
     const res = await fetch("/api/stripe/cart-checkout", {

@@ -16,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { centsToDisplay } from "@/lib/stripe";
+import { findProhibitedWord, censorWord, logViolation } from "@/lib/profanity";
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
@@ -117,6 +118,14 @@ export default function CheckoutForm({ listingId, auctionId, offerId, priceCents
   async function handleAddressSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (submittingRef.current) return;
+    if (isGift && giftMessage) {
+      const hit = findProhibitedWord(giftMessage);
+      if (hit) {
+        toast.error(`Your gift message contains a prohibited word: "${censorWord(hit)}"`);
+        logViolation(hit, "gift-message", giftMessage);
+        return;
+      }
+    }
     submittingRef.current = true;
     setLoading(true);
 

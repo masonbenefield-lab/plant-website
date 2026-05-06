@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { AlertTriangle } from "lucide-react";
+import { findProhibitedWord, censorWord, logViolation } from "@/lib/profanity";
 
 const REASONS = [
   "Item not received",
@@ -28,6 +29,14 @@ export default function DisputeButton({ orderId }: { orderId: string }) {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!reason) return;
+    if (details) {
+      const hit = findProhibitedWord(details);
+      if (hit) {
+        toast.error(`Your details contain a prohibited word: "${censorWord(hit)}"`);
+        logViolation(hit, "dispute-details", details);
+        return;
+      }
+    }
     setSubmitting(true);
     const res = await fetch("/api/orders/dispute", {
       method: "POST",
