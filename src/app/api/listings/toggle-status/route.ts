@@ -30,18 +30,16 @@ export async function POST(request: Request) {
 
   const newStatus = listing.status === "active" ? "paused" : "active";
 
-  const updatePayload: Record<string, unknown> = { status: newStatus };
-  if (newStatus === "active") {
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    const lastActivated = listing.last_activated_at ? new Date(listing.last_activated_at) : null;
-    if (!lastActivated || lastActivated < sevenDaysAgo) {
-      updatePayload.last_activated_at = new Date().toISOString();
-    }
-  }
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const lastActivated = listing.last_activated_at ? new Date(listing.last_activated_at) : null;
+  const bumpActivatedAt = newStatus === "active" && (!lastActivated || lastActivated < sevenDaysAgo);
 
   const { error: updateErr } = await admin
     .from("listings")
-    .update(updatePayload)
+    .update({
+      status: newStatus,
+      ...(bumpActivatedAt ? { last_activated_at: new Date().toISOString() } : {}),
+    })
     .eq("id", listingId);
 
   if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 });
