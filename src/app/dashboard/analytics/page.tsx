@@ -7,9 +7,12 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import RevenueChart from "./revenue-chart";
+import BuyerMap from "./buyer-map";
+import FollowerChart from "./follower-chart";
 
 type Order = {
   id: string;
+  buyer_id: string;
   amount_cents: number;
   created_at: string;
   listing_id: string | null;
@@ -85,7 +88,7 @@ export default async function AnalyticsPage() {
   const [{ data: rawOrders }, { data: rawManualSales }] = await Promise.all([
     supabase
       .from("orders")
-      .select("id, amount_cents, created_at, listing_id, auction_id, shipping_address")
+      .select("id, buyer_id, amount_cents, created_at, listing_id, auction_id, shipping_address")
       .eq("seller_id", user.id)
       .in("status", ["paid", "shipped", "delivered"])
       .order("created_at", { ascending: true }),
@@ -179,11 +182,24 @@ export default async function AnalyticsPage() {
   // --- Nursery extras ---
   let monthlyRevenue: { month: string; revenue: number }[] = [];
   let topStates: { state: string; count: number }[] = [];
+  let geoStates: { state: string; count: number }[] = [];
   let categoryRevenue: { category: string; revenue: number }[] = [];
   let auctionStats = { total: 0, sold: 0, avgBids: 0 };
   let allItemRows: { name: string; revenue: number; units: number; avg: number }[] = [];
+  let followerGrowth: { month: string; count: number }[] = [];
+  let repeatBuyerRate: number | null = null;
+  let uniqueBuyerCount = 0;
 
   if (plan === "grower" || plan === "nursery") {
+    // Repeat buyer rate
+    const buyerCounts: Record<string, number> = {};
+    for (const o of orders) {
+      if (o.buyer_id) buyerCounts[o.buyer_id] = (buyerCounts[o.buyer_id] ?? 0) + 1;
+    }
+    uniqueBuyerCount = Object.keys(buyerCounts).length;
+    const repeatBuyers = Object.values(buyerCounts).filter(c => c > 1).length;
+    repeatBuyerRate = uniqueBuyerCount > 0 ? Math.round((repeatBuyers / uniqueBuyerCount) * 100) : 0;
+
     // Monthly revenue — last 6 months
     for (let i = 5; i >= 0; i--) {
       const mStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
@@ -200,16 +216,18 @@ export default async function AnalyticsPage() {
   }
 
   if (plan === "nursery") {
-    // Buyer states
+    // Buyer states — 5-order minimum threshold for privacy
     const stateMap: Record<string, number> = {};
     for (const o of orders) {
-      const state = (o.shipping_address as { state?: string })?.state;
+      const state = (o.shipping_address as { state?: string })?.state?.toUpperCase();
       if (state) stateMap[state] = (stateMap[state] ?? 0) + 1;
     }
-    topStates = Object.entries(stateMap)
+    const qualifyingStates = Object.entries(stateMap)
+      .filter(([, count]) => count >= 5)
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 8)
       .map(([state, count]) => ({ state, count }));
+    topStates = qualifyingStates.slice(0, 8);
+    geoStates = qualifyingStates;
 
     // Category revenue — from listings that have sales
     const allListingIds = sortedListingIds;
@@ -260,6 +278,27 @@ export default async function AnalyticsPage() {
       sold: (sellerAuctions ?? []).filter(a => a.status === "ended").length,
       avgBids: auctionIds.length ? Math.round((totalBids / auctionIds.length) * 10) / 10 : 0,
     };
+
+    // Follower growth — new followers per month, last 6 months
+    const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+    const { data: followsData } = await supabase
+      .from("follows")
+      .select("created_at")
+      .eq("seller_id", user.id)
+      .gte("created_at", sixMonthsAgo.toISOString());
+
+    for (let i = 5; i >= 0; i--) {
+      const mStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const mEnd   = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+      const count  = (followsData ?? []).filter(f => {
+        const d = new Date(f.created_at);
+        return d >= mStart && d < mEnd;
+      }).length;
+      followerGrowth.push({
+        month: mStart.toLocaleDateString("en-US", { month: "short", year: "2-digit" }),
+        count,
+      });
+    }
   }
 
   const maxTopRevenue = topItems[0]?.revenue ?? 1;
@@ -307,6 +346,20 @@ export default async function AnalyticsPage() {
             sub="all time · paid + shipped + delivered"
           />
         </div>
+        {(plan === "grower" || plan === "nursery") && repeatBuyerRate !== null && orders.length > 0 && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+            <StatCard
+              label="Repeat buyer rate"
+              value={`${repeatBuyerRate}%`}
+              sub={`${uniqueBuyerCount} unique buyer${uniqueBuyerCount !== 1 ? "s" : ""} total`}
+            />
+            <StatCard
+              label="Unique buyers"
+              value={uniqueBuyerCount}
+              sub="all time"
+            />
+          </div>
+        )}
       </div>
 
       {/* Monthly chart — Grower+ */}
@@ -400,46 +453,93 @@ export default async function AnalyticsPage() {
         </div>
       )}
 
+      {/* Nursery: follower growth */}
+      {plan === "nursery" && (
+        <div>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+            New followers — last 6 months
+          </h2>
+          <Card>
+            <CardContent className="pt-6">
+              {followerGrowth.every(m => m.count === 0) ? (
+                <p className="text-sm text-muted-foreground text-center py-6">
+                  No new followers in the last 6 months yet.
+                </p>
+              ) : (
+                <FollowerChart data={followerGrowth} />
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Nursery: buyer geography */}
       {plan === "nursery" && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {topStates.length > 0 && (
-            <div>
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">Top buyer states</h2>
-              <Card>
-                <CardContent className="pt-6 space-y-3">
-                  {topStates.map(({ state, count }) => (
-                    <MiniBar
-                      key={state}
-                      value={count}
-                      max={maxStateCount}
-                      label={state}
-                      sub={`${count} order${count !== 1 ? "s" : ""}`}
-                    />
-                  ))}
-                </CardContent>
-              </Card>
-            </div>
-          )}
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {topStates.length > 0 ? (
+              <div>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+                  Top buyer states
+                </h2>
+                <Card>
+                  <CardContent className="pt-6 space-y-3">
+                    {topStates.map(({ state, count }) => (
+                      <MiniBar
+                        key={state}
+                        value={count}
+                        max={maxStateCount}
+                        label={state}
+                        sub={`${count} order${count !== 1 ? "s" : ""}`}
+                      />
+                    ))}
+                  </CardContent>
+                </Card>
+              </div>
+            ) : (
+              <div>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+                  Top buyer states
+                </h2>
+                <Card>
+                  <CardContent className="py-8 text-center">
+                    <p className="text-sm text-muted-foreground">
+                      Each state needs at least 5 orders to appear here.
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
 
-          {categoryRevenue.length > 0 && (
-            <div>
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">Revenue by category</h2>
-              <Card>
-                <CardContent className="pt-6 space-y-3">
-                  {categoryRevenue.map(({ category, revenue }) => (
-                    <MiniBar
-                      key={category}
-                      value={revenue}
-                      max={maxCatRevenue}
-                      label={category}
-                      sub={centsToDisplay(revenue)}
-                    />
-                  ))}
-                </CardContent>
-              </Card>
-            </div>
-          )}
+            {categoryRevenue.length > 0 && (
+              <div>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+                  Revenue by category
+                </h2>
+                <Card>
+                  <CardContent className="pt-6 space-y-3">
+                    {categoryRevenue.map(({ category, revenue }) => (
+                      <MiniBar
+                        key={category}
+                        value={revenue}
+                        max={maxCatRevenue}
+                        label={category}
+                        sub={centsToDisplay(revenue)}
+                      />
+                    ))}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </div>
+
+          {/* Collapsible order map */}
+          <div>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+              Geographic breakdown
+            </h2>
+            <BuyerMap states={geoStates} />
+          </div>
         </div>
       )}
 
