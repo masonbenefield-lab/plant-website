@@ -57,7 +57,7 @@ export default async function LandingPage() {
   const [{ data: liveListings }, { data: liveAuctions }, { data: nurseryProfiles }] = await Promise.all([
     supabase
       .from("listings")
-      .select("id, plant_name, variety, price_cents, images")
+      .select("id, plant_name, variety, price_cents, sale_price_cents, sale_ends_at, images")
       .eq("status", "active")
       .or("category.neq.Hidden,category.is.null")
       .order("created_at", { ascending: false })
@@ -77,11 +77,11 @@ export default async function LandingPage() {
   ]);
 
   const nurserySellerIds = (nurseryProfiles ?? []).map((p) => p.id);
-  let featuredListings: { id: string; plant_name: string; variety: string | null; price_cents: number; images: string[] }[] = [];
+  let featuredListings: { id: string; plant_name: string; variety: string | null; price_cents: number; sale_price_cents: number | null; sale_ends_at: string | null; images: string[] }[] = [];
   if (nurserySellerIds.length > 0) {
     const { data } = await supabase
       .from("listings")
-      .select("id, plant_name, variety, price_cents, images")
+      .select("id, plant_name, variety, price_cents, sale_price_cents, sale_ends_at, images")
       .eq("status", "active")
       .or("category.neq.Hidden,category.is.null")
       .in("seller_id", nurserySellerIds)
@@ -94,16 +94,21 @@ export default async function LandingPage() {
   const emojiCycle = ["🌿", "🌸", "🌵", "🪴"];
 
   const heroCards = liveListings && liveListings.length >= 2
-    ? liveListings.map((l, i) => ({
-        id: l.id,
-        name: l.plant_name + (l.variety ? ` ${l.variety}` : ""),
-        price: centsToDisplay(l.price_cents),
-        tag: "In Shop",
-        bg: bgCycle[i % bgCycle.length],
-        emoji: emojiCycle[i % emojiCycle.length],
-        image: l.images?.[0] ?? null,
-        href: `/shop/${l.id}`,
-      }))
+    ? liveListings.map((l, i) => {
+        const onSale = !!(l.sale_price_cents && l.sale_ends_at && new Date(l.sale_ends_at) > new Date());
+        return {
+          id: l.id,
+          name: l.plant_name + (l.variety ? ` ${l.variety}` : ""),
+          price: centsToDisplay(onSale ? l.sale_price_cents! : l.price_cents),
+          regularPrice: onSale ? centsToDisplay(l.price_cents) : null,
+          onSale,
+          tag: "In Shop",
+          bg: bgCycle[i % bgCycle.length],
+          emoji: emojiCycle[i % emojiCycle.length],
+          image: l.images?.[0] ?? null,
+          href: `/shop/${l.id}`,
+        };
+      })
     : fallbackListings;
 
   return (
@@ -156,9 +161,17 @@ export default async function LandingPage() {
                   </div>
                   <div className="p-3">
                     <p className="font-semibold text-card-foreground text-sm leading-tight truncate">{l.name}</p>
-                    <div className="flex items-center justify-between mt-1.5">
-                      <span className="text-green-600 dark:text-green-400 font-bold text-sm">{l.price}</span>
-                      <span className={cn("text-xs px-2 py-0.5 rounded-full font-medium", l.tag === "Auction" ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300" : "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300")}>
+                    <div className="flex items-center justify-between mt-1.5 gap-1">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        {"onSale" in l && l.onSale && (
+                          <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-red-600 text-white">SALE</span>
+                        )}
+                        <span className="text-green-600 dark:text-green-400 font-bold text-sm">{l.price}</span>
+                        {"regularPrice" in l && l.regularPrice && (
+                          <span className="text-muted-foreground text-xs line-through">{l.regularPrice}</span>
+                        )}
+                      </div>
+                      <span className={cn("shrink-0 text-xs px-2 py-0.5 rounded-full font-medium", l.tag === "Auction" ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300" : "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300")}>
                         {l.tag}
                       </span>
                     </div>
@@ -254,6 +267,7 @@ export default async function LandingPage() {
               {featuredListings.map((l, i) => {
                 const bg = ["bg-green-100", "bg-pink-100", "bg-amber-100", "bg-emerald-100"][i % 4];
                 const emoji = ["🌿", "🌸", "🌵", "🪴"][i % 4];
+                const featOnSale = !!(l.sale_price_cents && l.sale_ends_at && new Date(l.sale_ends_at) > new Date());
                 return (
                   <Link key={l.id} href={`/shop/${l.id}`} className="bg-card rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow border">
                     <div className={cn("relative flex items-center justify-center h-24 sm:h-28 overflow-hidden", l.images?.[0] ? "" : bg)}>
@@ -262,12 +276,20 @@ export default async function LandingPage() {
                       ) : (
                         <span className="text-4xl sm:text-5xl">{emoji}</span>
                       )}
+                      {featOnSale && (
+                        <span className="absolute top-2 right-2 bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">SALE</span>
+                      )}
                     </div>
                     <div className="p-3">
                       <p className="font-semibold text-card-foreground text-sm leading-tight truncate">{l.plant_name}{l.variety ? ` ${l.variety}` : ""}</p>
-                      <div className="flex items-center justify-between mt-1.5">
-                        <span className="text-green-600 dark:text-green-400 font-bold text-sm">{centsToDisplay(l.price_cents)}</span>
-                        <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">⭐ Featured</span>
+                      <div className="flex items-center justify-between mt-1.5 gap-1">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="text-green-600 dark:text-green-400 font-bold text-sm">{centsToDisplay(featOnSale ? l.sale_price_cents! : l.price_cents)}</span>
+                          {featOnSale && (
+                            <span className="text-muted-foreground text-xs line-through">{centsToDisplay(l.price_cents)}</span>
+                          )}
+                        </div>
+                        <span className="shrink-0 text-xs px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">⭐ Featured</span>
                       </div>
                     </div>
                   </Link>
