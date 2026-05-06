@@ -303,6 +303,10 @@ export default function PricingPage() {
                             <a href="#weekly-digest" className={cn("underline underline-offset-2 decoration-dotted hover:opacity-80", isPopular ? "text-white" : "")}>
                               {val}
                             </a>
+                          ) : row.key === "commission" && isString ? (
+                            <a href="#commission" className={cn("underline underline-offset-2 decoration-dotted hover:opacity-80", isPopular ? "text-white" : "")}>
+                              {val}
+                            </a>
                           ) : isString ? val : row.label}
                         </span>
                       </li>
@@ -334,7 +338,7 @@ export default function PricingPage() {
       <BreakevenCalculator />
 
       {/* Commission callout */}
-      <section className="px-4 pb-16">
+      <section id="commission" className="px-4 pb-16">
         <div className="max-w-2xl mx-auto bg-muted rounded-2xl border p-8 text-center">
           <p className="text-2xl mb-3">💳</p>
           <h2 className="font-bold text-lg mb-2">How commissions work</h2>
