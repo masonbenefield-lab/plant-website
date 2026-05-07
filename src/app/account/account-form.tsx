@@ -254,7 +254,7 @@ export default function AccountForm({
                 </div>
                 <div className="rounded-lg border p-3 space-y-2">
                   <p className="text-sm font-semibold">Nursery — $29/mo</p>
-                  <p className="text-xs text-muted-foreground">Unlimited · 3% commission · full digest + homepage</p>
+                  <p className="text-xs text-muted-foreground">Unlimited listings · 20 photos · 3% commission · full digest + homepage</p>
                   <Button size="sm" className="w-full bg-green-700 hover:bg-green-800" disabled={subscribing} onClick={() => startSubscription("nursery", "monthly")}>
                     {subscribing ? "Redirecting…" : "Upgrade"}
                   </Button>

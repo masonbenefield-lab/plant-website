@@ -70,7 +70,7 @@ const tiers = [
     features: {
       inventory: "Free inventory management",
       listings: "Unlimited listings",
-      photos: "Unlimited photos",
+      photos: "Up to 20 photos per listing",
       auctions: "Unlimited auctions",
       commission: "3% platform commission",
       banner: true,
