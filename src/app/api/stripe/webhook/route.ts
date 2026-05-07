@@ -11,6 +11,46 @@ function adminClient() {
   );
 }
 
+async function restoreListingStock(
+  supabase: ReturnType<typeof adminClient>,
+  listingId: string,
+  qty: number,
+  inventoryId?: string | null
+) {
+  const { data: listing } = await supabase
+    .from("listings")
+    .select("quantity, status")
+    .eq("id", listingId)
+    .single();
+  if (!listing) return;
+
+  await supabase
+    .from("listings")
+    .update({
+      quantity: listing.quantity + qty,
+      // Re-activate if the purchase marked it sold_out; leave seller-paused listings alone
+      ...(listing.status === "sold_out" ? { status: "active" } : {}),
+    })
+    .eq("id", listingId);
+
+  if (inventoryId) {
+    const { data: inv } = await supabase
+      .from("inventory")
+      .select("quantity, listing_quantity")
+      .eq("id", inventoryId)
+      .single();
+    if (inv) {
+      await supabase
+        .from("inventory")
+        .update({
+          quantity: inv.quantity + qty,
+          listing_quantity: Math.max(0, (inv.listing_quantity ?? 0) + qty),
+        })
+        .eq("id", inventoryId);
+    }
+  }
+}
+
 export async function POST(request: Request) {
   const body = await request.text();
   const sig = request.headers.get("stripe-signature")!;
@@ -79,11 +119,39 @@ export async function POST(request: Request) {
 
   if (event.type === "payment_intent.payment_failed") {
     const pi = event.data.object;
-    await supabase
+    const { data: order } = await supabase
       .from("orders")
-      .delete()
+      .select("id, listing_id, auction_id, cart_items")
       .eq("stripe_payment_intent_id", pi.id)
-      .eq("status", "pending");
+      .eq("status", "pending")
+      .single();
+
+    if (order) {
+      // Single-listing checkout: restore via PI metadata (stored at checkout time)
+      if (order.listing_id && pi.metadata?.listing_qty) {
+        await restoreListingStock(
+          supabase,
+          order.listing_id,
+          Number(pi.metadata.listing_qty),
+          pi.metadata.inventory_id ?? null
+        );
+      }
+
+      // Cart checkout: restore each item using the order's cart_items record
+      if (!order.listing_id && !order.auction_id && order.cart_items) {
+        const cartItems = order.cart_items as { listing_id: string; quantity: number }[];
+        for (const item of cartItems) {
+          const { data: listing } = await supabase
+            .from("listings")
+            .select("inventory_id")
+            .eq("id", item.listing_id)
+            .single();
+          await restoreListingStock(supabase, item.listing_id, item.quantity, listing?.inventory_id ?? null);
+        }
+      }
+
+      await supabase.from("orders").delete().eq("id", order.id);
+    }
   }
 
   // Subscription created via Checkout — update plan and store IDs

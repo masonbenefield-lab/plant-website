@@ -96,12 +96,52 @@ export async function POST(request: Request) {
   const feePercent = planFeePercent(sellerPlan?.plan, !!sellerPlan?.is_admin);
   const feeCents = Math.round(totalCents * (feePercent / 100));
 
+  // Atomically decrement stock for each item before creating PaymentIntent — prevents overselling
+  const admin = adminClient();
+  const decrementedItems: { listingId: string; originalQty: number }[] = [];
+
+  for (const cartItem of items) {
+    const listing = listings.find((l) => l.id === cartItem.listingId)!;
+    const newQty = listing.quantity - cartItem.quantity;
+    const soldOut = newQty <= 0;
+    const soldOutBehavior = (listing as { sold_out_behavior?: string }).sold_out_behavior ?? "mark_sold_out";
+
+    const { data: decremented } = await admin
+      .from("listings")
+      .update({
+        quantity: newQty,
+        status: soldOut ? (soldOutBehavior === "auto_pause" ? "paused" : "sold_out") : "active",
+      })
+      .eq("id", listing.id)
+      .gte("quantity", cartItem.quantity)
+      .select("id");
+
+    if (!decremented?.length) {
+      await Promise.all(
+        decrementedItems.map((d) =>
+          admin.from("listings").update({ quantity: d.originalQty, status: "active" }).eq("id", d.listingId)
+        )
+      );
+      return NextResponse.json({ error: `${listing.plant_name} just sold out — someone else got the last one.` }, { status: 409 });
+    }
+
+    decrementedItems.push({ listingId: listing.id, originalQty: listing.quantity });
+  }
+
   const paymentIntent = await getStripe().paymentIntents.create({
     amount: totalCents,
     currency: "usd",
     application_fee_amount: feeCents,
     on_behalf_of: sellerProfile.stripe_account_id,
     transfer_data: { destination: sellerProfile.stripe_account_id },
+    metadata: { cart_checkout: "true" },
+  }).catch(async (err) => {
+    await Promise.all(
+      decrementedItems.map((d) =>
+        admin.from("listings").update({ quantity: d.originalQty, status: "active" }).eq("id", d.listingId)
+      )
+    );
+    throw err;
   });
 
   const { data: order, error: orderError } = await supabase
@@ -117,19 +157,21 @@ export async function POST(request: Request) {
     .select()
     .single();
 
-  if (orderError) return NextResponse.json({ error: orderError.message }, { status: 500 });
+  if (orderError) {
+    await Promise.all(
+      decrementedItems.map((d) =>
+        admin.from("listings").update({ quantity: d.originalQty, status: "active" }).eq("id", d.listingId)
+      )
+    );
+    await getStripe().paymentIntents.cancel(paymentIntent.id).catch(() => {});
+    return NextResponse.json({ error: orderError.message }, { status: 500 });
+  }
 
-  // Decrement stock for each item
-  const admin = adminClient();
+  // Update linked inventory records
   for (const cartItem of items) {
     const listing = listings.find((l) => l.id === cartItem.listingId)!;
     const newQty = listing.quantity - cartItem.quantity;
     const soldOut = newQty <= 0;
-    const soldOutBehavior = (listing as { sold_out_behavior?: string }).sold_out_behavior ?? "mark_sold_out";
-    await admin.from("listings").update({
-      quantity: newQty,
-      status: soldOut ? (soldOutBehavior === "auto_pause" ? "paused" : "sold_out") : "active",
-    }).eq("id", listing.id);
 
     if (listing.inventory_id) {
       const { data: inv } = await admin.from("inventory").select("quantity, listing_quantity, low_stock_threshold, plant_name, variety").eq("id", listing.inventory_id).single();

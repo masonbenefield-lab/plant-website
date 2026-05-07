@@ -92,12 +92,40 @@ export async function POST(request: Request) {
     const amountCents = effectivePriceCents * quantity;
     const feeCents = Math.round(amountCents * (feePercent / 100));
 
+    const admin = adminClient();
+    const newListingQty = listing.quantity - quantity;
+    const soldOut = newListingQty <= 0;
+    const soldOutBehavior = (listing as { sold_out_behavior?: string }).sold_out_behavior ?? "mark_sold_out";
+
+    // Atomically decrement stock before creating PaymentIntent — prevents two buyers from purchasing the same last unit
+    const { data: decremented } = await admin
+      .from("listings")
+      .update({
+        quantity: newListingQty,
+        status: soldOut ? (soldOutBehavior === "auto_pause" ? "paused" : "sold_out") : "active",
+      })
+      .eq("id", listingId)
+      .gte("quantity", quantity)
+      .select("id");
+
+    if (!decremented?.length) {
+      return NextResponse.json({ error: "This item just sold out — someone else got the last one." }, { status: 409 });
+    }
+
     const paymentIntent = await getStripe().paymentIntents.create({
       amount: amountCents,
       currency: "usd",
       application_fee_amount: feeCents,
       on_behalf_of: sellerProfile.stripe_account_id,
       transfer_data: { destination: sellerProfile.stripe_account_id },
+      metadata: {
+        listing_id: listingId,
+        listing_qty: String(quantity),
+        ...(listing.inventory_id ? { inventory_id: listing.inventory_id } : {}),
+      },
+    }).catch(async (err) => {
+      await admin.from("listings").update({ quantity: listing.quantity, status: "active" }).eq("id", listingId);
+      throw err;
     });
 
     const { data: order, error: orderError } = await supabase
@@ -113,24 +141,16 @@ export async function POST(request: Request) {
       .select()
       .single();
 
-    if (orderError) return NextResponse.json({ error: orderError.message }, { status: 500 });
+    if (orderError) {
+      await admin.from("listings").update({ quantity: listing.quantity, status: "active" }).eq("id", listingId);
+      await getStripe().paymentIntents.cancel(paymentIntent.id).catch(() => {});
+      return NextResponse.json({ error: orderError.message }, { status: 500 });
+    }
 
     // Mark the accepted offer as withdrawn (used) so it can't be checked out twice
     if (offerId) {
       await supabase.from("offers").update({ status: "withdrawn" }).eq("id", offerId);
     }
-
-    const admin = adminClient();
-    const newListingQty = listing.quantity - quantity;
-    const soldOut = newListingQty <= 0;
-    const soldOutBehavior = (listing as { sold_out_behavior?: string }).sold_out_behavior ?? "mark_sold_out";
-    await admin
-      .from("listings")
-      .update({
-        quantity: newListingQty,
-        status: soldOut ? (soldOutBehavior === "auto_pause" ? "paused" : "sold_out") : "active",
-      })
-      .eq("id", listingId);
 
     if (listing.inventory_id) {
       const { data: inv } = await admin
