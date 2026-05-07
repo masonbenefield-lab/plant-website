@@ -11,7 +11,9 @@ import {
 import { toast } from "sonner";
 import type { OrderStatus } from "@/lib/supabase/types";
 
-const statuses: OrderStatus[] = ["pending", "paid", "shipped", "delivered"];
+// Statuses sellers can manually advance to (pending/paid are set by Stripe)
+const SELLER_STATUSES: OrderStatus[] = ["shipped", "delivered"];
+const STATUS_RANK: Record<string, number> = { pending: 0, paid: 1, shipped: 2, delivered: 3 };
 
 export default function OrderStatusSelect({
   orderId,
@@ -37,13 +39,26 @@ export default function OrderStatusSelect({
     }
   }
 
+  const forwardStatuses = SELLER_STATUSES.filter(
+    (s) => STATUS_RANK[s] > STATUS_RANK[currentStatus]
+  );
+
+  // Nothing to advance to — show a read-only badge instead of an empty dropdown
+  if (forwardStatuses.length === 0) {
+    return (
+      <span className="text-xs text-muted-foreground px-2 py-1 rounded border border-border bg-muted">
+        {currentStatus}
+      </span>
+    );
+  }
+
   return (
-    <Select defaultValue={currentStatus} onValueChange={handleChange}>
-      <SelectTrigger className="w-32 text-xs h-8">
-        <SelectValue />
+    <Select onValueChange={handleChange}>
+      <SelectTrigger className="w-36 text-xs h-8">
+        <span className="text-muted-foreground">Mark as…</span>
       </SelectTrigger>
       <SelectContent>
-        {statuses.map((s) => (
+        {forwardStatuses.map((s) => (
           <SelectItem key={s} value={s} className="text-xs">
             {s}
           </SelectItem>

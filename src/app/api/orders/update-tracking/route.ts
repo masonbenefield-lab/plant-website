@@ -21,17 +21,22 @@ export async function POST(request: Request) {
   // Fetch the order — must belong to this seller
   const { data: order, error: orderErr } = await supabase
     .from("orders")
-    .select("id, buyer_id, seller_id, amount_cents, listing_id, auction_id, cart_items")
+    .select("id, buyer_id, seller_id, amount_cents, status, listing_id, auction_id, cart_items")
     .eq("id", orderId)
     .eq("seller_id", user.id)
     .single();
 
   if (orderErr || !order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
 
-  // Save tracking number and mark shipped
+  // Only advance to "shipped" when a real tracking number is added and the order hasn't moved past that point
+  const shouldMarkShipped = !!trackingNumber && order.status === "paid";
+
   const { error: updateErr } = await supabase
     .from("orders")
-    .update({ tracking_number: trackingNumber || null, status: "shipped" })
+    .update({
+      tracking_number: trackingNumber || null,
+      ...(shouldMarkShipped ? { status: "shipped" } : {}),
+    })
     .eq("id", orderId);
 
   if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 });
@@ -65,5 +70,5 @@ export async function POST(request: Request) {
     }
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, notified: !!trackingNumber });
 }

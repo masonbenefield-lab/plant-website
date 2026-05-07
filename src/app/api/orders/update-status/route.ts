@@ -28,6 +28,14 @@ export async function POST(request: Request) {
 
   if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
 
+  // Sellers may only advance status forward through the fulfillment flow
+  const STATUS_RANK: Record<string, number> = { pending: 0, paid: 1, shipped: 2, delivered: 3 };
+  const currentRank = STATUS_RANK[order.status] ?? -1;
+  const newRank = STATUS_RANK[status] ?? -1;
+  if (newRank <= currentRank) {
+    return NextResponse.json({ error: "Cannot move an order backward in status" }, { status: 400 });
+  }
+
   const update: Database["public"]["Tables"]["orders"]["Update"] = { status };
   if (status === "delivered") {
     update.delivered_at = new Date().toISOString();

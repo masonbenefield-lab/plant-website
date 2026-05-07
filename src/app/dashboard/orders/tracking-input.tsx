@@ -30,7 +30,8 @@ export default function TrackingInput({
       const { error } = await res.json().catch(() => ({ error: "Failed to save" }));
       toast.error(error ?? "Failed to save");
     } else {
-      toast.success("Tracking saved — buyer notified");
+      const { notified } = await res.json().catch(() => ({ notified: false }));
+      toast.success(notified ? "Tracking saved — buyer notified" : "Tracking saved");
       router.refresh();
     }
   }
