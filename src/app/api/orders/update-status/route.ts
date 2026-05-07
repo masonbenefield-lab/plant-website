@@ -21,7 +21,7 @@ export async function POST(request: Request) {
 
   const { data: order } = await admin
     .from("orders")
-    .select("id, seller_id, status")
+    .select("id, seller_id, status, tracking_number")
     .eq("id", orderId)
     .eq("seller_id", user.id)
     .single();
@@ -34,6 +34,10 @@ export async function POST(request: Request) {
   const newRank = STATUS_RANK[status] ?? -1;
   if (newRank <= currentRank) {
     return NextResponse.json({ error: "Cannot move an order backward in status" }, { status: 400 });
+  }
+
+  if (status === "delivered" && !order.tracking_number) {
+    return NextResponse.json({ error: "Please add a tracking number before marking this order as delivered" }, { status: 400 });
   }
 
   const update: Database["public"]["Tables"]["orders"]["Update"] = { status };

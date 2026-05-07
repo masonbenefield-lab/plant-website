@@ -51,11 +51,18 @@ export async function POST(request: Request) {
       .from("listings")
       .select("*")
       .eq("id", listingId)
-      .eq("status", "active")
       .single();
 
     if (error || !listing) {
       return NextResponse.json({ error: "Listing not found" }, { status: 404 });
+    }
+
+    if (listing.status !== "active") {
+      return NextResponse.json({
+        error: listing.status === "sold_out"
+          ? "This item is sold out"
+          : "This listing is no longer available",
+      }, { status: 410 });
     }
 
     if (listing.seller_id === user.id) {

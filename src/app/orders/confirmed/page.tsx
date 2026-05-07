@@ -53,7 +53,9 @@ export default async function OrderConfirmedPage({
       <div className="text-6xl mb-4">🌿</div>
       <h1 className="text-2xl font-bold mb-2">Order confirmed!</h1>
       <p className="text-muted-foreground mb-8">
-        Your payment was successful. The seller will be in touch soon.
+        {order.status === "paid"
+          ? "Your payment was successful. The seller will be in touch soon."
+          : "Your order has been placed and payment is being confirmed. The seller will be in touch soon."}
       </p>
 
       <Card className="text-left mb-6">
