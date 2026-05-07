@@ -57,6 +57,10 @@ export async function POST(request: Request) {
 
   const sellerId = sellerIds[0];
 
+  if (sellerId === user.id) {
+    return NextResponse.json({ error: "You cannot purchase your own listings" }, { status: 400 });
+  }
+
   // Validate quantities and compute totals
   const cartItemsForOrder: { listing_id: string; plant_name: string; variety: string | null; quantity: number; price_cents: number }[] = [];
   let totalCents = 0;

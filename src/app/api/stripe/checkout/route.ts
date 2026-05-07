@@ -58,6 +58,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Listing not found" }, { status: 404 });
     }
 
+    if (listing.seller_id === user.id) {
+      return NextResponse.json({ error: "You cannot purchase your own listing" }, { status: 400 });
+    }
+
     if (quantity > listing.quantity) {
       return NextResponse.json({ error: `Only ${listing.quantity} available` }, { status: 400 });
     }

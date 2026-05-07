@@ -18,8 +18,16 @@ export async function POST(request: Request) {
     photos?: string[];
   };
 
-  if (!orderId || !score || score < 1 || score > 5) {
-    return NextResponse.json({ error: "Invalid input" }, { status: 400 });
+  if (!orderId || !score || !Number.isInteger(score) || score < 1 || score > 5) {
+    return NextResponse.json({ error: "Score must be a whole number between 1 and 5" }, { status: 400 });
+  }
+
+  if (comment && comment.length > 1000) {
+    return NextResponse.json({ error: "Comment must be 1000 characters or fewer" }, { status: 400 });
+  }
+
+  if (photos && photos.length > 5) {
+    return NextResponse.json({ error: "Maximum 5 photos per review" }, { status: 400 });
   }
 
   const { data: order, error: orderError } = await supabase
