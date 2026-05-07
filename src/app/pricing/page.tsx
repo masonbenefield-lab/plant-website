@@ -195,6 +195,313 @@ function BreakevenCalculator() {
   );
 }
 
+function StorefrontBannerSection() {
+  return (
+    <section id="storefront-banner" className="px-4 pb-16">
+      <div className="max-w-4xl mx-auto">
+        <div className="text-center mb-10">
+          <p className="text-2xl mb-3">🎨</p>
+          <h2 className="font-bold text-2xl mb-3">Custom storefront banner</h2>
+          <p className="text-sm text-muted-foreground leading-relaxed max-w-xl mx-auto">
+            Your storefront is your brand. A custom banner turns a plain shop page into something buyers remember — whether you&apos;re a casual hobbyist or a professional nursery.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
+          {/* Without banner */}
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3 text-center">Seedling — no banner</p>
+            <div className="rounded-2xl border overflow-hidden bg-card shadow-sm">
+              <div className="h-24 bg-muted flex items-end px-4 pb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-full bg-muted-foreground/20 border-2 border-background shrink-0" />
+                  <div>
+                    <p className="font-semibold text-sm">leafy_greens</p>
+                    <p className="text-xs text-muted-foreground">12 listings</p>
+                  </div>
+                </div>
+              </div>
+              <div className="p-4 grid grid-cols-3 gap-2">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div key={i} className="aspect-square bg-muted rounded-lg" />
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* With banner */}
+          <div>
+            <p className="text-xs font-semibold text-green-700 uppercase tracking-widest mb-3 text-center">Grower &amp; Nursery — with banner</p>
+            <div className="rounded-2xl border overflow-hidden bg-card shadow-sm ring-2 ring-green-500">
+              <div
+                className="h-24 relative flex items-end px-4 pb-3"
+                style={{ background: "linear-gradient(135deg, #052e16 0%, #14532d 35%, #166534 65%, #15803d 100%)" }}
+              >
+                <div
+                  className="absolute inset-0 opacity-25"
+                  style={{ backgroundImage: "radial-gradient(ellipse at 75% 40%, rgba(134,239,172,0.4) 0%, transparent 55%)" }}
+                />
+                <div className="relative flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-full bg-green-800/60 border-2 border-white/20 shrink-0 flex items-center justify-center text-lg">
+                    🌿
+                  </div>
+                  <div>
+                    <p className="font-semibold text-sm text-white">leafy_greens</p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-xs text-green-300">12 listings</p>
+                      <span className="text-green-500 text-xs">·</span>
+                      <p className="text-xs text-green-300">⭐ 4.9</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="p-4 grid grid-cols-3 gap-2">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div key={i} className="aspect-square bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-100 dark:border-green-800/40" />
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+const SEARCH_LISTINGS = [
+  { name: "Monstera Deliciosa", price: "$28", seller: "leafy_greens", priority: true },
+  { name: "Fiddle Leaf Fig",    price: "$45", seller: "plantparent",  priority: true },
+  { name: "Pothos Golden",      price: "$12", seller: "urban_jungle",  priority: true },
+  { name: "Snake Plant",        price: "$18", seller: "hobbyist99",   priority: false },
+  { name: "Peace Lily",         price: "$22", seller: "plant_noob",   priority: false },
+  { name: "ZZ Plant",           price: "$35", seller: "freebie_shop", priority: false },
+];
+
+function SearchPlacementSection() {
+  const priority = SEARCH_LISTINGS.filter((l) => l.priority);
+  const standard = SEARCH_LISTINGS.filter((l) => !l.priority);
+
+  return (
+    <section id="search-placement" className="px-4 pb-16">
+      <div className="max-w-2xl mx-auto">
+        <div className="text-center mb-10">
+          <p className="text-2xl mb-3">🔍</p>
+          <h2 className="font-bold text-2xl mb-3">Priority search placement</h2>
+          <p className="text-sm text-muted-foreground leading-relaxed max-w-xl mx-auto">
+            When buyers search for plants, paid sellers rise to the top automatically. No bidding, no ad spend — just plan-based placement so your listings get seen first.
+          </p>
+        </div>
+
+        <div className="rounded-2xl border bg-card p-5">
+          {/* Mock search bar */}
+          <div className="flex items-center gap-2 mb-4">
+            <div className="flex-1 flex items-center gap-2 bg-muted rounded-lg px-3 py-2.5 text-sm text-muted-foreground">
+              <span className="opacity-50">🔍</span>
+              <span>monstera</span>
+            </div>
+            <div className="bg-green-700 text-white rounded-lg px-4 py-2.5 text-sm font-medium select-none">Search</div>
+          </div>
+
+          <p className="text-xs text-muted-foreground mb-3">6 results for &quot;monstera&quot;</p>
+
+          {/* Priority listings */}
+          <div className="grid grid-cols-3 gap-3 mb-2">
+            {priority.map((listing) => (
+              <div key={listing.name} className="rounded-xl border overflow-hidden bg-background ring-1 ring-green-500/30">
+                <div className="aspect-square relative bg-green-50 dark:bg-green-900/20">
+                  <span className="absolute top-1.5 left-1.5 bg-green-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide">
+                    ⚡ Priority
+                  </span>
+                </div>
+                <div className="p-2">
+                  <p className="text-[11px] font-medium leading-tight truncate">{listing.name}</p>
+                  <p className="text-[10px] text-green-700 dark:text-green-400 font-semibold mt-0.5">{listing.price}</p>
+                  <p className="text-[9px] text-muted-foreground truncate">{listing.seller}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Divider */}
+          <div className="flex items-center gap-2 my-3">
+            <div className="flex-1 h-px bg-border" />
+            <span className="text-[10px] text-muted-foreground px-1">Seedling listings</span>
+            <div className="flex-1 h-px bg-border" />
+          </div>
+
+          {/* Standard listings */}
+          <div className="grid grid-cols-3 gap-3 opacity-50">
+            {standard.map((listing) => (
+              <div key={listing.name} className="rounded-xl border overflow-hidden bg-background">
+                <div className="aspect-square bg-muted" />
+                <div className="p-2">
+                  <p className="text-[11px] font-medium leading-tight truncate">{listing.name}</p>
+                  <p className="text-[10px] text-muted-foreground font-semibold mt-0.5">{listing.price}</p>
+                  <p className="text-[9px] text-muted-foreground truncate">{listing.seller}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <p className="text-xs text-muted-foreground text-center mt-4">
+            Grower &amp; Nursery listings always appear above Seedling listings in search results
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+const CHART_DATA = [
+  { month: "Dec", value: 340 },
+  { month: "Jan", value: 520 },
+  { month: "Feb", value: 390 },
+  { month: "Mar", value: 680 },
+  { month: "Apr", value: 890 },
+  { month: "May", value: 750 },
+];
+
+const TOP_ITEMS = [
+  { name: "Monstera Deliciosa", sold: 14, revenue: "$392" },
+  { name: "Fiddle Leaf Fig",    sold: 9,  revenue: "$405" },
+  { name: "Pothos Golden",      sold: 23, revenue: "$276" },
+];
+
+const PLAN_TIERS = [
+  {
+    name: "Seedling",
+    color: "bg-muted",
+    border: "border",
+    items: ["Revenue this month", "Order count", "Avg order value"],
+  },
+  {
+    name: "Grower",
+    color: "bg-blue-50 dark:bg-blue-900/20",
+    border: "border border-blue-200 dark:border-blue-800",
+    items: ["Everything in Seedling", "6-month revenue chart", "Top 5 best sellers"],
+  },
+  {
+    name: "Nursery",
+    color: "bg-green-50 dark:bg-green-900/20",
+    border: "border border-green-200 dark:border-green-800",
+    items: ["Everything in Grower", "Repeat buyer rate", "Follower growth chart", "Buyer geography map"],
+  },
+];
+
+function AnalyticsDashboardSection() {
+  const max = Math.max(...CHART_DATA.map((d) => d.value));
+
+  return (
+    <section id="analytics-preview" className="px-4 pb-16">
+      <div className="max-w-3xl mx-auto">
+        <div className="text-center mb-10">
+          <p className="text-2xl mb-3">📊</p>
+          <h2 className="font-bold text-2xl mb-3">Full sales analytics</h2>
+          <p className="text-sm text-muted-foreground leading-relaxed max-w-xl mx-auto">
+            Know exactly what&apos;s selling, who&apos;s buying, and where your revenue is coming from. Each plan unlocks a deeper view of your business.
+          </p>
+        </div>
+
+        {/* Plan tier breakdown */}
+        <div className="grid grid-cols-3 gap-3 mb-8">
+          {PLAN_TIERS.map((tier) => (
+            <div key={tier.name} className={cn("rounded-xl p-4", tier.color, tier.border)}>
+              <p className="font-semibold text-xs uppercase tracking-wide mb-2 text-muted-foreground">{tier.name}</p>
+              <ul className="space-y-1.5">
+                {tier.items.map((item) => (
+                  <li key={item} className="flex items-start gap-1.5 text-xs">
+                    <Check size={11} className="mt-0.5 text-green-600 shrink-0" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+
+        {/* Dashboard mockup */}
+        <div className="rounded-2xl border bg-card p-5">
+          <div className="flex items-center justify-between mb-5">
+            <p className="text-sm font-semibold">Dashboard preview</p>
+            <span className="text-xs bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 px-2.5 py-1 rounded-full font-medium">
+              Nursery plan
+            </span>
+          </div>
+
+          {/* Stat cards */}
+          <div className="grid grid-cols-3 gap-3 mb-5">
+            {[
+              { label: "Revenue this month", value: "$1,247", sub: "↑ 18% vs last month" },
+              { label: "Orders",             value: "23",     sub: "This month" },
+              { label: "Avg order value",    value: "$54.22", sub: "All time" },
+            ].map((stat) => (
+              <div key={stat.label} className="rounded-xl bg-muted/60 p-3">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1.5">{stat.label}</p>
+                <p className="text-xl font-bold">{stat.value}</p>
+                <p className="text-[10px] text-green-700 dark:text-green-400 mt-0.5">{stat.sub}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Bar chart */}
+          <div className="mb-5">
+            <p className="text-xs font-medium text-muted-foreground mb-3">Revenue — last 6 months</p>
+            <div className="flex items-end gap-2 h-24 pb-5 relative">
+              {CHART_DATA.map(({ month, value }) => (
+                <div key={month} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
+                  <div
+                    className="w-full rounded-t-md bg-green-600 transition-all"
+                    style={{ height: `${Math.round((value / max) * 72)}px` }}
+                  />
+                  <span className="text-[9px] text-muted-foreground shrink-0">{month}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Top performers */}
+          <div className="mb-4">
+            <p className="text-xs font-medium text-muted-foreground mb-2">Top performers</p>
+            <div className="space-y-1.5">
+              {TOP_ITEMS.map((item, i) => (
+                <div key={item.name} className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-muted-foreground w-4">{i + 1}</span>
+                    <span className="text-xs font-medium">{item.name}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-[10px] text-muted-foreground">{item.sold} sold</span>
+                    <span className="text-xs font-semibold text-green-700 dark:text-green-400">{item.revenue}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Nursery extras */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-xl bg-muted/60 p-3">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1.5">Repeat buyer rate</p>
+              <p className="text-xl font-bold">38%</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">of buyers have ordered 2+ times</p>
+            </div>
+            <div className="rounded-xl bg-muted/60 p-3">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1.5">Top shipping states</p>
+              <div className="flex flex-wrap gap-1 mt-1">
+                {["TX", "CA", "FL", "NY", "WA"].map((s) => (
+                  <span key={s} className="text-[9px] font-bold bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 px-1.5 py-0.5 rounded">
+                    {s}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function PricingPage() {
   const [annual, setAnnual] = useState(false);
 
@@ -307,6 +614,18 @@ export default function PricingPage() {
                             <a href="#commission" className={cn("underline underline-offset-2 decoration-dotted hover:opacity-80", isPopular ? "text-white" : "")}>
                               {val}
                             </a>
+                          ) : row.key === "banner" && !isFalse ? (
+                            <a href="#storefront-banner" className={cn("underline underline-offset-2 decoration-dotted hover:opacity-80", isPopular ? "text-white" : "")}>
+                              {row.label}
+                            </a>
+                          ) : row.key === "search" && !isFalse ? (
+                            <a href="#search-placement" className={cn("underline underline-offset-2 decoration-dotted hover:opacity-80", isPopular ? "text-white" : "")}>
+                              {row.label}
+                            </a>
+                          ) : row.key === "analytics" && isString ? (
+                            <a href="#analytics-preview" className={cn("underline underline-offset-2 decoration-dotted hover:opacity-80", isPopular ? "text-white" : "")}>
+                              {val}
+                            </a>
                           ) : isString ? val : row.label}
                         </span>
                       </li>
@@ -354,6 +673,15 @@ export default function PricingPage() {
           </div>
         </div>
       </section>
+
+      {/* Storefront banner callout */}
+      <StorefrontBannerSection />
+
+      {/* Search placement callout */}
+      <SearchPlacementSection />
+
+      {/* Analytics preview callout */}
+      <AnalyticsDashboardSection />
 
       {/* Digest callout */}
       <section id="weekly-digest" className="px-4 pb-16">
