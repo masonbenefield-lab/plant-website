@@ -9,6 +9,7 @@ import { Star, MapPin } from "lucide-react";
 import FollowButton from "@/components/follow-button";
 import ReportButton from "@/components/report-button";
 import ShareButton from "@/components/share-button";
+import { MessageButton } from "@/components/message-button";
 import RateSellerForm from "@/app/orders/rate-seller-form";
 import { StorefrontListings, StorefrontAuctions } from "./storefront-listings";
 
@@ -158,6 +159,9 @@ export default async function SellerStorefront({
                 initialFollowing={isFollowing}
                 initialCount={followerCount ?? 0}
               />
+              {user && user.id !== profile.id && (
+                <MessageButton recipientId={profile.id} />
+              )}
               {user && user.id !== profile.id && (
                 <ReportButton
                   userId={user.id}

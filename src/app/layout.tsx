@@ -31,13 +31,14 @@ export default async function RootLayout({
   } = await supabase.auth.getUser();
 
   let profile = null;
+  let unreadMessages = 0;
   if (user) {
-    const { data } = await supabase
-      .from("profiles")
-      .select("username, avatar_url, is_admin")
-      .eq("id", user.id)
-      .single();
+    const [{ data }, { count }] = await Promise.all([
+      supabase.from("profiles").select("username, avatar_url, is_admin").eq("id", user.id).single(),
+      supabase.from("messages").select("id", { count: "exact", head: true }).is("read_at", null).neq("sender_id", user.id),
+    ]);
     profile = data;
+    unreadMessages = count ?? 0;
   }
 
   return (
@@ -53,6 +54,7 @@ export default async function RootLayout({
               avatarUrl={profile?.avatar_url}
               username={profile?.username}
               isAdmin={profile?.is_admin ?? false}
+              unreadMessages={unreadMessages}
             />
             <main className="flex-1">{children}</main>
             <Footer />

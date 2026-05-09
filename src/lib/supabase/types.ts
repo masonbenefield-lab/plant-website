@@ -602,6 +602,53 @@ export interface Database {
         Relationships: [];
       };
 
+      conversations: {
+        Row: {
+          id: string;
+          participant_a: string;
+          participant_b: string;
+          last_message_at: string | null;
+          last_message_preview: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          participant_a: string;
+          participant_b: string;
+          last_message_at?: string | null;
+          last_message_preview?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          last_message_at?: string | null;
+          last_message_preview?: string | null;
+        };
+        Relationships: [];
+      };
+
+      messages: {
+        Row: {
+          id: string;
+          conversation_id: string;
+          sender_id: string;
+          body: string;
+          read_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          conversation_id: string;
+          sender_id: string;
+          body: string;
+          read_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          read_at?: string | null;
+        };
+        Relationships: [];
+      };
+
       garden_plants: {
         Row: {
           id: string;

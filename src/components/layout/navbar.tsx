@@ -15,7 +15,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Search, Heart, Package, Rss, Sprout } from "lucide-react";
+import { Search, Heart, Package, Rss, Sprout, MessageSquare } from "lucide-react";
 import { CartButton } from "@/components/cart-drawer";
 import type { User } from "@supabase/supabase-js";
 
@@ -24,9 +24,10 @@ interface NavbarProps {
   avatarUrl?: string | null;
   username?: string | null;
   isAdmin?: boolean;
+  unreadMessages?: number;
 }
 
-export default function Navbar({ user, avatarUrl, username, isAdmin }: NavbarProps) {
+export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessages = 0 }: NavbarProps) {
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -88,6 +89,14 @@ export default function Navbar({ user, avatarUrl, username, isAdmin }: NavbarPro
                 <Link href="/garden" className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="My Garden">
                   <Sprout size={17} />
                 </Link>
+                <Link href="/messages" className="relative p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="Messages">
+                  <MessageSquare size={17} />
+                  {unreadMessages > 0 && (
+                    <span className="absolute top-0 right-0 w-3.5 h-3.5 rounded-full bg-green-600 text-white text-[9px] font-bold flex items-center justify-center">
+                      {unreadMessages > 9 ? "9+" : unreadMessages}
+                    </span>
+                  )}
+                </Link>
                 <CartButton />
               </div>
             )}
@@ -108,6 +117,7 @@ export default function Navbar({ user, avatarUrl, username, isAdmin }: NavbarPro
                   <DropdownMenuItem><Link href="/wishlist" className="block w-full">Wishlist</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href="/orders" className="block w-full">My Purchases</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href="/feed" className="block w-full">Feed</Link></DropdownMenuItem>
+                  <DropdownMenuItem><Link href="/messages" className="block w-full">Messages{unreadMessages > 0 ? ` (${unreadMessages})` : ""}</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href="/garden" className="block w-full">My Garden</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href={`/sellers/${username}`} className="block w-full">My Storefront</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href="/account" className="block w-full">Account Settings</Link></DropdownMenuItem>
@@ -178,6 +188,7 @@ export default function Navbar({ user, avatarUrl, username, isAdmin }: NavbarPro
               <MobileLink href="/dashboard/inventory" onClick={closeMenu}>Inventory</MobileLink>
               <MobileLink href="/wishlist" onClick={closeMenu}>Wishlist</MobileLink>
               <MobileLink href="/orders" onClick={closeMenu}>My Purchases</MobileLink>
+              <MobileLink href="/messages" onClick={closeMenu}>Messages{unreadMessages > 0 ? ` (${unreadMessages})` : ""}</MobileLink>
               <MobileLink href="/garden" onClick={closeMenu}>My Garden</MobileLink>
               <MobileLink href={`/sellers/${username}`} onClick={closeMenu}>My Storefront</MobileLink>
               <MobileLink href="/account" onClick={closeMenu}>Account Settings</MobileLink>
