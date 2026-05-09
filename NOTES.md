@@ -638,3 +638,38 @@ ALTER TABLE profiles ADD COLUMN IF NOT EXISTS last_reengagement_sent timestamptz
 - `STRIPE_GROWER_ANNUAL_PRICE_ID` — Stripe price ID for Grower annual plan
 - `STRIPE_NURSERY_PRICE_ID` — Stripe price ID for Nursery monthly plan
 - `STRIPE_NURSERY_ANNUAL_PRICE_ID` — Stripe price ID for Nursery annual plan
+
+---
+
+## 2026-05-09 — Bug fixes (code trace) + pricing page improvements
+
+### Critical bugs fixed
+- `src/app/api/stripe/checkout/route.ts` — Moved listing stock decrement before PaymentIntent creation using `.gte("quantity", qty)` atomic conditional update; rolls back on PI or order failure
+- `src/app/api/stripe/cart-checkout/route.ts` — Same atomic decrement pattern for cart orders with per-item rollback array; rolls back all decrements on any failure
+- `src/app/api/stripe/webhook/route.ts` — Added `restoreListingStock` helper; `payment_intent.payment_failed` now restores listing + inventory quantities (from PI metadata for single listing, from `cart_items` for cart orders) before deleting the pending order
+
+### Medium bugs fixed
+- `src/app/api/stripe/checkout/route.ts` + `src/app/api/stripe/cart-checkout/route.ts` — Block seller from purchasing their own listing (returns 400)
+- `src/app/api/ratings/route.ts` — Added server-side validation: score must be whole number 1–5, comment max 1000 chars, photos max 5
+- `src/app/api/orders/update-tracking/route.ts` — Only sets `status: "shipped"` when a real tracking number is provided AND order is currently `"paid"`; returns `notified` flag to client
+- `src/app/dashboard/orders/tracking-input.tsx` — Toast shows "buyer notified" only when API confirms email was sent
+- `src/app/api/orders/update-status/route.ts` — Enforces forward-only status progression; blocks backward transitions
+- `src/app/dashboard/orders/order-status-select.tsx` — Dropdown now only shows `shipped`/`delivered`, filtered to forward options; read-only label when fully delivered
+
+### Minor bugs fixed
+- `src/app/shop/[id]/buy-button.tsx` — Replaced manual loading state with `useTransition`; loading auto-resets on navigation success or failure
+- `src/app/api/stripe/checkout/route.ts` — Sold-out listings now return "This item is sold out" (410) instead of generic "Listing not found" (404)
+- `src/app/orders/confirmed/page.tsx` — Confirmation copy is now status-aware; shows "payment is being confirmed" if webhook hasn't fired yet
+- `src/app/api/orders/update-status/route.ts` — Blocks `"delivered"` status if order has no tracking number
+
+### Features / changes
+- `src/lib/plan-limits.ts` — Nursery plan photo limit changed from unlimited (`null`) to 20
+- `src/app/pricing/page.tsx` — Updated Nursery photo copy to "Up to 20 photos per listing"
+- `src/app/account/account-form.tsx` — Updated Nursery plan description to reflect 20-photo cap
+- `src/app/pricing/page.tsx` — Added three new interactive callout sections: Custom Storefront Banner (before/after comparison), Priority Search Placement (mock search grid with priority badges), Full Sales Analytics (plan breakdown + live dashboard mockup with bar chart, top performers, repeat buyer rate, top states). All three wired as clickable anchor links from the pricing feature list.
+
+### SQL migrations required
+- None
+
+### Environment variables added or changed
+- None
