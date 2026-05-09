@@ -21,6 +21,7 @@ export default async function DashboardPage() {
     { count: listingCount },
     { count: auctionCount },
     { count: followerCount },
+    { count: inventoryCount },
     { data: paidOrders },
     { data: revenueOrders },
     { data: thisMonthOrders },
@@ -30,6 +31,7 @@ export default async function DashboardPage() {
     supabase.from("listings").select("*", { count: "exact", head: true }).eq("seller_id", user.id).eq("status", "active"),
     supabase.from("auctions").select("*", { count: "exact", head: true }).eq("seller_id", user.id).eq("status", "active"),
     supabase.from("follows").select("*", { count: "exact", head: true }).eq("seller_id", user.id),
+    supabase.from("inventory").select("*", { count: "exact", head: true }).eq("seller_id", user.id),
     supabase.from("orders").select("id, amount_cents, created_at, listing_id, auction_id, buyer_id, shipping_address").eq("seller_id", user.id).eq("status", "paid").order("created_at", { ascending: false }).limit(5),
     supabase.from("orders").select("amount_cents").eq("seller_id", user.id).in("status", ["paid", "shipped", "delivered"]),
     supabase.from("orders").select("amount_cents").eq("seller_id", user.id).in("status", ["paid", "shipped", "delivered"]).gte("created_at", startOfThisMonth),
@@ -86,12 +88,15 @@ export default async function DashboardPage() {
   }
 
   // Onboarding checklist
+  const hasListing = (listingCount ?? 0) > 0 || (auctionCount ?? 0) > 0;
   const checks = {
-    profile: !!(profile?.bio && profile?.avatar_url),
-    listing: (listingCount ?? 0) > 0 || (auctionCount ?? 0) > 0,
-    stripe: !!profile?.stripe_onboarded,
+    profile:    !!(profile?.bio && profile?.avatar_url),
+    inventory:  (inventoryCount ?? 0) > 0,
+    listing:    hasListing,
+    stripe:     !!profile?.stripe_onboarded,
+    storefront: !!profile?.username && hasListing,
   };
-  const allDone = checks.profile && checks.listing && checks.stripe;
+  const allDone = Object.values(checks).every(Boolean);
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-10 space-y-8">
@@ -116,9 +121,18 @@ export default async function DashboardPage() {
             <CardTitle className="text-base text-green-800">Get your shop ready</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            <CheckItem done={checks.profile} label="Complete your profile" href="/account" hint="Add a bio and profile photo so buyers trust you" />
-            <CheckItem done={checks.listing} label="Add your first item to inventory" href="/dashboard/inventory" hint="Head to your Inventory page — confused? Click the ? next to the Inventory heading for a walkthrough" />
-            <CheckItem done={checks.stripe} label="Connect your bank account" href="/account#seller-payments" hint="Required to receive payments via Stripe" />
+            <CheckItem done={checks.profile}    label="Complete your profile"           href="/account"                  hint="Add a bio and profile photo so buyers trust you" />
+            <CheckItem done={checks.inventory}  label="Add your first item to inventory" href="/dashboard/inventory"       hint="Everything starts in inventory — add your first plant here" />
+            <CheckItem done={checks.listing}    label="Create your first listing or auction" href="/dashboard/inventory"  hint="From inventory, list a plant at a fixed price or start a timed auction" />
+            <CheckItem done={checks.stripe}     label="Connect your bank account"        href="/account#seller-payments"  hint="Required to receive payments via Stripe" />
+            <CheckItem
+              done={checks.storefront}
+              label="Preview your storefront"
+              href={profile?.username ? `/sellers/${profile.username}` : "/account"}
+              hint="See how buyers discover and shop your store — share the link when you're ready"
+              external={!!profile?.username}
+              doneHref={profile?.username ? `/sellers/${profile.username}` : undefined}
+            />
           </CardContent>
         </Card>
       )}
@@ -226,7 +240,12 @@ function StatCard({ label, value, highlight, sub, trend, href }: { label: string
   return card;
 }
 
-function CheckItem({ done, label, href, hint }: { done: boolean; label: string; href: string; hint: string }) {
+function CheckItem({ done, label, href, hint, external, doneHref }: {
+  done: boolean; label: string; href: string; hint: string;
+  external?: boolean; doneHref?: string;
+}) {
+  const linkTarget = external ? "_blank" : undefined;
+  const linkRel    = external ? "noopener noreferrer" : undefined;
   return (
     <div className="flex items-start gap-3">
       <div className={cn("mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold", done ? "bg-green-600 text-white" : "border-2 border-green-400 text-green-700")}>
@@ -234,9 +253,15 @@ function CheckItem({ done, label, href, hint }: { done: boolean; label: string; 
       </div>
       <div>
         {done ? (
-          <p className="text-sm font-medium text-green-800 line-through opacity-60">{label}</p>
+          doneHref ? (
+            <Link href={doneHref} target={linkTarget} rel={linkRel} className="text-sm font-medium text-green-800/60 line-through hover:text-green-800 hover:no-underline transition-colors">
+              {label}
+            </Link>
+          ) : (
+            <p className="text-sm font-medium text-green-800 line-through opacity-60">{label}</p>
+          )
         ) : (
-          <Link href={href} className="text-sm font-medium text-green-800 hover:underline">{label}</Link>
+          <Link href={href} target={linkTarget} rel={linkRel} className="text-sm font-medium text-green-800 hover:underline">{label}</Link>
         )}
         {!done && <p className="text-xs text-green-700/70 mt-0.5">{hint}</p>}
       </div>
