@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
+import { GardenVisibilityToggle } from "@/components/garden/garden-visibility-toggle";
 import type { GardenPlantStatus } from "@/lib/supabase/types";
 
 const STATUS_LABEL: Record<GardenPlantStatus, string> = {
@@ -34,6 +35,12 @@ export default async function GardenPage({
 
   const { status } = await searchParams;
 
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("garden_public")
+    .eq("id", user.id)
+    .single();
+
   let query = supabase
     .from("garden_plants")
     .select("id, name, variety, status, location, planted_at, images")
@@ -56,9 +63,12 @@ export default async function GardenPage({
             {total} plant{total !== 1 ? "s" : ""} tracked
           </p>
         </div>
-        <Link href="/garden/new" className={cn(buttonVariants(), "bg-green-700 hover:bg-green-800")}>
-          + Add Plant
-        </Link>
+        <div className="flex items-center gap-2">
+          <GardenVisibilityToggle initialPublic={profile?.garden_public ?? false} />
+          <Link href="/garden/new" className={cn(buttonVariants(), "bg-green-700 hover:bg-green-800")}>
+            + Add Plant
+          </Link>
+        </div>
       </div>
 
       {/* Status filter chips */}

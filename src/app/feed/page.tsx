@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import FeedUpdates from "@/components/feed-updates";
 import FeedList from "./feed-list";
+import { CareReminders } from "./care-reminders";
 
 export default async function FeedPage() {
   const supabase = await createClient();
@@ -40,6 +41,61 @@ export default async function FeedPage() {
     : [{ data: [] }, { data: [] }, { data: [] }];
 
   const sellerMap = Object.fromEntries((sellers ?? []).map((s) => [s.id, s]));
+
+  // ── Today's care reminders ──────────────────────────────────────────────
+  const { data: gardenPlants } = await supabase
+    .from("garden_plants")
+    .select("id, name, variety, water_interval_days, fertilize_interval_days, repot_interval_days, prune_interval_days")
+    .eq("user_id", user.id)
+    .or("water_interval_days.not.is.null,fertilize_interval_days.not.is.null,repot_interval_days.not.is.null,prune_interval_days.not.is.null");
+
+  const plantIds = (gardenPlants ?? []).map((p) => p.id);
+  const { data: lastEvents } = plantIds.length
+    ? await supabase
+        .from("garden_events")
+        .select("plant_id, event_type, event_date")
+        .in("plant_id", plantIds)
+        .in("event_type", ["watered", "fertilized", "repotted", "pruned"])
+        .order("event_date", { ascending: false })
+    : { data: [] };
+
+  // Build map: plantId -> { eventType -> lastDate }
+  const lastEventMap: Record<string, Record<string, Date>> = {};
+  for (const ev of lastEvents ?? []) {
+    if (!lastEventMap[ev.plant_id]) lastEventMap[ev.plant_id] = {};
+    if (!lastEventMap[ev.plant_id][ev.event_type]) {
+      lastEventMap[ev.plant_id][ev.event_type] = new Date(ev.event_date);
+    }
+  }
+
+  type CareItem = { plantId: string; plantName: string; careType: string; daysSince: number; interval: number };
+  const today = new Date();
+  const careItems: CareItem[] = [];
+
+  for (const plant of gardenPlants ?? []) {
+    const checks: { type: string; interval: number | null; eventKey: string }[] = [
+      { type: "Water", interval: plant.water_interval_days, eventKey: "watered" },
+      { type: "Fertilize", interval: plant.fertilize_interval_days, eventKey: "fertilized" },
+      { type: "Repot", interval: plant.repot_interval_days, eventKey: "repotted" },
+      { type: "Prune", interval: plant.prune_interval_days, eventKey: "pruned" },
+    ];
+    for (const { type, interval, eventKey } of checks) {
+      if (!interval) continue;
+      const last = lastEventMap[plant.id]?.[eventKey];
+      const daysSince = last
+        ? Math.floor((today.getTime() - last.getTime()) / 86400000)
+        : interval; // treat as due if never done
+      if (daysSince >= interval) {
+        careItems.push({
+          plantId: plant.id,
+          plantName: plant.variety ? `${plant.name} — ${plant.variety}` : plant.name,
+          careType: type,
+          daysSince,
+          interval,
+        });
+      }
+    }
+  }
 
   type FeedItem = {
     id: string;
@@ -87,6 +143,7 @@ export default async function FeedPage() {
   return (
     <div className="max-w-3xl mx-auto px-4 py-10">
       <FeedUpdates sellerIds={sellerIds} />
+      {careItems.length > 0 && <CareReminders items={careItems} />}
       <h1 className="text-2xl font-bold mb-2">Feed</h1>
       <p className="text-muted-foreground text-sm mb-8">
         Recent listings from {sellerIds.length} seller{sellerIds.length !== 1 ? "s" : ""} you follow

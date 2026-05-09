@@ -48,6 +48,10 @@ interface GardenFormProps {
     source_type: string | null;
     notes: string | null;
     images: string[];
+    water_interval_days: number | null;
+    fertilize_interval_days: number | null;
+    repot_interval_days: number | null;
+    prune_interval_days: number | null;
   };
 }
 
@@ -67,6 +71,10 @@ export function GardenForm({ mode, plant }: GardenFormProps) {
   const [sourceType, setSourceType] = useState<string>(plant?.source_type ?? "");
   const [notes, setNotes] = useState(plant?.notes ?? "");
   const [images, setImages] = useState<string[]>(plant?.images ?? []);
+  const [waterInterval, setWaterInterval] = useState(plant?.water_interval_days?.toString() ?? "");
+  const [fertilizeInterval, setFertilizeInterval] = useState(plant?.fertilize_interval_days?.toString() ?? "");
+  const [repotInterval, setRepotInterval] = useState(plant?.repot_interval_days?.toString() ?? "");
+  const [pruneInterval, setPruneInterval] = useState(plant?.prune_interval_days?.toString() ?? "");
   const [uploading, setUploading] = useState(false);
 
   async function handlePhotoUpload(files: FileList) {
@@ -120,6 +128,10 @@ export function GardenForm({ mode, plant }: GardenFormProps) {
         source_type: (sourceType || null) as "nursery" | "purchase" | "trade" | "propagation" | "gift" | null,
         notes: notes.trim() || null,
         images,
+        water_interval_days: waterInterval ? parseInt(waterInterval) : null,
+        fertilize_interval_days: fertilizeInterval ? parseInt(fertilizeInterval) : null,
+        repot_interval_days: repotInterval ? parseInt(repotInterval) : null,
+        prune_interval_days: pruneInterval ? parseInt(pruneInterval) : null,
       };
 
       if (mode === "add") {
@@ -273,6 +285,17 @@ export function GardenForm({ mode, plant }: GardenFormProps) {
         </div>
       </div>
 
+      {/* Care schedule */}
+      <div className="space-y-2">
+        <Label>Care reminders <span className="text-muted-foreground font-normal text-xs">(optional — shows in your feed and monthly email)</span></Label>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <IntervalInput label="💧 Water every" value={waterInterval} onChange={setWaterInterval} />
+          <IntervalInput label="🌿 Fertilize every" value={fertilizeInterval} onChange={setFertilizeInterval} />
+          <IntervalInput label="🪴 Repot every" value={repotInterval} onChange={setRepotInterval} />
+          <IntervalInput label="✂️ Prune every" value={pruneInterval} onChange={setPruneInterval} />
+        </div>
+      </div>
+
       {/* Notes */}
       <div className="space-y-1.5">
         <Label htmlFor="notes">Notes</Label>
@@ -304,5 +327,25 @@ export function GardenForm({ mode, plant }: GardenFormProps) {
         </Button>
       </div>
     </form>
+  );
+}
+
+function IntervalInput({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <div className="space-y-1">
+      <Label className="text-xs text-muted-foreground">{label}</Label>
+      <div className="flex items-center gap-1.5">
+        <Input
+          type="number"
+          min={1}
+          max={365}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="—"
+          className="w-16 text-center"
+        />
+        <span className="text-xs text-muted-foreground">days</span>
+      </div>
+    </div>
   );
 }

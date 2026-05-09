@@ -27,6 +27,7 @@ export interface Database {
           is_admin: boolean;
           plan: "seedling" | "grower" | "nursery";
           show_follower_count: boolean;
+          garden_public: boolean;
           shipping_days: number | null;
           vacation_mode: boolean;
           vacation_until: string | null;
@@ -54,6 +55,7 @@ export interface Database {
           is_admin?: boolean;
           plan?: "seedling" | "grower" | "nursery";
           show_follower_count?: boolean;
+          garden_public?: boolean;
           shipping_days?: number | null;
           vacation_mode?: boolean;
           vacation_until?: string | null;
@@ -82,6 +84,7 @@ export interface Database {
           is_admin?: boolean;
           plan?: "seedling" | "grower" | "nursery";
           show_follower_count?: boolean;
+          garden_public?: boolean;
           shipping_days?: number | null;
           vacation_mode?: boolean;
           vacation_until?: string | null;
@@ -663,6 +666,10 @@ export interface Database {
           source_listing_id: string | null;
           notes: string | null;
           images: string[];
+          water_interval_days: number | null;
+          fertilize_interval_days: number | null;
+          repot_interval_days: number | null;
+          prune_interval_days: number | null;
           created_at: string;
         };
         Insert: {
@@ -678,6 +685,10 @@ export interface Database {
           source_listing_id?: string | null;
           notes?: string | null;
           images?: string[];
+          water_interval_days?: number | null;
+          fertilize_interval_days?: number | null;
+          repot_interval_days?: number | null;
+          prune_interval_days?: number | null;
           created_at?: string;
         };
         Update: {
@@ -691,6 +702,10 @@ export interface Database {
           source_listing_id?: string | null;
           notes?: string | null;
           images?: string[];
+          water_interval_days?: number | null;
+          fertilize_interval_days?: number | null;
+          repot_interval_days?: number | null;
+          prune_interval_days?: number | null;
         };
         Relationships: [];
       };
