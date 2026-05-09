@@ -1,0 +1,57 @@
+import { notFound, redirect } from "next/navigation";
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
+import { GardenForm } from "@/components/garden/garden-form";
+import { ChevronLeft } from "lucide-react";
+import type { GardenPlantStatus } from "@/lib/supabase/types";
+
+export default async function EditGardenPlantPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const { id } = await params;
+
+  const { data: plant } = await supabase
+    .from("garden_plants")
+    .select("id, name, variety, status, location, planted_at, source_name, source_type, notes, images")
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .single();
+
+  if (!plant) notFound();
+
+  return (
+    <div className="max-w-2xl mx-auto px-4 py-10 space-y-6">
+      <div>
+        <Link
+          href={`/garden/${plant.id}`}
+          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4"
+        >
+          <ChevronLeft size={16} />
+          {plant.name}
+        </Link>
+        <h1 className="text-2xl font-bold">Edit plant</h1>
+      </div>
+      <GardenForm
+        mode="edit"
+        plant={{
+          id: plant.id,
+          name: plant.name,
+          variety: plant.variety,
+          status: plant.status as GardenPlantStatus,
+          location: plant.location,
+          planted_at: plant.planted_at,
+          source_name: plant.source_name,
+          source_type: plant.source_type,
+          notes: plant.notes,
+          images: plant.images ?? [],
+        }}
+      />
+    </div>
+  );
+}

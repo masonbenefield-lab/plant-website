@@ -3,6 +3,8 @@ export type Json = string | number | boolean | null | { [key: string]: Json } | 
 export type ListingStatus = "active" | "paused" | "sold_out";
 export type AuctionStatus = "active" | "ended" | "cancelled" | "scheduled";
 export type OrderStatus = "pending" | "paid" | "shipped" | "delivered" | "refunded";
+export type GardenPlantStatus = "thriving" | "growing" | "dormant" | "struggling" | "dead";
+export type GardenEventType = "watered" | "fertilized" | "repotted" | "pruned" | "treated" | "harvested" | "note";
 
 export interface Database {
   public: {
@@ -597,6 +599,79 @@ export interface Database {
           created_at?: string;
         };
         Update: Record<string, never>;
+        Relationships: [];
+      };
+
+      garden_plants: {
+        Row: {
+          id: string;
+          user_id: string;
+          name: string;
+          variety: string | null;
+          status: GardenPlantStatus;
+          location: string | null;
+          planted_at: string | null;
+          source_name: string | null;
+          source_type: "nursery" | "purchase" | "trade" | "propagation" | "gift" | null;
+          source_listing_id: string | null;
+          notes: string | null;
+          images: string[];
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          name: string;
+          variety?: string | null;
+          status?: GardenPlantStatus;
+          location?: string | null;
+          planted_at?: string | null;
+          source_name?: string | null;
+          source_type?: "nursery" | "purchase" | "trade" | "propagation" | "gift" | null;
+          source_listing_id?: string | null;
+          notes?: string | null;
+          images?: string[];
+          created_at?: string;
+        };
+        Update: {
+          name?: string;
+          variety?: string | null;
+          status?: GardenPlantStatus;
+          location?: string | null;
+          planted_at?: string | null;
+          source_name?: string | null;
+          source_type?: "nursery" | "purchase" | "trade" | "propagation" | "gift" | null;
+          source_listing_id?: string | null;
+          notes?: string | null;
+          images?: string[];
+        };
+        Relationships: [];
+      };
+
+      garden_events: {
+        Row: {
+          id: string;
+          plant_id: string;
+          user_id: string;
+          event_type: GardenEventType;
+          event_date: string;
+          notes: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          plant_id: string;
+          user_id: string;
+          event_type: GardenEventType;
+          event_date: string;
+          notes?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          event_type?: GardenEventType;
+          event_date?: string;
+          notes?: string | null;
+        };
         Relationships: [];
       };
 

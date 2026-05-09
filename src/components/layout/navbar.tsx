@@ -15,7 +15,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Search, Heart, Package, Rss } from "lucide-react";
+import { Search, Heart, Package, Rss, Sprout } from "lucide-react";
 import { CartButton } from "@/components/cart-drawer";
 import type { User } from "@supabase/supabase-js";
 
@@ -85,6 +85,9 @@ export default function Navbar({ user, avatarUrl, username, isAdmin }: NavbarPro
                 <Link href="/feed" className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="Feed">
                   <Rss size={17} />
                 </Link>
+                <Link href="/garden" className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="My Garden">
+                  <Sprout size={17} />
+                </Link>
                 <CartButton />
               </div>
             )}
@@ -105,6 +108,7 @@ export default function Navbar({ user, avatarUrl, username, isAdmin }: NavbarPro
                   <DropdownMenuItem><Link href="/wishlist" className="block w-full">Wishlist</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href="/orders" className="block w-full">My Purchases</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href="/feed" className="block w-full">Feed</Link></DropdownMenuItem>
+                  <DropdownMenuItem><Link href="/garden" className="block w-full">My Garden</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href={`/sellers/${username}`} className="block w-full">My Storefront</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href="/account" className="block w-full">Account Settings</Link></DropdownMenuItem>
                   {isAdmin && (
@@ -174,6 +178,7 @@ export default function Navbar({ user, avatarUrl, username, isAdmin }: NavbarPro
               <MobileLink href="/dashboard/inventory" onClick={closeMenu}>Inventory</MobileLink>
               <MobileLink href="/wishlist" onClick={closeMenu}>Wishlist</MobileLink>
               <MobileLink href="/orders" onClick={closeMenu}>My Purchases</MobileLink>
+              <MobileLink href="/garden" onClick={closeMenu}>My Garden</MobileLink>
               <MobileLink href={`/sellers/${username}`} onClick={closeMenu}>My Storefront</MobileLink>
               <MobileLink href="/account" onClick={closeMenu}>Account Settings</MobileLink>
               {isAdmin && <MobileLink href="/admin" onClick={closeMenu}>Admin Panel</MobileLink>}
