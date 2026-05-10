@@ -138,15 +138,13 @@ export default async function GardenPage({
                   </CardContent>
                 </Card>
               </Link>
-              {profile?.garden_public && (
-                <div className="absolute top-2 right-2 z-10">
-                  <PlantVisibilityToggle
-                    plantId={plant.id}
-                    initialPublic={plant.is_public ?? true}
-                    variant="icon"
-                  />
-                </div>
-              )}
+              <div className="absolute top-2 right-2 z-10">
+                <PlantVisibilityToggle
+                  plantId={plant.id}
+                  initialPublic={plant.is_public ?? true}
+                  variant="icon"
+                />
+              </div>
             </div>
           ))}
         </div>
