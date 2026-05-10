@@ -54,7 +54,7 @@ export default async function GardenPlantDetailPage({
       .single(),
     supabase
       .from("garden_events")
-      .select("id, event_type, event_date, notes, created_at")
+      .select("id, event_type, event_date, notes, photos, created_at")
       .eq("plant_id", id)
       .order("event_date", { ascending: false })
       .order("created_at", { ascending: false }),
@@ -138,7 +138,7 @@ export default async function GardenPlantDetailPage({
           {/* Event log */}
           <EventLog
             plantId={plant.id}
-            initialEvents={(events ?? []) as { id: string; event_type: GardenEventType; event_date: string; notes: string | null; created_at: string }[]}
+            initialEvents={(events ?? []) as { id: string; event_type: GardenEventType; event_date: string; notes: string | null; photos: string[]; created_at: string }[]}
           />
         </div>
 

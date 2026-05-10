@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,9 +23,11 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Loader2, Plus, Droplets, Leaf, FlowerIcon, Scissors, Syringe, Apple, StickyNote } from "lucide-react";
+import { Loader2, Plus, Droplets, Leaf, FlowerIcon, Scissors, Syringe, Apple, StickyNote, Upload, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { GardenEventType } from "@/lib/supabase/types";
+
+const MAX_EVENT_PHOTOS = 3;
 
 const EVENT_OPTIONS: { value: GardenEventType; label: string; icon: React.ReactNode; color: string }[] = [
   { value: "watered",     label: "Watered",     icon: <Droplets size={14} />,   color: "bg-blue-100 text-blue-700" },
@@ -43,6 +46,7 @@ interface Event {
   event_type: GardenEventType;
   event_date: string;
   notes: string | null;
+  photos: string[];
   created_at: string;
 }
 
@@ -59,11 +63,40 @@ export function EventLog({ plantId, initialEvents }: EventLogProps) {
   const [eventType, setEventType] = useState<GardenEventType>("watered");
   const [eventDate, setEventDate] = useState(new Date().toISOString().slice(0, 10));
   const [eventNotes, setEventNotes] = useState("");
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   function resetForm() {
     setEventType("watered");
     setEventDate(new Date().toISOString().slice(0, 10));
     setEventNotes("");
+    setPhotos([]);
+  }
+
+  async function handlePhotoUpload(files: FileList) {
+    if (photos.length >= MAX_EVENT_PHOTOS) {
+      toast.error(`Maximum ${MAX_EVENT_PHOTOS} photos per event`);
+      return;
+    }
+    const toUpload = Array.from(files).slice(0, MAX_EVENT_PHOTOS - photos.length);
+    setUploading(true);
+    const supabase = createClient();
+    const urls: string[] = [];
+    for (const file of toUpload) {
+      if (file.size > 8 * 1024 * 1024) {
+        toast.error(`${file.name} is too large (max 8 MB)`);
+        continue;
+      }
+      const ext = file.name.split(".").pop() ?? "jpg";
+      const path = `events/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error } = await supabase.storage.from("garden").upload(path, file);
+      if (error) { toast.error(`Failed to upload ${file.name}`); continue; }
+      const { data: { publicUrl } } = supabase.storage.from("garden").getPublicUrl(path);
+      urls.push(publicUrl);
+    }
+    setPhotos((prev) => [...prev, ...urls]);
+    setUploading(false);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -81,8 +114,9 @@ export function EventLog({ plantId, initialEvents }: EventLogProps) {
           event_type: eventType,
           event_date: eventDate,
           notes: eventNotes.trim() || null,
+          photos,
         })
-        .select("id, event_type, event_date, notes, created_at")
+        .select("id, event_type, event_date, notes, photos, created_at")
         .single();
 
       if (error) {
@@ -163,7 +197,44 @@ export function EventLog({ plantId, initialEvents }: EventLogProps) {
                 />
               </div>
 
-              <Button type="submit" disabled={isPending} className="w-full bg-green-700 hover:bg-green-800">
+              <div className="space-y-1.5">
+                <Label>Photos ({photos.length}/{MAX_EVENT_PHOTOS}) — optional</Label>
+                <div className="flex flex-wrap gap-2">
+                  {photos.map((url) => (
+                    <div key={url} className="relative w-20 h-20 rounded-lg overflow-hidden border group">
+                      <Image src={url} alt="Event photo" fill className="object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setPhotos((prev) => prev.filter((u) => u !== url))}
+                        className="absolute top-1 right-1 w-5 h-5 bg-black/60 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X size={11} className="text-white" />
+                      </button>
+                    </div>
+                  ))}
+                  {photos.length < MAX_EVENT_PHOTOS && (
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploading}
+                      className="w-20 h-20 rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center gap-1 text-muted-foreground hover:border-green-400 hover:text-green-700 transition-colors text-xs"
+                    >
+                      {uploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+                      {!uploading && <span>Add</span>}
+                    </button>
+                  )}
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => { if (e.target.files?.length) handlePhotoUpload(e.target.files); e.target.value = ""; }}
+                />
+              </div>
+
+              <Button type="submit" disabled={isPending || uploading} className="w-full bg-green-700 hover:bg-green-800">
                 {isPending ? <Loader2 size={14} className="animate-spin mr-2" /> : null}
                 Save event
               </Button>
@@ -198,6 +269,15 @@ export function EventLog({ plantId, initialEvents }: EventLogProps) {
                   </div>
                   {event.notes && (
                     <p className="text-sm text-muted-foreground mt-0.5 leading-snug">{event.notes}</p>
+                  )}
+                  {event.photos?.length > 0 && (
+                    <div className="flex gap-1.5 mt-1.5 flex-wrap">
+                      {event.photos.map((url, i) => (
+                        <div key={i} className="relative w-16 h-16 rounded overflow-hidden border">
+                          <Image src={url} alt="Event photo" fill className="object-cover" />
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
                 <button

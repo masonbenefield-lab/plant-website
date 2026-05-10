@@ -718,6 +718,7 @@ export interface Database {
           event_type: GardenEventType;
           event_date: string;
           notes: string | null;
+          photos: string[];
           created_at: string;
         };
         Insert: {
@@ -727,12 +728,14 @@ export interface Database {
           event_type: GardenEventType;
           event_date: string;
           notes?: string | null;
+          photos?: string[];
           created_at?: string;
         };
         Update: {
           event_type?: GardenEventType;
           event_date?: string;
           notes?: string | null;
+          photos?: string[];
         };
         Relationships: [];
       };
