@@ -28,7 +28,7 @@ export default async function DashboardPage() {
     { data: thisMonthOrders },
     { data: lastMonthOrders },
   ] = await Promise.all([
-    supabase.from("profiles").select("username, bio, avatar_url, stripe_onboarded, plan, garden_public, groundbreaker, groundbreaker_number").eq("id", user.id).single(),
+    supabase.from("profiles").select("username, bio, avatar_url, stripe_onboarded, plan, garden_public, groundbreaker, groundbreaker_number, ship_from_address").eq("id", user.id).single(),
     supabase.from("listings").select("*", { count: "exact", head: true }).eq("seller_id", user.id).eq("status", "active"),
     supabase.from("auctions").select("*", { count: "exact", head: true }).eq("seller_id", user.id).eq("status", "active"),
     supabase.from("follows").select("*", { count: "exact", head: true }).eq("seller_id", user.id),
@@ -93,6 +93,7 @@ export default async function DashboardPage() {
   const hasListing = (listingCount ?? 0) > 0 || (auctionCount ?? 0) > 0;
   const checks = {
     profile:    !!(profile?.bio && profile?.avatar_url),
+    shipping:   !!((profile?.ship_from_address as { street1?: string } | null)?.street1),
     inventory:  (inventoryCount ?? 0) > 0,
     listing:    hasListing,
     stripe:     !!profile?.stripe_onboarded,
@@ -134,6 +135,7 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent className="space-y-2">
             <CheckItem done={checks.profile}    label="Complete your profile"           href="/account"                  hint="Add a bio and profile photo so buyers trust you" />
+            <CheckItem done={checks.shipping}   label="Set up your ship-from address"    href="/account#shipping-settings" hint="Required so buyers get accurate shipping rates at checkout" />
             <CheckItem done={checks.inventory}  label="Add your first item to inventory" href="/dashboard/inventory"       hint="Everything starts in inventory — add your first plant here" />
             <CheckItem done={checks.listing}    label="Create your first listing or auction" href="/dashboard/inventory"  hint="From inventory, list a plant at a fixed price or start a timed auction" />
             <CheckItem done={checks.stripe}     label="Connect your bank account"        href="/account#seller-payments"  hint="Required to receive payments via Stripe" />

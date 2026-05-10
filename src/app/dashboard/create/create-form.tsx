@@ -18,7 +18,7 @@ import PotSizePicker from "@/components/pot-size-picker";
 import { findProhibitedWord, censorWord, logViolation } from "@/lib/profanity";
 import { getPlanLimits, type PlanLimits } from "@/lib/plan-limits";
 
-type SizeEntry = { id: number; potSize: string; quantity: string; listInShop: boolean; shopPrice: string; shopQuantity: string };
+type SizeEntry = { id: number; potSize: string; quantity: string; weightOz: string; listInShop: boolean; shopPrice: string; shopQuantity: string };
 
 let nextId = 1;
 
@@ -39,10 +39,10 @@ export default function CreateInventoryPage() {
   const [existingGroup, setExistingGroup] = useState<{ plant_name: string; count: number } | null>(null);
 
   // Multiple sizes — each becomes its own inventory row
-  const [sizes, setSizes] = useState<SizeEntry[]>([{ id: 0, potSize: "", quantity: "1", listInShop: false, shopPrice: "", shopQuantity: "" }]);
+  const [sizes, setSizes] = useState<SizeEntry[]>([{ id: 0, potSize: "", quantity: "1", weightOz: "", listInShop: false, shopPrice: "", shopQuantity: "" }]);
 
   function addSize() {
-    setSizes(prev => [...prev, { id: nextId++, potSize: "", quantity: "1", listInShop: false, shopPrice: "", shopQuantity: "" }]);
+    setSizes(prev => [...prev, { id: nextId++, potSize: "", quantity: "1", weightOz: "", listInShop: false, shopPrice: "", shopQuantity: "" }]);
   }
 
   function removeSize(id: number) {
@@ -154,6 +154,7 @@ export default function CreateInventoryPage() {
       images: imageUrls,
       category: category || "Other",
       pot_size: s.potSize || null,
+      shipping_weight_oz: s.weightOz ? Math.max(1, Math.round(parseFloat(s.weightOz))) : null,
     }));
 
     const { data: invRows, error: invErr } = await supabase
@@ -379,6 +380,22 @@ export default function CreateInventoryPage() {
                         onChange={(e) => updateSize(size.id, "quantity", e.target.value)}
                         className="max-w-[120px]"
                       />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs" htmlFor={`weight-${size.id}`}>
+                        Ship weight (oz) <span className="font-normal text-muted-foreground">(optional)</span>
+                      </Label>
+                      <Input
+                        id={`weight-${size.id}`}
+                        type="number"
+                        min={1}
+                        step={1}
+                        placeholder="e.g. 16"
+                        value={size.weightOz}
+                        onChange={(e) => updateSize(size.id, "weightOz", e.target.value)}
+                        className="max-w-[120px]"
+                      />
+                      <p className="text-xs text-muted-foreground">Used for live rate quotes at checkout</p>
                     </div>
                   </div>
                   {sizes.length > 1 && (

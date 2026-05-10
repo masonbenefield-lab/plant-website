@@ -827,3 +827,37 @@ CREATE POLICY "owner_all" ON garden_events FOR ALL USING (user_id = auth.uid());
 
 ### Environment variables added or changed
 - None
+
+---
+
+## 2026-05-10 — Full shipping system (Shippo integration)
+
+### Features built
+- **Shippo utility library** (`src/lib/shippo.ts`): `getShippingRates()` and `purchaseLabel()` using Shippo SDK v2.18.0
+- **Shipping rate step at checkout**: new "shipping" step in `checkout-form.tsx` between address entry and payment — calls `/api/shipping/rates`, shows seller-enabled USPS services with live prices, buyer selects rate
+- **Domestic-only enforcement**: `/api/shipping/rates` checks `seller.ship_from_address.country === buyer.country`; returns error if mismatched
+- **Shipping cost in PaymentIntent**: `/api/stripe/checkout` now adds `shippingCostCents` to the PaymentIntent amount (fee only taken on item price, not shipping)
+- **Buy Label button in orders dashboard**: `orders-client.tsx` shows "Buy Label" button for orders with `shippo_rate_id`; calls `/api/shipping/purchase-label`, auto-populates tracking number and shows "View label" link after purchase
+- **Ship-from address + services in account settings**: new "Shipping Settings" card with full address form + USPS service checkboxes; saved to `profiles.ship_from_address` and `profiles.shipping_services` via `/api/profile/update-shipping`
+- **Shipping weight on inventory**: `shipping_weight_oz` field added to create form (per-size) and edit modal in inventory dashboard
+
+### SQL migrations required
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS ship_from_address jsonb, ADD COLUMN IF NOT EXISTS shipping_services text[];
+ALTER TABLE inventory ADD COLUMN IF NOT EXISTS shipping_weight_oz integer;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS shipping_cost_cents integer, ADD COLUMN IF NOT EXISTS shipping_service text, ADD COLUMN IF NOT EXISTS shippo_rate_id text, ADD COLUMN IF NOT EXISTS shippo_transaction_id text, ADD COLUMN IF NOT EXISTS label_url text;
+
+### Environment variables
+- SHIPPO_API_KEY already in .env.local (test key). Add to Vercel env vars. Swap for live key when approved.
+
+### Files created/modified
+- src/lib/shippo.ts (new)
+- src/lib/supabase/types.ts
+- src/app/api/shipping/rates/route.ts (new)
+- src/app/api/shipping/purchase-label/route.ts (new)
+- src/app/api/profile/update-shipping/route.ts (new)
+- src/app/api/stripe/checkout/route.ts
+- src/app/checkout/checkout-form.tsx
+- src/app/dashboard/orders/orders-client.tsx
+- src/app/account/account-form.tsx
+- src/app/dashboard/create/create-form.tsx
+- src/app/dashboard/inventory/inventory-client.tsx

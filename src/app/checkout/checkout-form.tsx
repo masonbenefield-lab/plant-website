@@ -17,6 +17,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { centsToDisplay } from "@/lib/stripe";
 import { findProhibitedWord, censorWord, logViolation } from "@/lib/profanity";
+import { Loader2, Package } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
@@ -34,6 +36,16 @@ interface ShippingAddressData {
   name: string; line1: string; line2: string; city: string; state: string; zip: string; country: string;
 }
 
+interface ShippoRate {
+  objectId: string;
+  provider: string;
+  servicelevelName: string;
+  servicelevelToken: string;
+  amount: string;
+  currency: string;
+  estimatedDays: number | null;
+}
+
 interface CheckoutFormProps {
   listingId?: string;
   auctionId?: string;
@@ -45,11 +57,11 @@ interface CheckoutFormProps {
 
 function PaymentStep({
   clientSecret,
-  priceCents,
+  totalCents,
   onSuccess,
 }: {
   clientSecret: string;
-  priceCents: number;
+  totalCents: number;
   onSuccess: () => void;
 }) {
   const stripe = useStripe();
@@ -84,7 +96,7 @@ function PaymentStep({
         className="w-full bg-green-700 hover:bg-green-800"
         size="lg"
       >
-        {loading ? "Processing…" : `Pay ${centsToDisplay(priceCents)}`}
+        {loading ? "Processing…" : `Pay ${centsToDisplay(totalCents)}`}
       </Button>
     </form>
   );
@@ -94,10 +106,11 @@ const SAVED_ADDRESS_KEY = "checkout_saved_address";
 
 export default function CheckoutForm({ listingId, auctionId, offerId, priceCents, quantity = 1, savedAddress }: CheckoutFormProps) {
   const router = useRouter();
-  const [step, setStep] = useState<"address" | "payment">("address");
+  const [step, setStep] = useState<"address" | "shipping" | "payment">("address");
   const [clientSecret, setClientSecret] = useState("");
   const [orderId, setOrderId] = useState("");
   const [loading, setLoading] = useState(false);
+  const [fetchingRates, setFetchingRates] = useState(false);
   const submittingRef = useRef(false);
   const [saveAddress, setSaveAddress] = useState(true);
   const [isGift, setIsGift] = useState(false);
@@ -105,6 +118,9 @@ export default function CheckoutForm({ listingId, auctionId, offerId, priceCents
   const [address, setAddress] = useState<ShippingAddress>(
     savedAddress ?? { name: "", line1: "", line2: "", city: "", state: "", zip: "", country: "US" }
   );
+  const [rates, setRates] = useState<ShippoRate[]>([]);
+  const [selectedRate, setSelectedRate] = useState<ShippoRate | null>(null);
+  const [totalCents, setTotalCents] = useState(priceCents);
 
   // Fall back to localStorage if no server-side saved address
   useEffect(() => {
@@ -117,7 +133,6 @@ export default function CheckoutForm({ listingId, auctionId, offerId, priceCents
 
   async function handleAddressSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (submittingRef.current) return;
     if (isGift && giftMessage) {
       const hit = findProhibitedWord(giftMessage);
       if (hit) {
@@ -126,9 +141,60 @@ export default function CheckoutForm({ listingId, auctionId, offerId, priceCents
         return;
       }
     }
+    setFetchingRates(true);
+
+    const res = await fetch("/api/shipping/rates", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        listingId,
+        auctionId,
+        toAddress: {
+          name: address.name,
+          street1: address.line1,
+          street2: address.line2 || null,
+          city: address.city,
+          state: address.state,
+          zip: address.zip,
+          country: address.country,
+        },
+      }),
+    });
+
+    const data = await res.json();
+    setFetchingRates(false);
+
+    if (data.error) {
+      toast.error(data.error);
+      return;
+    }
+
+    setRates(data.rates ?? []);
+    setSelectedRate(data.rates?.[0] ?? null);
+    const firstRateCents = data.rates?.[0] ? Math.round(parseFloat(data.rates[0].amount) * 100) : 0;
+    setTotalCents(priceCents + firstRateCents);
+    setStep("shipping");
+
+    // Save address
+    if (saveAddress) {
+      fetch("/api/profile/save-address", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address }),
+      }).catch(() => {});
+      try { localStorage.setItem(SAVED_ADDRESS_KEY, JSON.stringify(address)); } catch { /* ignore */ }
+    } else {
+      try { localStorage.removeItem(SAVED_ADDRESS_KEY); } catch { /* ignore */ }
+    }
+  }
+
+  async function handleShippingSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selectedRate || submittingRef.current) return;
     submittingRef.current = true;
     setLoading(true);
 
+    const shippingCostCents = Math.round(parseFloat(selectedRate.amount) * 100);
     const res = await fetch("/api/stripe/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -140,6 +206,9 @@ export default function CheckoutForm({ listingId, auctionId, offerId, priceCents
         shippingAddress: isGift
           ? { ...address, is_gift: true, gift_message: giftMessage || null }
           : address,
+        shippingCostCents,
+        shippoRateId: selectedRate.objectId,
+        shippingService: selectedRate.servicelevelName,
       }),
     });
 
@@ -151,19 +220,9 @@ export default function CheckoutForm({ listingId, auctionId, offerId, priceCents
       return;
     }
 
-    // Save address to profile via API for cross-device persistence
-    if (saveAddress) {
-      fetch("/api/profile/save-address", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ address }),
-      }).catch(() => {});
-      try { localStorage.setItem(SAVED_ADDRESS_KEY, JSON.stringify(address)); } catch { /* ignore */ }
-    } else {
-      try { localStorage.removeItem(SAVED_ADDRESS_KEY); } catch { /* ignore */ }
-    }
     setClientSecret(data.clientSecret);
     setOrderId(data.orderId ?? "");
+    setTotalCents(priceCents + shippingCostCents);
     setStep("payment");
     setLoading(false);
   }
@@ -182,10 +241,96 @@ export default function CheckoutForm({ listingId, auctionId, offerId, priceCents
           <Elements stripe={stripePromise} options={{ clientSecret }}>
             <PaymentStep
               clientSecret={clientSecret}
-              priceCents={priceCents}
+              totalCents={totalCents}
               onSuccess={onPaymentSuccess}
             />
           </Elements>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (step === "shipping") {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Choose Shipping</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleShippingSubmit} className="space-y-4">
+            <div className="space-y-2">
+              {rates.map((rate) => {
+                const rateCents = Math.round(parseFloat(rate.amount) * 100);
+                const isSelected = selectedRate?.objectId === rate.objectId;
+                return (
+                  <label
+                    key={rate.objectId}
+                    className={cn(
+                      "flex items-center gap-4 rounded-lg border p-4 cursor-pointer transition-colors",
+                      isSelected ? "border-green-600 bg-green-50 dark:bg-green-900/20" : "hover:bg-muted"
+                    )}
+                    onClick={() => {
+                      setSelectedRate(rate);
+                      setTotalCents(priceCents + rateCents);
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="shipping-rate"
+                      value={rate.objectId}
+                      checked={isSelected}
+                      onChange={() => {
+                        setSelectedRate(rate);
+                        setTotalCents(priceCents + rateCents);
+                      }}
+                      className="accent-green-700"
+                    />
+                    <Package size={18} className="text-muted-foreground shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold">{rate.provider} — {rate.servicelevelName}</p>
+                      {rate.estimatedDays != null && (
+                        <p className="text-xs text-muted-foreground">Est. {rate.estimatedDays} business day{rate.estimatedDays !== 1 ? "s" : ""}</p>
+                      )}
+                    </div>
+                    <span className="text-sm font-semibold shrink-0">{centsToDisplay(rateCents)}</span>
+                  </label>
+                );
+              })}
+            </div>
+
+            <div className="rounded-lg border bg-muted/50 p-3 text-sm space-y-1">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Item{quantity > 1 ? `s (×${quantity})` : ""}</span>
+                <span>{centsToDisplay(priceCents)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Shipping</span>
+                <span>{selectedRate ? centsToDisplay(Math.round(parseFloat(selectedRate.amount) * 100)) : "—"}</span>
+              </div>
+              <div className="flex justify-between font-semibold border-t pt-1 mt-1">
+                <span>Total</span>
+                <span>{centsToDisplay(totalCents)}</span>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                onClick={() => setStep("address")}
+              >
+                Back
+              </Button>
+              <Button
+                type="submit"
+                disabled={loading || !selectedRate}
+                className="flex-1 bg-green-700 hover:bg-green-800"
+              >
+                {loading ? "Loading…" : "Continue to Payment"}
+              </Button>
+            </div>
+          </form>
         </CardContent>
       </Card>
     );
@@ -303,11 +448,13 @@ export default function CheckoutForm({ listingId, auctionId, offerId, priceCents
           </label>
           <Button
             type="submit"
-            disabled={loading}
+            disabled={fetchingRates}
             className="w-full bg-green-700 hover:bg-green-800 mt-2"
             size="lg"
           >
-            {loading ? "Loading…" : "Continue to Payment"}
+            {fetchingRates ? (
+              <span className="flex items-center gap-2"><Loader2 size={16} className="animate-spin" /> Fetching shipping rates…</span>
+            ) : "Continue"}
           </Button>
         </form>
       </CardContent>

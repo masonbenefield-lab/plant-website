@@ -281,6 +281,7 @@ export default function InventoryClient({
   const [editImages, setEditImages] = useState<string[]>([]);
   const [imageUploading, setImageUploading] = useState(false);
   const [editLowStockThreshold, setEditLowStockThreshold] = useState("");
+  const [editWeightOz, setEditWeightOz] = useState("");
   const [dragPhotoIdx, setDragPhotoIdx] = useState<number | null>(null);
 
   // Sold modal
@@ -407,6 +408,7 @@ export default function InventoryClient({
       setEditImages([...m.row.images]);
       setEditLowStockThreshold(m.row.low_stock_threshold != null ? String(m.row.low_stock_threshold) : "");
       setEditCostPrice(m.row.cost_cents != null ? String(m.row.cost_cents / 100) : "");
+      setEditWeightOz((m.row as { shipping_weight_oz?: number | null }).shipping_weight_oz != null ? String((m.row as { shipping_weight_oz?: number | null }).shipping_weight_oz) : "");
       setDragPhotoIdx(null);
       setSaveTemplateName("");
       // Load seller's templates
@@ -694,6 +696,7 @@ export default function InventoryClient({
       images: editImages,
       low_stock_threshold: editLowStockThreshold !== "" ? Number(editLowStockThreshold) : null,
       cost_cents: editCostPrice !== "" ? dollarsToCents(editCostPrice) : null,
+      shipping_weight_oz: editWeightOz !== "" ? Math.max(1, Math.round(parseFloat(editWeightOz))) : null,
     }).eq("id", modal.row.id);
     if (error) { toast.error(error.message); setSubmitting(false); return; }
     if (modal.row.listing_id) {
@@ -2164,6 +2167,19 @@ export default function InventoryClient({
                     placeholder="e.g. 3"
                   />
                   <p className="text-xs text-muted-foreground">Warn when available ≤ this</p>
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="edit-weight">Ship weight (oz) <span className="font-normal text-muted-foreground">(optional)</span></Label>
+                  <Input
+                    id="edit-weight"
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={editWeightOz}
+                    onChange={e => setEditWeightOz(e.target.value)}
+                    placeholder="e.g. 16"
+                  />
+                  <p className="text-xs text-muted-foreground">Used for live shipping quotes</p>
                 </div>
               </div>
               {/* Templates */}

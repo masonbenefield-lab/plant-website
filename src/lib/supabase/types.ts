@@ -39,6 +39,8 @@ export interface Database {
           last_reengagement_sent: string | null;
           groundbreaker: boolean;
           groundbreaker_number: number | null;
+          ship_from_address: Json | null;
+          shipping_services: string[] | null;
           deleted_at: string | null;
           created_at: string;
         };
@@ -69,6 +71,8 @@ export interface Database {
           last_reengagement_sent?: string | null;
           groundbreaker?: boolean;
           groundbreaker_number?: number | null;
+          ship_from_address?: Json | null;
+          shipping_services?: string[] | null;
           deleted_at?: string | null;
           created_at?: string;
         };
@@ -98,6 +102,8 @@ export interface Database {
           email_marketing_opt_in?: boolean;
           last_digest_sent?: string | null;
           last_reengagement_sent?: string | null;
+          ship_from_address?: Json | null;
+          shipping_services?: string[] | null;
           groundbreaker?: boolean;
           groundbreaker_number?: number | null;
           deleted_at?: string | null;
@@ -332,6 +338,11 @@ export interface Database {
           tracking_number: string | null;
           delivered_at: string | null;
           cart_items: { listing_id: string; plant_name: string; variety: string | null; quantity: number; price_cents: number }[] | null;
+          shipping_cost_cents: number | null;
+          shipping_service: string | null;
+          shippo_rate_id: string | null;
+          shippo_transaction_id: string | null;
+          label_url: string | null;
           created_at: string;
         };
         Insert: {
@@ -353,6 +364,9 @@ export interface Database {
           status?: OrderStatus;
           amount_cents: number;
           cart_items?: { listing_id: string; plant_name: string; variety: string | null; quantity: number; price_cents: number }[] | null;
+          shipping_cost_cents?: number | null;
+          shipping_service?: string | null;
+          shippo_rate_id?: string | null;
           created_at?: string;
         };
         Update: {
@@ -362,6 +376,11 @@ export interface Database {
           tracking_number?: string | null;
           delivered_at?: string | null;
           cart_items?: { listing_id: string; plant_name: string; variety: string | null; quantity: number; price_cents: number }[] | null;
+          shipping_cost_cents?: number | null;
+          shipping_service?: string | null;
+          shippo_rate_id?: string | null;
+          shippo_transaction_id?: string | null;
+          label_url?: string | null;
         };
         Relationships: [];
       };
@@ -383,6 +402,7 @@ export interface Database {
           notes: string | null;
           category: string | null;
           pot_size: string | null;
+          shipping_weight_oz: number | null;
           archived_at: string | null;
           created_at: string;
         };
@@ -403,6 +423,7 @@ export interface Database {
           notes?: string | null;
           category?: string | null;
           pot_size?: string | null;
+          shipping_weight_oz?: number | null;
           archived_at?: string | null;
           created_at?: string;
         };
@@ -421,6 +442,7 @@ export interface Database {
           notes?: string | null;
           category?: string | null;
           pot_size?: string | null;
+          shipping_weight_oz?: number | null;
           archived_at?: string | null;
         };
         Relationships: [];

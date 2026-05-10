@@ -47,6 +47,21 @@ export default function AccountForm({
   const [announcement, setAnnouncement] = useState((profile as { announcement?: string | null } | null)?.announcement ?? "");
   const [emailOptIn, setEmailOptIn] = useState(profile?.email_marketing_opt_in ?? false);
 
+  const rawShipFrom = profile?.ship_from_address as { name?: string; street1?: string; city?: string; state?: string; zip?: string; country?: string; phone?: string } | null;
+  const [shipFrom, setShipFrom] = useState({
+    name: rawShipFrom?.name ?? "",
+    street1: rawShipFrom?.street1 ?? "",
+    city: rawShipFrom?.city ?? "",
+    state: rawShipFrom?.state ?? "",
+    zip: rawShipFrom?.zip ?? "",
+    country: rawShipFrom?.country ?? "US",
+    phone: rawShipFrom?.phone ?? "",
+  });
+  const [shippingServices, setShippingServices] = useState<string[]>(
+    (profile?.shipping_services as string[] | null) ?? ["usps_ground_advantage", "usps_priority", "usps_priority_express"]
+  );
+  const [savingShipping, setSavingShipping] = useState(false);
+
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [deleting, setDeleting] = useState(false);
@@ -309,6 +324,29 @@ export default function AccountForm({
     const supabase = createClient();
     await supabase.auth.signOut();
     router.push("/");
+  }
+
+  async function saveShipping(e: React.FormEvent) {
+    e.preventDefault();
+    setSavingShipping(true);
+    const res = await fetch("/api/profile/update-shipping", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ship_from_address: shipFrom.street1.trim() ? shipFrom : null,
+        shipping_services: shippingServices.length ? shippingServices : null,
+      }),
+    });
+    const data = await res.json();
+    setSavingShipping(false);
+    if (data.error) toast.error(data.error);
+    else toast.success("Shipping settings saved");
+  }
+
+  function toggleService(token: string) {
+    setShippingServices((prev) =>
+      prev.includes(token) ? prev.filter((s) => s !== token) : [...prev, token]
+    );
   }
 
   return (
@@ -656,6 +694,83 @@ export default function AccountForm({
               </Button>
             </>
           )}
+        </CardContent>
+      </Card>
+
+      <Card id="shipping-settings">
+        <CardHeader>
+          <CardTitle>Shipping Settings</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={saveShipping} className="space-y-5">
+            <div>
+              <p className="text-sm font-medium mb-3">Ship-from address</p>
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <Label htmlFor="sf-name">Full Name / Business Name</Label>
+                  <Input id="sf-name" value={shipFrom.name} onChange={(e) => setShipFrom({ ...shipFrom, name: e.target.value })} placeholder="Jane's Nursery" />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="sf-street1">Street Address</Label>
+                  <Input id="sf-street1" value={shipFrom.street1} onChange={(e) => setShipFrom({ ...shipFrom, street1: e.target.value })} placeholder="123 Main St" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="sf-city">City</Label>
+                    <Input id="sf-city" value={shipFrom.city} onChange={(e) => setShipFrom({ ...shipFrom, city: e.target.value })} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="sf-state">State</Label>
+                    <Input id="sf-state" value={shipFrom.state} onChange={(e) => setShipFrom({ ...shipFrom, state: e.target.value })} maxLength={2} placeholder="TX" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="sf-zip">ZIP Code</Label>
+                    <Input id="sf-zip" value={shipFrom.zip} onChange={(e) => setShipFrom({ ...shipFrom, zip: e.target.value })} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="sf-country">Country</Label>
+                    <Input id="sf-country" value={shipFrom.country} onChange={(e) => setShipFrom({ ...shipFrom, country: e.target.value })} maxLength={2} placeholder="US" />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="sf-phone">Phone (optional)</Label>
+                  <Input id="sf-phone" type="tel" value={shipFrom.phone} onChange={(e) => setShipFrom({ ...shipFrom, phone: e.target.value })} placeholder="For carrier notifications" />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <p className="text-sm font-medium mb-1">Shipping services offered</p>
+              <p className="text-xs text-muted-foreground mb-3">Buyers will only see the services you enable. Rates are calculated live via USPS at checkout.</p>
+              <div className="space-y-2">
+                {[
+                  { token: "usps_ground_advantage", label: "USPS Ground Advantage", desc: "Most affordable — 2–5 business days" },
+                  { token: "usps_priority", label: "USPS Priority Mail", desc: "1–3 business days" },
+                  { token: "usps_priority_express", label: "USPS Priority Mail Express", desc: "Overnight — fastest option" },
+                ].map(({ token, label, desc }) => (
+                  <label key={token} className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={shippingServices.includes(token)}
+                      onChange={() => toggleService(token)}
+                      className="mt-0.5 accent-green-700"
+                    />
+                    <div>
+                      <p className="text-sm font-medium">{label}</p>
+                      <p className="text-xs text-muted-foreground">{desc}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">Select at least one service.</p>
+            </div>
+
+            <Button type="submit" disabled={savingShipping || shippingServices.length === 0} className="bg-green-700 hover:bg-green-800">
+              {savingShipping ? "Saving…" : "Save shipping settings"}
+            </Button>
+          </form>
         </CardContent>
       </Card>
 

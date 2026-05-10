@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { centsToDisplay } from "@/lib/stripe";
 import { Pagination } from "@/components/pagination";
@@ -10,6 +11,8 @@ import OrderStatusSelect from "./order-status-select";
 import TrackingInput from "./tracking-input";
 import { BulkOrderActions, OrderCheckbox } from "./bulk-order-actions";
 import type { OrderStatus } from "@/lib/supabase/types";
+import { toast } from "sonner";
+import { Printer } from "lucide-react";
 
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-100 text-yellow-800",
@@ -28,10 +31,65 @@ type OrderRow = {
   shipping_address: unknown;
   cart_items: unknown;
   tracking_number: string | null;
+  shippo_rate_id: string | null;
+  label_url: string | null;
+  shipping_cost_cents: number | null;
+  shipping_service: string | null;
 };
 
 type ItemRow = { id: string; plant_name: string; variety: string | null };
 type BuyerRow = { id: string; username: string };
+
+function BuyLabelButton({ orderId, labelUrl: initialLabelUrl }: { orderId: string; labelUrl: string | null }) {
+  const [loading, setLoading] = useState(false);
+  const [labelUrl, setLabelUrl] = useState(initialLabelUrl);
+
+  if (labelUrl) {
+    return (
+      <a
+        href={labelUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1.5 text-xs font-medium text-green-700 hover:text-green-800 hover:underline"
+      >
+        <Printer size={13} /> View label
+      </a>
+    );
+  }
+
+  async function handleBuyLabel() {
+    setLoading(true);
+    const res = await fetch("/api/shipping/purchase-label", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderId }),
+    });
+    const data = await res.json();
+    setLoading(false);
+    if (data.error) {
+      toast.error(data.error);
+      return;
+    }
+    setLabelUrl(data.labelUrl);
+    toast.success("Label purchased!", {
+      description: "Tracking number added. Click 'View label' to print.",
+    });
+    if (data.labelUrl) window.open(data.labelUrl, "_blank");
+  }
+
+  return (
+    <Button
+      size="sm"
+      variant="outline"
+      className="h-7 text-xs gap-1.5"
+      disabled={loading}
+      onClick={handleBuyLabel}
+    >
+      <Printer size={13} />
+      {loading ? "Purchasing…" : "Buy Label"}
+    </Button>
+  );
+}
 
 export default function OrdersClient({
   orders,
@@ -154,8 +212,18 @@ export default function OrdersClient({
                     </div>
                   </div>
                 </div>
-                <div className="mt-3 ml-7">
-                  <TrackingInput orderId={order.id} initialValue={order.tracking_number ?? null} />
+                <div className="mt-3 ml-7 space-y-2">
+                  {order.shipping_cost_cents && (
+                    <p className="text-xs text-muted-foreground">
+                      Shipping: {centsToDisplay(order.shipping_cost_cents)}{order.shipping_service ? ` · ${order.shipping_service}` : ""}
+                    </p>
+                  )}
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <TrackingInput orderId={order.id} initialValue={order.tracking_number ?? null} />
+                    {order.shippo_rate_id && (
+                      <BuyLabelButton orderId={order.id} labelUrl={order.label_url} />
+                    )}
+                  </div>
                 </div>
               </CardContent>
             </Card>

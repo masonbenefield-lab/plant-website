@@ -24,7 +24,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { listingId, auctionId, offerId, quantity: rawQty, shippingAddress } = body as {
+  const { listingId, auctionId, offerId, quantity: rawQty, shippingAddress, shippingCostCents, shippoRateId, shippingService } = body as {
     listingId?: string;
     auctionId?: string;
     offerId?: string;
@@ -38,6 +38,9 @@ export async function POST(request: Request) {
       zip: string;
       country: string;
     };
+    shippingCostCents?: number;
+    shippoRateId?: string;
+    shippingService?: string;
   };
 
   const quantity = Math.max(1, Math.floor(rawQty ?? 1));
@@ -100,8 +103,10 @@ export async function POST(request: Request) {
       const onSale = !!(listing.sale_price_cents && listing.sale_ends_at && new Date(listing.sale_ends_at) > new Date());
       effectivePriceCents = onSale ? listing.sale_price_cents! : listing.price_cents;
     }
-    const amountCents = effectivePriceCents * quantity;
-    const feeCents = Math.round(amountCents * (feePercent / 100));
+    const itemAmountCents = effectivePriceCents * quantity;
+    const shippingCents = Math.max(0, Math.round(shippingCostCents ?? 0));
+    const amountCents = itemAmountCents + shippingCents;
+    const feeCents = Math.round(itemAmountCents * (feePercent / 100));
 
     const admin = adminClient();
     const newListingQty = listing.quantity - quantity;
@@ -148,6 +153,9 @@ export async function POST(request: Request) {
         stripe_payment_intent_id: paymentIntent.id,
         shipping_address: shippingAddress,
         amount_cents: amountCents,
+        shipping_cost_cents: shippingCents || null,
+        shipping_service: shippingService ?? null,
+        shippo_rate_id: shippoRateId ?? null,
       })
       .select()
       .single();
@@ -223,8 +231,9 @@ export async function POST(request: Request) {
     }
 
     const feePercent = planFeePercent(sellerPlan?.plan, !!sellerPlan?.is_admin);
-    const amountCents = auction.current_bid_cents;
-    const feeCents = Math.round(amountCents * (feePercent / 100));
+    const auctionShippingCents = Math.max(0, Math.round(shippingCostCents ?? 0));
+    const amountCents = auction.current_bid_cents + auctionShippingCents;
+    const feeCents = Math.round(auction.current_bid_cents * (feePercent / 100));
 
     const paymentIntent = await getStripe().paymentIntents.create({
       amount: amountCents,
@@ -243,6 +252,9 @@ export async function POST(request: Request) {
         stripe_payment_intent_id: paymentIntent.id,
         shipping_address: shippingAddress,
         amount_cents: amountCents,
+        shipping_cost_cents: auctionShippingCents || null,
+        shipping_service: shippingService ?? null,
+        shippo_rate_id: shippoRateId ?? null,
       })
       .select()
       .single();
