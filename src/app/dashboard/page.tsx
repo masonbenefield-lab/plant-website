@@ -22,16 +22,18 @@ export default async function DashboardPage() {
     { count: auctionCount },
     { count: followerCount },
     { count: inventoryCount },
+    { count: gardenPlantCount },
     { data: paidOrders },
     { data: revenueOrders },
     { data: thisMonthOrders },
     { data: lastMonthOrders },
   ] = await Promise.all([
-    supabase.from("profiles").select("username, bio, avatar_url, stripe_onboarded, plan").eq("id", user.id).single(),
+    supabase.from("profiles").select("username, bio, avatar_url, stripe_onboarded, plan, garden_public").eq("id", user.id).single(),
     supabase.from("listings").select("*", { count: "exact", head: true }).eq("seller_id", user.id).eq("status", "active"),
     supabase.from("auctions").select("*", { count: "exact", head: true }).eq("seller_id", user.id).eq("status", "active"),
     supabase.from("follows").select("*", { count: "exact", head: true }).eq("seller_id", user.id),
     supabase.from("inventory").select("*", { count: "exact", head: true }).eq("seller_id", user.id),
+    supabase.from("garden_plants").select("*", { count: "exact", head: true }).eq("user_id", user.id),
     supabase.from("orders").select("id, amount_cents, created_at, listing_id, auction_id, buyer_id, shipping_address").eq("seller_id", user.id).eq("status", "paid").order("created_at", { ascending: false }).limit(5),
     supabase.from("orders").select("amount_cents").eq("seller_id", user.id).in("status", ["paid", "shipped", "delivered"]),
     supabase.from("orders").select("amount_cents").eq("seller_id", user.id).in("status", ["paid", "shipped", "delivered"]).gte("created_at", startOfThisMonth),
@@ -95,8 +97,11 @@ export default async function DashboardPage() {
     listing:    hasListing,
     stripe:     !!profile?.stripe_onboarded,
     storefront: !!profile?.username && hasListing,
+    garden:     (gardenPlantCount ?? 0) > 0 && !!profile?.garden_public,
   };
-  const allDone = Object.values(checks).every(Boolean);
+  // garden is optional — don't block allDone on it
+  const { garden: _garden, ...coreChecks } = checks;
+  const allDone = Object.values(coreChecks).every(Boolean);
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-10 space-y-8">
@@ -132,6 +137,12 @@ export default async function DashboardPage() {
               hint="See how buyers discover and shop your store — share the link when you're ready"
               external={!!profile?.username}
               doneHref={profile?.username ? `/sellers/${profile.username}` : undefined}
+            />
+            <CheckItem
+              done={checks.garden}
+              label="Share your garden on your storefront (optional)"
+              href="/garden"
+              hint="Add plants to My Garden and set it to public — visitors can browse your collection right from your storefront"
             />
           </CardContent>
         </Card>
