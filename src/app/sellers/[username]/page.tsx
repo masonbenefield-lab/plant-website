@@ -5,13 +5,31 @@ import { createClient } from "@/lib/supabase/server";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Star, MapPin } from "lucide-react";
+import { Star, MapPin, Sprout } from "lucide-react";
+import { cn } from "@/lib/utils";
 import FollowButton from "@/components/follow-button";
 import ReportButton from "@/components/report-button";
 import ShareButton from "@/components/share-button";
 import { MessageButton } from "@/components/message-button";
 import RateSellerForm from "@/app/orders/rate-seller-form";
 import { StorefrontListings, StorefrontAuctions } from "./storefront-listings";
+import type { GardenPlantStatus } from "@/lib/supabase/types";
+
+const GARDEN_STATUS_LABEL: Record<GardenPlantStatus, string> = {
+  thriving: "Thriving",
+  growing: "Growing",
+  dormant: "Dormant",
+  struggling: "Struggling",
+  dead: "Dead",
+};
+
+const GARDEN_STATUS_COLOR: Record<GardenPlantStatus, string> = {
+  thriving: "bg-green-100 text-green-700",
+  growing: "bg-emerald-100 text-emerald-700",
+  dormant: "bg-yellow-100 text-yellow-700",
+  struggling: "bg-orange-100 text-orange-700",
+  dead: "bg-gray-100 text-gray-500",
+};
 
 export async function generateMetadata({
   params,
@@ -57,7 +75,7 @@ export default async function SellerStorefront({
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  const [{ data: listings }, { data: auctions }, { data: ratings }, { count: followerCount }] =
+  const [{ data: listings }, { data: auctions }, { data: ratings }, { count: followerCount }, { data: gardenPlants }] =
     await Promise.all([
       supabase.from("listings").select("*").eq("seller_id", profile.id).eq("status", "active").or("category.neq.Hidden,category.is.null").order("created_at", { ascending: false }),
       profile.stripe_onboarded
@@ -65,6 +83,9 @@ export default async function SellerStorefront({
         : Promise.resolve({ data: [] }),
       supabase.from("ratings").select("*").eq("seller_id", profile.id).order("created_at", { ascending: false }),
       supabase.from("follows").select("*", { count: "exact", head: true }).eq("seller_id", profile.id),
+      profile.garden_public
+        ? supabase.from("garden_plants").select("id, name, variety, status, location, planted_at, images").eq("user_id", profile.id).order("created_at", { ascending: false })
+        : Promise.resolve({ data: [] }),
     ]);
 
   const reviewerIds = [...new Set(ratings?.map((r) => r.reviewer_id) ?? [])];
@@ -217,6 +238,9 @@ export default async function SellerStorefront({
             <TabsTrigger value="auctions">Auctions ({auctions?.length ?? 0})</TabsTrigger>
           )}
           <TabsTrigger value="reviews">Reviews ({ratings?.length ?? 0})</TabsTrigger>
+          {profile.garden_public && (
+            <TabsTrigger value="garden">Garden ({gardenPlants?.length ?? 0})</TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="shop" className="mt-6">
@@ -316,6 +340,51 @@ export default async function SellerStorefront({
             )}
           </div>
         </TabsContent>
+        {profile.garden_public && (
+          <TabsContent value="garden" className="mt-6">
+            {!gardenPlants?.length ? (
+              <Card>
+                <CardContent className="py-16 text-center space-y-3">
+                  <Sprout className="mx-auto text-muted-foreground" size={36} />
+                  <p className="font-medium">No plants added yet</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                {gardenPlants.map((plant) => (
+                  <Card key={plant.id} className="overflow-hidden h-full">
+                    <div className="aspect-square relative bg-muted">
+                      {(plant.images as string[])?.[0] ? (
+                        <Image src={(plant.images as string[])[0]} alt={plant.name} fill className="object-cover" />
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-4xl">🪴</div>
+                      )}
+                    </div>
+                    <CardContent className="p-3 space-y-1">
+                      <p className="font-semibold text-sm leading-tight">{plant.name}</p>
+                      {plant.variety && (
+                        <p className="text-xs text-muted-foreground">{plant.variety}</p>
+                      )}
+                      <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                        <span className={cn("text-xs px-1.5 py-0.5 rounded-full font-medium", GARDEN_STATUS_COLOR[plant.status as GardenPlantStatus])}>
+                          {GARDEN_STATUS_LABEL[plant.status as GardenPlantStatus]}
+                        </span>
+                        {plant.location && (
+                          <span className="text-xs text-muted-foreground truncate">{plant.location}</span>
+                        )}
+                      </div>
+                      {plant.planted_at && (
+                        <p className="text-xs text-muted-foreground">
+                          Planted {new Date(plant.planted_at).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
