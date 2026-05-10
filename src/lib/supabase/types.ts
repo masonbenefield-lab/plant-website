@@ -665,6 +665,7 @@ export interface Database {
           source_type: "nursery" | "purchase" | "trade" | "propagation" | "gift" | null;
           source_listing_id: string | null;
           notes: string | null;
+          public_notes: string | null;
           images: string[];
           water_interval_days: number | null;
           fertilize_interval_days: number | null;
@@ -685,6 +686,7 @@ export interface Database {
           source_type?: "nursery" | "purchase" | "trade" | "propagation" | "gift" | null;
           source_listing_id?: string | null;
           notes?: string | null;
+          public_notes?: string | null;
           images?: string[];
           water_interval_days?: number | null;
           fertilize_interval_days?: number | null;
@@ -703,6 +705,7 @@ export interface Database {
           source_type?: "nursery" | "purchase" | "trade" | "propagation" | "gift" | null;
           source_listing_id?: string | null;
           notes?: string | null;
+          public_notes?: string | null;
           images?: string[];
           water_interval_days?: number | null;
           fertilize_interval_days?: number | null;

@@ -47,6 +47,7 @@ interface GardenFormProps {
     source_name: string | null;
     source_type: string | null;
     notes: string | null;
+    public_notes: string | null;
     images: string[];
     water_interval_days: number | null;
     fertilize_interval_days: number | null;
@@ -70,6 +71,7 @@ export function GardenForm({ mode, plant }: GardenFormProps) {
   const [sourceName, setSourceName] = useState(plant?.source_name ?? "");
   const [sourceType, setSourceType] = useState<string>(plant?.source_type ?? "");
   const [notes, setNotes] = useState(plant?.notes ?? "");
+  const [publicNotes, setPublicNotes] = useState(plant?.public_notes ?? "");
   const [images, setImages] = useState<string[]>(plant?.images ?? []);
   const [waterInterval, setWaterInterval] = useState(plant?.water_interval_days?.toString() ?? "");
   const [fertilizeInterval, setFertilizeInterval] = useState(plant?.fertilize_interval_days?.toString() ?? "");
@@ -127,6 +129,7 @@ export function GardenForm({ mode, plant }: GardenFormProps) {
         source_name: sourceName.trim() || null,
         source_type: (sourceType || null) as "nursery" | "purchase" | "trade" | "propagation" | "gift" | null,
         notes: notes.trim() || null,
+        public_notes: publicNotes.trim() || null,
         images,
         water_interval_days: waterInterval ? parseInt(waterInterval) : null,
         fertilize_interval_days: fertilizeInterval ? parseInt(fertilizeInterval) : null,
@@ -297,15 +300,29 @@ export function GardenForm({ mode, plant }: GardenFormProps) {
       </div>
 
       {/* Notes */}
-      <div className="space-y-1.5">
-        <Label htmlFor="notes">Notes</Label>
-        <Textarea
-          id="notes"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          placeholder="Care tips, observations, potting mix, soil type..."
-          rows={4}
-        />
+      <div className="space-y-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="notes">Private notes</Label>
+          <p className="text-xs text-muted-foreground -mt-1">Only visible to you.</p>
+          <Textarea
+            id="notes"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Care tips, observations, potting mix, soil type..."
+            rows={3}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="public_notes">Public notes</Label>
+          <p className="text-xs text-muted-foreground -mt-1">Visible to anyone who can see your garden.</p>
+          <Textarea
+            id="public_notes"
+            value={publicNotes}
+            onChange={(e) => setPublicNotes(e.target.value)}
+            placeholder="Share care tips, origin story, fun facts about this plant..."
+            rows={3}
+          />
+        </div>
       </div>
 
       <div className="flex gap-3 pt-2">

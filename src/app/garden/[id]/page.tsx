@@ -127,13 +127,25 @@ export default async function GardenPlantDetailPage({
           )}
 
           {/* Notes */}
-          {plant.notes && (
-            <Card>
-              <CardContent className="p-4">
-                <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide text-xs mb-2">Notes</p>
-                <p className="text-sm whitespace-pre-wrap leading-relaxed">{plant.notes}</p>
-              </CardContent>
-            </Card>
+          {(plant.public_notes || plant.notes) && (
+            <div className="space-y-3">
+              {plant.public_notes && (
+                <Card>
+                  <CardContent className="p-4">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Public notes</p>
+                    <p className="text-sm whitespace-pre-wrap leading-relaxed">{plant.public_notes}</p>
+                  </CardContent>
+                </Card>
+              )}
+              {plant.notes && (
+                <Card className="border-dashed">
+                  <CardContent className="p-4">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Private notes</p>
+                    <p className="text-sm whitespace-pre-wrap leading-relaxed">{plant.notes}</p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           )}
 
           {/* Event log */}

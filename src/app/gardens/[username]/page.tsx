@@ -41,7 +41,7 @@ export default async function PublicGardenPage({
 
   const { data: plants } = await supabase
     .from("garden_plants")
-    .select("id, name, variety, status, location, planted_at, images")
+    .select("id, name, variety, status, location, planted_at, images, public_notes")
     .eq("user_id", profile.id)
     .eq("is_public", true)
     .order("created_at", { ascending: false });
@@ -108,6 +108,11 @@ export default async function PublicGardenPage({
                 {plant.planted_at && (
                   <p className="text-xs text-muted-foreground">
                     Planted {new Date(plant.planted_at).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+                  </p>
+                )}
+                {(plant as { public_notes?: string | null }).public_notes && (
+                  <p className="text-xs text-muted-foreground leading-snug line-clamp-3 pt-0.5 border-t mt-1">
+                    {(plant as { public_notes?: string | null }).public_notes}
                   </p>
                 )}
               </CardContent>

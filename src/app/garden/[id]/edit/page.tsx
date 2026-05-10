@@ -18,7 +18,7 @@ export default async function EditGardenPlantPage({
 
   const { data: plant } = await supabase
     .from("garden_plants")
-    .select("id, name, variety, status, location, planted_at, source_name, source_type, notes, images, water_interval_days, fertilize_interval_days, repot_interval_days, prune_interval_days")
+    .select("id, name, variety, status, location, planted_at, source_name, source_type, notes, public_notes, images, water_interval_days, fertilize_interval_days, repot_interval_days, prune_interval_days")
     .eq("id", id)
     .eq("user_id", user.id)
     .single();
@@ -49,6 +49,7 @@ export default async function EditGardenPlantPage({
           source_name: plant.source_name,
           source_type: plant.source_type,
           notes: plant.notes,
+          public_notes: plant.public_notes ?? null,
           images: plant.images ?? [],
           water_interval_days: plant.water_interval_days ?? null,
           fertilize_interval_days: plant.fertilize_interval_days ?? null,
