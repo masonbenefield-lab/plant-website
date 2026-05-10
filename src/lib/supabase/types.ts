@@ -670,6 +670,7 @@ export interface Database {
           fertilize_interval_days: number | null;
           repot_interval_days: number | null;
           prune_interval_days: number | null;
+          is_public: boolean;
           created_at: string;
         };
         Insert: {
@@ -689,6 +690,7 @@ export interface Database {
           fertilize_interval_days?: number | null;
           repot_interval_days?: number | null;
           prune_interval_days?: number | null;
+          is_public?: boolean;
           created_at?: string;
         };
         Update: {
@@ -706,6 +708,7 @@ export interface Database {
           fertilize_interval_days?: number | null;
           repot_interval_days?: number | null;
           prune_interval_days?: number | null;
+          is_public?: boolean;
         };
         Relationships: [];
       };

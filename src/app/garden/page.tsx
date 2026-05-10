@@ -6,6 +6,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { GardenVisibilityToggle } from "@/components/garden/garden-visibility-toggle";
+import { PlantVisibilityToggle } from "@/components/garden/plant-visibility-toggle";
 import type { GardenPlantStatus } from "@/lib/supabase/types";
 
 const STATUS_LABEL: Record<GardenPlantStatus, string> = {
@@ -43,7 +44,7 @@ export default async function GardenPage({
 
   let query = supabase
     .from("garden_plants")
-    .select("id, name, variety, status, location, planted_at, images")
+    .select("id, name, variety, status, location, planted_at, images, is_public")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
@@ -101,41 +102,52 @@ export default async function GardenPage({
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {plants!.map((plant) => (
-            <Link key={plant.id} href={`/garden/${plant.id}`}>
-              <Card className="overflow-hidden hover:shadow-md transition-shadow h-full">
-                <div className="aspect-square relative bg-muted">
-                  {plant.images?.[0] ? (
-                    <Image src={plant.images[0]} alt={plant.name} fill className="object-cover" />
-                  ) : (
-                    <div className="flex items-center justify-center h-full text-4xl">🪴</div>
-                  )}
-                </div>
-                <CardContent className="p-3 space-y-1">
-                  <p className="font-semibold text-sm leading-tight">{plant.name}</p>
-                  {plant.variety && (
-                    <p className="text-xs text-muted-foreground leading-tight">{plant.variety}</p>
-                  )}
-                  <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
-                    <span
-                      className={cn(
-                        "text-xs px-1.5 py-0.5 rounded-full font-medium",
-                        STATUS_COLOR[plant.status as GardenPlantStatus]
-                      )}
-                    >
-                      {STATUS_LABEL[plant.status as GardenPlantStatus]}
-                    </span>
-                    {plant.location && (
-                      <span className="text-xs text-muted-foreground truncate">{plant.location}</span>
+            <div key={plant.id} className="relative">
+              <Link href={`/garden/${plant.id}`}>
+                <Card className="overflow-hidden hover:shadow-md transition-shadow h-full">
+                  <div className="aspect-square relative bg-muted">
+                    {plant.images?.[0] ? (
+                      <Image src={plant.images[0]} alt={plant.name} fill className="object-cover" />
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-4xl">🪴</div>
                     )}
                   </div>
-                  {plant.planted_at && (
-                    <p className="text-xs text-muted-foreground">
-                      Planted {new Date(plant.planted_at).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            </Link>
+                  <CardContent className="p-3 space-y-1">
+                    <p className="font-semibold text-sm leading-tight">{plant.name}</p>
+                    {plant.variety && (
+                      <p className="text-xs text-muted-foreground leading-tight">{plant.variety}</p>
+                    )}
+                    <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                      <span
+                        className={cn(
+                          "text-xs px-1.5 py-0.5 rounded-full font-medium",
+                          STATUS_COLOR[plant.status as GardenPlantStatus]
+                        )}
+                      >
+                        {STATUS_LABEL[plant.status as GardenPlantStatus]}
+                      </span>
+                      {plant.location && (
+                        <span className="text-xs text-muted-foreground truncate">{plant.location}</span>
+                      )}
+                    </div>
+                    {plant.planted_at && (
+                      <p className="text-xs text-muted-foreground">
+                        Planted {new Date(plant.planted_at).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              </Link>
+              {profile?.garden_public && (
+                <div className="absolute top-2 right-2 z-10">
+                  <PlantVisibilityToggle
+                    plantId={plant.id}
+                    initialPublic={plant.is_public ?? true}
+                    variant="icon"
+                  />
+                </div>
+              )}
+            </div>
           ))}
         </div>
       )}

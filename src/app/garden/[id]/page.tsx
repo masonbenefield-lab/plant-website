@@ -9,6 +9,7 @@ import { EventLog } from "@/components/garden/event-log";
 import { ChevronLeft, Pencil } from "lucide-react";
 import type { GardenPlantStatus, GardenEventType } from "@/lib/supabase/types";
 import { DeletePlantButton } from "@/components/garden/delete-plant-button";
+import { PlantVisibilityToggle } from "@/components/garden/plant-visibility-toggle";
 
 const STATUS_LABEL: Record<GardenPlantStatus, string> = {
   thriving: "Thriving",
@@ -179,6 +180,9 @@ export default async function GardenPlantDetailPage({
                 })}
               />
               <DetailRow label="Events logged" value={String(events?.length ?? 0)} />
+              <div className="pt-1">
+                <PlantVisibilityToggle plantId={plant.id} initialPublic={plant.is_public ?? true} />
+              </div>
             </CardContent>
           </Card>
         </div>
