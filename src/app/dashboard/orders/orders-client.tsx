@@ -35,14 +35,21 @@ type OrderRow = {
   label_url: string | null;
   shipping_cost_cents: number | null;
   shipping_service: string | null;
+  created_at: string;
 };
 
 type ItemRow = { id: string; plant_name: string; variety: string | null };
 type BuyerRow = { id: string; username: string };
 
-function BuyLabelButton({ orderId, labelUrl: initialLabelUrl }: { orderId: string; labelUrl: string | null }) {
+function BuyLabelButton({ orderId, labelUrl: initialLabelUrl, createdAt }: { orderId: string; labelUrl: string | null; createdAt: string }) {
   const [loading, setLoading] = useState(false);
   const [labelUrl, setLabelUrl] = useState(initialLabelUrl);
+
+  const ageMs = Date.now() - new Date(createdAt).getTime();
+  const ageDays = ageMs / (1000 * 60 * 60 * 24);
+  const daysLeft = Math.max(0, 7 - ageDays);
+  const rateExpired = ageDays >= 7;
+  const rateExpiringSoon = !rateExpired && ageDays >= 5;
 
   if (labelUrl) {
     return (
@@ -77,17 +84,32 @@ function BuyLabelButton({ orderId, labelUrl: initialLabelUrl }: { orderId: strin
     if (data.labelUrl) window.open(data.labelUrl, "_blank");
   }
 
+  if (rateExpired) {
+    return (
+      <p className="text-xs text-red-600 font-medium">
+        Shipping rate expired — enter tracking manually after shipping
+      </p>
+    );
+  }
+
   return (
-    <Button
-      size="sm"
-      variant="outline"
-      className="h-7 text-xs gap-1.5"
-      disabled={loading}
-      onClick={handleBuyLabel}
-    >
-      <Printer size={13} />
-      {loading ? "Purchasing…" : "Buy Label"}
-    </Button>
+    <div className="flex items-center gap-2 flex-wrap">
+      <Button
+        size="sm"
+        variant="outline"
+        className="h-7 text-xs gap-1.5"
+        disabled={loading}
+        onClick={handleBuyLabel}
+      >
+        <Printer size={13} />
+        {loading ? "Purchasing…" : "Buy Label"}
+      </Button>
+      {rateExpiringSoon && (
+        <p className="text-xs text-amber-600 font-medium">
+          Rate expires in ~{Math.ceil(daysLeft)} day{Math.ceil(daysLeft) !== 1 ? "s" : ""} — buy soon
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -221,7 +243,7 @@ export default function OrdersClient({
                   <div className="flex items-center gap-3 flex-wrap">
                     <TrackingInput orderId={order.id} initialValue={order.tracking_number ?? null} />
                     {order.shippo_rate_id && (
-                      <BuyLabelButton orderId={order.id} labelUrl={order.label_url} />
+                      <BuyLabelButton orderId={order.id} labelUrl={order.label_url} createdAt={order.created_at} />
                     )}
                   </div>
                 </div>
