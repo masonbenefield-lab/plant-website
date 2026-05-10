@@ -673,3 +673,157 @@ ALTER TABLE profiles ADD COLUMN IF NOT EXISTS last_reengagement_sent timestamptz
 
 ### Environment variables added or changed
 - None
+
+---
+
+## 2026-05-09 (continued) — My Garden, Messaging, Care Reminders, Public Garden
+
+### Features built
+
+#### My Garden (personal plant tracker)
+- `src/app/garden/page.tsx` — Garden overview grid with status filter chips (Thriving / Growing / Dormant / Struggling / Dead) and Public/Private visibility toggle
+- `src/app/garden/new/page.tsx` — Add plant page
+- `src/app/garden/[id]/page.tsx` — Plant detail: photo gallery, info sidebar (location, planted date, source, event count), care log
+- `src/app/garden/[id]/edit/page.tsx` — Edit plant page
+- `src/components/garden/garden-form.tsx` — Shared add/edit form: name, variety, status, location, planted date, source type + name, notes, photo upload (up to 10 via Supabase Storage `garden` bucket), care interval inputs (water/fertilize/repot/prune every X days)
+- `src/components/garden/event-log.tsx` — Care log client component: log Watered / Fertilized / Repotted / Pruned / Treated / Harvested / Note events with date and optional notes; delete events inline
+- `src/components/garden/delete-plant-button.tsx` — Confirmation dialog before deleting a plant and all its events
+- `src/components/garden/garden-visibility-toggle.tsx` — Client toggle that calls `/api/garden/toggle-public`
+- `src/app/api/garden/toggle-public/route.ts` — POST: updates `profiles.garden_public`
+- `src/components/layout/navbar.tsx` — Added Sprout icon shortcut, "My Garden" in dropdown and mobile menu
+
+#### Care Schedules + Reminders
+- `garden_plants` table: added `water_interval_days`, `fertilize_interval_days`, `repot_interval_days`, `prune_interval_days` (all nullable integers)
+- `src/app/feed/care-reminders.tsx` — "Today's care" card section shown at top of feed when plants are due or overdue based on last logged event + interval
+- `src/app/feed/page.tsx` — Queries garden plants with intervals + last events; computes due/overdue items; renders CareReminders above feed
+- `src/lib/email.ts` — `sendGardenCareReminder()`: styled HTML email with plant/care/due-date table
+- `src/app/api/cron/garden-reminders/route.ts` — Monthly cron: for each opted-in user with care intervals set, calculates what's due this month and sends one summary email
+- `vercel.json` — Added `"/api/cron/garden-reminders"` cron at `0 9 1 * *` (9 AM UTC on the 1st of each month)
+
+#### Public Garden Profiles
+- `profiles` table: added `garden_public boolean DEFAULT false`
+- `src/app/gardens/[username]/page.tsx` — Read-only public garden view at `/gardens/[username]`; 404s if garden is private
+
+#### User-to-User Messaging
+- `src/app/api/messages/start/route.ts` — POST: creates or finds existing conversation between two users (normalizes participant order for UNIQUE constraint)
+- `src/app/api/messages/send/route.ts` — POST: server-side word filter (logs violation + 400 on hit), inserts message, updates conversation last_message_at + preview via admin client
+- `src/app/api/messages/read/route.ts` — POST: marks all unread messages in a conversation as read
+- `src/app/messages/page.tsx` — Inbox: lists conversations with unread badge, other user avatar, last message preview, timestamp
+- `src/app/messages/[id]/page.tsx` — Server wrapper: fetches conversation, other user profile, initial messages
+- `src/app/messages/[id]/message-thread.tsx` — Client component: Supabase Realtime live updates, auto-scroll, Enter-to-send, client-side word filter check
+- `src/components/message-button.tsx` — "Message" button on seller storefronts for logged-in non-owner users
+- `src/app/sellers/[username]/page.tsx` — Added MessageButton alongside Follow/Report buttons
+- `src/app/layout.tsx` — Fetches unread message count server-side on every page load
+- `src/components/layout/navbar.tsx` — MessageSquare icon with unread count badge, "Messages" in dropdown and mobile menu
+
+### SQL migrations required
+```sql
+-- garden_plants care intervals
+ALTER TABLE garden_plants
+  ADD COLUMN water_interval_days integer,
+  ADD COLUMN fertilize_interval_days integer,
+  ADD COLUMN repot_interval_days integer,
+  ADD COLUMN prune_interval_days integer;
+
+-- public garden toggle
+ALTER TABLE profiles
+  ADD COLUMN garden_public boolean NOT NULL DEFAULT false;
+
+-- Conversations table
+CREATE TABLE conversations (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  participant_a uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  participant_b uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  last_message_at timestamptz,
+  last_message_preview text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (participant_a, participant_b),
+  CHECK (participant_a < participant_b)
+);
+
+-- Messages table
+CREATE TABLE messages (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  conversation_id uuid NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+  sender_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  body text NOT NULL CHECK (char_length(body) <= 2000),
+  read_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- RLS
+ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "participants_all" ON conversations FOR ALL
+  USING (participant_a = auth.uid() OR participant_b = auth.uid());
+
+CREATE POLICY "participants_select" ON messages FOR SELECT
+  USING (EXISTS (
+    SELECT 1 FROM conversations c WHERE c.id = conversation_id
+    AND (c.participant_a = auth.uid() OR c.participant_b = auth.uid())
+  ));
+
+CREATE POLICY "sender_insert" ON messages FOR INSERT
+  WITH CHECK (
+    sender_id = auth.uid() AND
+    EXISTS (
+      SELECT 1 FROM conversations c WHERE c.id = conversation_id
+      AND (c.participant_a = auth.uid() OR c.participant_b = auth.uid())
+    )
+  );
+
+CREATE POLICY "recipient_update" ON messages FOR UPDATE
+  USING (EXISTS (
+    SELECT 1 FROM conversations c WHERE c.id = conversation_id
+    AND (c.participant_a = auth.uid() OR c.participant_b = auth.uid())
+  ));
+
+-- Garden plants table
+CREATE TABLE garden_plants (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name text NOT NULL,
+  variety text,
+  status text NOT NULL DEFAULT 'growing'
+    CHECK (status IN ('thriving','growing','dormant','struggling','dead')),
+  location text,
+  planted_at date,
+  source_name text,
+  source_type text CHECK (source_type IN ('nursery','purchase','trade','propagation','gift')),
+  source_listing_id uuid REFERENCES listings(id) ON DELETE SET NULL,
+  notes text,
+  images text[] NOT NULL DEFAULT '{}',
+  water_interval_days integer,
+  fertilize_interval_days integer,
+  repot_interval_days integer,
+  prune_interval_days integer,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- Garden events table
+CREATE TABLE garden_events (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  plant_id uuid NOT NULL REFERENCES garden_plants(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  event_type text NOT NULL
+    CHECK (event_type IN ('watered','fertilized','repotted','pruned','treated','harvested','note')),
+  event_date date NOT NULL,
+  notes text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE garden_plants ENABLE ROW LEVEL SECURITY;
+ALTER TABLE garden_events ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "owner_all" ON garden_plants FOR ALL USING (user_id = auth.uid());
+CREATE POLICY "owner_all" ON garden_events FOR ALL USING (user_id = auth.uid());
+```
+
+### Supabase Storage
+- Created `garden` bucket (public) for plant photos
+
+### Supabase Realtime
+- Enabled `messages` table in `supabase_realtime` publication (Database → Publications)
+
+### Environment variables added or changed
+- None
