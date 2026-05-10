@@ -223,6 +223,8 @@ export default function AccountForm({
 
   function PlanBillingCard({ profile }: { profile: Profile | null }) {
     const plan = profile?.plan ?? "seedling";
+    const isGroundbreaker = !!profile?.groundbreaker;
+    const groundbreakerNumber = profile?.groundbreaker_number ?? null;
     const hasSubscription = !!(profile as { stripe_subscription_id?: string | null } | null)?.stripe_subscription_id;
 
     const planLabel = plan === "nursery" ? "Nursery" : plan === "grower" ? "Grower" : "Seedling";
@@ -238,10 +240,24 @@ export default function AccountForm({
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted-foreground">Current plan</span>
-            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${planColor}`}>{planLabel}</span>
+            <div className="flex items-center gap-2">
+              {isGroundbreaker && (
+                <span className="text-xs font-semibold px-2.5 py-1 rounded-full border bg-amber-50 border-amber-300 text-amber-800 dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-300">
+                  ⛏️ Groundbreaker {groundbreakerNumber ? `#${groundbreakerNumber}` : ""}
+                </span>
+              )}
+              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${planColor}`}>{planLabel}</span>
+            </div>
           </div>
 
-          {plan === "seedling" && (
+          {isGroundbreaker ? (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 p-4 space-y-1">
+              <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">Nursery plan — free forever</p>
+              <p className="text-sm text-amber-800 dark:text-amber-300">
+                You joined as one of Plantet&apos;s first 150 Groundbreakers. You have full Nursery plan access with no subscription — ever. Thank you for being here from the start.
+              </p>
+            </div>
+          ) : plan === "seedling" ? (
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">Upgrade to unlock lower commissions, more listings, and buyer digest exposure.</p>
               <div className="grid grid-cols-2 gap-3">
@@ -261,9 +277,7 @@ export default function AccountForm({
                 </div>
               </div>
             </div>
-          )}
-
-          {plan !== "seedling" && (
+          ) : (
             <div className="space-y-3">
               {hasSubscription ? (
                 <>

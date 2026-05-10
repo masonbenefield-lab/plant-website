@@ -23,7 +23,11 @@ export async function POST(request: Request) {
   }
 
   const admin = createAdmin(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
-  const { data: profile } = await admin.from("profiles").select("stripe_customer_id, stripe_subscription_id, plan").eq("id", user.id).single();
+  const { data: profile } = await admin.from("profiles").select("stripe_customer_id, stripe_subscription_id, plan, groundbreaker").eq("id", user.id).single();
+
+  if (profile?.groundbreaker) {
+    return NextResponse.json({ error: "Groundbreakers have the Nursery plan free forever — no subscription needed." }, { status: 403 });
+  }
   const { data: { user: authUser } } = await admin.auth.admin.getUserById(user.id);
 
   const stripe = getStripe();

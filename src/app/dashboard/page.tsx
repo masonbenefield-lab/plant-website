@@ -28,7 +28,7 @@ export default async function DashboardPage() {
     { data: thisMonthOrders },
     { data: lastMonthOrders },
   ] = await Promise.all([
-    supabase.from("profiles").select("username, bio, avatar_url, stripe_onboarded, plan, garden_public").eq("id", user.id).single(),
+    supabase.from("profiles").select("username, bio, avatar_url, stripe_onboarded, plan, garden_public, groundbreaker, groundbreaker_number").eq("id", user.id).single(),
     supabase.from("listings").select("*", { count: "exact", head: true }).eq("seller_id", user.id).eq("status", "active"),
     supabase.from("auctions").select("*", { count: "exact", head: true }).eq("seller_id", user.id).eq("status", "active"),
     supabase.from("follows").select("*", { count: "exact", head: true }).eq("seller_id", user.id),
@@ -109,7 +109,14 @@ export default async function DashboardPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Seller Dashboard</h1>
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-2xl font-bold">Seller Dashboard</h1>
+            {profile?.groundbreaker && (
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-full border bg-amber-50 border-amber-300 text-amber-800 dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-300">
+                ⛏️ Groundbreaker {profile.groundbreaker_number ? `#${profile.groundbreaker_number}` : ""}
+              </span>
+            )}
+          </div>
           {profile?.username && (
             <p className="text-muted-foreground text-sm mt-0.5">Welcome back, {profile.username}</p>
           )}

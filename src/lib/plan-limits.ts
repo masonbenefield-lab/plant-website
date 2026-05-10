@@ -1,5 +1,7 @@
 export type Plan = "seedling" | "grower" | "nursery";
 
+export const GROUNDBREAKER_CAP = 150;
+
 export interface PlanLimits {
   listings: number | null; // null = unlimited
   auctions: number | null;

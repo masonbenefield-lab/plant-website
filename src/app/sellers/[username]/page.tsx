@@ -197,6 +197,11 @@ export default async function SellerStorefront({
             <p className="text-muted-foreground mt-2 max-w-lg">{profile.bio}</p>
           )}
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5">
+            {(profile as { groundbreaker?: boolean; groundbreaker_number?: number | null }).groundbreaker && (
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full border bg-amber-50 border-amber-300 text-amber-800 dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-300">
+                ⛏️ Groundbreaker {(profile as { groundbreaker_number?: number | null }).groundbreaker_number ? `#${(profile as { groundbreaker_number?: number | null }).groundbreaker_number}` : ""}
+              </span>
+            )}
             {profile.location && (
               <span className="flex items-center gap-1 text-xs text-muted-foreground">
                 <MapPin size={12} />

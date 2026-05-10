@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
 import { centsToDisplay } from "@/lib/stripe";
 import { PLANT_CATEGORIES } from "@/lib/categories";
+import { GROUNDBREAKER_CAP } from "@/lib/plan-limits";
 import HeroSearch from "@/components/hero-search";
 import LiveAuctionCard from "@/components/live-auction-card";
 
@@ -54,7 +55,7 @@ const steps = [
 export default async function LandingPage() {
   const supabase = await createClient();
 
-  const [{ data: liveListings }, { data: liveAuctions }, { data: nurseryProfiles }] = await Promise.all([
+  const [{ data: liveListings }, { data: liveAuctions }, { data: nurseryProfiles }, { count: groundbreakerCount }] = await Promise.all([
     supabase
       .from("listings")
       .select("id, plant_name, variety, price_cents, sale_price_cents, sale_ends_at, images")
@@ -74,6 +75,10 @@ export default async function LandingPage() {
       .from("profiles")
       .select("id")
       .eq("plan", "nursery"),
+    supabase
+      .from("profiles")
+      .select("*", { count: "exact", head: true })
+      .eq("groundbreaker", true),
   ]);
 
   const nurserySellerIds = (nurseryProfiles ?? []).map((p) => p.id);
@@ -111,8 +116,21 @@ export default async function LandingPage() {
       })
     : fallbackListings;
 
+  const groundbreakersLeft = GROUNDBREAKER_CAP - (groundbreakerCount ?? 0);
+
   return (
     <div className="flex flex-col">
+
+      {/* ── Groundbreaker banner ─────────────────────────────────── */}
+      {groundbreakersLeft > 0 && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800 py-2.5 px-4 text-center text-sm text-amber-900 dark:text-amber-200">
+          <span className="font-semibold">⛏️ Groundbreaker program:</span>{" "}
+          {groundbreakersLeft} of {GROUNDBREAKER_CAP} spots remaining — the first {GROUNDBREAKER_CAP} sellers get the Nursery plan free forever.{" "}
+          <Link href="/signup" className="underline font-semibold hover:text-amber-700 dark:hover:text-amber-100">
+            Claim your spot →
+          </Link>
+        </div>
+      )}
 
       {/* ── Hero ─────────────────────────────────────────────────── */}
       <section className="bg-gradient-to-br from-green-800 via-green-700 to-emerald-600 text-white overflow-hidden">
