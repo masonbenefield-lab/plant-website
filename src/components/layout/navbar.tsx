@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { buttonVariants } from "@/components/ui/button";
 import {
@@ -29,7 +29,50 @@ interface NavbarProps {
 
 export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessages = 0 }: NavbarProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [liveUnread, setLiveUnread] = useState(unreadMessages);
+
+  const fetchUnreadCount = useCallback(async () => {
+    if (!user) return;
+    const res = await fetch("/api/messages/unread-count");
+    if (res.ok) {
+      const { count } = await res.json();
+      setLiveUnread(count);
+    }
+  }, [user]);
+
+  // Refresh count on mount and whenever the route changes
+  useEffect(() => {
+    fetchUnreadCount();
+  }, [fetchUnreadCount, pathname]);
+
+  // Subscribe to new messages via Realtime
+  useEffect(() => {
+    if (!user) return;
+    const supabase = createClient();
+    const channel = supabase
+      .channel("navbar-unread")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "messages" },
+        (payload) => {
+          if (payload.new.sender_id !== user.id) {
+            setLiveUnread((prev) => prev + 1);
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "messages" },
+        () => {
+          fetchUnreadCount();
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [user, fetchUnreadCount]);
 
   async function signOut() {
     const supabase = createClient();
@@ -91,9 +134,9 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
                 </Link>
                 <Link href="/messages" className="relative p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="Messages">
                   <MessageSquare size={17} />
-                  {unreadMessages > 0 && (
+                  {liveUnread > 0 && (
                     <span className="absolute top-0 right-0 w-3.5 h-3.5 rounded-full bg-green-600 text-white text-[9px] font-bold flex items-center justify-center">
-                      {unreadMessages > 9 ? "9+" : unreadMessages}
+                      {liveUnread > 9 ? "9+" : liveUnread}
                     </span>
                   )}
                 </Link>
@@ -117,7 +160,7 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
                   <DropdownMenuItem><Link href="/wishlist" className="block w-full">Wishlist</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href="/orders" className="block w-full">My Purchases</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href="/feed" className="block w-full">Feed</Link></DropdownMenuItem>
-                  <DropdownMenuItem><Link href="/messages" className="block w-full">Messages{unreadMessages > 0 ? ` (${unreadMessages})` : ""}</Link></DropdownMenuItem>
+                  <DropdownMenuItem><Link href="/messages" className="block w-full">Messages{liveUnread > 0 ? ` (${liveUnread})` : ""}</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href="/garden" className="block w-full">My Garden</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href={`/sellers/${username}`} className="block w-full">My Storefront</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href="/account" className="block w-full">Account Settings</Link></DropdownMenuItem>
@@ -188,7 +231,7 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
               <MobileLink href="/dashboard/inventory" onClick={closeMenu}>Inventory</MobileLink>
               <MobileLink href="/wishlist" onClick={closeMenu}>Wishlist</MobileLink>
               <MobileLink href="/orders" onClick={closeMenu}>My Purchases</MobileLink>
-              <MobileLink href="/messages" onClick={closeMenu}>Messages{unreadMessages > 0 ? ` (${unreadMessages})` : ""}</MobileLink>
+              <MobileLink href="/messages" onClick={closeMenu}>Messages{liveUnread > 0 ? ` (${liveUnread})` : ""}</MobileLink>
               <MobileLink href="/garden" onClick={closeMenu}>My Garden</MobileLink>
               <MobileLink href={`/sellers/${username}`} onClick={closeMenu}>My Storefront</MobileLink>
               <MobileLink href="/account" onClick={closeMenu}>Account Settings</MobileLink>
