@@ -113,7 +113,7 @@ export async function purchaseLabel(rateId: string): Promise<{
   });
 
   if (!transaction.trackingNumber || !transaction.labelUrl || !transaction.objectId) {
-    const msgs = transaction.messages?.map((m) => m.text).join("; ") ?? "Label purchase failed";
+    const msgs = transaction.messages?.map((m) => m.text).filter(Boolean).join("; ") || "Label purchase failed";
     throw new Error(msgs);
   }
 

@@ -7,21 +7,44 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { listingId, auctionId, toAddress } = await request.json() as {
+  const { listingId, listingIds, auctionId, toAddress } = await request.json() as {
     listingId?: string;
+    listingIds?: string[];   // cart: multiple listings from one seller
     auctionId?: string;
     toAddress: { name: string; street1: string; street2?: string | null; city: string; state: string; zip: string; country: string };
   };
 
-  if (!listingId && !auctionId) {
+  if (!listingId && !listingIds?.length && !auctionId) {
     return NextResponse.json({ error: "listing or auction required" }, { status: 400 });
   }
 
-  // Resolve seller ID and weight
   let sellerId: string;
   let weightOz: number;
 
-  if (listingId) {
+  if (listingIds?.length) {
+    // Cart: multiple listings from one seller — sum weights
+    const { data: listings } = await supabase
+      .from("listings")
+      .select("seller_id, inventory_id")
+      .in("id", listingIds);
+
+    if (!listings?.length) return NextResponse.json({ error: "Listings not found" }, { status: 404 });
+
+    const sellerIds = [...new Set(listings.map((l) => l.seller_id))];
+    if (sellerIds.length > 1) return NextResponse.json({ error: "Cart items must be from one seller" }, { status: 400 });
+    sellerId = sellerIds[0];
+
+    const invIds = listings.map((l) => l.inventory_id).filter(Boolean) as string[];
+    if (invIds.length) {
+      const { data: invs } = await supabase
+        .from("inventory")
+        .select("shipping_weight_oz")
+        .in("id", invIds);
+      weightOz = (invs ?? []).reduce((sum, inv) => sum + (inv.shipping_weight_oz ?? 16), 0);
+    } else {
+      weightOz = listings.length * 16; // default 1lb per item
+    }
+  } else if (listingId) {
     const { data: listing } = await supabase
       .from("listings")
       .select("seller_id, inventory_id")

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { redirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { loadStripe } from "@stripe/stripe-js";
@@ -16,12 +15,24 @@ import { toast } from "sonner";
 import { centsToDisplay } from "@/lib/stripe";
 import { useCart } from "@/lib/cart";
 import { findProhibitedWord, censorWord, logViolation } from "@/lib/profanity";
+import { Loader2, Package } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 const SAVED_ADDRESS_KEY = "checkout_saved_address";
 
 interface ShippingAddress {
   name: string; line1: string; line2: string; city: string; state: string; zip: string; country: string;
+}
+
+interface ShippoRate {
+  objectId: string;
+  provider: string;
+  servicelevelName: string;
+  servicelevelToken: string;
+  amount: string;
+  currency: string;
+  estimatedDays: number | null;
 }
 
 function PaymentStep({ clientSecret, totalCents, onSuccess }: { clientSecret: string; totalCents: number; onSuccess: () => void }) {
@@ -53,16 +64,24 @@ function PaymentStep({ clientSecret, totalCents, onSuccess }: { clientSecret: st
 }
 
 export default function CartCheckoutPage() {
-  const { items, totalCents, clearCart } = useCart();
+  const { items, totalCents: itemsTotalCents, clearCart } = useCart();
   const router = useRouter();
-  const [step, setStep] = useState<"address" | "payment">("address");
+  const [step, setStep] = useState<"address" | "shipping" | "payment">("address");
   const [clientSecret, setClientSecret] = useState("");
   const [orderId, setOrderId] = useState("");
   const [loading, setLoading] = useState(false);
+  const [fetchingRates, setFetchingRates] = useState(false);
   const [isGift, setIsGift] = useState(false);
   const [giftMessage, setGiftMessage] = useState("");
   const [saveAddress, setSaveAddress] = useState(true);
   const [address, setAddress] = useState<ShippingAddress>({ name: "", line1: "", line2: "", city: "", state: "", zip: "", country: "US" });
+  const [rates, setRates] = useState<ShippoRate[]>([]);
+  const [selectedRate, setSelectedRate] = useState<ShippoRate | null>(null);
+  const [grandTotalCents, setGrandTotalCents] = useState(itemsTotalCents);
+
+  useEffect(() => {
+    setGrandTotalCents(itemsTotalCents);
+  }, [itemsTotalCents]);
 
   useEffect(() => {
     try {
@@ -90,26 +109,68 @@ export default function CartCheckoutPage() {
         return;
       }
     }
+    setFetchingRates(true);
+
+    const res = await fetch("/api/shipping/rates", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        listingIds: items.map((i) => i.listingId),
+        toAddress: {
+          name: address.name,
+          street1: address.line1,
+          street2: address.line2 || null,
+          city: address.city,
+          state: address.state,
+          zip: address.zip,
+          country: address.country,
+        },
+      }),
+    });
+
+    const data = await res.json();
+    setFetchingRates(false);
+
+    if (data.error) { toast.error(data.error); return; }
+
+    setRates(data.rates ?? []);
+    const first = data.rates?.[0] ?? null;
+    setSelectedRate(first);
+    const firstCents = first ? Math.round(parseFloat(first.amount) * 100) : 0;
+    setGrandTotalCents(itemsTotalCents + firstCents);
+    setStep("shipping");
+
+    if (saveAddress) {
+      try { localStorage.setItem(SAVED_ADDRESS_KEY, JSON.stringify(address)); } catch { /* ignore */ }
+    } else {
+      try { localStorage.removeItem(SAVED_ADDRESS_KEY); } catch { /* ignore */ }
+    }
+  }
+
+  async function handleShippingSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selectedRate) return;
     setLoading(true);
 
+    const shippingCostCents = Math.round(parseFloat(selectedRate.amount) * 100);
     const res = await fetch("/api/stripe/cart-checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         items: items.map((i) => ({ listingId: i.listingId, quantity: i.quantity, priceCents: i.priceCents })),
         shippingAddress: isGift ? { ...address, is_gift: true, gift_message: giftMessage || null } : address,
+        shippingCostCents,
+        shippoRateId: selectedRate.objectId,
+        shippingService: selectedRate.servicelevelName,
       }),
     });
 
     const data = await res.json();
     if (data.error) { toast.error(data.error); setLoading(false); return; }
 
-    if (saveAddress) {
-      try { localStorage.setItem(SAVED_ADDRESS_KEY, JSON.stringify(address)); } catch { /* ignore */ }
-    }
-
     setClientSecret(data.clientSecret);
     setOrderId(data.orderId ?? "");
+    setGrandTotalCents(itemsTotalCents + shippingCostCents);
     setStep("payment");
     setLoading(false);
   }
@@ -119,41 +180,111 @@ export default function CartCheckoutPage() {
     router.push(orderId ? `/orders/confirmed?id=${orderId}` : "/orders");
   }
 
+  // Order summary sidebar
+  const OrderSummary = () => (
+    <div className="space-y-3">
+      <h2 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">Order Summary</h2>
+      {items.map((item) => (
+        <div key={item.listingId} className="flex gap-3 items-center">
+          {item.imageUrl ? (
+            <Image src={item.imageUrl} alt={item.plantName} width={48} height={48} className="rounded-md object-cover border shrink-0" />
+          ) : (
+            <div className="w-12 h-12 rounded-md bg-muted border shrink-0 flex items-center justify-center text-lg">🌿</div>
+          )}
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium leading-tight">{item.plantName}{item.variety ? ` — ${item.variety}` : ""}</p>
+            <p className="text-xs text-muted-foreground">Qty {item.quantity} · {centsToDisplay(item.priceCents)}</p>
+          </div>
+        </div>
+      ))}
+      <div className="border-t pt-3 space-y-1 text-sm">
+        <div className="flex justify-between text-muted-foreground">
+          <span>Items</span>
+          <span>{centsToDisplay(itemsTotalCents)}</span>
+        </div>
+        {selectedRate && (
+          <div className="flex justify-between text-muted-foreground">
+            <span>Shipping</span>
+            <span>{centsToDisplay(Math.round(parseFloat(selectedRate.amount) * 100))}</span>
+          </div>
+        )}
+        <div className="flex justify-between font-semibold pt-1 border-t">
+          <span>Total</span>
+          <span className="text-green-700">{centsToDisplay(grandTotalCents)}</span>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="max-w-3xl mx-auto px-4 py-10">
       <h1 className="text-2xl font-bold mb-8">Checkout</h1>
       <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
-        {/* Order summary */}
-        <div className="md:col-span-2 space-y-3">
-          <h2 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">Order Summary</h2>
-          {items.map((item) => (
-            <div key={item.listingId} className="flex gap-3 items-center">
-              {item.imageUrl ? (
-                <Image src={item.imageUrl} alt={item.plantName} width={48} height={48} className="rounded-md object-cover border shrink-0" />
-              ) : (
-                <div className="w-12 h-12 rounded-md bg-muted border shrink-0 flex items-center justify-center text-lg">🌿</div>
-              )}
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium leading-tight">{item.plantName}{item.variety ? ` — ${item.variety}` : ""}</p>
-                <p className="text-xs text-muted-foreground">Qty {item.quantity} · {centsToDisplay(item.priceCents)}</p>
-              </div>
-            </div>
-          ))}
-          <div className="border-t pt-3 flex justify-between font-semibold">
-            <span>Total</span>
-            <span className="text-green-700">{centsToDisplay(totalCents)}</span>
-          </div>
+        <div className="md:col-span-2">
+          <OrderSummary />
         </div>
 
-        {/* Form */}
         <div className="md:col-span-3">
           {step === "payment" && clientSecret ? (
             <Card>
               <CardHeader><CardTitle>Payment</CardTitle></CardHeader>
               <CardContent>
                 <Elements stripe={stripePromise} options={{ clientSecret }}>
-                  <PaymentStep clientSecret={clientSecret} totalCents={totalCents} onSuccess={onPaymentSuccess} />
+                  <PaymentStep clientSecret={clientSecret} totalCents={grandTotalCents} onSuccess={onPaymentSuccess} />
                 </Elements>
+              </CardContent>
+            </Card>
+          ) : step === "shipping" ? (
+            <Card>
+              <CardHeader><CardTitle>Choose Shipping</CardTitle></CardHeader>
+              <CardContent>
+                <form onSubmit={handleShippingSubmit} className="space-y-4">
+                  <div className="space-y-2">
+                    {rates.map((rate) => {
+                      const rateCents = Math.round(parseFloat(rate.amount) * 100);
+                      const isSelected = selectedRate?.objectId === rate.objectId;
+                      return (
+                        <label
+                          key={rate.objectId}
+                          className={cn(
+                            "flex items-center gap-4 rounded-lg border p-4 cursor-pointer transition-colors",
+                            isSelected ? "border-green-600 bg-green-50 dark:bg-green-900/20" : "hover:bg-muted"
+                          )}
+                          onClick={() => {
+                            setSelectedRate(rate);
+                            setGrandTotalCents(itemsTotalCents + rateCents);
+                          }}
+                        >
+                          <input
+                            type="radio"
+                            name="shipping-rate"
+                            value={rate.objectId}
+                            checked={isSelected}
+                            onChange={() => {
+                              setSelectedRate(rate);
+                              setGrandTotalCents(itemsTotalCents + rateCents);
+                            }}
+                            className="accent-green-700"
+                          />
+                          <Package size={18} className="text-muted-foreground shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold">{rate.provider} — {rate.servicelevelName}</p>
+                            {rate.estimatedDays != null && (
+                              <p className="text-xs text-muted-foreground">Est. {rate.estimatedDays} business day{rate.estimatedDays !== 1 ? "s" : ""}</p>
+                            )}
+                          </div>
+                          <span className="text-sm font-semibold shrink-0">{centsToDisplay(rateCents)}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <div className="flex gap-3">
+                    <Button type="button" variant="outline" className="flex-1" onClick={() => setStep("address")}>Back</Button>
+                    <Button type="submit" disabled={loading || !selectedRate} className="flex-1 bg-green-700 hover:bg-green-800">
+                      {loading ? "Loading…" : "Continue to Payment"}
+                    </Button>
+                  </div>
+                </form>
               </CardContent>
             </Card>
           ) : (
@@ -207,8 +338,10 @@ export default function CartCheckoutPage() {
                     <input type="checkbox" checked={saveAddress} onChange={(e) => setSaveAddress(e.target.checked)} className="rounded" />
                     Save this address for next time
                   </label>
-                  <Button type="submit" disabled={loading} className="w-full bg-green-700 hover:bg-green-800 mt-2" size="lg">
-                    {loading ? "Loading…" : "Continue to Payment"}
+                  <Button type="submit" disabled={fetchingRates} className="w-full bg-green-700 hover:bg-green-800 mt-2" size="lg">
+                    {fetchingRates ? (
+                      <span className="flex items-center gap-2"><Loader2 size={16} className="animate-spin" /> Fetching shipping rates…</span>
+                    ) : "Continue"}
                   </Button>
                 </form>
               </CardContent>

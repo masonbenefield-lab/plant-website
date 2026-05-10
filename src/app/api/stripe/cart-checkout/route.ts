@@ -29,13 +29,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 
-  const { items, shippingAddress } = await request.json() as {
+  const { items, shippingAddress, shippingCostCents, shippoRateId, shippingService } = await request.json() as {
     items: CartItem[];
     shippingAddress: {
       name: string; line1: string; line2?: string;
       city: string; state: string; zip: string; country: string;
       is_gift?: boolean; gift_message?: string | null;
     };
+    shippingCostCents?: number;
+    shippoRateId?: string;
+    shippingService?: string;
   };
 
   if (!items?.length) return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
@@ -98,7 +101,9 @@ export async function POST(request: Request) {
   }
 
   const feePercent = planFeePercent(sellerPlan?.plan, !!sellerPlan?.is_admin);
+  const shippingCents = Math.max(0, Math.round(shippingCostCents ?? 0));
   const feeCents = Math.round(totalCents * (feePercent / 100));
+  const grandTotalCents = totalCents + shippingCents;
 
   // Atomically decrement stock for each item before creating PaymentIntent — prevents overselling
   const admin = adminClient();
@@ -133,7 +138,7 @@ export async function POST(request: Request) {
   }
 
   const paymentIntent = await getStripe().paymentIntents.create({
-    amount: totalCents,
+    amount: grandTotalCents,
     currency: "usd",
     application_fee_amount: feeCents,
     on_behalf_of: sellerProfile.stripe_account_id,
@@ -155,8 +160,11 @@ export async function POST(request: Request) {
       seller_id: sellerId,
       stripe_payment_intent_id: paymentIntent.id,
       shipping_address: shippingAddress,
-      amount_cents: totalCents,
+      amount_cents: grandTotalCents,
       cart_items: cartItemsForOrder,
+      shipping_cost_cents: shippingCents || null,
+      shipping_service: shippingService ?? null,
+      shippo_rate_id: shippoRateId ?? null,
     })
     .select()
     .single();
