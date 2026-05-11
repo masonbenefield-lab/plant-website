@@ -90,7 +90,14 @@ export default async function MyOrdersPage({
   const auctionIds = orders.filter((o) => o.auction_id).map((o) => o.auction_id!);
   const sellerIds = [...new Set(orders.map((o) => o.seller_id))];
 
-  const [{ data: listings }, { data: auctionItems }, { data: sellers }, { data: existingRatings }] =
+  // Collect all listing IDs including those from cart orders
+  const cartListingIds = orders.flatMap((o) => {
+    const items = o.cart_items as { listing_id: string }[] | null;
+    return items?.map((ci) => ci.listing_id) ?? [];
+  });
+  const allListingIds = [...new Set([...listingIds, ...cartListingIds])];
+
+  const [{ data: listings }, { data: auctionItems }, { data: sellers }, { data: existingRatings }, { data: gardenPlants }] =
     await Promise.all([
       listingIds.length
         ? supabase.from("listings").select("id, plant_name, variety, images, care_guide_pdf_url").in("id", listingIds)
@@ -100,12 +107,16 @@ export default async function MyOrdersPage({
         : { data: [] },
       supabase.from("profiles").select("id, username").in("id", sellerIds),
       supabase.from("ratings").select("order_id").eq("reviewer_id", user.id),
+      allListingIds.length
+        ? supabase.from("garden_plants").select("source_listing_id").eq("user_id", user.id).in("source_listing_id", allListingIds)
+        : { data: [] },
     ]);
 
   const listingMap = Object.fromEntries((listings ?? []).map((l) => [l.id, l]));
   const auctionMap = Object.fromEntries((auctionItems ?? []).map((a) => [a.id, a]));
   const sellerMap = Object.fromEntries((sellers ?? []).map((s) => [s.id, s]));
   const ratedOrderIds = new Set(existingRatings?.map((r) => r.order_id) ?? []);
+  const inGardenListingIds = new Set(gardenPlants?.map((g) => g.source_listing_id).filter(Boolean) ?? []);
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-10">
@@ -223,6 +234,64 @@ export default async function MyOrdersPage({
                 {order.status === "delivered" && ratedOrderIds.has(order.id) && (
                   <p className="mt-3 text-sm text-green-700">✓ You left a review for this order</p>
                 )}
+
+                {order.status === "delivered" && (() => {
+                  if (isCartOrder) {
+                    return (
+                      <div className="mt-3 pt-3 border-t space-y-1.5">
+                        {cartItems!.map((ci) => {
+                          const alreadyAdded = inGardenListingIds.has(ci.listing_id);
+                          const params = new URLSearchParams({
+                            name: ci.plant_name,
+                            ...(ci.variety ? { variety: ci.variety } : {}),
+                            source_type: "purchase",
+                            ...(seller?.username ? { source_name: seller.username } : {}),
+                            source_listing_id: ci.listing_id,
+                          });
+                          return (
+                            <div key={ci.listing_id} className="flex items-center gap-2">
+                              <Link
+                                href={`/garden/new?${params.toString()}`}
+                                className="inline-flex items-center gap-1.5 text-xs font-medium text-green-700 hover:text-green-800 hover:underline"
+                              >
+                                🪴 Add {ci.plant_name}{ci.variety ? ` — ${ci.variety}` : ""} to garden →
+                              </Link>
+                              {alreadyAdded && (
+                                <span className="text-xs text-muted-foreground">(already in garden)</span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  }
+
+                  const listingId = order.listing_id;
+                  if (!listingId) return null;
+                  const alreadyAdded = inGardenListingIds.has(listingId);
+                  const plantName = item?.plant_name ?? "";
+                  const plantVariety = item?.variety ?? null;
+                  const params = new URLSearchParams({
+                    name: plantName,
+                    ...(plantVariety ? { variety: plantVariety } : {}),
+                    source_type: "purchase",
+                    ...(seller?.username ? { source_name: seller.username } : {}),
+                    source_listing_id: listingId,
+                  });
+                  return (
+                    <div className="mt-3 pt-3 border-t flex items-center gap-2">
+                      <Link
+                        href={`/garden/new?${params.toString()}`}
+                        className="inline-flex items-center gap-1.5 text-xs font-medium text-green-700 hover:text-green-800 hover:underline"
+                      >
+                        🪴 Add to garden →
+                      </Link>
+                      {alreadyAdded && (
+                        <span className="text-xs text-muted-foreground">(already in garden)</span>
+                      )}
+                    </div>
+                  );
+                })()}
               </CardContent>
             </Card>
           );

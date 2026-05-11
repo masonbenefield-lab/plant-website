@@ -46,6 +46,7 @@ interface GardenFormProps {
     planted_at: string | null;
     source_name: string | null;
     source_type: string | null;
+    source_listing_id: string | null;
     notes: string | null;
     public_notes: string | null;
     images: string[];
@@ -54,22 +55,29 @@ interface GardenFormProps {
     repot_interval_days: number | null;
     prune_interval_days: number | null;
   };
+  initialValues?: {
+    name?: string;
+    variety?: string;
+    sourceType?: string;
+    sourceName?: string;
+    sourceListingId?: string;
+  };
 }
 
 const MAX_PHOTOS = 10;
 
-export function GardenForm({ mode, plant }: GardenFormProps) {
+export function GardenForm({ mode, plant, initialValues }: GardenFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [name, setName] = useState(plant?.name ?? "");
-  const [variety, setVariety] = useState(plant?.variety ?? "");
+  const [name, setName] = useState(plant?.name ?? initialValues?.name ?? "");
+  const [variety, setVariety] = useState(plant?.variety ?? initialValues?.variety ?? "");
   const [status, setStatus] = useState<GardenPlantStatus>(plant?.status ?? "growing");
   const [location, setLocation] = useState(plant?.location ?? "");
   const [plantedAt, setPlantedAt] = useState(plant?.planted_at?.slice(0, 10) ?? "");
-  const [sourceName, setSourceName] = useState(plant?.source_name ?? "");
-  const [sourceType, setSourceType] = useState<string>(plant?.source_type ?? "");
+  const [sourceName, setSourceName] = useState(plant?.source_name ?? initialValues?.sourceName ?? "");
+  const [sourceType, setSourceType] = useState<string>(plant?.source_type ?? initialValues?.sourceType ?? "");
   const [notes, setNotes] = useState(plant?.notes ?? "");
   const [publicNotes, setPublicNotes] = useState(plant?.public_notes ?? "");
   const [images, setImages] = useState<string[]>(plant?.images ?? []);
@@ -128,6 +136,7 @@ export function GardenForm({ mode, plant }: GardenFormProps) {
         planted_at: plantedAt || null,
         source_name: sourceName.trim() || null,
         source_type: (sourceType || null) as "nursery" | "purchase" | "trade" | "propagation" | "gift" | null,
+        source_listing_id: plant?.source_listing_id ?? initialValues?.sourceListingId ?? null,
         notes: notes.trim() || null,
         public_notes: publicNotes.trim() || null,
         images,
