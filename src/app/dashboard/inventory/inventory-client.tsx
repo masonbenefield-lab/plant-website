@@ -66,6 +66,7 @@ type Row = {
   listing_care_guide_pdf_url: string | null;
   listing_last_activated_at: string | null;
   auctions: AuctionSummary[];
+  shipping_weight_oz: number | null;
   low_stock_threshold: number | null;
   cost_cents: number | null;
   status: string;
@@ -408,7 +409,7 @@ export default function InventoryClient({
       setEditImages([...m.row.images]);
       setEditLowStockThreshold(m.row.low_stock_threshold != null ? String(m.row.low_stock_threshold) : "");
       setEditCostPrice(m.row.cost_cents != null ? String(m.row.cost_cents / 100) : "");
-      setEditWeightOz((m.row as { shipping_weight_oz?: number | null }).shipping_weight_oz != null ? String((m.row as { shipping_weight_oz?: number | null }).shipping_weight_oz) : "");
+      setEditWeightOz(m.row.shipping_weight_oz != null ? String(m.row.shipping_weight_oz) : "");
       setDragPhotoIdx(null);
       setSaveTemplateName("");
       // Load seller's templates
@@ -1188,11 +1189,31 @@ export default function InventoryClient({
                 <AlertTriangle size={11} /> Fully committed — consider pausing
               </div>
             )}
+            {!row.shipping_weight_oz && (
+              <button
+                onClick={() => openModal({ type: "edit", row })}
+                className="flex items-center gap-1 text-xs text-amber-600 font-medium hover:text-amber-700"
+                title="No shipping weight set — rates will use a default. Click to edit."
+              >
+                <AlertTriangle size={11} /> No weight set
+              </button>
+            )}
           </div>
         ) : a > 0 ? (
-          <button onClick={() => openModal({ type: "listing", row })} className="inline-flex items-center gap-1.5 text-sm text-green-700 hover:underline font-medium">
-            <Store size={13} /> List in Shop
-          </button>
+          <div className="space-y-1">
+            <button onClick={() => openModal({ type: "listing", row })} className="inline-flex items-center gap-1.5 text-sm text-green-700 hover:underline font-medium">
+              <Store size={13} /> List in Shop
+            </button>
+            {!row.shipping_weight_oz && (
+              <button
+                onClick={() => openModal({ type: "edit", row })}
+                className="flex items-center gap-1 text-xs text-amber-600 font-medium hover:text-amber-700"
+                title="No shipping weight set — rates will use a default. Click to edit."
+              >
+                <AlertTriangle size={11} /> No weight set
+              </button>
+            )}
+          </div>
         ) : null}
 
         {/* Auctions */}
@@ -1344,14 +1365,34 @@ export default function InventoryClient({
                   <AlertTriangle size={11} /> Fully committed — consider pausing
                 </div>
               )}
+              {!row.shipping_weight_oz && (
+                <button
+                  onClick={() => openModal({ type: "edit", row })}
+                  className="flex items-center gap-1 text-xs text-amber-600 font-medium hover:text-amber-700"
+                  title="No shipping weight set — rates will use a default. Click to edit."
+                >
+                  <AlertTriangle size={11} /> No weight set
+                </button>
+              )}
             </div>
           ) : a > 0 ? (
-            <button
-              onClick={() => openModal({ type: "listing", row })}
-              className="inline-flex items-center gap-1.5 text-sm text-green-700 hover:underline font-medium"
-            >
-              <Store size={13} /> List in Shop
-            </button>
+            <div className="space-y-1">
+              <button
+                onClick={() => openModal({ type: "listing", row })}
+                className="inline-flex items-center gap-1.5 text-sm text-green-700 hover:underline font-medium"
+              >
+                <Store size={13} /> List in Shop
+              </button>
+              {!row.shipping_weight_oz && (
+                <button
+                  onClick={() => openModal({ type: "edit", row })}
+                  className="flex items-center gap-1 text-xs text-amber-600 font-medium hover:text-amber-700"
+                  title="No shipping weight set — rates will use a default. Click to edit."
+                >
+                  <AlertTriangle size={11} /> No weight set
+                </button>
+              )}
+            </div>
           ) : (
             <span className="text-xs text-muted-foreground">—</span>
           )}
