@@ -430,6 +430,25 @@ export default function InventoryClient({
     setModal(m);
   }
 
+  function guardListOrAuction(type: "listing" | "auction", row: Row) {
+    if (!row.shipping_weight_oz && !row.free_shipping) {
+      toast.warning("No shipping weight set", {
+        description: "Buyers will see inaccurate shipping quotes (defaults to 1 lb). Set a weight or enable free shipping for accurate rates.",
+        duration: 12000,
+        action: {
+          label: "Set weight first",
+          onClick: () => openModal({ type: "edit", row }),
+        },
+        cancel: {
+          label: "Continue anyway",
+          onClick: () => openModal({ type, row }),
+        },
+      });
+      return;
+    }
+    openModal({ type, row });
+  }
+
   // ── Photo upload ──────────────────────────────────────────────────────────
   async function handleImageAdd(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -1043,10 +1062,10 @@ export default function InventoryClient({
                 </DropdownMenuItem>
               )}
               {a > 0 && !hasListing && (
-                <DropdownMenuItem onClick={() => openModal({ type: "listing", row })}><Store size={13} className="mr-1.5" /> List in Shop</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => guardListOrAuction("listing", row)}><Store size={13} className="mr-1.5" /> List in Shop</DropdownMenuItem>
               )}
               {a > 0 && (
-                <DropdownMenuItem onClick={() => openModal({ type: "auction", row })}><Gavel size={13} className="mr-1.5" /> {activeAuctions.length > 0 ? "Add Auction" : "Auction"}</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => guardListOrAuction("auction", row)}><Gavel size={13} className="mr-1.5" /> {activeAuctions.length > 0 ? "Add Auction" : "Auction"}</DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => archiveItem(row.id)} disabled={loadingId === row.id} className="text-destructive focus:text-destructive">Archive</DropdownMenuItem>
@@ -1209,7 +1228,7 @@ export default function InventoryClient({
           </div>
         ) : a > 0 ? (
           <div className="space-y-1">
-            <button onClick={() => openModal({ type: "listing", row })} className="inline-flex items-center gap-1.5 text-sm text-green-700 hover:underline font-medium">
+            <button onClick={() => guardListOrAuction("listing", row)} className="inline-flex items-center gap-1.5 text-sm text-green-700 hover:underline font-medium">
               <Store size={13} /> List in Shop
             </button>
             {row.free_shipping ? (
@@ -1248,7 +1267,7 @@ export default function InventoryClient({
             </div>
           ))}
           {a > 0 && (
-            <button onClick={() => openModal({ type: "auction", row })} className="inline-flex items-center gap-1.5 text-sm text-purple-700 hover:underline font-medium">
+            <button onClick={() => guardListOrAuction("auction", row)} className="inline-flex items-center gap-1.5 text-sm text-purple-700 hover:underline font-medium">
               <Gavel size={13} /> {activeAuctions.length > 0 ? "Add Auction" : "Auction"}
             </button>
           )}
@@ -1394,7 +1413,7 @@ export default function InventoryClient({
           ) : a > 0 ? (
             <div className="space-y-1">
               <button
-                onClick={() => openModal({ type: "listing", row })}
+                onClick={() => guardListOrAuction("listing", row)}
                 className="inline-flex items-center gap-1.5 text-sm text-green-700 hover:underline font-medium"
               >
                 <Store size={13} /> List in Shop
@@ -1442,7 +1461,7 @@ export default function InventoryClient({
             ))}
             {a > 0 ? (
               <button
-                onClick={() => openModal({ type: "auction", row })}
+                onClick={() => guardListOrAuction("auction", row)}
                 className="inline-flex items-center gap-1.5 text-sm text-purple-700 hover:underline font-medium"
               >
                 <Gavel size={13} /> {activeAuctions.length > 0 ? "Add Auction" : "Auction"}
