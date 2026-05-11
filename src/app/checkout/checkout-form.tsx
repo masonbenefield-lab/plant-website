@@ -169,13 +169,7 @@ export default function CheckoutForm({ listingId, auctionId, offerId, priceCents
       return;
     }
 
-    setRates(data.rates ?? []);
-    setSelectedRate(data.rates?.[0] ?? null);
-    const firstRateCents = data.rates?.[0] ? Math.round(parseFloat(data.rates[0].amount) * 100) : 0;
-    setTotalCents(priceCents + firstRateCents);
-    setStep("shipping");
-
-    // Save address
+    // Save address regardless of shipping path
     if (saveAddress) {
       fetch("/api/profile/save-address", {
         method: "POST",
@@ -186,15 +180,24 @@ export default function CheckoutForm({ listingId, auctionId, offerId, priceCents
     } else {
       try { localStorage.removeItem(SAVED_ADDRESS_KEY); } catch { /* ignore */ }
     }
+
+    if (data.freeShipping) {
+      await createOrder({ shippingCostCents: 0 });
+      return;
+    }
+
+    setRates(data.rates ?? []);
+    setSelectedRate(data.rates?.[0] ?? null);
+    const firstRateCents = data.rates?.[0] ? Math.round(parseFloat(data.rates[0].amount) * 100) : 0;
+    setTotalCents(priceCents + firstRateCents);
+    setStep("shipping");
   }
 
-  async function handleShippingSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!selectedRate || submittingRef.current) return;
+  async function createOrder({ shippingCostCents, shippoRateId, shippingService }: { shippingCostCents: number; shippoRateId?: string; shippingService?: string }) {
+    if (submittingRef.current) return;
     submittingRef.current = true;
     setLoading(true);
 
-    const shippingCostCents = Math.round(parseFloat(selectedRate.amount) * 100);
     const res = await fetch("/api/stripe/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -207,8 +210,8 @@ export default function CheckoutForm({ listingId, auctionId, offerId, priceCents
           ? { ...address, is_gift: true, gift_message: giftMessage || null }
           : address,
         shippingCostCents,
-        shippoRateId: selectedRate.objectId,
-        shippingService: selectedRate.servicelevelName,
+        shippoRateId,
+        shippingService,
       }),
     });
 
@@ -225,6 +228,16 @@ export default function CheckoutForm({ listingId, auctionId, offerId, priceCents
     setTotalCents(priceCents + shippingCostCents);
     setStep("payment");
     setLoading(false);
+  }
+
+  async function handleShippingSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selectedRate) return;
+    await createOrder({
+      shippingCostCents: Math.round(parseFloat(selectedRate.amount) * 100),
+      shippoRateId: selectedRate.objectId,
+      shippingService: selectedRate.servicelevelName,
+    });
   }
 
   function onPaymentSuccess() {

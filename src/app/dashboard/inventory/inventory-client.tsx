@@ -26,7 +26,7 @@ import {
   ChevronRight, ChevronDown, MoreHorizontal, Plus,
   ImagePlus, X, Store, Gavel, Pencil, HelpCircle,
   AlertTriangle, GripVertical, Copy, StickyNote, ArrowUpDown,
-  LayoutList, LayoutGrid, Upload,
+  LayoutList, LayoutGrid, Upload, Truck,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import PotSizePicker from "@/components/pot-size-picker";
@@ -67,6 +67,7 @@ type Row = {
   listing_last_activated_at: string | null;
   auctions: AuctionSummary[];
   shipping_weight_oz: number | null;
+  free_shipping: boolean;
   low_stock_threshold: number | null;
   cost_cents: number | null;
   status: string;
@@ -283,6 +284,7 @@ export default function InventoryClient({
   const [imageUploading, setImageUploading] = useState(false);
   const [editLowStockThreshold, setEditLowStockThreshold] = useState("");
   const [editWeightOz, setEditWeightOz] = useState("");
+  const [editFreeShipping, setEditFreeShipping] = useState(false);
   const [dragPhotoIdx, setDragPhotoIdx] = useState<number | null>(null);
 
   // Sold modal
@@ -410,6 +412,7 @@ export default function InventoryClient({
       setEditLowStockThreshold(m.row.low_stock_threshold != null ? String(m.row.low_stock_threshold) : "");
       setEditCostPrice(m.row.cost_cents != null ? String(m.row.cost_cents / 100) : "");
       setEditWeightOz(m.row.shipping_weight_oz != null ? String(m.row.shipping_weight_oz) : "");
+      setEditFreeShipping(m.row.free_shipping ?? false);
       setDragPhotoIdx(null);
       setSaveTemplateName("");
       // Load seller's templates
@@ -698,6 +701,7 @@ export default function InventoryClient({
       low_stock_threshold: editLowStockThreshold !== "" ? Number(editLowStockThreshold) : null,
       cost_cents: editCostPrice !== "" ? dollarsToCents(editCostPrice) : null,
       shipping_weight_oz: editWeightOz !== "" ? Math.max(1, Math.round(parseFloat(editWeightOz))) : null,
+      free_shipping: editFreeShipping,
     }).eq("id", modal.row.id);
     if (error) { toast.error(error.message); setSubmitting(false); return; }
     if (modal.row.listing_id) {
@@ -1189,7 +1193,11 @@ export default function InventoryClient({
                 <AlertTriangle size={11} /> Fully committed — consider pausing
               </div>
             )}
-            {!row.shipping_weight_oz && (
+            {row.free_shipping ? (
+              <div className="flex items-center gap-1 text-xs text-green-700 font-medium">
+                <Truck size={11} /> Free shipping
+              </div>
+            ) : !row.shipping_weight_oz ? (
               <button
                 onClick={() => openModal({ type: "edit", row })}
                 className="flex items-center gap-1 text-xs text-amber-600 font-medium hover:text-amber-700"
@@ -1197,14 +1205,18 @@ export default function InventoryClient({
               >
                 <AlertTriangle size={11} /> No weight set
               </button>
-            )}
+            ) : null}
           </div>
         ) : a > 0 ? (
           <div className="space-y-1">
             <button onClick={() => openModal({ type: "listing", row })} className="inline-flex items-center gap-1.5 text-sm text-green-700 hover:underline font-medium">
               <Store size={13} /> List in Shop
             </button>
-            {!row.shipping_weight_oz && (
+            {row.free_shipping ? (
+              <div className="flex items-center gap-1 text-xs text-green-700 font-medium">
+                <Truck size={11} /> Free shipping
+              </div>
+            ) : !row.shipping_weight_oz ? (
               <button
                 onClick={() => openModal({ type: "edit", row })}
                 className="flex items-center gap-1 text-xs text-amber-600 font-medium hover:text-amber-700"
@@ -1212,7 +1224,7 @@ export default function InventoryClient({
               >
                 <AlertTriangle size={11} /> No weight set
               </button>
-            )}
+            ) : null}
           </div>
         ) : null}
 
@@ -1365,7 +1377,11 @@ export default function InventoryClient({
                   <AlertTriangle size={11} /> Fully committed — consider pausing
                 </div>
               )}
-              {!row.shipping_weight_oz && (
+              {row.free_shipping ? (
+                <div className="flex items-center gap-1 text-xs text-green-700 font-medium">
+                  <Truck size={11} /> Free shipping
+                </div>
+              ) : !row.shipping_weight_oz ? (
                 <button
                   onClick={() => openModal({ type: "edit", row })}
                   className="flex items-center gap-1 text-xs text-amber-600 font-medium hover:text-amber-700"
@@ -1373,7 +1389,7 @@ export default function InventoryClient({
                 >
                   <AlertTriangle size={11} /> No weight set
                 </button>
-              )}
+              ) : null}
             </div>
           ) : a > 0 ? (
             <div className="space-y-1">
@@ -1383,7 +1399,11 @@ export default function InventoryClient({
               >
                 <Store size={13} /> List in Shop
               </button>
-              {!row.shipping_weight_oz && (
+              {row.free_shipping ? (
+                <div className="flex items-center gap-1 text-xs text-green-700 font-medium">
+                  <Truck size={11} /> Free shipping
+                </div>
+              ) : !row.shipping_weight_oz ? (
                 <button
                   onClick={() => openModal({ type: "edit", row })}
                   className="flex items-center gap-1 text-xs text-amber-600 font-medium hover:text-amber-700"
@@ -1391,7 +1411,7 @@ export default function InventoryClient({
                 >
                   <AlertTriangle size={11} /> No weight set
                 </button>
-              )}
+              ) : null}
             </div>
           ) : (
             <span className="text-xs text-muted-foreground">—</span>
@@ -2219,8 +2239,19 @@ export default function InventoryClient({
                     value={editWeightOz}
                     onChange={e => setEditWeightOz(e.target.value)}
                     placeholder="e.g. 16"
+                    disabled={editFreeShipping}
                   />
                   <p className="text-xs text-muted-foreground">Used for live shipping quotes</p>
+                  <label className="flex items-center gap-2 pt-1 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={editFreeShipping}
+                      onChange={e => setEditFreeShipping(e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 accent-green-700"
+                    />
+                    <span className="text-sm font-medium">Offer free shipping</span>
+                    <span className="text-xs text-muted-foreground">(you absorb the cost)</span>
+                  </label>
                 </div>
               </div>
               {/* Templates */}

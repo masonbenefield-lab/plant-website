@@ -38,8 +38,11 @@ export async function POST(request: Request) {
     if (invIds.length) {
       const { data: invs } = await supabase
         .from("inventory")
-        .select("shipping_weight_oz")
+        .select("shipping_weight_oz, free_shipping")
         .in("id", invIds);
+      if (invs?.length && invs.every((inv) => inv.free_shipping)) {
+        return NextResponse.json({ rates: [], freeShipping: true });
+      }
       weightOz = (invs ?? []).reduce((sum, inv) => sum + (inv.shipping_weight_oz ?? 16), 0);
     } else {
       weightOz = listings.length * 16; // default 1lb per item
@@ -56,9 +59,10 @@ export async function POST(request: Request) {
     if (listing.inventory_id) {
       const { data: inv } = await supabase
         .from("inventory")
-        .select("shipping_weight_oz")
+        .select("shipping_weight_oz, free_shipping")
         .eq("id", listing.inventory_id)
         .single();
+      if (inv?.free_shipping) return NextResponse.json({ rates: [], freeShipping: true });
       weightOz = inv?.shipping_weight_oz ?? 16;
     } else {
       weightOz = 16;
@@ -75,9 +79,10 @@ export async function POST(request: Request) {
     if (auction.inventory_id) {
       const { data: inv } = await supabase
         .from("inventory")
-        .select("shipping_weight_oz")
+        .select("shipping_weight_oz, free_shipping")
         .eq("id", auction.inventory_id)
         .single();
+      if (inv?.free_shipping) return NextResponse.json({ rates: [], freeShipping: true });
       weightOz = inv?.shipping_weight_oz ?? 16;
     } else {
       weightOz = 16;

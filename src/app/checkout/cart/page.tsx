@@ -133,26 +133,27 @@ export default function CartCheckoutPage() {
 
     if (data.error) { toast.error(data.error); return; }
 
+    if (saveAddress) {
+      try { localStorage.setItem(SAVED_ADDRESS_KEY, JSON.stringify(address)); } catch { /* ignore */ }
+    } else {
+      try { localStorage.removeItem(SAVED_ADDRESS_KEY); } catch { /* ignore */ }
+    }
+
+    if (data.freeShipping) {
+      await createCartOrder({ shippingCostCents: 0 });
+      return;
+    }
+
     setRates(data.rates ?? []);
     const first = data.rates?.[0] ?? null;
     setSelectedRate(first);
     const firstCents = first ? Math.round(parseFloat(first.amount) * 100) : 0;
     setGrandTotalCents(itemsTotalCents + firstCents);
     setStep("shipping");
-
-    if (saveAddress) {
-      try { localStorage.setItem(SAVED_ADDRESS_KEY, JSON.stringify(address)); } catch { /* ignore */ }
-    } else {
-      try { localStorage.removeItem(SAVED_ADDRESS_KEY); } catch { /* ignore */ }
-    }
   }
 
-  async function handleShippingSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!selectedRate) return;
+  async function createCartOrder({ shippingCostCents, shippoRateId, shippingService }: { shippingCostCents: number; shippoRateId?: string; shippingService?: string }) {
     setLoading(true);
-
-    const shippingCostCents = Math.round(parseFloat(selectedRate.amount) * 100);
     const res = await fetch("/api/stripe/cart-checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -160,8 +161,8 @@ export default function CartCheckoutPage() {
         items: items.map((i) => ({ listingId: i.listingId, quantity: i.quantity, priceCents: i.priceCents })),
         shippingAddress: isGift ? { ...address, is_gift: true, gift_message: giftMessage || null } : address,
         shippingCostCents,
-        shippoRateId: selectedRate.objectId,
-        shippingService: selectedRate.servicelevelName,
+        shippoRateId,
+        shippingService,
       }),
     });
 
@@ -173,6 +174,16 @@ export default function CartCheckoutPage() {
     setGrandTotalCents(itemsTotalCents + shippingCostCents);
     setStep("payment");
     setLoading(false);
+  }
+
+  async function handleShippingSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selectedRate) return;
+    await createCartOrder({
+      shippingCostCents: Math.round(parseFloat(selectedRate.amount) * 100),
+      shippoRateId: selectedRate.objectId,
+      shippingService: selectedRate.servicelevelName,
+    });
   }
 
   function onPaymentSuccess() {
