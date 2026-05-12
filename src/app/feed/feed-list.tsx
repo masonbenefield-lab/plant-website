@@ -10,7 +10,7 @@ const STORAGE_KEY = "feed_last_visit";
 
 type FeedItem = {
   id: string;
-  kind: "listing" | "auction";
+  kind: "listing" | "auction" | "garden";
   createdAt: string;
   seller_id: string;
   plant_name: string;
@@ -47,7 +47,7 @@ export default function FeedList({ items, sellerMap }: { items: FeedItem[]; sell
     <div className="space-y-4">
       {items.map(({ id, kind, createdAt, seller_id, plant_name, variety, category, images, price_cents, current_bid_cents }) => {
         const seller = sellerMap[seller_id];
-        const href = kind === "listing" ? `/shop/${id}` : `/auctions/${id}`;
+        const href = kind === "listing" ? `/shop/${id}` : kind === "auction" ? `/auctions/${id}` : `/gardens/${seller?.username}`;
         const isNew = lastVisit !== null && new Date(createdAt).getTime() > lastVisit;
         const showDivider = !isNew && !dividerInserted && lastVisit !== null;
         if (showDivider) dividerInserted = true;
@@ -92,6 +92,9 @@ export default function FeedList({ items, sellerMap }: { items: FeedItem[]; sell
                     {kind === "auction" && (
                       <Badge className="bg-blue-600 text-white text-xs px-1.5 py-0">Auction</Badge>
                     )}
+                    {kind === "garden" && (
+                      <Badge className="bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 text-xs px-1.5 py-0 border-0">🌱 New in garden</Badge>
+                    )}
                   </div>
                   {variety && <p className="text-sm text-muted-foreground truncate">{variety}</p>}
                   {category && (
@@ -99,11 +102,16 @@ export default function FeedList({ items, sellerMap }: { items: FeedItem[]; sell
                       {category}
                     </span>
                   )}
-                  <p className="text-sm font-bold text-green-700 mt-1">
-                    {price_cents !== undefined
-                      ? centsToDisplay(price_cents)
-                      : `Bid: ${centsToDisplay(current_bid_cents ?? 0)}`}
-                  </p>
+                  {kind !== "garden" && (
+                    <p className="text-sm font-bold text-green-700 mt-1">
+                      {price_cents !== undefined
+                        ? centsToDisplay(price_cents)
+                        : `Bid: ${centsToDisplay(current_bid_cents ?? 0)}`}
+                    </p>
+                  )}
+                  {kind === "garden" && (
+                    <p className="text-xs text-muted-foreground mt-1">Added to their garden</p>
+                  )}
                 </div>
               </Link>
             </div>

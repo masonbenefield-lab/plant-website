@@ -861,3 +861,61 @@ ALTER TABLE orders ADD COLUMN IF NOT EXISTS shipping_cost_cents integer, ADD COL
 - src/app/account/account-form.tsx
 - src/app/dashboard/create/create-form.tsx
 - src/app/dashboard/inventory/inventory-client.tsx
+
+---
+
+## 2026-05-11 — Garden feed sharing + following page
+
+### Features built
+- **Garden feed sharing**: Opt-in "Share to followers' feeds" checkbox on the Add to Garden form. Sets `shared_at` timestamp on insert. Followers see a "🌱 New in garden" card in their feed that links to the grower's public garden page.
+- **Feed page**: Now queries `garden_plants` from followed user IDs where `shared_at IS NOT NULL` and `is_public = true`. Garden posts merged and sorted with listings/auctions in the unified feed.
+- **FeedList**: Handles `kind: "garden"` cards — shows "🌱 New in garden" badge, "Added to their garden" text, links to `/gardens/[username]`. No price shown.
+- **FeedUpdates**: Realtime listener now also subscribes to `garden_plants` INSERTs from followed users (only increments count if `shared_at` is set).
+- **Following/Followers/Blocked page** (`/following`): Three-tab page with user cards (avatar, username, Message, Follow/Unfollow, block menu). Added to navbar (desktop icon row, dropdown, mobile menu).
+- **Block function**: `/api/users/block` route blocks/unblocks users. Block removes follows in both directions. Message route (`/api/messages/start`) checks for blocks before creating conversations.
+- **Shipping weight warning**: Amber "⚠ No weight set" alert in inventory. Clicking opens edit modal.
+- **Free shipping option**: Checkbox in inventory edit modal. Shows green "🚚 Free shipping" badge. Checkout skips Shippo rate step and uses $0 shipping.
+- **Weight guard on list/auction**: Sonner toast intercepts listing/auction button clicks when no weight or free shipping is set. Offers "Set weight first" or "Continue anyway".
+- **Add to Garden from orders**: "🪴 Add to garden →" link on delivered orders, pre-fills garden form. Shows "(already in garden)" note if already added but link always works.
+
+### SQL migrations required
+```sql
+-- Garden feed sharing
+ALTER TABLE garden_plants ADD COLUMN IF NOT EXISTS shared_at timestamptz;
+
+-- Free shipping on inventory
+ALTER TABLE inventory ADD COLUMN IF NOT EXISTS free_shipping boolean NOT NULL DEFAULT false;
+
+-- Block table
+CREATE TABLE IF NOT EXISTS blocks (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  blocker_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  blocked_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE(blocker_id, blocked_id)
+);
+ALTER TABLE blocks ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users manage own blocks" ON blocks
+  USING (blocker_id = auth.uid())
+  WITH CHECK (blocker_id = auth.uid());
+```
+
+### Files changed
+- src/lib/supabase/types.ts (shared_at on garden_plants; blocks table; free_shipping on inventory)
+- src/components/garden/garden-form.tsx (shareToFeed checkbox, shared_at in insert payload)
+- src/app/feed/page.tsx (garden_plants query, FeedItem type includes "garden" kind)
+- src/app/feed/feed-list.tsx (garden card UI, kind: "garden" support)
+- src/components/feed-updates.tsx (realtime garden_plants listener)
+- src/app/following/page.tsx (new — server component)
+- src/app/following/following-client.tsx (new — three-tab UI with block/unblock)
+- src/app/api/users/block/route.ts (new — block/unblock API)
+- src/components/layout/navbar.tsx (Users icon + /following link)
+- src/app/api/messages/start/route.ts (block check before creating conversation)
+- src/app/dashboard/inventory/inventory-client.tsx (weight warning, free_shipping, guardListOrAuction)
+- src/app/dashboard/inventory/page.tsx (shipping_weight_oz + free_shipping in row mappings)
+- src/app/api/shipping/rates/route.ts (free_shipping early return)
+- src/app/checkout/checkout-form.tsx (free shipping bypass)
+- src/app/checkout/cart/page.tsx (free shipping bypass)
+- src/app/orders/page.tsx (Add to Garden link, duplicate detection)
+- src/app/garden/new/page.tsx (searchParams pre-fill)
+- src/app/garden/[id]/edit/page.tsx (source_listing_id in select)

@@ -16,6 +16,8 @@ export default function FeedUpdates({ sellerIds }: { sellerIds: string[] }) {
     const supabase = createClient();
     const filter = `seller_id=in.(${sellerKey})`;
 
+    const gardenFilter = `user_id=in.(${sellerKey})`;
+
     const channel = supabase
       .channel("feed-updates")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "listings", filter }, () => {
@@ -23,6 +25,9 @@ export default function FeedUpdates({ sellerIds }: { sellerIds: string[] }) {
       })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "auctions", filter }, () => {
         setNewCount((n) => n + 1);
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "garden_plants", filter: gardenFilter }, (payload) => {
+        if (payload.new.shared_at) setNewCount((n) => n + 1);
       })
       .subscribe();
 

@@ -86,6 +86,7 @@ export function GardenForm({ mode, plant, initialValues }: GardenFormProps) {
   const [repotInterval, setRepotInterval] = useState(plant?.repot_interval_days?.toString() ?? "");
   const [pruneInterval, setPruneInterval] = useState(plant?.prune_interval_days?.toString() ?? "");
   const [uploading, setUploading] = useState(false);
+  const [shareToFeed, setShareToFeed] = useState(false);
 
   async function handlePhotoUpload(files: FileList) {
     if (images.length >= MAX_PHOTOS) {
@@ -137,6 +138,7 @@ export function GardenForm({ mode, plant, initialValues }: GardenFormProps) {
         source_name: sourceName.trim() || null,
         source_type: (sourceType || null) as "nursery" | "purchase" | "trade" | "propagation" | "gift" | null,
         source_listing_id: plant?.source_listing_id ?? initialValues?.sourceListingId ?? null,
+        shared_at: mode === "add" && shareToFeed ? new Date().toISOString() : (plant ? undefined : null),
         notes: notes.trim() || null,
         public_notes: publicNotes.trim() || null,
         images,
@@ -333,6 +335,23 @@ export function GardenForm({ mode, plant, initialValues }: GardenFormProps) {
           />
         </div>
       </div>
+
+      {mode === "add" && (
+        <label className="flex items-start gap-3 cursor-pointer group">
+          <input
+            type="checkbox"
+            checked={shareToFeed}
+            onChange={(e) => setShareToFeed(e.target.checked)}
+            className="mt-0.5 h-4 w-4 rounded border-border accent-green-700"
+          />
+          <div>
+            <span className="text-sm font-medium">Share to your followers&apos; feeds</span>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Followers will see a card for this plant in their feed. Your garden must be public for the link to work.
+            </p>
+          </div>
+        </label>
+      )}
 
       <div className="flex gap-3 pt-2">
         <Button

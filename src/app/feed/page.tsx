@@ -17,7 +17,7 @@ export default async function FeedPage() {
 
   const sellerIds = (follows ?? []).map((f) => f.seller_id);
 
-  const [{ data: listings }, { data: auctions }, { data: sellers }] = sellerIds.length
+  const [{ data: listings }, { data: auctions }, { data: gardenShares }, { data: sellers }] = sellerIds.length
     ? await Promise.all([
         supabase
           .from("listings")
@@ -34,11 +34,19 @@ export default async function FeedPage() {
           .order("created_at", { ascending: false })
           .limit(40),
         supabase
+          .from("garden_plants")
+          .select("id, user_id, name, variety, images, shared_at, is_public")
+          .in("user_id", sellerIds)
+          .not("shared_at", "is", null)
+          .eq("is_public", true)
+          .order("shared_at", { ascending: false })
+          .limit(20),
+        supabase
           .from("profiles")
           .select("id, username, avatar_url")
           .in("id", sellerIds),
       ])
-    : [{ data: [] }, { data: [] }, { data: [] }];
+    : [{ data: [] }, { data: [] }, { data: [] }, { data: [] }];
 
   const sellerMap = Object.fromEntries((sellers ?? []).map((s) => [s.id, s]));
 
@@ -99,7 +107,7 @@ export default async function FeedPage() {
 
   type FeedItem = {
     id: string;
-    kind: "listing" | "auction";
+    kind: "listing" | "auction" | "garden";
     createdAt: string;
     seller_id: string;
     plant_name: string;
@@ -120,6 +128,11 @@ export default async function FeedPage() {
       id: a.id, kind: "auction" as const, createdAt: a.created_at, seller_id: a.seller_id,
       plant_name: a.plant_name, variety: a.variety ?? null, category: a.category ?? null,
       images: (a.images ?? []) as string[], current_bid_cents: a.current_bid_cents,
+    })),
+    ...(gardenShares ?? []).map((g) => ({
+      id: g.id, kind: "garden" as const, createdAt: g.shared_at!, seller_id: g.user_id,
+      plant_name: g.name, variety: g.variety ?? null, category: null,
+      images: (g.images ?? []) as string[],
     })),
   ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 

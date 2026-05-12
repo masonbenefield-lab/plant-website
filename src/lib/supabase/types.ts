@@ -719,6 +719,7 @@ export interface Database {
           repot_interval_days: number | null;
           prune_interval_days: number | null;
           is_public: boolean;
+          shared_at: string | null;
           created_at: string;
         };
         Insert: {
@@ -740,6 +741,7 @@ export interface Database {
           repot_interval_days?: number | null;
           prune_interval_days?: number | null;
           is_public?: boolean;
+          shared_at?: string | null;
           created_at?: string;
         };
         Update: {
@@ -759,6 +761,7 @@ export interface Database {
           repot_interval_days?: number | null;
           prune_interval_days?: number | null;
           is_public?: boolean;
+          shared_at?: string | null;
         };
         Relationships: [];
       };
