@@ -17,18 +17,19 @@ const fallbackListings = [
 ];
 
 const features = [
-  { icon: "🌿", title: "Build Your Storefront",   desc: "Create a personal shop page with your bio, profile photo, and all your listings in one place." },
-  { icon: "🛒", title: "Sell at Fixed Price",      desc: "List plants with photos, variety details, and inventory count. Buyers purchase instantly." },
-  { icon: "⚡", title: "Run Live Auctions",        desc: "Set a starting bid and end time. Watch live bids roll in — highest bidder wins when the clock hits zero." },
-  { icon: "📦", title: "Seamless Fulfillment",     desc: "Buyer shipping addresses land straight in your seller dashboard so you always know what to ship and where." },
-  { icon: "💳", title: "Secure Payments",          desc: "Powered by Stripe. Buyers pay on-site; funds route directly to your bank minus a small platform fee." },
-  { icon: "⭐", title: "Trusted Reviews",          desc: "Buyers rate sellers after delivery, building reputation that helps great nurseries stand out." },
+  { icon: "🌿", title: "Build Your Storefront",       desc: "Create a personal shop page with your bio, profile photo, and all your listings in one place." },
+  { icon: "🛒", title: "Sell at Fixed Price",          desc: "List plants with photos, variety details, and inventory count. Buyers purchase instantly." },
+  { icon: "⚡", title: "Run Live Auctions",            desc: "Set a starting bid and end time. Watch live bids roll in — highest bidder wins when the clock hits zero." },
+  { icon: "👥", title: "Follow Growers You Love",      desc: "Follow your favorite sellers and get their new listings, restocks, and updates straight in your feed." },
+  { icon: "💳", title: "Secure Payments",              desc: "Powered by Stripe. Buyers pay on-site; funds route directly to your bank minus a small platform fee." },
+  { icon: "🪴", title: "Your Personal Garden Log",     desc: "Track every plant you own — care schedules, growth photos, source history, and event logs all in one place." },
 ];
 
 const audiences = [
   { emoji: "🏡", label: "Small Nurseries",      desc: "Move seasonal inventory and reach buyers beyond your local area." },
   { emoji: "🔍", label: "Hobbyist Collectors",  desc: "Trade rare finds, offsets, and propagations with fellow enthusiasts." },
   { emoji: "🏆", label: "Rare Plant Sellers",   desc: "Run time-limited auctions to get true market value for sought-after specimens." },
+  { emoji: "🌱", label: "Plant Enthusiasts",    desc: "Browse the shop, follow growers you love, ask the community for help, and track your own collection." },
 ];
 
 const testimonials = [
@@ -146,8 +147,8 @@ export default async function LandingPage() {
                 The marketplace<br className="hidden sm:block" /> for plant lovers
               </h1>
               <p className="text-base sm:text-lg text-green-100 mb-8 max-w-lg mx-auto lg:mx-0">
-                Buy, sell, and auction plants directly with nurseries and hobbyists.
-                Open your storefront in minutes — no monthly fees, just a small commission when you sell.
+                Buy, sell, and connect with nurseries and fellow plant enthusiasts.
+                Your plant community — all in one place.
               </p>
 
               {/* Dual CTA */}
@@ -350,6 +351,59 @@ export default async function LandingPage() {
                 <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Community spotlight ──────────────────────────────────── */}
+      <section className="py-16 sm:py-20 px-4 bg-green-50 dark:bg-green-950/20">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-10">
+            <span className="inline-block bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 text-xs font-semibold uppercase tracking-widest px-4 py-1.5 rounded-full mb-4">
+              More than a marketplace
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-bold mb-3">A place for plant people</h2>
+            <p className="text-muted-foreground max-w-xl mx-auto">
+              Plantet is built around the people behind the plants — not just the transactions.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            <div className="bg-card rounded-2xl border p-6 shadow-sm flex flex-col gap-3">
+              <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center text-2xl">
+                💬
+              </div>
+              <p className="font-bold text-foreground">Ask the Community</p>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Post a help request, share a plant you&apos;re proud of, or start a discussion. Fellow growers are here to help.
+              </p>
+              <Link href="/community" className="text-sm font-medium text-green-700 hover:underline mt-auto">
+                Browse community →
+              </Link>
+            </div>
+            <div className="bg-card rounded-2xl border p-6 shadow-sm flex flex-col gap-3">
+              <div className="w-12 h-12 rounded-xl bg-green-50 dark:bg-green-900/30 flex items-center justify-center text-2xl">
+                📣
+              </div>
+              <p className="font-bold text-foreground">Follow & Get Updates</p>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Follow sellers you love and get their new arrivals, restocks, and announcements straight in your personal feed.
+              </p>
+              <Link href="/shop" className="text-sm font-medium text-green-700 hover:underline mt-auto">
+                Find sellers to follow →
+              </Link>
+            </div>
+            <div className="bg-card rounded-2xl border p-6 shadow-sm flex flex-col gap-3">
+              <div className="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-2xl">
+                🪴
+              </div>
+              <p className="font-bold text-foreground">Track Your Collection</p>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Log every plant you own, record care events, set watering reminders, and share your garden publicly with other enthusiasts.
+              </p>
+              <Link href="/signup" className="text-sm font-medium text-green-700 hover:underline mt-auto">
+                Start your garden log →
+              </Link>
+            </div>
           </div>
         </div>
       </section>
