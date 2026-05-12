@@ -1,16 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MessageButton } from "@/components/message-button";
 import FollowButton from "@/components/follow-button";
 import { toast } from "sonner";
-import { MoreHorizontal, ShieldOff } from "lucide-react";
+import { MoreHorizontal, ShieldOff, Search, X } from "lucide-react";
 
 type Profile = { id: string; username: string; avatar_url: string | null };
 
@@ -39,6 +40,7 @@ const EMPTY_MSG: Record<Tab, string> = {
 
 export default function FollowingClient({ currentUserId, followingIds, followerIds, blockedIds, profileMap }: Props) {
   const [tab, setTab] = useState<Tab>("following");
+  const [query, setQuery] = useState("");
   const [following, setFollowing] = useState(() => new Set(followingIds));
   const [followers, setFollowers] = useState(() => new Set(followerIds));
   const [blocked, setBlocked] = useState(() => new Set(blockedIds));
@@ -67,13 +69,16 @@ export default function FollowingClient({ currentUserId, followingIds, followerI
     toast.success("User unblocked");
   }
 
-  const lists: Record<Tab, Profile[]> = {
+  const lists: Record<Tab, Profile[]> = useMemo(() => ({
     following: [...following].map((id) => profileMap[id]).filter(Boolean),
     followers: [...followers].map((id) => profileMap[id]).filter(Boolean),
     blocked: [...blocked].map((id) => profileMap[id]).filter(Boolean),
-  };
+  }), [following, followers, blocked, profileMap]);
 
-  const currentList = lists[tab];
+  const currentList = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return q ? lists[tab].filter((p) => p.username.toLowerCase().includes(q)) : lists[tab];
+  }, [lists, tab, query]);
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-10">
@@ -84,7 +89,7 @@ export default function FollowingClient({ currentUserId, followingIds, followerI
         {TABS.map((t) => (
           <button
             key={t}
-            onClick={() => setTab(t)}
+            onClick={() => { setTab(t); setQuery(""); }}
             className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors ${
               tab === t
                 ? "border-green-700 text-green-700"
@@ -99,9 +104,30 @@ export default function FollowingClient({ currentUserId, followingIds, followerI
         ))}
       </div>
 
+      {/* Search */}
+      {lists[tab].length > 0 && (
+        <div className="relative mb-4">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={`Search ${TAB_LABEL[tab].toLowerCase()}…`}
+            className="pl-9 pr-9"
+          />
+          {query && (
+            <button
+              onClick={() => setQuery("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+      )}
+
       {currentList.length === 0 ? (
         <div className="py-16 text-center text-muted-foreground text-sm">
-          {EMPTY_MSG[tab]}
+          {query ? `No ${TAB_LABEL[tab].toLowerCase()} match "${query}"` : EMPTY_MSG[tab]}
         </div>
       ) : (
         <div className="space-y-2">
