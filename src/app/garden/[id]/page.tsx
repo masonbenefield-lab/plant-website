@@ -10,6 +10,7 @@ import { ChevronLeft, Pencil } from "lucide-react";
 import type { GardenPlantStatus, GardenEventType } from "@/lib/supabase/types";
 import { DeletePlantButton } from "@/components/garden/delete-plant-button";
 import { PlantVisibilityToggle } from "@/components/garden/plant-visibility-toggle";
+import { SharePlantButton } from "@/components/garden/share-plant-button";
 
 const STATUS_LABEL: Record<GardenPlantStatus, string> = {
   thriving: "Thriving",
@@ -46,7 +47,7 @@ export default async function GardenPlantDetailPage({
 
   const { id } = await params;
 
-  const [{ data: plant }, { data: events }] = await Promise.all([
+  const [{ data: plant }, { data: events }, { data: profile }] = await Promise.all([
     supabase
       .from("garden_plants")
       .select("*")
@@ -59,11 +60,17 @@ export default async function GardenPlantDetailPage({
       .eq("plant_id", id)
       .order("event_date", { ascending: false })
       .order("created_at", { ascending: false }),
+    supabase
+      .from("profiles")
+      .select("garden_public")
+      .eq("id", user.id)
+      .single(),
   ]);
 
   if (!plant) notFound();
 
   const status = plant.status as GardenPlantStatus;
+  const gardenPublic = profile?.garden_public ?? false;
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-10 space-y-8">
@@ -75,6 +82,12 @@ export default async function GardenPlantDetailPage({
           My Garden
         </Link>
         <div className="flex items-center gap-2">
+          <SharePlantButton
+            plantId={plant.id}
+            plantName={plant.name}
+            isPublic={plant.is_public ?? true}
+            gardenPublic={gardenPublic}
+          />
           <Link
             href={`/garden/${plant.id}/edit`}
             className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-1.5")}
@@ -193,7 +206,7 @@ export default async function GardenPlantDetailPage({
               />
               <DetailRow label="Events logged" value={String(events?.length ?? 0)} />
               <div className="pt-1">
-                <PlantVisibilityToggle plantId={plant.id} initialPublic={plant.is_public ?? true} />
+                <PlantVisibilityToggle plantId={plant.id} initialPublic={plant.is_public ?? true} gardenPublic={gardenPublic} />
               </div>
             </CardContent>
           </Card>

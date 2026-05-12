@@ -271,11 +271,13 @@ export function EventLog({ plantId, initialEvents }: EventLogProps) {
                     <p className="text-sm text-muted-foreground mt-0.5 leading-snug">{event.notes}</p>
                   )}
                   {event.photos?.length > 0 && (
-                    <div className="flex gap-1.5 mt-1.5 flex-wrap">
+                    <div className="flex gap-2 mt-2 flex-wrap">
                       {event.photos.map((url, i) => (
-                        <div key={i} className="relative w-16 h-16 rounded overflow-hidden border">
-                          <Image src={url} alt="Event photo" fill className="object-cover" />
-                        </div>
+                        <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="shrink-0">
+                          <div className="relative w-20 h-20 rounded-lg overflow-hidden border hover:opacity-80 transition-opacity">
+                            <Image src={url} alt={`Event photo ${i + 1}`} fill className="object-cover" />
+                          </div>
+                        </a>
                       ))}
                     </div>
                   )}

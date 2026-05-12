@@ -142,6 +142,7 @@ export default async function GardenPage({
                 <PlantVisibilityToggle
                   plantId={plant.id}
                   initialPublic={plant.is_public ?? true}
+                  gardenPublic={profile?.garden_public ?? false}
                   variant="icon"
                 />
               </div>
