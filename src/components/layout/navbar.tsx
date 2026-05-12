@@ -15,7 +15,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Search, Heart, Package, Rss, Sprout, MessageSquare } from "lucide-react";
+import { Search, Heart, Package, Rss, Sprout, MessageSquare, Users } from "lucide-react";
 import { CartButton } from "@/components/cart-drawer";
 import type { User } from "@supabase/supabase-js";
 
@@ -132,6 +132,9 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
                 <Link href="/garden" className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="My Garden">
                   <Sprout size={17} />
                 </Link>
+                <Link href="/following" className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="Following">
+                  <Users size={17} />
+                </Link>
                 <Link href="/messages" className="relative p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="Messages">
                   <MessageSquare size={17} />
                   {liveUnread > 0 && (
@@ -161,6 +164,7 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
                   <DropdownMenuItem><Link href="/orders" className="block w-full">My Purchases</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href="/feed" className="block w-full">Feed</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href="/messages" className="block w-full">Messages{liveUnread > 0 ? ` (${liveUnread})` : ""}</Link></DropdownMenuItem>
+                  <DropdownMenuItem><Link href="/following" className="block w-full">Following</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href="/garden" className="block w-full">My Garden</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href={`/sellers/${username}`} className="block w-full">My Storefront</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href="/account" className="block w-full">Account Settings</Link></DropdownMenuItem>
@@ -232,6 +236,7 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
               <MobileLink href="/wishlist" onClick={closeMenu}>Wishlist</MobileLink>
               <MobileLink href="/orders" onClick={closeMenu}>My Purchases</MobileLink>
               <MobileLink href="/messages" onClick={closeMenu}>Messages{liveUnread > 0 ? ` (${liveUnread})` : ""}</MobileLink>
+              <MobileLink href="/following" onClick={closeMenu}>Following</MobileLink>
               <MobileLink href="/garden" onClick={closeMenu}>My Garden</MobileLink>
               <MobileLink href={`/sellers/${username}`} onClick={closeMenu}>My Storefront</MobileLink>
               <MobileLink href="/account" onClick={closeMenu}>Account Settings</MobileLink>

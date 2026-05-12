@@ -508,6 +508,22 @@ export interface Database {
         Update: Record<string, never>;
         Relationships: [];
       };
+      blocks: {
+        Row: {
+          id: string;
+          blocker_id: string;
+          blocked_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          blocker_id: string;
+          blocked_id: string;
+          created_at?: string;
+        };
+        Update: Record<string, never>;
+        Relationships: [];
+      };
       reports: {
         Row: {
           id: string;

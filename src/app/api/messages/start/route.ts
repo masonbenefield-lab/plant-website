@@ -27,6 +27,14 @@ export async function POST(req: Request) {
     .single();
   if (!recipient) return NextResponse.json({ error: "Recipient not found" }, { status: 404 });
 
+  // Check blocks in either direction
+  const { data: blockCheck } = await supabase
+    .from("blocks")
+    .select("id")
+    .or(`and(blocker_id.eq.${user.id},blocked_id.eq.${recipientId}),and(blocker_id.eq.${recipientId},blocked_id.eq.${user.id})`)
+    .maybeSingle();
+  if (blockCheck) return NextResponse.json({ error: "Cannot message this user" }, { status: 403 });
+
   // Normalize participant order so UNIQUE constraint works
   const [a, b] = [user.id, recipientId].sort();
 
