@@ -832,6 +832,110 @@ export interface Database {
         };
         Relationships: [];
       };
+
+      announcements: {
+        Row: {
+          id: string;
+          seller_id: string;
+          body: string;
+          photos: string[];
+          listing_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          seller_id: string;
+          body: string;
+          photos?: string[];
+          listing_id?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          body?: string;
+          photos?: string[];
+          listing_id?: string | null;
+        };
+        Relationships: [];
+      };
+
+      listing_comments: {
+        Row: {
+          id: string;
+          listing_id: string;
+          user_id: string;
+          body: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          listing_id: string;
+          user_id: string;
+          body: string;
+          created_at?: string;
+        };
+        Update: {
+          body?: string;
+        };
+        Relationships: [];
+      };
+
+      community_posts: {
+        Row: {
+          id: string;
+          user_id: string;
+          post_type: "help" | "show_and_tell" | "discussion";
+          title: string;
+          body: string | null;
+          photos: string[];
+          solved: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          post_type: "help" | "show_and_tell" | "discussion";
+          title: string;
+          body?: string | null;
+          photos?: string[];
+          solved?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          title?: string;
+          body?: string | null;
+          photos?: string[];
+          solved?: boolean;
+        };
+        Relationships: [];
+      };
+
+      community_replies: {
+        Row: {
+          id: string;
+          post_id: string;
+          user_id: string;
+          body: string;
+          photos: string[];
+          is_solution: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          post_id: string;
+          user_id: string;
+          body: string;
+          photos?: string[];
+          is_solution?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          body?: string;
+          photos?: string[];
+          is_solution?: boolean;
+        };
+        Relationships: [];
+      };
+
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

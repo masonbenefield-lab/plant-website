@@ -19,6 +19,7 @@ import ImageGallery from "@/components/image-gallery";
 import TrackView from "@/components/track-view";
 import SizePicker from "@/components/size-picker";
 import ListingShareButton from "@/components/listing-share-button";
+import { ListingComments } from "@/components/listing-comments";
 
 export async function generateMetadata({
   params,
@@ -89,7 +90,7 @@ export default async function ListingPage({
   const siblingIds = new Set((sizeSiblings ?? []).map((s) => s.id));
   const showSizePicker = (sizeSiblings ?? []).length > 1;
 
-  const [wishlistRow, reportRow, offerRow, restockRow, { data: relatedListings }] = await Promise.all([
+  const [wishlistRow, reportRow, offerRow, restockRow, { data: relatedListings }, { data: rawComments }] = await Promise.all([
     user ? supabase.from("wishlists").select("id").eq("user_id", user.id).eq("listing_id", listing.id).maybeSingle() : Promise.resolve({ data: null }),
     user ? supabase.from("reports").select("id").eq("reporter_id", user.id).eq("listing_id", listing.id).maybeSingle() : Promise.resolve({ data: null }),
     user ? supabase.from("offers").select("id, status").eq("buyer_id", user.id).eq("listing_id", listing.id).in("status", ["pending", "accepted"]).maybeSingle() : Promise.resolve({ data: null }),
@@ -101,6 +102,11 @@ export default async function ListingPage({
       .eq("status", "active")
       .neq("id", listing.id)
       .limit(8),
+    supabase
+      .from("listing_comments")
+      .select("id, body, created_at, user_id")
+      .eq("listing_id", listing.id)
+      .order("created_at", { ascending: false }),
   ]);
 
   const isWishlisted = !!wishlistRow.data;
@@ -111,6 +117,18 @@ export default async function ListingPage({
   const isSoldOut = listing.status === "sold_out" || listing.quantity <= 0;
 
   const filteredRelated = (relatedListings ?? []).filter((r) => !siblingIds.has(r.id)).slice(0, 4);
+
+  // Fetch commenter profiles
+  const commenterIds = [...new Set((rawComments ?? []).map((c) => c.user_id))];
+  const { data: commenters } = commenterIds.length
+    ? await supabase.from("profiles").select("id, username, avatar_url").in("id", commenterIds)
+    : { data: [] };
+  const commenterMap = Object.fromEntries((commenters ?? []).map((p) => [p.id, p]));
+  const comments = (rawComments ?? []).map((c) => ({
+    ...c,
+    username: commenterMap[c.user_id]?.username ?? "unknown",
+    avatar_url: commenterMap[c.user_id]?.avatar_url ?? null,
+  }));
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-10">
@@ -284,6 +302,14 @@ export default async function ListingPage({
           )}
         </div>
       </div>
+
+      {/* Comments */}
+      <ListingComments
+        listingId={listing.id}
+        sellerId={listing.seller_id}
+        currentUserId={user?.id ?? null}
+        initialComments={comments}
+      />
 
       {/* Related listings */}
       {filteredRelated.length > 0 && (

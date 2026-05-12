@@ -29,6 +29,9 @@ export default function FeedUpdates({ sellerIds }: { sellerIds: string[] }) {
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "garden_plants", filter: gardenFilter }, (payload) => {
         if (payload.new.shared_at) setNewCount((n) => n + 1);
       })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "announcements", filter }, () => {
+        setNewCount((n) => n + 1);
+      })
       .subscribe();
 
     sellerKeyRef.current = sellerKey;

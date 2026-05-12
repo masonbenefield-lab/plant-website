@@ -17,7 +17,7 @@ export default async function FeedPage() {
 
   const sellerIds = (follows ?? []).map((f) => f.seller_id);
 
-  const [{ data: listings }, { data: auctions }, { data: gardenShares }, { data: sellers }] = sellerIds.length
+  const [{ data: listings }, { data: auctions }, { data: gardenShares }, { data: announcementRows }, { data: sellers }] = sellerIds.length
     ? await Promise.all([
         supabase
           .from("listings")
@@ -42,11 +42,17 @@ export default async function FeedPage() {
           .order("shared_at", { ascending: false })
           .limit(20),
         supabase
+          .from("announcements")
+          .select("id, seller_id, body, photos, listing_id, created_at")
+          .in("seller_id", sellerIds)
+          .order("created_at", { ascending: false })
+          .limit(30),
+        supabase
           .from("profiles")
           .select("id, username, avatar_url")
           .in("id", sellerIds),
       ])
-    : [{ data: [] }, { data: [] }, { data: [] }, { data: [] }];
+    : [{ data: [] }, { data: [] }, { data: [] }, { data: [] }, { data: [] }];
 
   const sellerMap = Object.fromEntries((sellers ?? []).map((s) => [s.id, s]));
 
@@ -107,7 +113,7 @@ export default async function FeedPage() {
 
   type FeedItem = {
     id: string;
-    kind: "listing" | "auction" | "garden";
+    kind: "listing" | "auction" | "garden" | "announcement";
     createdAt: string;
     seller_id: string;
     plant_name: string;
@@ -116,6 +122,7 @@ export default async function FeedPage() {
     images: string[];
     price_cents?: number;
     current_bid_cents?: number;
+    announcement_body?: string;
   };
 
   const feed: FeedItem[] = [
@@ -133,6 +140,11 @@ export default async function FeedPage() {
       id: g.id, kind: "garden" as const, createdAt: g.shared_at!, seller_id: g.user_id,
       plant_name: g.name, variety: g.variety ?? null, category: null,
       images: (g.images ?? []) as string[],
+    })),
+    ...(announcementRows ?? []).map((a) => ({
+      id: a.id, kind: "announcement" as const, createdAt: a.created_at, seller_id: a.seller_id,
+      plant_name: "", variety: null, category: null,
+      images: (a.photos ?? []) as string[], announcement_body: a.body,
     })),
   ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 

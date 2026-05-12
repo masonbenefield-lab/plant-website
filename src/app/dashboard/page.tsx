@@ -225,6 +225,7 @@ export default async function DashboardPage() {
           <h2 className="font-semibold">Quick links</h2>
           <div className="flex flex-col gap-2">
             <NavLink href="/dashboard/inventory" label="Inventory" />
+            <NavLink href="/dashboard/announcements" label="Announcements" />
             <NavLink href="/dashboard/listings" label="Manage Listings" />
             <NavLink href="/dashboard/auctions" label="Manage Auctions" />
             <NavLink href="/dashboard/orders" label="My Sales" badge={paidCount > 0 ? paidCount : undefined} />

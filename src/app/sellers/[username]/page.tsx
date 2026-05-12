@@ -75,7 +75,7 @@ export default async function SellerStorefront({
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  const [{ data: listings }, { data: auctions }, { data: ratings }, { count: followerCount }, { data: gardenPlants }] =
+  const [{ data: listings }, { data: auctions }, { data: ratings }, { count: followerCount }, { data: gardenPlants }, { data: announcements }] =
     await Promise.all([
       supabase.from("listings").select("*").eq("seller_id", profile.id).eq("status", "active").or("category.neq.Hidden,category.is.null").order("created_at", { ascending: false }),
       profile.stripe_onboarded
@@ -86,6 +86,7 @@ export default async function SellerStorefront({
       profile.garden_public
         ? supabase.from("garden_plants").select("id, name, variety, status, location, planted_at, images, public_notes").eq("user_id", profile.id).eq("is_public", true).order("created_at", { ascending: false })
         : Promise.resolve({ data: [] }),
+      supabase.from("announcements").select("id, body, photos, created_at").eq("seller_id", profile.id).order("created_at", { ascending: false }).limit(20),
     ]);
 
   const reviewerIds = [...new Set(ratings?.map((r) => r.reviewer_id) ?? [])];
@@ -242,6 +243,9 @@ export default async function SellerStorefront({
           {profile.stripe_onboarded && (
             <TabsTrigger value="auctions">Auctions ({auctions?.length ?? 0})</TabsTrigger>
           )}
+          {(announcements?.length ?? 0) > 0 && (
+            <TabsTrigger value="updates">Updates ({announcements?.length ?? 0})</TabsTrigger>
+          )}
           <TabsTrigger value="reviews">Reviews ({ratings?.length ?? 0})</TabsTrigger>
           {profile.garden_public && (
             <TabsTrigger value="garden">Garden ({gardenPlants?.length ?? 0})</TabsTrigger>
@@ -276,6 +280,42 @@ export default async function SellerStorefront({
               category: (a as { category?: string | null }).category ?? null,
             }))}
           />
+        </TabsContent>
+
+        <TabsContent value="updates" className="mt-6">
+          <div className="space-y-4 max-w-2xl">
+            {(announcements ?? []).map((a) => (
+              <div key={a.id} className="rounded-xl border bg-card p-4">
+                <div className="flex items-start gap-3">
+                  <Avatar className="h-8 w-8 shrink-0">
+                    <AvatarImage src={profile.avatar_url ?? undefined} />
+                    <AvatarFallback className="bg-green-100 text-green-700 text-xs font-semibold">
+                      {profile.username.slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-sm font-medium">{profile.display_name || profile.username}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(a.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                      </span>
+                    </div>
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{a.body}</p>
+                    {(a.photos as string[]).length > 0 && (
+                      <div className="flex gap-2 flex-wrap mt-2">
+                        {(a.photos as string[]).map((url, i) => (
+                          <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                            <Image src={url} alt="Update photo" width={96} height={96}
+                              className="rounded-lg object-cover border hover:opacity-80 transition-opacity w-24 h-24" />
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </TabsContent>
 
         <TabsContent value="reviews" className="mt-6">

@@ -10,7 +10,7 @@ const STORAGE_KEY = "feed_last_visit";
 
 type FeedItem = {
   id: string;
-  kind: "listing" | "auction" | "garden";
+  kind: "listing" | "auction" | "garden" | "announcement";
   createdAt: string;
   seller_id: string;
   plant_name: string;
@@ -19,6 +19,7 @@ type FeedItem = {
   images: string[];
   price_cents?: number;
   current_bid_cents?: number;
+  announcement_body?: string;
 };
 
 type Seller = {
@@ -45,7 +46,7 @@ export default function FeedList({ items, sellerMap }: { items: FeedItem[]; sell
 
   return (
     <div className="space-y-4">
-      {items.map(({ id, kind, createdAt, seller_id, plant_name, variety, category, images, price_cents, current_bid_cents }) => {
+      {items.map(({ id, kind, createdAt, seller_id, plant_name, variety, category, images, price_cents, current_bid_cents, announcement_body }) => {
         const seller = sellerMap[seller_id];
         const href = kind === "listing" ? `/shop/${id}` : kind === "auction" ? `/auctions/${id}` : `/gardens/${seller?.username}`;
         const isNew = lastVisit !== null && new Date(createdAt).getTime() > lastVisit;
@@ -62,6 +63,7 @@ export default function FeedList({ items, sellerMap }: { items: FeedItem[]; sell
               </div>
             )}
             <div className="rounded-2xl border bg-card overflow-hidden hover:shadow-md transition-shadow">
+              {/* Seller header */}
               <Link href={`/sellers/${seller?.username}`} className="flex items-center gap-2 px-4 pt-3 pb-2 hover:bg-muted/40 transition-colors">
                 <div className="relative w-7 h-7 rounded-full bg-green-100 overflow-hidden border shrink-0">
                   {seller?.avatar_url ? (
@@ -73,47 +75,68 @@ export default function FeedList({ items, sellerMap }: { items: FeedItem[]; sell
                   )}
                 </div>
                 <span className="text-sm font-medium">{seller?.username}</span>
+                {kind === "announcement" && (
+                  <Badge className="bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 text-xs px-1.5 py-0 border-0 ml-1">Update</Badge>
+                )}
                 <span className="text-xs text-muted-foreground ml-auto">
                   {new Date(createdAt).toLocaleDateString()}
                 </span>
               </Link>
 
-              <Link href={href} className="flex gap-4 px-4 pb-4">
-                <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-muted shrink-0">
-                  {images[0] ? (
-                    <Image src={images[0]} alt={plant_name} fill className="object-cover" />
-                  ) : (
-                    <div className="flex items-center justify-center h-full text-2xl">🌿</div>
+              {/* Announcement card — no plant link, just text + photos */}
+              {kind === "announcement" ? (
+                <div className="px-4 pb-4">
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{announcement_body}</p>
+                  {images.length > 0 && (
+                    <div className="flex gap-2 flex-wrap mt-3">
+                      {images.map((url, i) => (
+                        <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                          <div className="relative w-24 h-24 rounded-lg overflow-hidden border hover:opacity-80 transition-opacity">
+                            <Image src={url} alt="Announcement photo" fill className="object-cover" />
+                          </div>
+                        </a>
+                      ))}
+                    </div>
                   )}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                    <p className="font-semibold truncate">{plant_name}</p>
-                    {kind === "auction" && (
-                      <Badge className="bg-blue-600 text-white text-xs px-1.5 py-0">Auction</Badge>
-                    )}
-                    {kind === "garden" && (
-                      <Badge className="bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 text-xs px-1.5 py-0 border-0">🌱 New in garden</Badge>
+              ) : (
+                <Link href={href} className="flex gap-4 px-4 pb-4">
+                  <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-muted shrink-0">
+                    {images[0] ? (
+                      <Image src={images[0]} alt={plant_name} fill className="object-cover" />
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-2xl">🌿</div>
                     )}
                   </div>
-                  {variety && <p className="text-sm text-muted-foreground truncate">{variety}</p>}
-                  {category && (
-                    <span className="inline-block text-xs font-medium px-2 py-0.5 rounded-full mt-1 text-green-700 bg-green-100 dark:text-green-400 dark:bg-green-900/40">
-                      {category}
-                    </span>
-                  )}
-                  {kind !== "garden" && (
-                    <p className="text-sm font-bold text-green-700 mt-1">
-                      {price_cents !== undefined
-                        ? centsToDisplay(price_cents)
-                        : `Bid: ${centsToDisplay(current_bid_cents ?? 0)}`}
-                    </p>
-                  )}
-                  {kind === "garden" && (
-                    <p className="text-xs text-muted-foreground mt-1">Added to their garden</p>
-                  )}
-                </div>
-              </Link>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                      <p className="font-semibold truncate">{plant_name}</p>
+                      {kind === "auction" && (
+                        <Badge className="bg-blue-600 text-white text-xs px-1.5 py-0">Auction</Badge>
+                      )}
+                      {kind === "garden" && (
+                        <Badge className="bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 text-xs px-1.5 py-0 border-0">🌱 New in garden</Badge>
+                      )}
+                    </div>
+                    {variety && <p className="text-sm text-muted-foreground truncate">{variety}</p>}
+                    {category && (
+                      <span className="inline-block text-xs font-medium px-2 py-0.5 rounded-full mt-1 text-green-700 bg-green-100 dark:text-green-400 dark:bg-green-900/40">
+                        {category}
+                      </span>
+                    )}
+                    {kind !== "garden" && (
+                      <p className="text-sm font-bold text-green-700 mt-1">
+                        {price_cents !== undefined
+                          ? centsToDisplay(price_cents)
+                          : `Bid: ${centsToDisplay(current_bid_cents ?? 0)}`}
+                      </p>
+                    )}
+                    {kind === "garden" && (
+                      <p className="text-xs text-muted-foreground mt-1">Added to their garden</p>
+                    )}
+                  </div>
+                </Link>
+              )}
             </div>
           </div>
         );
