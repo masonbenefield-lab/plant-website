@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import FeedUpdates from "@/components/feed-updates";
 import FeedList from "./feed-list";
 import { CareReminders } from "./care-reminders";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import FollowButton from "@/components/follow-button";
 
 export default async function FeedPage() {
   const supabase = await createClient();
@@ -149,18 +151,81 @@ export default async function FeedPage() {
   ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   if (sellerIds.length === 0) {
+    // Suggested sellers to follow
+    const { data: suggested } = await supabase
+      .from("profiles")
+      .select("id, username, avatar_url, bio")
+      .eq("stripe_onboarded", true)
+      .is("deleted_at", null)
+      .neq("id", user.id)
+      .limit(4);
+
+    const suggestedIds = (suggested ?? []).map((s) => s.id);
+    const [{ data: followerRows }, { data: myFollows }] = suggestedIds.length
+      ? await Promise.all([
+          supabase.from("follows").select("seller_id").in("seller_id", suggestedIds),
+          supabase.from("follows").select("seller_id").in("seller_id", suggestedIds).eq("follower_id", user.id),
+        ])
+      : [{ data: [] }, { data: [] }];
+
+    const followerCountMap: Record<string, number> = {};
+    for (const r of followerRows ?? []) {
+      followerCountMap[r.seller_id] = (followerCountMap[r.seller_id] ?? 0) + 1;
+    }
+    const myFollowSet = new Set((myFollows ?? []).map((f) => f.seller_id));
+
+    const suggestedSellers = (suggested ?? []).map((s) => ({
+      ...s,
+      followerCount: followerCountMap[s.id] ?? 0,
+      isFollowing: myFollowSet.has(s.id),
+    }));
+
     return (
       <div className="max-w-3xl mx-auto px-4 py-10">
         <h1 className="text-2xl font-bold mb-2">Feed</h1>
-        <p className="text-muted-foreground text-sm mb-8">Recent listings from sellers you follow</p>
-        <div className="text-center py-20 border rounded-xl bg-muted/30">
-          <p className="text-4xl mb-4">🌱</p>
+        <p className="text-muted-foreground text-sm mb-8">New listings and updates from sellers you follow</p>
+        <div className="text-center py-10 border rounded-xl bg-muted/30 mb-6">
+          <p className="text-4xl mb-3">🌱</p>
           <p className="font-semibold mb-1">You&apos;re not following anyone yet</p>
-          <p className="text-sm text-muted-foreground mb-6">
-            Visit a seller&apos;s storefront and click Follow to see their listings here.
+          <p className="text-sm text-muted-foreground mb-4">
+            Follow sellers to see their new listings and updates here.
           </p>
-          <Link href="/shop" className="text-sm text-green-700 hover:underline">Browse the shop</Link>
+          <Link href="/shop" className="text-sm font-medium text-green-700 hover:underline">
+            Browse the shop to discover sellers →
+          </Link>
         </div>
+
+        {suggestedSellers.length > 0 && (
+          <div>
+            <p className="text-sm font-semibold mb-3">Sellers to follow</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {suggestedSellers.map((seller) => (
+                <div key={seller.id} className="flex items-center gap-3 p-3 border rounded-xl bg-card">
+                  <Avatar className="h-10 w-10 shrink-0">
+                    <AvatarImage src={seller.avatar_url ?? undefined} />
+                    <AvatarFallback className="bg-green-100 text-green-700 text-xs font-semibold">
+                      {seller.username?.slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <Link href={`/sellers/${seller.username}`} className="text-sm font-medium hover:underline truncate block">
+                      {seller.username}
+                    </Link>
+                    {seller.bio && (
+                      <p className="text-xs text-muted-foreground truncate">{seller.bio}</p>
+                    )}
+                  </div>
+                  <FollowButton
+                    userId={user.id}
+                    sellerId={seller.id}
+                    initialFollowing={seller.isFollowing}
+                    initialCount={seller.followerCount}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   }

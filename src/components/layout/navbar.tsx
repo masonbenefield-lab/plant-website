@@ -119,35 +119,22 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
           {/* Desktop auth */}
           <div className="hidden md:flex items-center gap-3">
             {user && (
-              <div className="flex items-center gap-1 mr-1">
-                <Link href="/search" className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="Search">
-                  <Search size={17} />
-                </Link>
-                <Link href="/wishlist" className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="Wishlist">
-                  <Heart size={17} />
-                </Link>
-                <Link href="/orders" className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="My Purchases">
-                  <Package size={17} />
-                </Link>
-                <Link href="/feed" className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="Feed">
-                  <Rss size={17} />
-                </Link>
-                <Link href="/garden" className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="My Garden">
-                  <Sprout size={17} />
-                </Link>
-                <Link href="/following" className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="Following">
-                  <Users size={17} />
-                </Link>
-                <Link href="/community" className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="Community">
-                  <UsersRound size={17} />
-                </Link>
-                <Link href="/messages" className="relative p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="Messages">
-                  <MessageSquare size={17} />
+              <div className="flex items-center gap-0.5 mr-1">
+                <NavIcon href="/search" label="Search"><Search size={15} /></NavIcon>
+                <NavIcon href="/wishlist" label="Wishlist"><Heart size={15} /></NavIcon>
+                <NavIcon href="/orders" label="Orders"><Package size={15} /></NavIcon>
+                <NavIcon href="/feed" label="Feed"><Rss size={15} /></NavIcon>
+                <NavIcon href="/garden" label="Garden"><Sprout size={15} /></NavIcon>
+                <NavIcon href="/following" label="Following"><Users size={15} /></NavIcon>
+                <NavIcon href="/community" label="Community"><UsersRound size={15} /></NavIcon>
+                <Link href="/messages" className="relative flex flex-col items-center gap-0.5 px-1.5 py-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+                  <MessageSquare size={15} />
                   {liveUnread > 0 && (
-                    <span className="absolute top-0 right-0 w-3.5 h-3.5 rounded-full bg-green-600 text-white text-[9px] font-bold flex items-center justify-center">
+                    <span className="absolute top-0.5 right-0.5 w-3.5 h-3.5 rounded-full bg-green-600 text-white text-[9px] font-bold flex items-center justify-center">
                       {liveUnread > 9 ? "9+" : liveUnread}
                     </span>
                   )}
+                  <span className="text-[9px] leading-none font-medium">Messages</span>
                 </Link>
                 <CartButton />
               </div>
@@ -281,6 +268,15 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
         </div>
       )}
     </header>
+  );
+}
+
+function NavIcon({ href, label, children }: { href: string; label: string; children: React.ReactNode }) {
+  return (
+    <Link href={href} className="flex flex-col items-center gap-0.5 px-1.5 py-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title={label}>
+      {children}
+      <span className="text-[9px] leading-none font-medium">{label}</span>
+    </Link>
   );
 }
 

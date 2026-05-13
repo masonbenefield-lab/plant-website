@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { centsToDisplay } from "@/lib/stripe";
+import FollowButton from "@/components/follow-button";
 
 export default async function OrderConfirmedPage({
   searchParams,
@@ -27,14 +28,16 @@ export default async function OrderConfirmedPage({
 
   if (!order) redirect("/orders");
 
-  const [{ data: listing }, { data: auction }, { data: seller }] = await Promise.all([
+  const [{ data: listing }, { data: auction }, { data: seller }, { data: alreadyFollows }, { count: followerCount }] = await Promise.all([
     order.listing_id
       ? supabase.from("listings").select("plant_name, variety, images").eq("id", order.listing_id).single()
       : { data: null },
     order.auction_id
       ? supabase.from("auctions").select("plant_name, variety, images").eq("id", order.auction_id).single()
       : { data: null },
-    supabase.from("profiles").select("username").eq("id", order.seller_id).single(),
+    supabase.from("profiles").select("id, username").eq("id", order.seller_id).single(),
+    supabase.from("follows").select("id").eq("follower_id", user.id).eq("seller_id", order.seller_id).maybeSingle(),
+    supabase.from("follows").select("*", { count: "exact", head: true }).eq("seller_id", order.seller_id),
   ]);
 
   const item = listing ?? auction;
@@ -95,6 +98,21 @@ export default async function OrderConfirmedPage({
           )}
         </CardContent>
       </Card>
+
+      {seller && seller.id !== user.id && !alreadyFollows && (
+        <div className="mb-6 border rounded-xl p-4 flex items-center justify-between gap-4 text-left bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800">
+          <div>
+            <p className="font-medium text-sm">Follow {seller.username}</p>
+            <p className="text-xs text-muted-foreground">Get notified when they list new plants</p>
+          </div>
+          <FollowButton
+            userId={user.id}
+            sellerId={seller.id}
+            initialFollowing={false}
+            initialCount={followerCount ?? 0}
+          />
+        </div>
+      )}
 
       <div className="flex flex-col sm:flex-row gap-3 justify-center">
         <Link href="/orders" className={cn(buttonVariants({ variant: "outline" }))}>
