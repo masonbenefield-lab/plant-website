@@ -1,10 +1,12 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { MessageCircle, CheckCircle2 } from "lucide-react";
+import { CommunitySearchBar } from "@/components/community-search-bar";
 
 export const dynamic = "force-dynamic";
 
@@ -17,15 +19,25 @@ const TYPE_COLOR = {
 
 type PostType = "help" | "show_and_tell" | "discussion";
 
+function buildHref(params: { type?: string; sort?: string; q?: string }) {
+  const p = new URLSearchParams();
+  if (params.q) p.set("q", params.q);
+  if (params.type) p.set("type", params.type);
+  if (params.sort && params.sort !== "newest") p.set("sort", params.sort);
+  const s = p.toString();
+  return s ? `/community?${s}` : "/community";
+}
+
 export default async function CommunityPage({
   searchParams,
 }: {
-  searchParams: Promise<{ type?: string; sort?: string }>;
+  searchParams: Promise<{ type?: string; sort?: string; q?: string }>;
 }) {
   const supabase = await createClient();
-  const { type, sort } = await searchParams;
+  const { type, sort, q } = await searchParams;
   const validType = (["help", "show_and_tell", "discussion"] as const).find((t) => t === type);
   const validSort = (["newest", "most_replies", "unanswered"] as const).find((s) => s === sort) ?? "newest";
+  const searchQuery = q?.trim() ?? "";
 
   let query = supabase
     .from("community_posts")
@@ -34,6 +46,7 @@ export default async function CommunityPage({
     .limit(50);
 
   if (validType) query = query.eq("post_type", validType);
+  if (searchQuery) query = query.or(`title.ilike.%${searchQuery}%,body.ilike.%${searchQuery}%`);
   if (validSort === "unanswered") query = query.eq("post_type", validType ?? "help");
 
   const { data: rawPosts } = await query;
@@ -73,27 +86,42 @@ export default async function CommunityPage({
         </Link>
       </div>
 
-      {/* Filter tabs */}
+      {/* Search */}
+      <Suspense>
+        <CommunitySearchBar />
+      </Suspense>
+
+      {/* Type filter tabs */}
       <div className="flex flex-wrap gap-2 mb-3">
-        <FilterChip href={`/community${sort && sort !== "newest" ? `?sort=${sort}` : ""}`} label="All" active={!validType} />
-        <FilterChip href={`/community?type=help${sort && sort !== "newest" ? `&sort=${sort}` : ""}`} label="Help Requests" active={validType === "help"} />
-        <FilterChip href={`/community?type=show_and_tell${sort && sort !== "newest" ? `&sort=${sort}` : ""}`} label="Show & Tell" active={validType === "show_and_tell"} />
-        <FilterChip href={`/community?type=discussion${sort && sort !== "newest" ? `&sort=${sort}` : ""}`} label="Discussions" active={validType === "discussion"} />
+        <FilterChip href={buildHref({ sort: validSort, q: searchQuery })} label="All" active={!validType} />
+        <FilterChip href={buildHref({ type: "help", sort: validSort, q: searchQuery })} label="Help Requests" active={validType === "help"} />
+        <FilterChip href={buildHref({ type: "show_and_tell", sort: validSort, q: searchQuery })} label="Show & Tell" active={validType === "show_and_tell"} />
+        <FilterChip href={buildHref({ type: "discussion", sort: validSort, q: searchQuery })} label="Discussions" active={validType === "discussion"} />
       </div>
       <div className="flex flex-wrap gap-2 mb-6">
-        <FilterChip href={`/community${validType ? `?type=${validType}` : ""}`} label="Newest" active={validSort === "newest"} small />
-        <FilterChip href={`/community?${validType ? `type=${validType}&` : ""}sort=most_replies`} label="Most Replies" active={validSort === "most_replies"} small />
-        <FilterChip href={`/community?${validType ? `type=${validType}&` : ""}sort=unanswered`} label="Unanswered" active={validSort === "unanswered"} small />
+        <FilterChip href={buildHref({ type: validType, q: searchQuery })} label="Newest" active={validSort === "newest"} small />
+        <FilterChip href={buildHref({ type: validType, sort: "most_replies", q: searchQuery })} label="Most Replies" active={validSort === "most_replies"} small />
+        <FilterChip href={buildHref({ type: validType, sort: "unanswered", q: searchQuery })} label="Unanswered" active={validSort === "unanswered"} small />
       </div>
 
-      {(posts ?? []).length === 0 ? (
+      {posts.length === 0 ? (
         <div className="text-center py-20 border rounded-xl bg-muted/30">
           <p className="text-4xl mb-4">🌿</p>
-          <p className="font-semibold mb-1">Nothing here yet</p>
-          <p className="text-sm text-muted-foreground mb-6">Be the first to post in the community.</p>
-          <Link href="/community/new" className={cn(buttonVariants(), "bg-green-700 hover:bg-green-800")}>
-            Post something
-          </Link>
+          {searchQuery ? (
+            <>
+              <p className="font-semibold mb-1">No posts match &ldquo;{searchQuery}&rdquo;</p>
+              <p className="text-sm text-muted-foreground mb-4">Try a different search term or clear the search.</p>
+              <Link href={buildHref({ type: validType, sort: validSort })} className="text-sm text-green-700 hover:underline">Clear search</Link>
+            </>
+          ) : (
+            <>
+              <p className="font-semibold mb-1">Nothing here yet</p>
+              <p className="text-sm text-muted-foreground mb-6">Be the first to post in the community.</p>
+              <Link href="/community/new" className={cn(buttonVariants(), "bg-green-700 hover:bg-green-800")}>
+                Post something
+              </Link>
+            </>
+          )}
         </div>
       ) : (
         <div className="space-y-3">
