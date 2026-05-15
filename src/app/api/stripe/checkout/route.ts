@@ -78,14 +78,14 @@ export async function POST(request: Request) {
 
     const [{ data: sellerProfile }, { data: sellerPlan }] = await Promise.all([
       supabase.from("profiles").select("stripe_account_id, stripe_onboarded").eq("id", listing.seller_id).single(),
-      supabase.from("profiles").select("plan, is_admin").eq("id", listing.seller_id).single(),
+      supabase.from("profiles").select("plan, is_admin, groundbreaker").eq("id", listing.seller_id).single(),
     ]);
 
     if (!sellerProfile?.stripe_onboarded || !sellerProfile.stripe_account_id) {
       return NextResponse.json({ error: "Seller not set up for payments" }, { status: 400 });
     }
 
-    const feePercent = planFeePercent(sellerPlan?.plan, !!sellerPlan?.is_admin);
+    const feePercent = planFeePercent(sellerPlan?.plan, !!sellerPlan?.is_admin, !!sellerPlan?.groundbreaker);
     // If checking out with an accepted offer, use offer price
     let effectivePriceCents: number;
     if (offerId) {
@@ -223,14 +223,14 @@ export async function POST(request: Request) {
 
     const [{ data: sellerProfile }, { data: sellerPlan }] = await Promise.all([
       supabase.from("profiles").select("stripe_account_id, stripe_onboarded").eq("id", auction.seller_id).single(),
-      supabase.from("profiles").select("plan, is_admin").eq("id", auction.seller_id).single(),
+      supabase.from("profiles").select("plan, is_admin, groundbreaker").eq("id", auction.seller_id).single(),
     ]);
 
     if (!sellerProfile?.stripe_onboarded || !sellerProfile.stripe_account_id) {
       return NextResponse.json({ error: "Seller not set up for payments" }, { status: 400 });
     }
 
-    const feePercent = planFeePercent(sellerPlan?.plan, !!sellerPlan?.is_admin);
+    const feePercent = planFeePercent(sellerPlan?.plan, !!sellerPlan?.is_admin, !!sellerPlan?.groundbreaker);
     const auctionShippingCents = Math.max(0, Math.round(shippingCostCents ?? 0));
     const amountCents = auction.current_bid_cents + auctionShippingCents;
     const feeCents = Math.round(auction.current_bid_cents * (feePercent / 100));

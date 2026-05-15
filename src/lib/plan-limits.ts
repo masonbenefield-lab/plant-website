@@ -17,8 +17,9 @@ export function getPlanLimits(plan: Plan | null | undefined, isAdmin: boolean): 
   }
 }
 
-export function planFeePercent(plan: Plan | null | undefined, isAdmin: boolean): number {
+export function planFeePercent(plan: Plan | null | undefined, isAdmin: boolean, isGroundbreaker?: boolean): number {
   if (isAdmin) return 0;
+  if (isGroundbreaker) return 2;
   switch (plan) {
     case "nursery": return 3;
     case "grower":  return 4.5;
