@@ -27,6 +27,9 @@ export default async function DashboardPage() {
     { data: revenueOrders },
     { data: thisMonthOrders },
     { data: lastMonthOrders },
+    { count: purchaseCount },
+    { count: wishlistCount },
+    { count: followingCount },
   ] = await Promise.all([
     supabase.from("profiles").select("username, bio, avatar_url, stripe_onboarded, plan, garden_public, groundbreaker, groundbreaker_number, ship_from_address").eq("id", user.id).single(),
     supabase.from("listings").select("*", { count: "exact", head: true }).eq("seller_id", user.id).eq("status", "active"),
@@ -38,6 +41,9 @@ export default async function DashboardPage() {
     supabase.from("orders").select("amount_cents").eq("seller_id", user.id).in("status", ["paid", "shipped", "delivered"]),
     supabase.from("orders").select("amount_cents").eq("seller_id", user.id).in("status", ["paid", "shipped", "delivered"]).gte("created_at", startOfThisMonth),
     supabase.from("orders").select("amount_cents").eq("seller_id", user.id).in("status", ["paid", "shipped", "delivered"]).gte("created_at", startOfLastMonth).lt("created_at", startOfThisMonth),
+    supabase.from("orders").select("*", { count: "exact", head: true }).eq("buyer_id", user.id),
+    supabase.from("wishlists").select("*", { count: "exact", head: true }).eq("user_id", user.id),
+    supabase.from("follows").select("*", { count: "exact", head: true }).eq("follower_id", user.id),
   ]);
 
   const paidCount = paidOrders?.length ?? 0;
@@ -49,6 +55,7 @@ export default async function DashboardPage() {
     : null;
 
   const plan = profile?.plan ?? "seedling";
+  const isSellerMode = !!profile?.stripe_onboarded || (inventoryCount ?? 0) > 0 || (listingCount ?? 0) > 0 || (auctionCount ?? 0) > 0;
 
   // Resolve item names and buyer usernames for recent orders
   let recentOrders: {
@@ -103,6 +110,48 @@ export default async function DashboardPage() {
   // garden is optional — don't block allDone on it
   const { garden: _garden, ...coreChecks } = checks;
   const allDone = Object.values(coreChecks).every(Boolean);
+
+  if (!isSellerMode) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 py-10 space-y-8">
+        <div>
+          <h1 className="text-2xl font-bold">My Account</h1>
+          {profile?.username && (
+            <p className="text-muted-foreground text-sm mt-0.5">Welcome back, {profile.username}</p>
+          )}
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <StatCard label="My Purchases" value={purchaseCount ?? 0} href="/orders" />
+          <StatCard label="Wishlist" value={wishlistCount ?? 0} href="/wishlist" />
+          <StatCard label="Following" value={followingCount ?? 0} href="/following" />
+          <StatCard label="My Garden" value={gardenPlantCount ?? 0} href="/garden" />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <NavLink href="/orders" label="My Purchases" />
+          <NavLink href="/wishlist" label="Wishlist" />
+          <NavLink href="/feed" label="Feed" />
+          <NavLink href="/messages" label="Messages" />
+          <NavLink href="/garden" label="My Garden" />
+          <NavLink href="/community" label="Community" />
+          <NavLink href="/account" label="Account Settings" />
+        </div>
+
+        <div className="rounded-xl border bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800 p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <p className="font-semibold text-green-900 dark:text-green-200">Want to sell your plants?</p>
+            <p className="text-sm text-green-800/70 dark:text-green-300/70 mt-0.5">
+              Open a free storefront and list plants for fixed price or timed auction.
+            </p>
+          </div>
+          <Link href="/account#seller-payments" className={cn(buttonVariants(), "bg-green-700 hover:bg-green-800 shrink-0")}>
+            Start selling
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-10 space-y-8">

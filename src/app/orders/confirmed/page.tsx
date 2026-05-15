@@ -99,6 +99,11 @@ export default async function OrderConfirmedPage({
         </CardContent>
       </Card>
 
+      <p className="text-xs text-muted-foreground mb-6">
+        Once your order is delivered, you can leave a review from{" "}
+        <Link href="/orders" className="text-green-700 hover:underline">My Purchases</Link>.
+      </p>
+
       {seller && seller.id !== user.id && !alreadyFollows && (
         <div className="mb-6 border rounded-xl p-4 flex items-center justify-between gap-4 text-left bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800">
           <div>

@@ -56,7 +56,7 @@ const steps = [
 export default async function LandingPage() {
   const supabase = await createClient();
 
-  const [{ data: liveListings }, { data: liveAuctions }, { data: nurseryProfiles }, { count: groundbreakerCount }] = await Promise.all([
+  const [{ data: liveListings }, { data: liveAuctions }, { data: nurseryProfiles }, { count: groundbreakerCount }, { data: recentCommunityPosts }] = await Promise.all([
     supabase
       .from("listings")
       .select("id, plant_name, variety, price_cents, sale_price_cents, sale_ends_at, images")
@@ -80,6 +80,11 @@ export default async function LandingPage() {
       .from("profiles")
       .select("*", { count: "exact", head: true })
       .eq("groundbreaker", true),
+    supabase
+      .from("community_posts")
+      .select("id, post_type, title, created_at")
+      .order("created_at", { ascending: false })
+      .limit(3),
   ]);
 
   const nurserySellerIds = (nurseryProfiles ?? []).map((p) => p.id);
@@ -162,6 +167,12 @@ export default async function LandingPage() {
                   Browse Plants
                 </Link>
               </div>
+              <p className="text-sm text-green-100/80 text-center lg:text-left">
+                or{" "}
+                <Link href="/auctions" className="font-medium text-white underline underline-offset-2 hover:text-green-200">
+                  browse live auctions →
+                </Link>
+              </p>
 
               {/* Hero search */}
               <HeroSearch />
@@ -405,6 +416,28 @@ export default async function LandingPage() {
               </Link>
             </div>
           </div>
+
+          {recentCommunityPosts && recentCommunityPosts.length > 0 && (
+            <div className="mt-8 border rounded-2xl bg-card overflow-hidden shadow-sm">
+              <div className="px-5 py-3.5 border-b flex items-center justify-between">
+                <p className="text-sm font-semibold">Recent in the community</p>
+                <Link href="/community" className="text-xs font-medium text-green-700 hover:underline">See all →</Link>
+              </div>
+              {recentCommunityPosts.map((post) => {
+                const typeColor = post.post_type === "help" ? "bg-amber-100 text-amber-700" : post.post_type === "show_and_tell" ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700";
+                const typeLabel = post.post_type === "help" ? "Help" : post.post_type === "show_and_tell" ? "Show & Tell" : "Discussion";
+                return (
+                  <Link key={post.id} href={`/community/${post.id}`} className="flex items-center gap-3 px-5 py-3.5 hover:bg-muted/50 transition-colors border-b last:border-0">
+                    <span className={`shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full ${typeColor}`}>{typeLabel}</span>
+                    <p className="text-sm font-medium line-clamp-1 text-foreground">{post.title}</p>
+                    <span className="ml-auto text-xs text-muted-foreground shrink-0">
+                      {new Date(post.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
         </div>
       </section>
 
@@ -440,20 +473,58 @@ export default async function LandingPage() {
 
       {/* ── How it works ──────────────────────────────────────────── */}
       <section className="py-16 sm:py-20 px-4 bg-green-700 text-white">
-        <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-2xl sm:text-3xl font-bold mb-3">Sell in 3 steps</h2>
-          <p className="text-green-100 mb-12 max-w-md mx-auto">Getting started takes less than 10 minutes.</p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-4 relative">
-            <div className="hidden sm:block absolute top-6 left-[calc(16.67%+1rem)] right-[calc(16.67%+1rem)] h-px bg-white/30" />
-            {steps.map((s) => (
-              <div key={s.step} className="flex flex-col items-center relative">
-                <div className="w-12 h-12 rounded-full bg-white text-green-700 flex items-center justify-center text-xl font-bold mb-5 shadow-md z-10">
-                  {s.step}
-                </div>
-                <p className="font-semibold text-white mb-1">{s.title}</p>
-                <p className="text-sm text-green-100 leading-relaxed">{s.desc}</p>
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-2xl sm:text-3xl font-bold mb-3">How it works</h2>
+            <p className="text-green-100 max-w-md mx-auto">Simple for buyers. Simple for sellers.</p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8">
+            <div className="bg-white/10 rounded-2xl p-6 sm:p-8">
+              <p className="text-xs font-bold uppercase tracking-widest text-green-200 mb-6">For Buyers</p>
+              <div className="space-y-6">
+                {([
+                  { n: "1", title: "Browse the shop or auctions", desc: "Search by plant name, category, or price. Filter to in-stock only. Bid on live auctions in real time." },
+                  { n: "2", title: "Add to cart and pay securely", desc: "Checkout is powered by Stripe. Your shipping address goes straight to the seller — no back-and-forth." },
+                  { n: "3", title: "Track it in your garden log", desc: "Once it arrives, add it to My Garden. Log care events, set reminders, and share your collection." },
+                ] as const).map((s) => (
+                  <div key={s.n} className="flex gap-4">
+                    <div className="w-9 h-9 rounded-full bg-white text-green-700 flex items-center justify-center text-sm font-bold shrink-0 shadow">
+                      {s.n}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-white mb-0.5">{s.title}</p>
+                      <p className="text-sm text-green-100 leading-relaxed">{s.desc}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
+              <Link href="/shop" className="inline-block mt-7 text-sm font-medium text-white underline underline-offset-2 hover:text-green-200">
+                Browse plants →
+              </Link>
+            </div>
+            <div className="bg-white/10 rounded-2xl p-6 sm:p-8">
+              <p className="text-xs font-bold uppercase tracking-widest text-green-200 mb-6">For Sellers</p>
+              <div className="space-y-6">
+                {([
+                  { n: "1", title: "Connect your bank account", desc: "Sign up free and link your bank via Stripe. Takes under 10 minutes — no monthly fees, ever." },
+                  { n: "2", title: "Add plants and set your price", desc: "Add inventory once, then list at a fixed price or kick off a timed auction from the same row." },
+                  { n: "3", title: "Get paid when you sell", desc: "Funds deposit directly to your bank after each sale. Buyer's shipping address lands in your dashboard, ready to ship." },
+                ] as const).map((s) => (
+                  <div key={s.n} className="flex gap-4">
+                    <div className="w-9 h-9 rounded-full bg-white text-green-700 flex items-center justify-center text-sm font-bold shrink-0 shadow">
+                      {s.n}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-white mb-0.5">{s.title}</p>
+                      <p className="text-sm text-green-100 leading-relaxed">{s.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <Link href="/signup" className="inline-block mt-7 text-sm font-medium text-white underline underline-offset-2 hover:text-green-200">
+                Start selling free →
+              </Link>
+            </div>
           </div>
         </div>
       </section>

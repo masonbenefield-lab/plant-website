@@ -226,16 +226,32 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
                 </Avatar>
                 <span className="text-sm font-medium">{username}</span>
               </div>
-              <MobileLink href="/dashboard" onClick={closeMenu}>Dashboard</MobileLink>
-              <MobileLink href="/dashboard/inventory" onClick={closeMenu}>Inventory</MobileLink>
+              <p className="px-3 pt-2 pb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Shopping</p>
               <MobileLink href="/wishlist" onClick={closeMenu}>Wishlist</MobileLink>
               <MobileLink href="/orders" onClick={closeMenu}>My Purchases</MobileLink>
               <MobileLink href="/messages" onClick={closeMenu}>Messages{liveUnread > 0 ? ` (${liveUnread})` : ""}</MobileLink>
-              <MobileLink href="/following" onClick={closeMenu}>Following</MobileLink>
-              <MobileLink href="/garden" onClick={closeMenu}>My Garden</MobileLink>
+
+              <div className="border-t my-2" />
+              <p className="px-3 pt-1 pb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Selling</p>
+              <MobileLink href="/dashboard" onClick={closeMenu}>Dashboard</MobileLink>
+              <MobileLink href="/dashboard/inventory" onClick={closeMenu}>Inventory</MobileLink>
+              <MobileLink href="/dashboard/announcements" onClick={closeMenu}>Announcements</MobileLink>
               <MobileLink href={`/sellers/${username}`} onClick={closeMenu}>My Storefront</MobileLink>
               <MobileLink href="/account" onClick={closeMenu}>Account Settings</MobileLink>
-              {isAdmin && <MobileLink href="/admin" onClick={closeMenu}>Admin Panel</MobileLink>}
+
+              <div className="border-t my-2" />
+              <p className="px-3 pt-1 pb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Community</p>
+              <MobileLink href="/feed" onClick={closeMenu}>Feed</MobileLink>
+              <MobileLink href="/garden" onClick={closeMenu}>My Garden</MobileLink>
+              <MobileLink href="/following" onClick={closeMenu}>Following</MobileLink>
+              <MobileLink href="/community" onClick={closeMenu}>Community</MobileLink>
+
+              {isAdmin && (
+                <>
+                  <div className="border-t my-2" />
+                  <MobileLink href="/admin" onClick={closeMenu}>Admin Panel</MobileLink>
+                </>
+              )}
               <div className="border-t my-3" />
               <button
                 onClick={signOut}

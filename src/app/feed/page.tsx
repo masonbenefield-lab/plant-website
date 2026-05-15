@@ -6,6 +6,7 @@ import FeedList from "./feed-list";
 import { CareReminders } from "./care-reminders";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import FollowButton from "@/components/follow-button";
+import { FeedExplainer } from "@/components/feed-explainer";
 
 export default async function FeedPage() {
   const supabase = await createClient();
@@ -239,6 +240,7 @@ export default async function FeedPage() {
         Recent listings from {sellerIds.length} seller{sellerIds.length !== 1 ? "s" : ""} you follow
       </p>
 
+      <FeedExplainer />
       {feed.length === 0 ? (
         <div className="text-center py-20 border rounded-xl bg-muted/30">
           <p className="text-4xl mb-4">🌿</p>

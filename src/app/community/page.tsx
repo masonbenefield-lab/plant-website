@@ -20,11 +20,12 @@ type PostType = "help" | "show_and_tell" | "discussion";
 export default async function CommunityPage({
   searchParams,
 }: {
-  searchParams: Promise<{ type?: string }>;
+  searchParams: Promise<{ type?: string; sort?: string }>;
 }) {
   const supabase = await createClient();
-  const { type } = await searchParams;
+  const { type, sort } = await searchParams;
   const validType = (["help", "show_and_tell", "discussion"] as const).find((t) => t === type);
+  const validSort = (["newest", "most_replies", "unanswered"] as const).find((s) => s === sort) ?? "newest";
 
   let query = supabase
     .from("community_posts")
@@ -33,22 +34,31 @@ export default async function CommunityPage({
     .limit(50);
 
   if (validType) query = query.eq("post_type", validType);
+  if (validSort === "unanswered") query = query.eq("post_type", validType ?? "help");
 
-  const { data: posts } = await query;
+  const { data: rawPosts } = await query;
 
-  const authorIds = [...new Set((posts ?? []).map((p) => p.user_id))];
+  const authorIds = [...new Set((rawPosts ?? []).map((p) => p.user_id))];
   const { data: authors } = authorIds.length
     ? await supabase.from("profiles").select("id, username, avatar_url").in("id", authorIds)
     : { data: [] };
   const authorMap = Object.fromEntries((authors ?? []).map((a) => [a.id, a]));
 
-  const postIds = (posts ?? []).map((p) => p.id);
+  const postIds = (rawPosts ?? []).map((p) => p.id);
   const { data: replyCounts } = postIds.length
     ? await supabase.from("community_replies").select("post_id").in("post_id", postIds)
     : { data: [] };
   const replyCountMap: Record<string, number> = {};
   for (const r of replyCounts ?? []) {
     replyCountMap[r.post_id] = (replyCountMap[r.post_id] ?? 0) + 1;
+  }
+
+  // Apply client-side sort / filter after reply counts are known
+  let posts = [...(rawPosts ?? [])];
+  if (validSort === "most_replies") {
+    posts.sort((a, b) => (replyCountMap[b.id] ?? 0) - (replyCountMap[a.id] ?? 0));
+  } else if (validSort === "unanswered") {
+    posts = posts.filter((p) => p.post_type === "help" && (replyCountMap[p.id] ?? 0) === 0);
   }
 
   return (
@@ -64,11 +74,16 @@ export default async function CommunityPage({
       </div>
 
       {/* Filter tabs */}
+      <div className="flex flex-wrap gap-2 mb-3">
+        <FilterChip href={`/community${sort && sort !== "newest" ? `?sort=${sort}` : ""}`} label="All" active={!validType} />
+        <FilterChip href={`/community?type=help${sort && sort !== "newest" ? `&sort=${sort}` : ""}`} label="Help Requests" active={validType === "help"} />
+        <FilterChip href={`/community?type=show_and_tell${sort && sort !== "newest" ? `&sort=${sort}` : ""}`} label="Show & Tell" active={validType === "show_and_tell"} />
+        <FilterChip href={`/community?type=discussion${sort && sort !== "newest" ? `&sort=${sort}` : ""}`} label="Discussions" active={validType === "discussion"} />
+      </div>
       <div className="flex flex-wrap gap-2 mb-6">
-        <FilterChip href="/community" label="All" active={!validType} />
-        <FilterChip href="/community?type=help" label="Help Requests" active={validType === "help"} />
-        <FilterChip href="/community?type=show_and_tell" label="Show & Tell" active={validType === "show_and_tell"} />
-        <FilterChip href="/community?type=discussion" label="Discussions" active={validType === "discussion"} />
+        <FilterChip href={`/community${validType ? `?type=${validType}` : ""}`} label="Newest" active={validSort === "newest"} small />
+        <FilterChip href={`/community?${validType ? `type=${validType}&` : ""}sort=most_replies`} label="Most Replies" active={validSort === "most_replies"} small />
+        <FilterChip href={`/community?${validType ? `type=${validType}&` : ""}sort=unanswered`} label="Unanswered" active={validSort === "unanswered"} small />
       </div>
 
       {(posts ?? []).length === 0 ? (
@@ -137,12 +152,13 @@ export default async function CommunityPage({
   );
 }
 
-function FilterChip({ href, label, active }: { href: string; label: string; active: boolean }) {
+function FilterChip({ href, label, active, small }: { href: string; label: string; active: boolean; small?: boolean }) {
   return (
     <Link
       href={href}
       className={cn(
-        "px-3 py-1.5 rounded-full text-sm font-medium transition-colors border",
+        "rounded-full font-medium transition-colors border",
+        small ? "px-2.5 py-1 text-xs" : "px-3 py-1.5 text-sm",
         active
           ? "bg-green-700 text-white border-green-700"
           : "bg-background text-muted-foreground border-border hover:text-foreground hover:border-green-400"
