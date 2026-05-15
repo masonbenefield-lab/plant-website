@@ -653,6 +653,30 @@ export default function PricingPage() {
         </div>
       </section>
 
+      {/* Groundbreaker callout */}
+      <section className="px-4 pb-16">
+        <div className="max-w-5xl mx-auto">
+          <div className="rounded-2xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-8 flex flex-col sm:flex-row items-start sm:items-center gap-6">
+            <div className="text-4xl shrink-0">⛏️</div>
+            <div className="flex-1">
+              <p className="font-bold text-lg text-amber-900 dark:text-amber-200 mb-1">
+                Groundbreaker — 150 spots, first come first served
+              </p>
+              <p className="text-sm text-amber-800 dark:text-amber-300 leading-relaxed">
+                The first 150 sellers to join Plantet get the <strong>Nursery plan free forever</strong> plus a permanent{" "}
+                <strong>2% commission rate</strong> — lower than any paid tier. Sign up today to lock in your spot before they&apos;re gone.
+              </p>
+            </div>
+            <a
+              href="/signup"
+              className="shrink-0 inline-flex items-center justify-center rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold text-sm px-5 py-2.5 transition-colors whitespace-nowrap"
+            >
+              Claim your spot
+            </a>
+          </div>
+        </div>
+      </section>
+
       {/* Breakeven calculator */}
       <BreakevenCalculator />
 

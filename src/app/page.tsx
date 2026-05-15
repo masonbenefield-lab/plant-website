@@ -131,7 +131,7 @@ export default async function LandingPage() {
       {groundbreakersLeft > 0 && (
         <div className="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800 py-2.5 px-4 text-center text-sm text-amber-900 dark:text-amber-200">
           <span className="font-semibold">⛏️ Groundbreaker program:</span>{" "}
-          {groundbreakersLeft} of {GROUNDBREAKER_CAP} spots remaining — the first {GROUNDBREAKER_CAP} sellers get the Nursery plan free forever.{" "}
+          {groundbreakersLeft} of {GROUNDBREAKER_CAP} spots remaining — the first {GROUNDBREAKER_CAP} sellers get the Nursery plan free forever + a permanent <strong>2% commission rate</strong>.{" "}
           <Link href="/signup" className="underline font-semibold hover:text-amber-700 dark:hover:text-amber-100">
             Claim your spot →
           </Link>
