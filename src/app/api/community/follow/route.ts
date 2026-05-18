@@ -14,10 +14,14 @@ export async function POST(request: Request) {
     .select("id")
     .eq("user_id", user.id)
     .eq("post_id", postId)
-    .single();
+    .maybeSingle();
 
-  if (existing) {
-    await supabase.from("community_post_follows").delete().eq("id", existing.id);
+  if (existing !== null) {
+    await supabase
+      .from("community_post_follows")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("post_id", postId);
     return NextResponse.json({ following: false });
   }
 
