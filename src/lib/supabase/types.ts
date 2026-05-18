@@ -531,6 +531,7 @@ export interface Database {
           listing_id: string | null;
           auction_id: string | null;
           reported_user_id: string | null;
+          community_post_id: string | null;
           reason: string;
           details: string | null;
           status: string;
@@ -545,6 +546,7 @@ export interface Database {
           listing_id?: string | null;
           auction_id?: string | null;
           reported_user_id?: string | null;
+          community_post_id?: string | null;
           reason: string;
           details?: string | null;
           status?: string;

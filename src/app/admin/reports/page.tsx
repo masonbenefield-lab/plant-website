@@ -10,15 +10,17 @@ const statusColor: Record<string, string> = {
 };
 
 const typeLabel: Record<string, string> = {
-  listing: "Listing",
-  auction: "Auction",
-  user:    "User",
+  listing:        "Listing",
+  auction:        "Auction",
+  user:           "User",
+  community_post: "Community Post",
 };
 
 const typeColor: Record<string, string> = {
-  listing: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400",
-  auction: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400",
-  user:    "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400",
+  listing:        "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400",
+  auction:        "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400",
+  user:           "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400",
+  community_post: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400",
 };
 
 export default async function AdminReportsPage({
@@ -32,7 +34,7 @@ export default async function AdminReportsPage({
 
   let query = supabase
     .from("reports")
-    .select("id, reason, details, status, admin_note, created_at, reporter_id, listing_id, auction_id, reported_user_id")
+    .select("id, reason, details, status, admin_note, created_at, reporter_id, listing_id, auction_id, reported_user_id, community_post_id")
     .order("created_at", { ascending: false });
 
   if (!showAll) query = query.eq("status", "pending");
@@ -48,23 +50,26 @@ export default async function AdminReportsPage({
   ]);
 
   // Gather IDs to resolve names
-  const reporterIds = [...new Set((reports ?? []).map(r => r.reporter_id).filter((x): x is string => x !== null))];
-  const listingIds  = [...new Set((reports ?? []).map(r => r.listing_id).filter((x): x is string => x !== null))];
-  const auctionIds  = [...new Set((reports ?? []).map(r => r.auction_id).filter((x): x is string => x !== null))];
-  const userIds     = [...new Set((reports ?? []).map(r => r.reported_user_id).filter((x): x is string => x !== null))];
+  const reporterIds    = [...new Set((reports ?? []).map(r => r.reporter_id).filter((x): x is string => x !== null))];
+  const listingIds     = [...new Set((reports ?? []).map(r => r.listing_id).filter((x): x is string => x !== null))];
+  const auctionIds     = [...new Set((reports ?? []).map(r => r.auction_id).filter((x): x is string => x !== null))];
+  const userIds        = [...new Set((reports ?? []).map(r => r.reported_user_id).filter((x): x is string => x !== null))];
+  const communityPostIds = [...new Set((reports ?? []).map(r => r.community_post_id).filter((x): x is string => x !== null))];
 
-  const [{ data: reporters }, { data: listings }, { data: auctions }, { data: reportedUsers }] =
+  const [{ data: reporters }, { data: listings }, { data: auctions }, { data: reportedUsers }, { data: communityPosts }] =
     await Promise.all([
-      reporterIds.length ? supabase.from("profiles").select("id, username").in("id", reporterIds) : { data: [] },
-      listingIds.length  ? supabase.from("listings").select("id, plant_name").in("id", listingIds)   : { data: [] },
-      auctionIds.length  ? supabase.from("auctions").select("id, plant_name").in("id", auctionIds)   : { data: [] },
-      userIds.length     ? supabase.from("profiles").select("id, username").in("id", userIds)        : { data: [] },
+      reporterIds.length     ? supabase.from("profiles").select("id, username").in("id", reporterIds)                   : { data: [] },
+      listingIds.length      ? supabase.from("listings").select("id, plant_name").in("id", listingIds)                  : { data: [] },
+      auctionIds.length      ? supabase.from("auctions").select("id, plant_name").in("id", auctionIds)                  : { data: [] },
+      userIds.length         ? supabase.from("profiles").select("id, username").in("id", userIds)                       : { data: [] },
+      communityPostIds.length ? supabase.from("community_posts").select("id, title").in("id", communityPostIds)         : { data: [] },
     ]);
 
-  const reporterMap    = Object.fromEntries((reporters    ?? []).map(r => [r.id, r]));
-  const listingMap     = Object.fromEntries((listings     ?? []).map(l => [l.id, l]));
-  const auctionMap     = Object.fromEntries((auctions     ?? []).map(a => [a.id, a]));
-  const reportedUserMap = Object.fromEntries((reportedUsers ?? []).map(u => [u.id, u]));
+  const reporterMap      = Object.fromEntries((reporters      ?? []).map(r => [r.id, r]));
+  const listingMap       = Object.fromEntries((listings       ?? []).map(l => [l.id, l]));
+  const auctionMap       = Object.fromEntries((auctions       ?? []).map(a => [a.id, a]));
+  const reportedUserMap  = Object.fromEntries((reportedUsers  ?? []).map(u => [u.id, u]));
+  const communityPostMap = Object.fromEntries((communityPosts ?? []).map(p => [p.id, p]));
 
   return (
     <div className="p-8">
@@ -118,18 +123,20 @@ export default async function AdminReportsPage({
           </thead>
           <tbody>
             {(reports ?? []).map((r, i) => {
-              const type = r.listing_id ? "listing" : r.auction_id ? "auction" : "user";
+              const type = r.listing_id ? "listing" : r.auction_id ? "auction" : r.community_post_id ? "community_post" : "user";
               const target =
-                r.listing_id  ? listingMap[r.listing_id]
-                : r.auction_id ? auctionMap[r.auction_id]
+                r.listing_id        ? listingMap[r.listing_id]
+                : r.auction_id      ? auctionMap[r.auction_id]
+                : r.community_post_id ? communityPostMap[r.community_post_id]
                 : r.reported_user_id ? reportedUserMap[r.reported_user_id]
                 : null;
               const targetName = target
-                ? ("plant_name" in target ? target.plant_name : target.username)
+                ? ("plant_name" in target ? target.plant_name : "title" in target ? target.title : (target as { username: string }).username)
                 : "Deleted";
               const targetHref =
-                r.listing_id  ? `/shop/${r.listing_id}`
-                : r.auction_id ? `/auctions/${r.auction_id}`
+                r.listing_id        ? `/shop/${r.listing_id}`
+                : r.auction_id      ? `/auctions/${r.auction_id}`
+                : r.community_post_id ? `/community/${r.community_post_id}`
                 : r.reported_user_id && target ? `/sellers/${(target as { username: string }).username}`
                 : null;
               const reporter = r.reporter_id ? reporterMap[r.reporter_id] : null;
@@ -143,7 +150,7 @@ export default async function AdminReportsPage({
                   </td>
                   <td className="px-4 py-3 font-medium">
                     {targetHref ? (
-                      <Link href={targetHref} className="hover:underline text-green-700" target="_blank">
+                      <Link href={targetHref} className="hover:underline text-green-700 max-w-[160px] truncate block" target="_blank">
                         {targetName}
                       </Link>
                     ) : (
@@ -180,6 +187,7 @@ export default async function AdminReportsPage({
                         listingId={r.listing_id}
                         auctionId={r.auction_id}
                         reportedUserId={r.reported_user_id}
+                        communityPostId={r.community_post_id}
                         targetName={targetName}
                       />
                     ) : (

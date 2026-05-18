@@ -8,6 +8,7 @@ import { ChevronLeft, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CommunityReplies } from "@/components/community/community-replies";
 import { PostFollowButton } from "@/components/community/post-follow-button";
+import ReportButton from "@/components/report-button";
 
 const TYPE_LABEL = { help: "Help Request", show_and_tell: "Show & Tell", discussion: "Discussion" } as const;
 const TYPE_COLOR = {
@@ -37,7 +38,7 @@ export default async function CommunityPostPage({
 
   if (!post) notFound();
 
-  const [{ data: author }, { data: replies }, { data: followRow }] = await Promise.all([
+  const [{ data: author }, { data: replies }, { data: followRow }, { data: reportRow }] = await Promise.all([
     supabase.from("profiles").select("id, username, avatar_url").eq("id", post.user_id).single(),
     supabase
       .from("community_replies")
@@ -46,6 +47,9 @@ export default async function CommunityPostPage({
       .order("created_at", { ascending: true }),
     user
       ? supabase.from("community_post_follows").select("id").eq("user_id", user.id).eq("post_id", id).single()
+      : Promise.resolve({ data: null }),
+    user
+      ? supabase.from("reports").select("id").eq("reporter_id", user.id).eq("community_post_id", id).maybeSingle()
       : Promise.resolve({ data: null }),
   ]);
 
@@ -107,6 +111,16 @@ export default async function CommunityPostPage({
           <span className="text-xs text-muted-foreground">
             {new Date(post.created_at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
           </span>
+          {!isOwner && (
+            <span className="ml-auto">
+              <ReportButton
+                userId={user?.id ?? null}
+                communityPostId={post.id}
+                targetName={post.title}
+                initialReported={!!reportRow}
+              />
+            </span>
+          )}
         </div>
       </div>
 
