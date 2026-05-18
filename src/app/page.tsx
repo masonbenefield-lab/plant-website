@@ -446,13 +446,13 @@ export default async function LandingPage() {
         <div className="max-w-3xl mx-auto text-center">
           <h2 className="text-2xl sm:text-3xl font-bold mb-3">Simple, honest pricing</h2>
           <p className="text-muted-foreground mb-10 max-w-md mx-auto">
-            No subscription. No listing fees. We only make money when you do.
+            No listing fees. We only make money when you do.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
             <div className="bg-card rounded-2xl border p-6 flex flex-col items-center">
               <p className="text-4xl font-bold text-green-700 mb-2">$0</p>
               <p className="font-semibold mb-2">To list</p>
-              <p className="text-sm text-muted-foreground leading-relaxed">Post unlimited listings and auctions — completely free.</p>
+              <p className="text-sm text-muted-foreground leading-relaxed">No listing fees — ever. Free plan includes 10 listings and 5 auctions. Unlimited on paid plans.</p>
             </div>
             <div className="bg-card rounded-2xl border-2 border-green-600 p-6 flex flex-col items-center shadow-md">
               <p className="text-4xl font-bold text-green-700 mb-2">3–6.5%</p>
