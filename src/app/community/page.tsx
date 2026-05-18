@@ -5,8 +5,9 @@ import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
-import { MessageCircle, CheckCircle2 } from "lucide-react";
+import { MessageCircle, CheckCircle2, Bookmark } from "lucide-react";
 import { CommunitySearchBar } from "@/components/community-search-bar";
+import { PostFollowButton } from "@/components/community/post-follow-button";
 
 export const dynamic = "force-dynamic";
 
@@ -19,11 +20,14 @@ const TYPE_COLOR = {
 
 type PostType = "help" | "show_and_tell" | "discussion";
 
-function buildHref(params: { type?: string; sort?: string; q?: string }) {
+function buildHref(params: { type?: string; sort?: string; q?: string; view?: string }) {
   const p = new URLSearchParams();
   if (params.q) p.set("q", params.q);
-  if (params.type) p.set("type", params.type);
-  if (params.sort && params.sort !== "newest") p.set("sort", params.sort);
+  if (params.view) p.set("view", params.view);
+  if (!params.view) {
+    if (params.type) p.set("type", params.type);
+    if (params.sort && params.sort !== "newest") p.set("sort", params.sort);
+  }
   const s = p.toString();
   return s ? `/community?${s}` : "/community";
 }
@@ -31,33 +35,60 @@ function buildHref(params: { type?: string; sort?: string; q?: string }) {
 export default async function CommunityPage({
   searchParams,
 }: {
-  searchParams: Promise<{ type?: string; sort?: string; q?: string }>;
+  searchParams: Promise<{ type?: string; sort?: string; q?: string; view?: string }>;
 }) {
   const supabase = await createClient();
-  const { type, sort, q } = await searchParams;
+  const { type, sort, q, view } = await searchParams;
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const isSavedView = view === "saved";
   const validType = (["help", "show_and_tell", "discussion"] as const).find((t) => t === type);
   const validSort = (["newest", "most_replies", "unanswered"] as const).find((s) => s === sort) ?? "newest";
   const searchQuery = q?.trim() ?? "";
 
-  let query = supabase
-    .from("community_posts")
-    .select("id, user_id, post_type, title, body, photos, solved, created_at")
-    .order("created_at", { ascending: false })
-    .limit(50);
+  let posts: { id: string; user_id: string; post_type: string; title: string; body: string | null; photos: unknown; solved: boolean; created_at: string }[] = [];
 
-  if (validType) query = query.eq("post_type", validType);
-  if (searchQuery) query = query.or(`title.ilike.%${searchQuery}%,body.ilike.%${searchQuery}%`);
-  if (validSort === "unanswered") query = query.eq("post_type", validType ?? "help");
+  if (isSavedView) {
+    if (user) {
+      const { data: follows } = await supabase
+        .from("community_post_follows")
+        .select("post_id")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
 
-  const { data: rawPosts } = await query;
+      const followedIds = (follows ?? []).map((f) => f.post_id);
+      if (followedIds.length) {
+        const { data } = await supabase
+          .from("community_posts")
+          .select("id, user_id, post_type, title, body, photos, solved, created_at")
+          .in("id", followedIds);
+        // preserve order from follows (most recently saved first)
+        const orderMap = Object.fromEntries(followedIds.map((id, i) => [id, i]));
+        posts = (data ?? []).sort((a, b) => (orderMap[a.id] ?? 0) - (orderMap[b.id] ?? 0));
+      }
+    }
+  } else {
+    let query = supabase
+      .from("community_posts")
+      .select("id, user_id, post_type, title, body, photos, solved, created_at")
+      .order("created_at", { ascending: false })
+      .limit(50);
 
-  const authorIds = [...new Set((rawPosts ?? []).map((p) => p.user_id))];
+    if (validType) query = query.eq("post_type", validType);
+    if (searchQuery) query = query.or(`title.ilike.%${searchQuery}%,body.ilike.%${searchQuery}%`);
+    if (validSort === "unanswered") query = query.eq("post_type", validType ?? "help");
+
+    const { data: rawPosts } = await query;
+    posts = rawPosts ?? [];
+  }
+
+  const authorIds = [...new Set(posts.map((p) => p.user_id))];
   const { data: authors } = authorIds.length
     ? await supabase.from("profiles").select("id, username, avatar_url").in("id", authorIds)
     : { data: [] };
   const authorMap = Object.fromEntries((authors ?? []).map((a) => [a.id, a]));
 
-  const postIds = (rawPosts ?? []).map((p) => p.id);
+  const postIds = posts.map((p) => p.id);
   const { data: replyCounts } = postIds.length
     ? await supabase.from("community_replies").select("post_id").in("post_id", postIds)
     : { data: [] };
@@ -66,12 +97,24 @@ export default async function CommunityPage({
     replyCountMap[r.post_id] = (replyCountMap[r.post_id] ?? 0) + 1;
   }
 
-  // Apply client-side sort / filter after reply counts are known
-  let posts = [...(rawPosts ?? [])];
-  if (validSort === "most_replies") {
-    posts.sort((a, b) => (replyCountMap[b.id] ?? 0) - (replyCountMap[a.id] ?? 0));
-  } else if (validSort === "unanswered") {
-    posts = posts.filter((p) => p.post_type === "help" && (replyCountMap[p.id] ?? 0) === 0);
+  // Fetch which posts the current user has saved (for bookmark state on cards)
+  let followedPostIds = new Set<string>();
+  if (user && postIds.length) {
+    const { data: userFollows } = await supabase
+      .from("community_post_follows")
+      .select("post_id")
+      .eq("user_id", user.id)
+      .in("post_id", postIds);
+    followedPostIds = new Set((userFollows ?? []).map((f) => f.post_id));
+  }
+
+  // Apply client-side sort / filter after reply counts are known (non-saved view)
+  if (!isSavedView) {
+    if (validSort === "most_replies") {
+      posts.sort((a, b) => (replyCountMap[b.id] ?? 0) - (replyCountMap[a.id] ?? 0));
+    } else if (validSort === "unanswered") {
+      posts = posts.filter((p) => p.post_type === "help" && (replyCountMap[p.id] ?? 0) === 0);
+    }
   }
 
   return (
@@ -86,28 +129,55 @@ export default async function CommunityPage({
         </Link>
       </div>
 
-      {/* Search */}
-      <Suspense>
-        <CommunitySearchBar />
-      </Suspense>
+      {/* Search (hidden in saved view) */}
+      {!isSavedView && (
+        <Suspense>
+          <CommunitySearchBar />
+        </Suspense>
+      )}
 
-      {/* Type filter tabs */}
+      {/* Top-level tabs: All / Saved */}
       <div className="flex flex-wrap gap-2 mb-3">
-        <FilterChip href={buildHref({ sort: validSort, q: searchQuery })} label="All" active={!validType} />
-        <FilterChip href={buildHref({ type: "help", sort: validSort, q: searchQuery })} label="Help Requests" active={validType === "help"} />
-        <FilterChip href={buildHref({ type: "show_and_tell", sort: validSort, q: searchQuery })} label="Show & Tell" active={validType === "show_and_tell"} />
-        <FilterChip href={buildHref({ type: "discussion", sort: validSort, q: searchQuery })} label="Discussions" active={validType === "discussion"} />
-      </div>
-      <div className="flex flex-wrap gap-2 mb-6">
-        <FilterChip href={buildHref({ type: validType, q: searchQuery })} label="Newest" active={validSort === "newest"} small />
-        <FilterChip href={buildHref({ type: validType, sort: "most_replies", q: searchQuery })} label="Most Replies" active={validSort === "most_replies"} small />
-        <FilterChip href={buildHref({ type: validType, sort: "unanswered", q: searchQuery })} label="Unanswered" active={validSort === "unanswered"} small />
+        <FilterChip href="/community" label="All Posts" active={!isSavedView} />
+        <FilterChip href="/community?view=saved" label="Saved" active={isSavedView} icon={<Bookmark size={12} />} />
+        {!isSavedView && (
+          <>
+            <FilterChip href={buildHref({ sort: validSort, q: searchQuery })} label="All" active={!validType} />
+            <FilterChip href={buildHref({ type: "help", sort: validSort, q: searchQuery })} label="Help Requests" active={validType === "help"} />
+            <FilterChip href={buildHref({ type: "show_and_tell", sort: validSort, q: searchQuery })} label="Show & Tell" active={validType === "show_and_tell"} />
+            <FilterChip href={buildHref({ type: "discussion", sort: validSort, q: searchQuery })} label="Discussions" active={validType === "discussion"} />
+          </>
+        )}
       </div>
 
+      {/* Sort chips (hidden in saved view) */}
+      {!isSavedView && (
+        <div className="flex flex-wrap gap-2 mb-6">
+          <FilterChip href={buildHref({ type: validType, q: searchQuery })} label="Newest" active={validSort === "newest"} small />
+          <FilterChip href={buildHref({ type: validType, sort: "most_replies", q: searchQuery })} label="Most Replies" active={validSort === "most_replies"} small />
+          <FilterChip href={buildHref({ type: validType, sort: "unanswered", q: searchQuery })} label="Unanswered" active={validSort === "unanswered"} small />
+        </div>
+      )}
+
+      {isSavedView && <div className="mb-6" />}
+
+      {/* Empty states */}
       {posts.length === 0 ? (
         <div className="text-center py-20 border rounded-xl bg-muted/30">
-          <p className="text-4xl mb-4">🌿</p>
-          {searchQuery ? (
+          <p className="text-4xl mb-4">{isSavedView ? "🔖" : "🌿"}</p>
+          {isSavedView && !user ? (
+            <>
+              <p className="font-semibold mb-1">Sign in to save posts</p>
+              <p className="text-sm text-muted-foreground mb-4">Bookmark posts to find them again later.</p>
+              <Link href="/login" className={cn(buttonVariants(), "bg-green-700 hover:bg-green-800")}>Sign in</Link>
+            </>
+          ) : isSavedView ? (
+            <>
+              <p className="font-semibold mb-1">No saved posts yet</p>
+              <p className="text-sm text-muted-foreground mb-4">Hit the bookmark icon on any post to save it here.</p>
+              <Link href="/community" className={cn(buttonVariants({ variant: "outline" }))}>Browse posts</Link>
+            </>
+          ) : searchQuery ? (
             <>
               <p className="font-semibold mb-1">No posts match &ldquo;{searchQuery}&rdquo;</p>
               <p className="text-sm text-muted-foreground mb-4">Try a different search term or clear the search.</p>
@@ -125,53 +195,59 @@ export default async function CommunityPage({
         </div>
       ) : (
         <div className="space-y-3">
-          {(posts ?? []).map((post) => {
+          {posts.map((post) => {
             const author = authorMap[post.user_id];
             const replyCount = replyCountMap[post.id] ?? 0;
+            const isFollowed = followedPostIds.has(post.id);
             return (
-              <Link
-                key={post.id}
-                href={`/community/${post.id}`}
-                className="block rounded-xl border bg-card p-4 hover:shadow-md transition-shadow"
-              >
-                <div className="flex items-start gap-3">
-                  <Avatar className="h-8 w-8 shrink-0 mt-0.5">
-                    <AvatarImage src={author?.avatar_url ?? undefined} />
-                    <AvatarFallback className="bg-green-100 text-green-700 text-xs font-semibold">
-                      {author?.username?.slice(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <Badge className={cn("text-xs px-1.5 py-0 border-0", TYPE_COLOR[post.post_type as PostType])}>
-                        {TYPE_LABEL[post.post_type as PostType]}
-                      </Badge>
-                      {post.solved && (
-                        <span className="flex items-center gap-0.5 text-xs text-green-700 font-medium">
-                          <CheckCircle2 size={12} /> Solved
-                        </span>
+              <div key={post.id} className="relative">
+                <Link
+                  href={`/community/${post.id}`}
+                  className="block rounded-xl border bg-card p-4 hover:shadow-md transition-shadow"
+                >
+                  <div className="flex items-start gap-3">
+                    <Avatar className="h-8 w-8 shrink-0 mt-0.5">
+                      <AvatarImage src={author?.avatar_url ?? undefined} />
+                      <AvatarFallback className="bg-green-100 text-green-700 text-xs font-semibold">
+                        {author?.username?.slice(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <Badge className={cn("text-xs px-1.5 py-0 border-0", TYPE_COLOR[post.post_type as PostType])}>
+                          {TYPE_LABEL[post.post_type as PostType]}
+                        </Badge>
+                        {post.solved && (
+                          <span className="flex items-center gap-0.5 text-xs text-green-700 font-medium">
+                            <CheckCircle2 size={12} /> Solved
+                          </span>
+                        )}
+                      </div>
+                      <p className="font-semibold text-sm leading-snug line-clamp-2 pr-8">{post.title}</p>
+                      {post.body && (
+                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">{post.body}</p>
                       )}
+                      <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                        <span>{author?.username}</span>
+                        <span>{new Date(post.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                        <span className="flex items-center gap-1">
+                          <MessageCircle size={11} /> {replyCount} {replyCount === 1 ? "reply" : "replies"}
+                        </span>
+                      </div>
                     </div>
-                    <p className="font-semibold text-sm leading-snug line-clamp-2">{post.title}</p>
-                    {post.body && (
-                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">{post.body}</p>
+                    {(post.photos as string[]).length > 0 && (
+                      <div className="relative w-14 h-14 rounded-lg overflow-hidden border shrink-0 bg-muted">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={(post.photos as string[])[0]} alt="Post photo" className="w-full h-full object-cover" />
+                      </div>
                     )}
-                    <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                      <span>{author?.username}</span>
-                      <span>{new Date(post.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
-                      <span className="flex items-center gap-1">
-                        <MessageCircle size={11} /> {replyCount} {replyCount === 1 ? "reply" : "replies"}
-                      </span>
-                    </div>
                   </div>
-                  {(post.photos as string[]).length > 0 && (
-                    <div className="relative w-14 h-14 rounded-lg overflow-hidden border shrink-0 bg-muted">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={(post.photos as string[])[0]} alt="Post photo" className="w-full h-full object-cover" />
-                    </div>
-                  )}
+                </Link>
+                {/* Bookmark button sits outside the Link to avoid nested interactive elements */}
+                <div className="absolute top-3 right-3">
+                  <PostFollowButton postId={post.id} initialFollowing={isFollowed} size="sm" />
                 </div>
-              </Link>
+              </div>
             );
           })}
         </div>
@@ -180,18 +256,23 @@ export default async function CommunityPage({
   );
 }
 
-function FilterChip({ href, label, active, small }: { href: string; label: string; active: boolean; small?: boolean }) {
+function FilterChip({
+  href, label, active, small, icon,
+}: {
+  href: string; label: string; active: boolean; small?: boolean; icon?: React.ReactNode;
+}) {
   return (
     <Link
       href={href}
       className={cn(
-        "rounded-full font-medium transition-colors border",
+        "rounded-full font-medium transition-colors border flex items-center gap-1",
         small ? "px-2.5 py-1 text-xs" : "px-3 py-1.5 text-sm",
         active
           ? "bg-green-700 text-white border-green-700"
           : "bg-background text-muted-foreground border-border hover:text-foreground hover:border-green-400"
       )}
     >
+      {icon}
       {label}
     </Link>
   );

@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CommunityReplies } from "@/components/community/community-replies";
+import { PostFollowButton } from "@/components/community/post-follow-button";
 
 const TYPE_LABEL = { help: "Help Request", show_and_tell: "Show & Tell", discussion: "Discussion" } as const;
 const TYPE_COLOR = {
@@ -36,13 +37,16 @@ export default async function CommunityPostPage({
 
   if (!post) notFound();
 
-  const [{ data: author }, { data: replies }] = await Promise.all([
+  const [{ data: author }, { data: replies }, { data: followRow }] = await Promise.all([
     supabase.from("profiles").select("id, username, avatar_url").eq("id", post.user_id).single(),
     supabase
       .from("community_replies")
       .select("id, user_id, body, photos, is_solution, created_at")
       .eq("post_id", id)
       .order("created_at", { ascending: true }),
+    user
+      ? supabase.from("community_post_follows").select("id").eq("user_id", user.id).eq("post_id", id).single()
+      : Promise.resolve({ data: null }),
   ]);
 
   const replyAuthorIds = [...new Set((replies ?? []).map((r) => r.user_id))];
@@ -62,15 +66,18 @@ export default async function CommunityPostPage({
 
       {/* Post */}
       <div className="rounded-xl border bg-card p-5 mb-8">
-        <div className="flex items-center gap-2 mb-3 flex-wrap">
-          <Badge className={cn("text-xs px-1.5 py-0 border-0", TYPE_COLOR[post.post_type as PostType])}>
-            {TYPE_LABEL[post.post_type as PostType]}
-          </Badge>
-          {post.solved && (
-            <span className="flex items-center gap-1 text-xs text-green-700 font-medium">
-              <CheckCircle2 size={12} /> Solved
-            </span>
-          )}
+        <div className="flex items-start justify-between gap-2 mb-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Badge className={cn("text-xs px-1.5 py-0 border-0", TYPE_COLOR[post.post_type as PostType])}>
+              {TYPE_LABEL[post.post_type as PostType]}
+            </Badge>
+            {post.solved && (
+              <span className="flex items-center gap-1 text-xs text-green-700 font-medium">
+                <CheckCircle2 size={12} /> Solved
+              </span>
+            )}
+          </div>
+          <PostFollowButton postId={post.id} initialFollowing={!!followRow} size="md" />
         </div>
         <h1 className="text-xl font-bold mb-3">{post.title}</h1>
         {post.body && (
