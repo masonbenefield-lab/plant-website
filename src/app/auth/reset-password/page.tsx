@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,8 +11,6 @@ import { Eye, EyeOff } from "lucide-react";
 
 function ResetForm() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const code = searchParams.get("code");
 
   const [ready, setReady] = useState(false);
   const [invalid, setInvalid] = useState(false);
@@ -23,13 +21,29 @@ function ResetForm() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!code) { setInvalid(true); return; }
     const supabase = createClient();
-    supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
-      if (error) setInvalid(true);
-      else setReady(true);
+
+    // Supabase auto-exchanges the PKCE code from the URL on load.
+    // Listen for the PASSWORD_RECOVERY event it fires after doing so.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") setReady(true);
     });
-  }, [code]);
+
+    // Also handle the case where the event already fired before listener attached
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) setReady(true);
+      else {
+        // Give the auto-exchange a moment; if still no session, the link is bad
+        setTimeout(() => {
+          supabase.auth.getSession().then(({ data: { session } }) => {
+            if (!session) setInvalid(true);
+          });
+        }, 1500);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
