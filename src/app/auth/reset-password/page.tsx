@@ -23,26 +23,20 @@ function ResetForm() {
   useEffect(() => {
     const supabase = createClient();
 
-    // Supabase auto-exchanges the PKCE code from the URL on load.
-    // Listen for the PASSWORD_RECOVERY event it fires after doing so.
+    // Only trust the PASSWORD_RECOVERY event — never an existing session.
+    // Using getSession() here would pick up any already-logged-in user and
+    // update the wrong account's password.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") setReady(true);
     });
 
-    // Also handle the case where the event already fired before listener attached
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) setReady(true);
-      else {
-        // Give the auto-exchange a moment; if still no session, the link is bad
-        setTimeout(() => {
-          supabase.auth.getSession().then(({ data: { session } }) => {
-            if (!session) setInvalid(true);
-          });
-        }, 1500);
-      }
-    });
+    // If no PASSWORD_RECOVERY event fires after a reasonable wait, the link is bad
+    const timer = setTimeout(() => setInvalid(true), 3000);
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timer);
+    };
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
