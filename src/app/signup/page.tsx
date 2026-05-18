@@ -62,6 +62,8 @@ export default function SignupPage() {
 
     if (data.user) {
       if (data.session) {
+        // Email confirmation is disabled — callback never fires, so assign Groundbreaker here
+        await fetch("/api/auth/claim-groundbreaker", { method: "POST" });
         router.push("/dashboard");
         router.refresh();
       } else {

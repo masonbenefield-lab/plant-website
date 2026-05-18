@@ -24,7 +24,7 @@ export async function GET(request: Request) {
         .eq("id", session.user.id)
         .single();
 
-      if (profile && !profile.groundbreaker) {
+      if (!profile?.groundbreaker) {
         const { count } = await admin
           .from("profiles")
           .select("*", { count: "exact", head: true })
