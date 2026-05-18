@@ -12,7 +12,7 @@ export default function Footer() {
           <Link href="/signup" className="hover:text-foreground transition-colors">Sell</Link>
           <Link href="/privacy-policy" className="hover:text-foreground transition-colors">Privacy Policy</Link>
           <Link href="/seller-agreement" className="hover:text-foreground transition-colors">Seller Agreement</Link>
-          <a href="mailto:support@plantet.app" className="hover:text-foreground transition-colors">Contact</a>
+          <Link href="/contact" className="hover:text-foreground transition-colors">Contact</Link>
         </nav>
         <span className="text-xs">&copy; {new Date().getFullYear()} Plantet</span>
       </div>
