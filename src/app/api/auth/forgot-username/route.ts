@@ -18,7 +18,8 @@ export async function POST(request: Request) {
     );
 
     // Use database function to look up username by email
-    const { data: username } = await admin.rpc("get_username_by_email", { p_email: email.toLowerCase().trim() });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: username } = await (admin as any).rpc("get_username_by_email", { p_email: email.toLowerCase().trim() });
 
     if (username) {
       const resend = new Resend(process.env.RESEND_API_KEY!);
