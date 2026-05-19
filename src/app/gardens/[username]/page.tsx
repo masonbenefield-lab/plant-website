@@ -4,7 +4,7 @@ import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { Sprout } from "lucide-react";
+import { Sprout, Store } from "lucide-react";
 import type { GardenPlantStatus } from "@/lib/supabase/types";
 
 const STATUS_LABEL: Record<GardenPlantStatus, string> = {
@@ -33,7 +33,7 @@ export default async function PublicGardenPage({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, username, display_name, avatar_url, garden_public")
+    .select("id, username, display_name, avatar_url, bio, garden_public, stripe_onboarded")
     .eq("username", username)
     .single();
 
@@ -50,28 +50,45 @@ export default async function PublicGardenPage({
   const displayName = profile.display_name || profile.username;
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-10 space-y-8">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <div className="w-12 h-12 rounded-full bg-muted overflow-hidden shrink-0">
+    <div className="max-w-5xl mx-auto px-4 py-12 space-y-10">
+
+      {/* Hero header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
+        <div className="w-16 h-16 rounded-full bg-muted overflow-hidden shrink-0 ring-2 ring-green-100">
           {profile.avatar_url ? (
-            <Image src={profile.avatar_url} alt={displayName ?? ""} width={48} height={48} className="object-cover w-full h-full" />
+            <Image
+              src={profile.avatar_url}
+              alt={displayName ?? ""}
+              width={64}
+              height={64}
+              className="object-cover w-full h-full"
+            />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-lg font-bold text-muted-foreground">
+            <div className="w-full h-full flex items-center justify-center text-xl font-bold text-muted-foreground">
               {displayName?.slice(0, 1).toUpperCase()}
             </div>
           )}
         </div>
-        <div>
-          <h1 className="text-2xl font-bold">{displayName}&apos;s Garden</h1>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-2xl font-bold leading-tight">{displayName}&apos;s Garden</h1>
           <p className="text-muted-foreground text-sm mt-0.5">
             {total} plant{total !== 1 ? "s" : ""}
-            {" · "}
-            <Link href={`/sellers/${profile.username}`} className="text-green-700 hover:underline">
-              Visit storefront
-            </Link>
           </p>
+          {profile.bio && (
+            <p className="text-sm text-muted-foreground mt-2 leading-relaxed max-w-lg">
+              {profile.bio}
+            </p>
+          )}
         </div>
+        {profile.stripe_onboarded && (
+          <Link
+            href={`/sellers/${profile.username}`}
+            className="shrink-0 flex items-center gap-1.5 text-sm px-4 py-2 rounded-full border border-green-300 bg-green-50 text-green-700 hover:bg-green-100 transition-colors font-medium"
+          >
+            <Store size={14} />
+            Visit shop
+          </Link>
+        )}
       </div>
 
       {total === 0 ? (
@@ -82,44 +99,58 @@ export default async function PublicGardenPage({
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-5">
           {plants!.map((plant) => (
-            <Card key={plant.id} className="overflow-hidden h-full">
-              <div className="aspect-square relative bg-muted">
-                {plant.images?.[0] ? (
-                  <Image src={plant.images[0]} alt={plant.name} fill className="object-cover" />
-                ) : (
-                  <div className="flex items-center justify-center h-full text-4xl">🪴</div>
-                )}
-              </div>
-              <CardContent className="p-3 space-y-1">
-                <p className="font-semibold text-sm leading-tight">{plant.name}</p>
-                {plant.variety && (
-                  <p className="text-xs text-muted-foreground">{plant.variety}</p>
-                )}
-                <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
-                  <span className={cn("text-xs px-1.5 py-0.5 rounded-full font-medium", STATUS_COLOR[plant.status as GardenPlantStatus])}>
-                    {STATUS_LABEL[plant.status as GardenPlantStatus]}
-                  </span>
-                  {plant.location && (
-                    <span className="text-xs text-muted-foreground truncate">{plant.location}</span>
+            <Link key={plant.id} href={`/gardens/${username}/${plant.id}`}>
+              <Card className="overflow-hidden h-full hover:shadow-md transition-shadow group">
+                <div className="aspect-[4/3] relative bg-muted">
+                  {plant.images?.[0] ? (
+                    <Image
+                      src={plant.images[0]}
+                      alt={plant.name}
+                      fill
+                      className="object-cover group-hover:scale-[1.02] transition-transform duration-300"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-5xl">🪴</div>
                   )}
                 </div>
-                {plant.planted_at && (
-                  <p className="text-xs text-muted-foreground">
-                    Planted {new Date(plant.planted_at).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
-                  </p>
-                )}
-                {(plant as { public_notes?: string | null }).public_notes && (
-                  <p className="text-xs text-muted-foreground leading-snug line-clamp-3 pt-0.5 border-t mt-1">
-                    {(plant as { public_notes?: string | null }).public_notes}
-                  </p>
-                )}
-              </CardContent>
-            </Card>
+                <CardContent className="p-4 space-y-1.5">
+                  <p className="font-semibold leading-tight">{plant.name}</p>
+                  {plant.variety && (
+                    <p className="text-sm text-muted-foreground leading-tight">{plant.variety}</p>
+                  )}
+                  <div className="flex items-center gap-2 flex-wrap pt-0.5">
+                    <span className={cn("text-xs px-2 py-0.5 rounded-full font-medium", STATUS_COLOR[plant.status as GardenPlantStatus])}>
+                      {STATUS_LABEL[plant.status as GardenPlantStatus]}
+                    </span>
+                    {plant.location && (
+                      <span className="text-xs text-muted-foreground truncate">{plant.location}</span>
+                    )}
+                  </div>
+                  {plant.planted_at && (
+                    <p className="text-xs text-muted-foreground">
+                      Planted {new Date(plant.planted_at).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+                    </p>
+                  )}
+                  {(plant as { public_notes?: string | null }).public_notes && (
+                    <p className="text-sm text-muted-foreground leading-snug line-clamp-2 pt-1 border-t">
+                      {(plant as { public_notes?: string | null }).public_notes}
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            </Link>
           ))}
         </div>
       )}
+
+      <p className="text-center text-xs text-muted-foreground pt-4">
+        Shared on{" "}
+        <Link href="/" className="text-green-700 hover:underline font-medium">
+          Plantet
+        </Link>
+      </p>
     </div>
   );
 }

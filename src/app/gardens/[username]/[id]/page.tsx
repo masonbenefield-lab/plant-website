@@ -1,0 +1,185 @@
+import { notFound } from "next/navigation";
+import Link from "next/link";
+import Image from "next/image";
+import { createClient } from "@/lib/supabase/server";
+import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+import { ChevronLeft } from "lucide-react";
+import { PhotoGallery } from "@/components/garden/photo-gallery";
+import type { GardenPlantStatus } from "@/lib/supabase/types";
+
+const STATUS_LABEL: Record<GardenPlantStatus, string> = {
+  thriving: "Thriving",
+  growing: "Growing",
+  dormant: "Dormant",
+  struggling: "Struggling",
+  dead: "Dead",
+};
+
+const STATUS_COLOR: Record<GardenPlantStatus, string> = {
+  thriving: "bg-green-100 text-green-700",
+  growing: "bg-emerald-100 text-emerald-700",
+  dormant: "bg-yellow-100 text-yellow-700",
+  struggling: "bg-orange-100 text-orange-700",
+  dead: "bg-gray-100 text-gray-500",
+};
+
+const SOURCE_TYPE_LABEL: Record<string, string> = {
+  nursery: "Local nursery",
+  purchase: "Online purchase",
+  trade: "Trade / swap",
+  propagation: "Propagation",
+  gift: "Gift",
+};
+
+export default async function PublicPlantDetailPage({
+  params,
+}: {
+  params: Promise<{ username: string; id: string }>;
+}) {
+  const { username, id } = await params;
+  const supabase = await createClient();
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("id, username, display_name, avatar_url, garden_public")
+    .eq("username", username)
+    .single();
+
+  if (!profile || !profile.garden_public) notFound();
+
+  const { data: plant } = await supabase
+    .from("garden_plants")
+    .select("id, name, variety, status, location, planted_at, source_type, source_name, images, public_notes")
+    .eq("id", id)
+    .eq("user_id", profile.id)
+    .eq("is_public", true)
+    .single();
+
+  if (!plant) notFound();
+
+  const status = plant.status as GardenPlantStatus;
+  const displayName = profile.display_name || profile.username;
+
+  return (
+    <div className="max-w-4xl mx-auto px-4 py-10 space-y-8">
+
+      {/* Back nav */}
+      <Link
+        href={`/gardens/${username}`}
+        className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <ChevronLeft size={16} />
+        {displayName}&apos;s Garden
+      </Link>
+
+      {/* Header */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-3 flex-wrap">
+          <h1 className="text-2xl font-bold">{plant.name}</h1>
+          <span className={cn("text-sm px-2 py-0.5 rounded-full font-medium", STATUS_COLOR[status])}>
+            {STATUS_LABEL[status]}
+          </span>
+        </div>
+        {plant.variety && (
+          <p className="text-muted-foreground">{plant.variety}</p>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+        {/* Left: photos + notes */}
+        <div className="lg:col-span-2 space-y-6">
+          <PhotoGallery images={plant.images ?? []} alt={plant.name} />
+
+          {plant.public_notes && (
+            <Card>
+              <CardContent className="p-4">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Notes</p>
+                <p className="text-sm whitespace-pre-wrap leading-relaxed">{plant.public_notes}</p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* Right: details sidebar */}
+        <div className="space-y-4">
+          <Card>
+            <CardContent className="p-4 space-y-3">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Details</p>
+
+              {plant.location && (
+                <DetailRow label="Location" value={plant.location} />
+              )}
+              {plant.planted_at && (
+                <DetailRow
+                  label="Planted"
+                  value={new Date(plant.planted_at).toLocaleDateString("en-US", {
+                    month: "long",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                />
+              )}
+              {plant.source_type && (
+                <DetailRow
+                  label="Source"
+                  value={SOURCE_TYPE_LABEL[plant.source_type] ?? plant.source_type}
+                />
+              )}
+              {plant.source_name && (
+                <DetailRow label="From" value={plant.source_name} />
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Grower attribution */}
+          <Card>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-muted overflow-hidden shrink-0">
+                {profile.avatar_url ? (
+                  <Image
+                    src={profile.avatar_url}
+                    alt={displayName ?? ""}
+                    width={36}
+                    height={36}
+                    className="object-cover w-full h-full"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-sm font-bold text-muted-foreground">
+                    {displayName?.slice(0, 1).toUpperCase()}
+                  </div>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-muted-foreground">Grown by</p>
+                <Link
+                  href={`/gardens/${username}`}
+                  className="text-sm font-medium hover:text-green-700 transition-colors truncate block"
+                >
+                  {displayName}
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      <p className="text-center text-xs text-muted-foreground pt-4">
+        Shared on{" "}
+        <Link href="/" className="text-green-700 hover:underline font-medium">
+          Plantet
+        </Link>
+      </p>
+    </div>
+  );
+}
+
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex justify-between gap-3 text-sm">
+      <span className="text-muted-foreground shrink-0">{label}</span>
+      <span className="font-medium text-right">{value}</span>
+    </div>
+  );
+}

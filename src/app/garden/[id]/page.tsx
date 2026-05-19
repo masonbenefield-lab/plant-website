@@ -1,16 +1,16 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { EventLog } from "@/components/garden/event-log";
-import { ChevronLeft, Pencil } from "lucide-react";
+import { ChevronLeft, Pencil, ExternalLink } from "lucide-react";
 import type { GardenPlantStatus, GardenEventType } from "@/lib/supabase/types";
 import { DeletePlantButton } from "@/components/garden/delete-plant-button";
 import { PlantVisibilityToggle } from "@/components/garden/plant-visibility-toggle";
 import { SharePlantButton } from "@/components/garden/share-plant-button";
+import { PhotoGallery } from "@/components/garden/photo-gallery";
 
 const STATUS_LABEL: Record<GardenPlantStatus, string> = {
   thriving: "Thriving",
@@ -62,7 +62,7 @@ export default async function GardenPlantDetailPage({
       .order("created_at", { ascending: false }),
     supabase
       .from("profiles")
-      .select("garden_public")
+      .select("garden_public, username")
       .eq("id", user.id)
       .single(),
   ]);
@@ -71,6 +71,7 @@ export default async function GardenPlantDetailPage({
 
   const status = plant.status as GardenPlantStatus;
   const gardenPublic = profile?.garden_public ?? false;
+  const username = profile?.username ?? null;
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-10 space-y-8">
@@ -81,7 +82,18 @@ export default async function GardenPlantDetailPage({
           <ChevronLeft size={16} />
           My Garden
         </Link>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {gardenPublic && username && (plant.is_public ?? true) && (
+            <a
+              href={`/gardens/${username}/${plant.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-1.5")}
+            >
+              <ExternalLink size={14} />
+              Public page
+            </a>
+          )}
           <SharePlantButton
             plantId={plant.id}
             plantName={plant.name}
@@ -118,26 +130,7 @@ export default async function GardenPlantDetailPage({
         <div className="lg:col-span-2 space-y-6">
 
           {/* Photo gallery */}
-          {plant.images && plant.images.length > 0 ? (
-            <div>
-              <div className="aspect-video relative rounded-xl overflow-hidden bg-muted mb-3">
-                <Image src={plant.images[0]} alt={plant.name} fill className="object-cover" />
-              </div>
-              {plant.images.length > 1 && (
-                <div className="flex gap-2 overflow-x-auto pb-1">
-                  {plant.images.map((url: string, i: number) => (
-                    <div key={i} className="w-20 h-20 shrink-0 relative rounded-lg overflow-hidden bg-muted">
-                      <Image src={url} alt={`${plant.name} photo ${i + 1}`} fill className="object-cover" />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="aspect-video rounded-xl bg-muted flex items-center justify-center text-6xl">
-              🪴
-            </div>
-          )}
+          <PhotoGallery images={plant.images ?? []} alt={plant.name} />
 
           {/* Notes */}
           {(plant.public_notes || plant.notes) && (

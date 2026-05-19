@@ -1,12 +1,14 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { GardenVisibilityToggle } from "@/components/garden/garden-visibility-toggle";
 import { PlantVisibilityToggle } from "@/components/garden/plant-visibility-toggle";
+import { GardenSearch } from "@/components/garden/garden-search";
 import type { GardenPlantStatus } from "@/lib/supabase/types";
 
 const STATUS_LABEL: Record<GardenPlantStatus, string> = {
@@ -28,17 +30,17 @@ const STATUS_COLOR: Record<GardenPlantStatus, string> = {
 export default async function GardenPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; q?: string }>;
 }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { status } = await searchParams;
+  const { status, q } = await searchParams;
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("garden_public")
+    .select("garden_public, username")
     .eq("id", user.id)
     .single();
 
@@ -52,32 +54,49 @@ export default async function GardenPage({
     query = query.eq("status", status as GardenPlantStatus);
   }
 
+  if (q?.trim()) {
+    query = query.or(`name.ilike.%${q.trim()}%,variety.ilike.%${q.trim()}%`);
+  }
+
   const { data: plants } = await query;
   const total = plants?.length ?? 0;
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-10 space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">My Garden</h1>
           <p className="text-muted-foreground text-sm mt-0.5">
             {total} plant{total !== 1 ? "s" : ""} tracked
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <GardenVisibilityToggle initialPublic={profile?.garden_public ?? false} />
+        <div className="flex flex-wrap items-center gap-2">
+          <GardenVisibilityToggle
+            initialPublic={profile?.garden_public ?? false}
+            username={profile?.username ?? null}
+          />
           <Link href="/garden/new" className={cn(buttonVariants(), "bg-green-700 hover:bg-green-800")}>
             + Add Plant
           </Link>
         </div>
       </div>
 
-      {/* Status filter chips */}
-      <div className="flex flex-wrap gap-2">
-        <FilterChip href="/garden" label="All" active={!status} />
-        {(["thriving", "growing", "dormant", "struggling", "dead"] as GardenPlantStatus[]).map((s) => (
-          <FilterChip key={s} href={`/garden?status=${s}`} label={STATUS_LABEL[s]} active={status === s} />
-        ))}
+      {/* Search + filter row */}
+      <div className="flex flex-wrap items-center gap-3">
+        <Suspense>
+          <GardenSearch />
+        </Suspense>
+        <div className="flex flex-wrap gap-2">
+          <FilterChip href={q ? `/garden?q=${encodeURIComponent(q)}` : "/garden"} label="All" active={!status} />
+          {(["thriving", "growing", "dormant", "struggling", "dead"] as GardenPlantStatus[]).map((s) => (
+            <FilterChip
+              key={s}
+              href={`/garden?status=${s}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
+              label={STATUS_LABEL[s]}
+              active={status === s}
+            />
+          ))}
+        </div>
       </div>
 
       {total === 0 ? (

@@ -301,7 +301,7 @@ export function GardenForm({ mode, plant, initialValues }: GardenFormProps) {
 
       {/* Care schedule */}
       <div className="space-y-2">
-        <Label>Care reminders <span className="text-muted-foreground font-normal text-xs">(optional — shows in your feed and monthly email)</span></Label>
+        <Label>Care reminders <span className="text-muted-foreground font-normal text-xs">(optional — for your personal reference)</span></Label>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <IntervalInput label="💧 Water every" value={waterInterval} onChange={setWaterInterval} />
           <IntervalInput label="🌿 Fertilize every" value={fertilizeInterval} onChange={setFertilizeInterval} />
