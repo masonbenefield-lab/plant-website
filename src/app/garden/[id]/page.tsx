@@ -10,7 +10,7 @@ import type { GardenPlantStatus, GardenEventType } from "@/lib/supabase/types";
 import { DeletePlantButton } from "@/components/garden/delete-plant-button";
 import { PlantVisibilityToggle } from "@/components/garden/plant-visibility-toggle";
 import { SharePlantButton } from "@/components/garden/share-plant-button";
-import { PhotoGallery } from "@/components/garden/photo-gallery";
+import { PlantPhotoManager } from "@/components/garden/plant-photo-manager";
 import { PlantNotesEditor } from "@/components/garden/plant-notes-editor";
 
 const STATUS_LABEL: Record<GardenPlantStatus, string> = {
@@ -131,7 +131,7 @@ export default async function GardenPlantDetailPage({
         <div className="lg:col-span-2 space-y-6">
 
           {/* Photo gallery */}
-          <PhotoGallery images={plant.images ?? []} alt={plant.name} />
+          <PlantPhotoManager plantId={plant.id} initialImages={plant.images ?? []} alt={plant.name} />
 
           {/* Notes */}
           <div className="space-y-3">
