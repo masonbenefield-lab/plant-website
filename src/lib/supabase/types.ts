@@ -42,6 +42,7 @@ export interface Database {
           ship_from_address: Json | null;
           shipping_services: string[] | null;
           deleted_at: string | null;
+          feed_last_seen_at: string | null;
           created_at: string;
         };
         Insert: {
@@ -74,6 +75,7 @@ export interface Database {
           ship_from_address?: Json | null;
           shipping_services?: string[] | null;
           deleted_at?: string | null;
+          feed_last_seen_at?: string | null;
           created_at?: string;
         };
         Update: {
@@ -107,6 +109,7 @@ export interface Database {
           groundbreaker?: boolean;
           groundbreaker_number?: number | null;
           deleted_at?: string | null;
+          feed_last_seen_at?: string | null;
         };
         Relationships: [];
       };

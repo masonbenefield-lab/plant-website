@@ -32,6 +32,7 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [liveUnread, setLiveUnread] = useState(unreadMessages);
+  const [hasNewFeed, setHasNewFeed] = useState(false);
 
   const fetchUnreadCount = useCallback(async () => {
     if (!user) return;
@@ -42,10 +43,24 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
     }
   }, [user]);
 
-  // Refresh count on mount and whenever the route changes
+  const fetchFeedBadge = useCallback(async () => {
+    if (!user) return;
+    const res = await fetch("/api/feed/unread-count");
+    if (res.ok) {
+      const { hasNew } = await res.json();
+      setHasNewFeed(hasNew);
+    }
+  }, [user]);
+
+  // Refresh counts on mount and whenever the route changes
   useEffect(() => {
     fetchUnreadCount();
-  }, [fetchUnreadCount, pathname]);
+    if (pathname === "/feed") {
+      setHasNewFeed(false);
+    } else {
+      fetchFeedBadge();
+    }
+  }, [fetchUnreadCount, fetchFeedBadge, pathname]);
 
   // Subscribe to new messages via Realtime
   useEffect(() => {
@@ -123,7 +138,13 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
                 <NavIcon href="/search" label="Search"><Search size={15} /></NavIcon>
                 <NavIcon href="/wishlist" label="Wishlist"><Heart size={15} /></NavIcon>
                 <NavIcon href="/orders" label="Orders"><Package size={15} /></NavIcon>
-                <NavIcon href="/feed" label="Feed"><Rss size={15} /></NavIcon>
+                <Link href="/feed" className="relative flex flex-col items-center gap-0.5 px-1.5 py-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+                  <Rss size={15} />
+                  {hasNewFeed && (
+                    <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-green-500" />
+                  )}
+                  <span className="text-[9px] leading-none font-medium">Feed</span>
+                </Link>
                 <NavIcon href="/garden" label="Garden"><Sprout size={15} /></NavIcon>
                 <NavIcon href="/following" label="Following"><Users size={15} /></NavIcon>
                 <NavIcon href="/community" label="Community"><UsersRound size={15} /></NavIcon>
