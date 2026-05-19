@@ -76,7 +76,7 @@ export default async function GardenPage({
             username={profile?.username ?? null}
           />
           <Link href="/garden/import" className={cn(buttonVariants({ variant: "outline" }))}>
-            Import CSV
+            Bulk Upload
           </Link>
           <Link href="/garden/new" className={cn(buttonVariants(), "bg-green-700 hover:bg-green-800")}>
             + Add Plant
