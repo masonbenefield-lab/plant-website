@@ -1,41 +1,43 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import Image from "next/image";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { centsToDisplay } from "@/lib/stripe";
 import { PLANT_CATEGORIES } from "@/lib/categories";
 import { GROUNDBREAKER_CAP } from "@/lib/plan-limits";
 import HeroSearch from "@/components/hero-search";
 import LiveAuctionCard from "@/components/live-auction-card";
+import type { Database } from "@/lib/supabase/types";
 
 const fallbackListings = [
-  { emoji: "🌿", name: "Monstera Deliciosa", price: "$24", regularPrice: null, onSale: false, tag: "In Shop", bg: "bg-green-100",   href: "/shop" },
-  { emoji: "🌸", name: "Pink Princess",      price: "$85", regularPrice: null, onSale: false, tag: "Auction", bg: "bg-pink-100",    href: "/auctions" },
-  { emoji: "🌵", name: "Blue Torch Cactus",  price: "$18", regularPrice: null, onSale: false, tag: "In Shop", bg: "bg-amber-100",   href: "/shop" },
-  { emoji: "🪴", name: "Golden Pothos",       price: "$12", regularPrice: null, onSale: false, tag: "In Shop", bg: "bg-emerald-100", href: "/shop" },
+  { emoji: "ðŸŒ¿", name: "Monstera Deliciosa", price: "$24", regularPrice: null, onSale: false, tag: "In Shop", bg: "bg-green-100",   href: "/shop" },
+  { emoji: "ðŸŒ¸", name: "Pink Princess",      price: "$85", regularPrice: null, onSale: false, tag: "Auction", bg: "bg-pink-100",    href: "/auctions" },
+  { emoji: "ðŸŒµ", name: "Blue Torch Cactus",  price: "$18", regularPrice: null, onSale: false, tag: "In Shop", bg: "bg-amber-100",   href: "/shop" },
+  { emoji: "ðŸª´", name: "Golden Pothos",       price: "$12", regularPrice: null, onSale: false, tag: "In Shop", bg: "bg-emerald-100", href: "/shop" },
 ];
 
 const features = [
-  { icon: "🌿", title: "Build Your Storefront",       desc: "Create a personal shop page with your bio, profile photo, and all your listings in one place." },
-  { icon: "🛒", title: "Sell at Fixed Price",          desc: "List plants with photos, variety details, and inventory count. Buyers purchase instantly." },
-  { icon: "⚡", title: "Run Live Auctions",            desc: "Set a starting bid and end time. Watch live bids roll in — highest bidder wins when the clock hits zero." },
-  { icon: "👥", title: "Follow Growers You Love",      desc: "Follow your favorite sellers and get their new listings, restocks, and updates straight in your feed." },
-  { icon: "💳", title: "Secure Payments",              desc: "Powered by Stripe. Buyers pay on-site; funds route directly to your bank minus a small platform fee." },
-  { icon: "🪴", title: "Your Personal Garden Log",     desc: "Track every plant you own — care schedules, growth photos, source history, and event logs all in one place." },
+  { icon: "ðŸŒ¿", title: "Build Your Storefront",       desc: "Create a personal shop page with your bio, profile photo, and all your listings in one place." },
+  { icon: "ðŸ›’", title: "Sell at Fixed Price",          desc: "List plants with photos, variety details, and inventory count. Buyers purchase instantly." },
+  { icon: "âš¡", title: "Run Live Auctions",            desc: "Set a starting bid and end time. Watch live bids roll in â€” highest bidder wins when the clock hits zero." },
+  { icon: "ðŸ‘¥", title: "Follow Growers You Love",      desc: "Follow your favorite sellers and get their new listings, restocks, and updates straight in your feed." },
+  { icon: "ðŸ’³", title: "Secure Payments",              desc: "Powered by Stripe. Buyers pay on-site; funds route directly to your bank minus a small platform fee." },
+  { icon: "ðŸª´", title: "Your Personal Garden Log",     desc: "Track every plant you own â€” care schedules, growth photos, source history, and event logs all in one place." },
 ];
 
 const audiences = [
-  { emoji: "🏡", label: "Small Nurseries",      desc: "Move seasonal inventory and reach buyers beyond your local area." },
-  { emoji: "🔍", label: "Hobbyist Collectors",  desc: "Trade rare finds, offsets, and propagations with fellow enthusiasts." },
-  { emoji: "🏆", label: "Rare Plant Sellers",   desc: "Run time-limited auctions to get true market value for sought-after specimens." },
-  { emoji: "🌱", label: "Plant Enthusiasts",    desc: "Browse the shop, follow growers you love, ask the community for help, and track your own collection." },
+  { emoji: "ðŸ¡", label: "Small Nurseries",      desc: "Move seasonal inventory and reach buyers beyond your local area." },
+  { emoji: "ðŸ”", label: "Hobbyist Collectors",  desc: "Trade rare finds, offsets, and propagations with fellow enthusiasts." },
+  { emoji: "ðŸ†", label: "Rare Plant Sellers",   desc: "Run time-limited auctions to get true market value for sought-after specimens." },
+  { emoji: "ðŸŒ±", label: "Plant Enthusiasts",    desc: "Browse the shop, follow growers you love, ask the community for help, and track your own collection." },
 ];
 
 const testimonials = [
   {
     initials: "SM", name: "Sarah M.", role: "Small Nursery Owner",
-    quote: "I moved 40 plants in my first month. The auction feature is a game changer for rare cuttings — I got way more than I ever would have priced them at.",
+    quote: "I moved 40 plants in my first month. The auction feature is a game changer for rare cuttings â€” I got way more than I ever would have priced them at.",
   },
   {
     initials: "JT", name: "James T.", role: "Rare Plant Collector",
@@ -87,6 +89,40 @@ export default async function LandingPage() {
       .limit(3),
   ]);
 
+  // â”€â”€ Public garden showcase â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  const admin = createAdminClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+  const { data: gardenShowcasePlants } = await admin
+    .from("garden_plants")
+    .select("id, name, variety, images, user_id")
+    .eq("is_public", true)
+    .filter("images", "neq", "{}")
+    .order("created_at", { ascending: false })
+    .limit(24);
+
+  let gardenShowcase: { id: string; name: string; variety: string | null; image: string; username: string }[] = [];
+  if (gardenShowcasePlants?.length) {
+    const userIds = [...new Set(gardenShowcasePlants.map((p) => p.user_id))];
+    const { data: gardenProfiles } = await admin
+      .from("profiles")
+      .select("id, username, garden_public")
+      .in("id", userIds)
+      .eq("garden_public", true);
+    const publicUserMap = Object.fromEntries((gardenProfiles ?? []).map((p) => [p.id, p.username]));
+    gardenShowcase = gardenShowcasePlants
+      .filter((p) => publicUserMap[p.user_id] && (p.images as string[]).length > 0)
+      .slice(0, 8)
+      .map((p) => ({
+        id: p.id,
+        name: p.name,
+        variety: p.variety ?? null,
+        image: (p.images as string[])[0],
+        username: publicUserMap[p.user_id],
+      }));
+  }
+
   const nurserySellerIds = (nurseryProfiles ?? []).map((p) => p.id);
   let featuredListings: { id: string; plant_name: string; variety: string | null; price_cents: number; sale_price_cents: number | null; sale_ends_at: string | null; images: string[] }[] = [];
   if (nurserySellerIds.length > 0) {
@@ -102,7 +138,7 @@ export default async function LandingPage() {
   }
 
   const bgCycle = ["bg-green-100", "bg-pink-100", "bg-amber-100", "bg-emerald-100"];
-  const emojiCycle = ["🌿", "🌸", "🌵", "🪴"];
+  const emojiCycle = ["ðŸŒ¿", "ðŸŒ¸", "ðŸŒµ", "ðŸª´"];
 
   const heroCards = liveListings && liveListings.length >= 2
     ? liveListings.map((l, i) => {
@@ -127,18 +163,18 @@ export default async function LandingPage() {
   return (
     <div className="flex flex-col">
 
-      {/* ── Groundbreaker banner ─────────────────────────────────── */}
+      {/* â”€â”€ Groundbreaker banner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {groundbreakersLeft > 0 && (
         <div className="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800 py-2.5 px-4 text-center text-sm text-amber-900 dark:text-amber-200">
-          <span className="font-semibold">⛏️ Groundbreaker program:</span>{" "}
-          {groundbreakersLeft} of {GROUNDBREAKER_CAP} spots remaining — the first {GROUNDBREAKER_CAP} sellers get the Nursery plan free forever + a permanent <strong>2% commission rate</strong>.{" "}
+          <span className="font-semibold">â›ï¸ Groundbreaker program:</span>{" "}
+          {groundbreakersLeft} of {GROUNDBREAKER_CAP} spots remaining â€” the first {GROUNDBREAKER_CAP} sellers get the Nursery plan free forever + a permanent <strong>2% commission rate</strong>.{" "}
           <Link href="/signup" className="underline font-semibold hover:text-amber-700 dark:hover:text-amber-100">
-            Claim your spot →
+            Claim your spot â†’
           </Link>
         </div>
       )}
 
-      {/* ── Hero ─────────────────────────────────────────────────── */}
+      {/* â”€â”€ Hero â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <section className="bg-gradient-to-br from-green-800 via-green-700 to-emerald-600 text-white overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-20 lg:py-24">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
@@ -153,7 +189,7 @@ export default async function LandingPage() {
               </h1>
               <p className="text-base sm:text-lg text-green-100 mb-8 max-w-lg mx-auto lg:mx-0">
                 Buy, sell, and connect with nurseries and fellow plant enthusiasts.
-                Your plant community — all in one place.
+                Your plant community â€” all in one place.
               </p>
 
               {/* Dual CTA */}
@@ -170,7 +206,7 @@ export default async function LandingPage() {
               <p className="text-sm text-green-100/80 text-center lg:text-left">
                 or{" "}
                 <Link href="/auctions" className="font-medium text-white underline underline-offset-2 hover:text-green-200">
-                  browse live auctions →
+                  browse live auctions â†’
                 </Link>
               </p>
 
@@ -214,7 +250,7 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ── Category quick-links ──────────────────────────────────── */}
+      {/* â”€â”€ Category quick-links â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <section className="bg-background border-b py-5 px-4">
         <div className="max-w-5xl mx-auto">
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground text-center mb-3">Browse by category</p>
@@ -232,32 +268,32 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ── Trust bar ─────────────────────────────────────────────── */}
+      {/* â”€â”€ Trust bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <section className="border-b bg-muted/40 py-5 px-4">
         <div className="max-w-4xl mx-auto">
           <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-muted-foreground">
             <span className="flex items-center gap-2"><span className="text-green-600 font-bold text-base">2,400+</span> plants listed</span>
-            <span className="hidden sm:block text-border">·</span>
+            <span className="hidden sm:block text-border">Â·</span>
             <span className="flex items-center gap-2"><span className="text-green-600 font-bold text-base">180+</span> active sellers</span>
-            <span className="hidden sm:block text-border">·</span>
-            <span className="flex items-center gap-2"><span className="text-green-600 font-bold text-base">4.9★</span> avg seller rating</span>
-            <span className="hidden sm:block text-border">·</span>
+            <span className="hidden sm:block text-border">Â·</span>
+            <span className="flex items-center gap-2"><span className="text-green-600 font-bold text-base">4.9â˜…</span> avg seller rating</span>
+            <span className="hidden sm:block text-border">Â·</span>
             <span className="flex items-center gap-2"><span className="text-green-600 font-bold text-base">Free</span> to start selling</span>
           </div>
         </div>
       </section>
 
-      {/* ── Live auctions ─────────────────────────────────────────── */}
+      {/* â”€â”€ Live auctions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {liveAuctions && liveAuctions.length > 0 && (
         <section className="py-14 sm:py-16 px-4 bg-background">
           <div className="max-w-5xl mx-auto">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-2xl sm:text-3xl font-bold">Live Auctions</h2>
-                <p className="text-muted-foreground mt-1 text-sm">Bid now — these end soon.</p>
+                <p className="text-muted-foreground mt-1 text-sm">Bid now â€” these end soon.</p>
               </div>
               <Link href="/auctions" className="text-sm font-medium text-green-700 hover:underline">
-                View all →
+                View all â†’
               </Link>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -277,7 +313,7 @@ export default async function LandingPage() {
         </section>
       )}
 
-      {/* ── Featured sellers (Nursery plan) ──────────────────────── */}
+      {/* â”€â”€ Featured sellers (Nursery plan) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {featuredListings.length > 0 && (
         <section className="py-14 sm:py-16 px-4 bg-muted/40">
           <div className="max-w-5xl mx-auto">
@@ -290,13 +326,13 @@ export default async function LandingPage() {
                 <p className="text-muted-foreground mt-1 text-sm">Hand-picked from our highest-rated professional sellers.</p>
               </div>
               <Link href="/shop" className="text-sm font-medium text-green-700 hover:underline">
-                Browse all →
+                Browse all â†’
               </Link>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {featuredListings.map((l, i) => {
                 const bg = ["bg-green-100", "bg-pink-100", "bg-amber-100", "bg-emerald-100"][i % 4];
-                const emoji = ["🌿", "🌸", "🌵", "🪴"][i % 4];
+                const emoji = ["ðŸŒ¿", "ðŸŒ¸", "ðŸŒµ", "ðŸª´"][i % 4];
                 const featOnSale = !!(l.sale_price_cents && l.sale_ends_at && new Date(l.sale_ends_at) > new Date());
                 return (
                   <Link key={l.id} href={`/shop/${l.id}`} className="bg-card rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow border">
@@ -319,7 +355,7 @@ export default async function LandingPage() {
                             <span className="text-muted-foreground text-xs line-through">{centsToDisplay(l.price_cents)}</span>
                           )}
                         </div>
-                        <span className="shrink-0 text-xs px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">⭐ Featured</span>
+                        <span className="shrink-0 text-xs px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">â­ Featured</span>
                       </div>
                     </div>
                   </Link>
@@ -330,7 +366,7 @@ export default async function LandingPage() {
         </section>
       )}
 
-      {/* ── Who it's for ──────────────────────────────────────────── */}
+      {/* â”€â”€ Who it's for â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <section className="py-16 sm:py-20 px-4 bg-muted">
         <div className="max-w-5xl mx-auto">
           <h2 className="text-2xl sm:text-3xl font-bold text-center mb-3">Who it&apos;s for</h2>
@@ -347,11 +383,11 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ── Features ──────────────────────────────────────────────── */}
+      {/* â”€â”€ Features â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <section className="py-16 sm:py-20 px-4 bg-background">
         <div className="max-w-5xl mx-auto">
           <h2 className="text-2xl sm:text-3xl font-bold text-center mb-3">Everything you need</h2>
-          <p className="text-muted-foreground text-center mb-10 max-w-xl mx-auto">One platform handles your storefront, payments, orders, and reputation — so you can focus on growing.</p>
+          <p className="text-muted-foreground text-center mb-10 max-w-xl mx-auto">One platform handles your storefront, payments, orders, and reputation â€” so you can focus on growing.</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {features.map((f) => (
               <div key={f.title} className="group rounded-2xl border bg-card p-6 hover:border-green-300 hover:shadow-md transition-all">
@@ -366,7 +402,7 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ── Community spotlight ──────────────────────────────────── */}
+      {/* â”€â”€ Community spotlight â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <section className="py-16 sm:py-20 px-4 bg-green-50 dark:bg-green-950/20">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-10">
@@ -375,44 +411,44 @@ export default async function LandingPage() {
             </span>
             <h2 className="text-2xl sm:text-3xl font-bold mb-3">A place for plant people</h2>
             <p className="text-muted-foreground max-w-xl mx-auto">
-              Plantet is built around the people behind the plants — not just the transactions.
+              Plantet is built around the people behind the plants â€” not just the transactions.
             </p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             <div className="bg-card rounded-2xl border p-6 shadow-sm flex flex-col gap-3">
               <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center text-2xl">
-                💬
+                ðŸ’¬
               </div>
               <p className="font-bold text-foreground">Ask the Community</p>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 Post a help request, share a plant you&apos;re proud of, or start a discussion. Fellow growers are here to help.
               </p>
               <Link href="/community" className="text-sm font-medium text-green-700 hover:underline mt-auto">
-                Browse community →
+                Browse community â†’
               </Link>
             </div>
             <div className="bg-card rounded-2xl border p-6 shadow-sm flex flex-col gap-3">
               <div className="w-12 h-12 rounded-xl bg-green-50 dark:bg-green-900/30 flex items-center justify-center text-2xl">
-                📣
+                ðŸ“£
               </div>
               <p className="font-bold text-foreground">Follow & Get Updates</p>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 Follow sellers you love and get their new arrivals, restocks, and announcements straight in your personal feed.
               </p>
               <Link href="/shop" className="text-sm font-medium text-green-700 hover:underline mt-auto">
-                Find sellers to follow →
+                Find sellers to follow â†’
               </Link>
             </div>
             <div className="bg-card rounded-2xl border p-6 shadow-sm flex flex-col gap-3">
               <div className="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-2xl">
-                🪴
+                ðŸª´
               </div>
               <p className="font-bold text-foreground">Track Your Collection</p>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 Log every plant you own, record care events, set watering reminders, and share your garden publicly with other enthusiasts.
               </p>
               <Link href="/signup" className="text-sm font-medium text-green-700 hover:underline mt-auto">
-                Start your garden log →
+                Start your garden log â†’
               </Link>
             </div>
           </div>
@@ -421,7 +457,7 @@ export default async function LandingPage() {
             <div className="mt-8 border rounded-2xl bg-card overflow-hidden shadow-sm">
               <div className="px-5 py-3.5 border-b flex items-center justify-between">
                 <p className="text-sm font-semibold">Recent in the community</p>
-                <Link href="/community" className="text-xs font-medium text-green-700 hover:underline">See all →</Link>
+                <Link href="/community" className="text-xs font-medium text-green-700 hover:underline">See all â†’</Link>
               </div>
               {recentCommunityPosts.map((post) => {
                 const typeColor = post.post_type === "help" ? "bg-amber-100 text-amber-700" : post.post_type === "show_and_tell" ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700";
@@ -441,7 +477,52 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ── Transparent pricing ───────────────────────────────────── */}
+      {/* â”€â”€ Garden showcase â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {gardenShowcase.length > 0 && (
+        <section className="py-16 sm:py-20 px-4 bg-background">
+          <div className="max-w-5xl mx-auto">
+            <div className="text-center mb-10">
+              <span className="inline-block bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 text-xs font-semibold uppercase tracking-widest px-4 py-1.5 rounded-full mb-4">
+                From the community
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-bold mb-3">See what people are growing</h2>
+              <p className="text-muted-foreground max-w-md mx-auto">
+                Members share their collections publicly â€” from rare aroids to backyard veggie patches.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+              {gardenShowcase.map((plant) => (
+                <Link
+                  key={plant.id}
+                  href={`/gardens/${plant.username}`}
+                  className="group relative aspect-square rounded-2xl overflow-hidden bg-muted shadow-sm hover:shadow-md transition-shadow"
+                >
+                  <Image
+                    src={plant.image}
+                    alt={plant.name}
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                  <div className="absolute bottom-0 left-0 right-0 p-3">
+                    <p className="text-white text-xs font-semibold leading-tight truncate">
+                      {plant.name}{plant.variety ? ` ${plant.variety}` : ""}
+                    </p>
+                    <p className="text-white/70 text-[10px] truncate">by {plant.username}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+            <div className="text-center mt-8">
+              <Link href="/signup" className={cn(buttonVariants({ variant: "outline" }), "gap-2")}>
+                ðŸª´ Start your own garden log
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* â”€â”€ Transparent pricing â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <section className="py-16 sm:py-20 px-4 bg-muted">
         <div className="max-w-3xl mx-auto text-center">
           <h2 className="text-2xl sm:text-3xl font-bold mb-3">Simple, honest pricing</h2>
@@ -452,10 +533,10 @@ export default async function LandingPage() {
             <div className="bg-card rounded-2xl border p-6 flex flex-col items-center">
               <p className="text-4xl font-bold text-green-700 mb-2">$0</p>
               <p className="font-semibold mb-2">To list</p>
-              <p className="text-sm text-muted-foreground leading-relaxed">No listing fees — ever. Free plan includes 10 listings and 5 auctions. Unlimited on paid plans.</p>
+              <p className="text-sm text-muted-foreground leading-relaxed">No listing fees â€” ever. Free plan includes 10 listings and 5 auctions. Unlimited on paid plans.</p>
             </div>
             <div className="bg-card rounded-2xl border-2 border-green-600 p-6 flex flex-col items-center shadow-md">
-              <p className="text-4xl font-bold text-green-700 mb-2">3–6.5%</p>
+              <p className="text-4xl font-bold text-green-700 mb-2">3â€“6.5%</p>
               <p className="font-semibold mb-2">Per sale</p>
               <p className="text-sm text-muted-foreground leading-relaxed">A small fee taken only when a sale completes. Rate depends on your plan.</p>
             </div>
@@ -471,7 +552,7 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ── How it works ──────────────────────────────────────────── */}
+      {/* â”€â”€ How it works â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <section className="py-16 sm:py-20 px-4 bg-green-700 text-white">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
@@ -484,7 +565,7 @@ export default async function LandingPage() {
               <div className="space-y-6">
                 {([
                   { n: "1", title: "Browse the shop or auctions", desc: "Search by plant name, category, or price. Filter to in-stock only. Bid on live auctions in real time." },
-                  { n: "2", title: "Add to cart and pay securely", desc: "Checkout is powered by Stripe. Your shipping address goes straight to the seller — no back-and-forth." },
+                  { n: "2", title: "Add to cart and pay securely", desc: "Checkout is powered by Stripe. Your shipping address goes straight to the seller â€” no back-and-forth." },
                   { n: "3", title: "Track it in your garden log", desc: "Once it arrives, add it to My Garden. Log care events, set reminders, and share your collection." },
                 ] as const).map((s) => (
                   <div key={s.n} className="flex gap-4">
@@ -499,14 +580,14 @@ export default async function LandingPage() {
                 ))}
               </div>
               <Link href="/shop" className="inline-block mt-7 text-sm font-medium text-white underline underline-offset-2 hover:text-green-200">
-                Browse plants →
+                Browse plants â†’
               </Link>
             </div>
             <div className="bg-white/10 rounded-2xl p-6 sm:p-8">
               <p className="text-xs font-bold uppercase tracking-widest text-green-200 mb-6">For Sellers</p>
               <div className="space-y-6">
                 {([
-                  { n: "1", title: "Connect your bank account", desc: "Sign up free and link your bank via Stripe. Takes under 10 minutes — no monthly fees, ever." },
+                  { n: "1", title: "Connect your bank account", desc: "Sign up free and link your bank via Stripe. Takes under 10 minutes â€” no monthly fees, ever." },
                   { n: "2", title: "Add plants and set your price", desc: "Add inventory once, then list at a fixed price or kick off a timed auction from the same row." },
                   { n: "3", title: "Get paid when you sell", desc: "Funds deposit directly to your bank after each sale. Buyer's shipping address lands in your dashboard, ready to ship." },
                 ] as const).map((s) => (
@@ -522,14 +603,14 @@ export default async function LandingPage() {
                 ))}
               </div>
               <Link href="/signup" className="inline-block mt-7 text-sm font-medium text-white underline underline-offset-2 hover:text-green-200">
-                Start selling free →
+                Start selling free â†’
               </Link>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ── Testimonials ──────────────────────────────────────────── */}
+      {/* â”€â”€ Testimonials â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <section className="py-16 sm:py-20 px-4 bg-background">
         <div className="max-w-5xl mx-auto">
           <h2 className="text-2xl sm:text-3xl font-bold text-center mb-3">Sellers love it</h2>
@@ -537,7 +618,7 @@ export default async function LandingPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             {testimonials.map((t) => (
               <div key={t.name} className="bg-card rounded-2xl border p-6 shadow-sm flex flex-col gap-4">
-                <div className="flex gap-0.5 text-amber-400 text-sm">{"★★★★★"}</div>
+                <div className="flex gap-0.5 text-amber-400 text-sm">{"â˜…â˜…â˜…â˜…â˜…"}</div>
                 <p className="text-sm text-muted-foreground leading-relaxed flex-1">&ldquo;{t.quote}&rdquo;</p>
                 <div className="flex items-center gap-3 pt-2 border-t">
                   <div className="w-9 h-9 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 font-bold text-xs flex items-center justify-center shrink-0">
@@ -554,10 +635,10 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ── CTA ───────────────────────────────────────────────────── */}
+      {/* â”€â”€ CTA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <section className="py-20 px-4 bg-gradient-to-br from-green-800 to-emerald-600 text-white text-center">
         <div className="max-w-xl mx-auto">
-          <span className="text-4xl mb-6 block">🌱</span>
+          <span className="text-4xl mb-6 block">ðŸŒ±</span>
           <h2 className="text-3xl sm:text-4xl font-bold mb-4">Ready to grow your plant business?</h2>
           <p className="text-green-100 mb-8 text-base sm:text-lg">
             Join hundreds of nurseries and hobbyists already buying and selling on Plantet.
@@ -577,3 +658,4 @@ export default async function LandingPage() {
     </div>
   );
 }
+
