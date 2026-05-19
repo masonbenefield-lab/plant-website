@@ -3,7 +3,8 @@
 import { useState, useRef, useCallback } from "react";
 import Papa from "papaparse";
 import { Button } from "@/components/ui/button";
-import { Upload, FileText, AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Upload, FileText, AlertTriangle, CheckCircle2, Loader2, List } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PlantReviewCard } from "@/components/garden/plant-review-card";
 import { createClient } from "@/lib/supabase/client";
@@ -116,6 +117,7 @@ export function ImportClient() {
   const [parseError, setParseError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
+  const [pasteText, setPasteText] = useState("");
 
   function handleFile(file: File) {
     if (!file.name.endsWith(".csv")) {
@@ -146,6 +148,38 @@ export function ImportClient() {
         setParseError(`Could not parse file: ${err.message}`);
       },
     });
+  }
+
+  function parsePasteList() {
+    const names = pasteText
+      .split(/[\n,]+/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .slice(0, MAX_BATCH);
+    if (!names.length) {
+      setParseError("No plant names found — separate names with commas or new lines.");
+      return;
+    }
+    if (names.length === MAX_BATCH && pasteText.split(/[\n,]+/).filter((s) => s.trim()).length > MAX_BATCH) {
+      toast.warning(`Only the first ${MAX_BATCH} plants were loaded.`);
+    }
+    setParseError("");
+    setDrafts(
+      names.map((name, i) => ({
+        id: `draft-${i}-${Date.now()}`,
+        name,
+        variety: "",
+        status: "growing" as GardenPlantStatus,
+        statusInvalid: false,
+        location: "",
+        planted_at: "",
+        source_type: "",
+        source_name: "",
+        notes: "",
+        public_notes: "",
+        images: [],
+      }))
+    );
   }
 
   const onDrop = useCallback((e: React.DragEvent) => {
@@ -340,6 +374,40 @@ export function ImportClient() {
           {parseError}
         </p>
       )}
+
+      {/* Divider */}
+      <div className="flex items-center gap-3">
+        <div className="flex-1 border-t" />
+        <span className="text-xs text-muted-foreground">or</span>
+        <div className="flex-1 border-t" />
+      </div>
+
+      {/* Paste list */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <List size={16} className="text-muted-foreground" />
+          <p className="font-medium text-sm">Paste a list of plant names</p>
+        </div>
+        <Textarea
+          value={pasteText}
+          onChange={(e) => setPasteText(e.target.value)}
+          placeholder={"Monstera, Pothos, Snake Plant\nor one per line"}
+          rows={4}
+          className="font-mono text-sm resize-none"
+        />
+        <p className="text-xs text-muted-foreground">
+          Separate by commas or new lines. Status, variety, and photos can be added on the next step.
+        </p>
+        <Button
+          onClick={parsePasteList}
+          disabled={!pasteText.trim()}
+          variant="outline"
+          className="gap-2"
+        >
+          <CheckCircle2 size={14} />
+          Review list
+        </Button>
+      </div>
 
       {/* Template section */}
       <div className="rounded-xl border p-5 space-y-3">
