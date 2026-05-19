@@ -34,7 +34,7 @@ export function PlantPhotoManager({ plantId, initialImages, alt }: Props) {
       const ext = file.name.split(".").pop() ?? "jpg";
       const path = `garden/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
       const { error } = await supabase.storage.from("garden").upload(path, file);
-      if (error) { toast.error(`Failed to upload ${file.name}: ${error.message}`); continue; }
+      if (error) { toast.error(`Failed to upload ${file.name}`); continue; }
       const { data: { publicUrl } } = supabase.storage.from("garden").getPublicUrl(path);
       urls.push(publicUrl);
     }
