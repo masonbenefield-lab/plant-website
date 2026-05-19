@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Globe, Lock, Loader2, ExternalLink } from "lucide-react";
+import { Globe, Lock, Loader2, ExternalLink, Link2, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -15,6 +15,15 @@ export function GardenVisibilityToggle({ initialPublic, username }: Props) {
   const router = useRouter();
   const [isPublic, setIsPublic] = useState(initialPublic);
   const [isPending, startTransition] = useTransition();
+  const [copied, setCopied] = useState(false);
+
+  function copyLink() {
+    const url = `${window.location.origin}/gardens/${username}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
 
   function toggle() {
     startTransition(async () => {
@@ -63,6 +72,16 @@ export function GardenVisibilityToggle({ initialPublic, username }: Props) {
           <ExternalLink size={12} />
           Preview
         </a>
+      )}
+      {isPublic && username && (
+        <button
+          onClick={copyLink}
+          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-green-700 transition-colors"
+          title="Copy garden link"
+        >
+          {copied ? <Check size={12} className="text-green-600" /> : <Link2 size={12} />}
+          {copied ? "Copied!" : "Copy link"}
+        </button>
       )}
     </div>
   );
