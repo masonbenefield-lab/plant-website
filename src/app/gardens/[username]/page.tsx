@@ -43,7 +43,7 @@ export default async function PublicGardenPage({
     .from("garden_plants")
     .select("id, name, variety, status, location, planted_at, images, public_notes")
     .eq("user_id", profile.id)
-    .neq("is_public", false)
+    .or("is_public.eq.true,is_public.is.null")
     .order("created_at", { ascending: false });
 
   const total = plants?.length ?? 0;
