@@ -11,6 +11,7 @@ import { DeletePlantButton } from "@/components/garden/delete-plant-button";
 import { PlantVisibilityToggle } from "@/components/garden/plant-visibility-toggle";
 import { SharePlantButton } from "@/components/garden/share-plant-button";
 import { PhotoGallery } from "@/components/garden/photo-gallery";
+import { PlantNotesEditor } from "@/components/garden/plant-notes-editor";
 
 const STATUS_LABEL: Record<GardenPlantStatus, string> = {
   thriving: "Thriving",
@@ -133,26 +134,23 @@ export default async function GardenPlantDetailPage({
           <PhotoGallery images={plant.images ?? []} alt={plant.name} />
 
           {/* Notes */}
-          {(plant.public_notes || plant.notes) && (
-            <div className="space-y-3">
-              {plant.public_notes && (
-                <Card>
-                  <CardContent className="p-4">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Public notes</p>
-                    <p className="text-sm whitespace-pre-wrap leading-relaxed">{plant.public_notes}</p>
-                  </CardContent>
-                </Card>
-              )}
-              {plant.notes && (
-                <Card className="border-dashed">
-                  <CardContent className="p-4">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Private notes</p>
-                    <p className="text-sm whitespace-pre-wrap leading-relaxed">{plant.notes}</p>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          )}
+          <div className="space-y-3">
+            <PlantNotesEditor
+              plantId={plant.id}
+              field="public_notes"
+              initialValue={plant.public_notes ?? null}
+              label="Public notes"
+              placeholder="Add public notes visible to anyone who can see your garden…"
+            />
+            <PlantNotesEditor
+              plantId={plant.id}
+              field="notes"
+              initialValue={plant.notes ?? null}
+              label="Private notes"
+              placeholder="Add private notes only visible to you…"
+              dashed
+            />
+          </div>
 
           {/* Event log */}
           <EventLog
