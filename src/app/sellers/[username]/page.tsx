@@ -84,7 +84,7 @@ export default async function SellerStorefront({
       supabase.from("ratings").select("*").eq("seller_id", profile.id).order("created_at", { ascending: false }),
       supabase.from("follows").select("*", { count: "exact", head: true }).eq("seller_id", profile.id),
       profile.garden_public
-        ? supabase.from("garden_plants").select("id, name, variety, status, location, planted_at, images, public_notes").eq("user_id", profile.id).eq("is_public", true).order("created_at", { ascending: false })
+        ? supabase.from("garden_plants").select("id, name, variety, status, location, planted_at, images, public_notes").eq("user_id", profile.id).neq("is_public", false).order("created_at", { ascending: false })
         : Promise.resolve({ data: [] }),
       supabase.from("announcements").select("id, body, photos, created_at").eq("seller_id", profile.id).order("created_at", { ascending: false }).limit(20),
     ]);

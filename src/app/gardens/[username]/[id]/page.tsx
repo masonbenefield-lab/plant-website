@@ -53,7 +53,7 @@ export default async function PublicPlantDetailPage({
     .select("id, name, variety, status, location, planted_at, source_type, source_name, images, public_notes")
     .eq("id", id)
     .eq("user_id", profile.id)
-    .eq("is_public", true)
+    .neq("is_public", false)
     .single();
 
   if (!plant) notFound();
