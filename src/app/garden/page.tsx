@@ -75,6 +75,9 @@ export default async function GardenPage({
             initialPublic={profile?.garden_public ?? false}
             username={profile?.username ?? null}
           />
+          <Link href="/garden/import" className={cn(buttonVariants({ variant: "outline" }))}>
+            Import CSV
+          </Link>
           <Link href="/garden/new" className={cn(buttonVariants(), "bg-green-700 hover:bg-green-800")}>
             + Add Plant
           </Link>
