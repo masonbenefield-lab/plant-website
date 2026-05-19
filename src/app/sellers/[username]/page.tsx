@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,7 +14,7 @@ import ShareButton from "@/components/share-button";
 import { MessageButton } from "@/components/message-button";
 import RateSellerForm from "@/app/orders/rate-seller-form";
 import { StorefrontListings, StorefrontAuctions } from "./storefront-listings";
-import type { GardenPlantStatus } from "@/lib/supabase/types";
+import type { GardenPlantStatus, Database } from "@/lib/supabase/types";
 
 const GARDEN_STATUS_LABEL: Record<GardenPlantStatus, string> = {
   thriving: "Thriving",
@@ -84,7 +85,7 @@ export default async function SellerStorefront({
       supabase.from("ratings").select("*").eq("seller_id", profile.id).order("created_at", { ascending: false }),
       supabase.from("follows").select("*", { count: "exact", head: true }).eq("seller_id", profile.id),
       profile.garden_public
-        ? supabase.from("garden_plants").select("id, name, variety, status, location, planted_at, images, public_notes").eq("user_id", profile.id).or("is_public.eq.true,is_public.is.null").order("created_at", { ascending: false })
+        ? createAdminClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!).from("garden_plants").select("id, name, variety, status, location, planted_at, images, public_notes").eq("user_id", profile.id).or("is_public.eq.true,is_public.is.null").order("created_at", { ascending: false })
         : Promise.resolve({ data: [] }),
       supabase.from("announcements").select("id, body, photos, created_at").eq("seller_id", profile.id).order("created_at", { ascending: false }).limit(20),
     ]);

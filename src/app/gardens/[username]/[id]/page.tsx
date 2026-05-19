@@ -2,11 +2,12 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { ChevronLeft } from "lucide-react";
 import { PhotoGallery } from "@/components/garden/photo-gallery";
-import type { GardenPlantStatus } from "@/lib/supabase/types";
+import type { GardenPlantStatus, Database } from "@/lib/supabase/types";
 
 const STATUS_LABEL: Record<GardenPlantStatus, string> = {
   thriving: "Thriving",
@@ -48,7 +49,12 @@ export default async function PublicPlantDetailPage({
 
   if (!profile || !profile.garden_public) notFound();
 
-  const { data: plant } = await supabase
+  const admin = createAdminClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
+  const { data: plant } = await admin
     .from("garden_plants")
     .select("id, name, variety, status, location, planted_at, source_type, source_name, images, public_notes")
     .eq("id", id)
