@@ -919,3 +919,43 @@ CREATE POLICY "Users manage own blocks" ON blocks
 - src/app/orders/page.tsx (Add to Garden link, duplicate detection)
 - src/app/garden/new/page.tsx (searchParams pre-fill)
 - src/app/garden/[id]/edit/page.tsx (source_listing_id in select)
+
+---
+
+## 2026-05-19 — Garden & Inventory improvements
+
+### Features built
+- **Inventory bulk import review page** — `/dashboard/inventory/import` with per-item collapsible cards (pot size, qty, cost, photos). Replaced old single-dialog import. Paste list (comma/newline separated names) also added.
+- **Garden bulk import paste list** — Added textarea input to `/garden/import` so users can paste comma/newline-separated plant names directly, bypassing CSV. Same review page flow.
+- **Garden "Bulk Upload" button** — Renamed "Import CSV" to "Bulk Upload" on My Garden page.
+- **Inline plant notes editing** — Public and private notes on `/garden/[id]` are now click-to-edit inline with Save/Cancel. No navigation to edit page required.
+- **Plant photo management** — `/garden/[id]` now has inline photo upload/remove. Camera overlay on main image, X button on thumbnails, uploads immediately to Supabase storage.
+- **Share garden link** — "Share garden" copy-link button added to garden visibility toggle. Shows "Link copied!" confirmation for 2 seconds.
+- **Feed unread badge** — Green dot on Feed nav icon when there are new listings, auctions, garden shares, or announcements from followed sellers. Clears on visiting feed.
+- **Reshare warning dialog** — Sharing a plant to feed within 24 hours of last share shows a confirmation dialog with how long ago it was last shared.
+
+### Bug fixes
+- Fixed Supabase storage RLS policies on `garden` bucket blocking all photo uploads (INSERT/UPDATE/DELETE policies added).
+
+### SQL migrations required
+- `ALTER TABLE profiles ADD COLUMN IF NOT EXISTS feed_last_seen_at timestamptz;` ✅ (run)
+- Supabase storage policies for `garden` bucket ✅ (run)
+
+### Files changed
+- src/app/dashboard/inventory/import/page.tsx (new)
+- src/components/inventory/inventory-import-client.tsx (new + paste list)
+- src/components/inventory/inventory-review-card.tsx (new)
+- src/app/dashboard/inventory/inventory-client.tsx (Import button → Link, removed old dialog)
+- src/components/garden/import-client.tsx (paste list added)
+- src/app/garden/page.tsx (Bulk Upload button rename)
+- src/components/garden/plant-notes-editor.tsx (new)
+- src/app/garden/[id]/page.tsx (inline notes + photo manager + lastSharedAt prop)
+- src/components/garden/plant-photo-manager.tsx (new)
+- src/components/garden/garden-visibility-toggle.tsx (Share garden copy-link button)
+- src/components/layout/navbar.tsx (feed unread dot badge)
+- src/app/api/feed/unread-count/route.ts (new)
+- src/app/api/feed/mark-seen/route.ts (new)
+- src/app/feed/feed-mark-seen.tsx (new)
+- src/app/feed/page.tsx (FeedMarkSeen on load)
+- src/components/garden/share-plant-button.tsx (24-hour reshare warning dialog)
+- src/lib/supabase/types.ts (feed_last_seen_at added to profiles)
