@@ -45,18 +45,26 @@ export default async function PublicGardenPage({
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  const { data: plants } = await admin
+  const { data: plants, error: plantsError } = await admin
     .from("garden_plants")
     .select("id, name, variety, status, location, planted_at, images, public_notes")
     .eq("user_id", profile.id)
     .or("is_public.eq.true,is_public.is.null")
     .order("created_at", { ascending: false });
 
+  // DEBUG — remove after diagnosing
+  const { data: allPlants } = await admin.from("garden_plants").select("id, user_id, name, is_public").limit(10);
+
   const total = plants?.length ?? 0;
   const displayName = profile.display_name || profile.username;
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-12 space-y-10">
+
+      {/* TEMP DEBUG */}
+      <pre className="text-xs bg-muted p-3 rounded overflow-auto">
+        {JSON.stringify({ profile_id: profile.id, garden_public: profile.garden_public, plants_count: total, plantsError, allPlants }, null, 2)}
+      </pre>
 
       {/* Hero header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
