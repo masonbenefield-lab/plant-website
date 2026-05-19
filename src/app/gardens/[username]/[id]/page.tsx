@@ -65,7 +65,8 @@ export default async function PublicPlantDetailPage({
   if (!plant) notFound();
 
   const status = plant.status as GardenPlantStatus;
-  const displayName = profile.display_name || profile.username;
+  const rawName = profile.display_name || profile.username;
+  const displayName = rawName?.endsWith("s") ? `${rawName}'` : `${rawName}'s`;
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-10 space-y-8">
@@ -76,7 +77,7 @@ export default async function PublicPlantDetailPage({
         className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
       >
         <ChevronLeft size={16} />
-        {displayName}&apos;s Garden
+        {displayName} Garden
       </Link>
 
       {/* Header */}

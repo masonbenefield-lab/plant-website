@@ -45,26 +45,19 @@ export default async function PublicGardenPage({
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  const { data: plants, error: plantsError } = await admin
+  const { data: plants } = await admin
     .from("garden_plants")
     .select("id, name, variety, status, location, planted_at, images, public_notes")
     .eq("user_id", profile.id)
     .or("is_public.eq.true,is_public.is.null")
     .order("created_at", { ascending: false });
 
-  // DEBUG — remove after diagnosing
-  const { data: allPlants } = await admin.from("garden_plants").select("id, user_id, name, is_public").limit(10);
-
   const total = plants?.length ?? 0;
-  const displayName = profile.display_name || profile.username;
+  const rawName = profile.display_name || profile.username;
+  const displayName = rawName?.endsWith("s") ? `${rawName}'` : `${rawName}'s`;
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-12 space-y-10">
-
-      {/* TEMP DEBUG */}
-      <pre className="text-xs bg-muted p-3 rounded overflow-auto">
-        {JSON.stringify({ profile_id: profile.id, garden_public: profile.garden_public, plants_count: total, plantsError, allPlants }, null, 2)}
-      </pre>
 
       {/* Hero header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
@@ -84,7 +77,7 @@ export default async function PublicGardenPage({
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <h1 className="text-2xl font-bold leading-tight">{displayName}&apos;s Garden</h1>
+          <h1 className="text-2xl font-bold leading-tight">{displayName} Garden</h1>
           <p className="text-muted-foreground text-sm mt-0.5">
             {total} plant{total !== 1 ? "s" : ""}
           </p>
