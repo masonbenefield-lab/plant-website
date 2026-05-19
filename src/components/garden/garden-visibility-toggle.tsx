@@ -80,7 +80,7 @@ export function GardenVisibilityToggle({ initialPublic, username }: Props) {
           title="Copy garden link"
         >
           {copied ? <Check size={12} className="text-green-600" /> : <Link2 size={12} />}
-          {copied ? "Copied!" : "Copy link"}
+          {copied ? "Link copied!" : "Share garden"}
         </button>
       )}
     </div>
