@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Globe, Lock, Loader2, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export function GardenVisibilityToggle({ initialPublic, username }: Props) {
+  const router = useRouter();
   const [isPublic, setIsPublic] = useState(initialPublic);
   const [isPending, startTransition] = useTransition();
 
@@ -25,6 +27,7 @@ export function GardenVisibilityToggle({ initialPublic, username }: Props) {
       if (!res.ok) { toast.error("Failed to update visibility"); return; }
       setIsPublic(next);
       toast.success(next ? "Garden is now public" : "Garden is now private");
+      router.refresh();
     });
   }
 
