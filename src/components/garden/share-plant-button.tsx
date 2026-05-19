@@ -3,21 +3,48 @@
 import { useState, useTransition } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Share2, Loader2, CheckCheck } from "lucide-react";
+
+const WARN_HOURS = 24;
 
 interface Props {
   plantId: string;
   plantName: string;
   isPublic: boolean;
   gardenPublic: boolean;
+  lastSharedAt?: string | null;
 }
 
-export function SharePlantButton({ plantId, plantName, isPublic, gardenPublic }: Props) {
+export function SharePlantButton({ plantId, plantName, isPublic, gardenPublic, lastSharedAt }: Props) {
   const [shared, setShared] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  function handleShare() {
+  function hoursAgo(iso: string) {
+    return (Date.now() - new Date(iso).getTime()) / 3_600_000;
+  }
+
+  function humanAgo(iso: string) {
+    const h = hoursAgo(iso);
+    if (h < 1) return "less than an hour ago";
+    if (h < 2) return "1 hour ago";
+    return `${Math.floor(h)} hours ago`;
+  }
+
+  function handleClick() {
+    if (lastSharedAt && hoursAgo(lastSharedAt) < WARN_HOURS) {
+      setConfirmOpen(true);
+    } else {
+      doShare();
+    }
+  }
+
+  function doShare() {
+    setConfirmOpen(false);
     startTransition(async () => {
       const supabase = createClient();
       const { error } = await supabase
@@ -50,9 +77,32 @@ export function SharePlantButton({ plantId, plantName, isPublic, gardenPublic }:
   }
 
   return (
-    <Button variant="outline" size="sm" onClick={handleShare} disabled={isPending} className="gap-1.5">
-      {isPending ? <Loader2 size={14} className="animate-spin" /> : <Share2 size={14} />}
-      Share to feed
-    </Button>
+    <>
+      <Button variant="outline" size="sm" onClick={handleClick} disabled={isPending} className="gap-1.5">
+        {isPending ? <Loader2 size={14} className="animate-spin" /> : <Share2 size={14} />}
+        Share to feed
+      </Button>
+
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Already shared recently</DialogTitle>
+            <DialogDescription>
+              You shared <span className="font-medium text-foreground">{plantName}</span> to your feed{" "}
+              {lastSharedAt ? humanAgo(lastSharedAt) : ""}. Share it again?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 pt-2">
+            <Button variant="outline" className="flex-1" onClick={() => setConfirmOpen(false)}>
+              Cancel
+            </Button>
+            <Button className="flex-1 bg-green-700 hover:bg-green-800" onClick={doShare} disabled={isPending}>
+              {isPending ? <Loader2 size={14} className="animate-spin mr-1" /> : null}
+              Share anyway
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

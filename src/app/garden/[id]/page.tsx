@@ -100,6 +100,7 @@ export default async function GardenPlantDetailPage({
             plantName={plant.name}
             isPublic={plant.is_public ?? true}
             gardenPublic={gardenPublic}
+            lastSharedAt={plant.shared_at ?? null}
           />
           <Link
             href={`/garden/${plant.id}/edit`}
