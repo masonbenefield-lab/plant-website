@@ -3,7 +3,8 @@
 import { useState, useRef, useCallback } from "react";
 import * as XLSX from "xlsx";
 import { Button } from "@/components/ui/button";
-import { Upload, FileText, AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Upload, FileText, AlertTriangle, CheckCircle2, Loader2, List } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { InventoryReviewCard } from "@/components/inventory/inventory-review-card";
 import { createClient } from "@/lib/supabase/client";
@@ -90,6 +91,7 @@ export function InventoryImportClient() {
   const [parseError, setParseError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
+  const [pasteText, setPasteText] = useState("");
 
   function handleFile(file: File) {
     const name = file.name.toLowerCase();
@@ -130,6 +132,37 @@ export function InventoryImportClient() {
       }
     };
     reader.readAsArrayBuffer(file);
+  }
+
+  function parsePasteList() {
+    const names = pasteText
+      .split(/[\n,]+/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .slice(0, MAX_BATCH);
+    if (!names.length) {
+      setParseError("No plant names found — separate names with commas or new lines.");
+      return;
+    }
+    if (names.length === MAX_BATCH && pasteText.split(/[\n,]+/).filter((s) => s.trim()).length > MAX_BATCH) {
+      toast.warning(`Only the first ${MAX_BATCH} items were loaded.`);
+    }
+    setParseError("");
+    setDrafts(
+      names.map((name, i) => ({
+        id: `inv-draft-${i}-${Date.now()}`,
+        plant_name: name,
+        variety: "",
+        pot_size: "",
+        quantity: "",
+        category: "",
+        description: "",
+        notes: "",
+        cost_price: "",
+        images: [],
+        quantityInvalid: false,
+      }))
+    );
   }
 
   const onDrop = useCallback((e: React.DragEvent) => {
@@ -311,6 +344,40 @@ export function InventoryImportClient() {
           {parseError}
         </p>
       )}
+
+      {/* Divider */}
+      <div className="flex items-center gap-3">
+        <div className="flex-1 border-t" />
+        <span className="text-xs text-muted-foreground">or</span>
+        <div className="flex-1 border-t" />
+      </div>
+
+      {/* Paste list */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <List size={16} className="text-muted-foreground" />
+          <p className="font-medium text-sm">Paste a list of plant names</p>
+        </div>
+        <Textarea
+          value={pasteText}
+          onChange={(e) => setPasteText(e.target.value)}
+          placeholder={"Monstera, Pothos, Snake Plant\nor one per line"}
+          rows={4}
+          className="font-mono text-sm resize-none"
+        />
+        <p className="text-xs text-muted-foreground">
+          Separate by commas or new lines. Quantity, pot size, and photos can be added on the next step.
+        </p>
+        <Button
+          onClick={parsePasteList}
+          disabled={!pasteText.trim()}
+          variant="outline"
+          className="gap-2"
+        >
+          <CheckCircle2 size={14} />
+          Review list
+        </Button>
+      </div>
 
       <div className="rounded-xl border p-5 space-y-3">
         <div className="flex items-center gap-2">
