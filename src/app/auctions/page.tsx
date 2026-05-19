@@ -129,6 +129,23 @@ export default async function AuctionsPage({
     }
   }
 
+  // ── Recently sold auctions ──────────────────────────────────────────────
+  const { data: soldAuctions } = await supabase
+    .from("auctions")
+    .select("id, plant_name, variety, images, current_bid_cents, ends_at, seller_id, bid_count")
+    .eq("status", "ended")
+    .not("current_bidder_id", "is", null)
+    .or("category.neq.Hidden,category.is.null")
+    .in("seller_id", onboardedSellerIds.length ? onboardedSellerIds : ["00000000-0000-0000-0000-000000000000"])
+    .order("ends_at", { ascending: false })
+    .limit(8);
+
+  const soldSellerIds = [...new Set((soldAuctions ?? []).map((a) => a.seller_id))];
+  const { data: soldSellers } = soldSellerIds.length
+    ? await supabase.from("profiles").select("id, username").in("id", soldSellerIds)
+    : { data: [] as { id: string; username: string }[] };
+  const soldSellerMap = Object.fromEntries((soldSellers ?? []).map((s) => [s.id, s.username]));
+
   const { data: { user } } = await supabase.auth.getUser();
 
   const wishlistedSet = new Set<string>();
@@ -244,6 +261,56 @@ export default async function AuctionsPage({
           />
         </>
       )}
+      {/* ── Recently sold ─────────────────────────────────────────────────── */}
+      {soldAuctions && soldAuctions.length > 0 && (
+        <div className="mt-16">
+          <div className="flex items-center gap-3 mb-5">
+            <h2 className="text-lg font-bold">Recently Sold</h2>
+            <span className="text-xs text-muted-foreground">See what&apos;s been selling and at what price</span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+            {soldAuctions.map((auction) => {
+              const soldAgo = timeAgo(auction.ends_at);
+              const sellerUsername = soldSellerMap[auction.seller_id];
+              return (
+                <Link key={auction.id} href={`/auctions/${auction.id}`} className="group block">
+                  <div className="relative aspect-square rounded-lg overflow-hidden bg-muted mb-2">
+                    {auction.images[0] ? (
+                      <Image src={auction.images[0]} alt={auction.plant_name} fill className="object-cover transition-transform duration-200 group-hover:scale-105" sizes="(max-width: 640px) 50vw, 12.5vw" />
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-3xl">🌿</div>
+                    )}
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
+                    <span className="absolute top-1.5 left-1.5 bg-gray-800/80 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-full">
+                      Sold
+                    </span>
+                  </div>
+                  <p className="text-sm font-medium truncate leading-tight">{auction.plant_name}</p>
+                  {auction.variety && (
+                    <p className="text-xs text-muted-foreground truncate">{auction.variety}</p>
+                  )}
+                  <p className="text-sm font-bold text-green-700 mt-0.5">{centsToDisplay(auction.current_bid_cents)}</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {auction.bid_count} bid{auction.bid_count !== 1 ? "s" : ""} · {soldAgo}
+                    {sellerUsername && <> · <span className="hover:underline">{sellerUsername}</span></>}
+                  </p>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
+}
+
+function timeAgo(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(ms / 60000);
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return `${days}d ago`;
+  return `${Math.floor(days / 7)}w ago`;
 }
