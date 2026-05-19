@@ -139,18 +139,6 @@ function groupUnlinked(listings: UnlinkedListing[], auctions: UnlinkedAuction[])
   );
 }
 
-type ImportRow = {
-  plant_name: string;
-  variety: string;
-  pot_size: string;
-  quantity: number;
-  category: string;
-  description: string;
-  notes: string;
-  cost_price: string;
-  valid: boolean;
-  error?: string;
-};
 
 type ModalState =
   | { type: "listing"; row: Row }
@@ -219,7 +207,6 @@ export default function InventoryClient({
 }) {
   const router = useRouter();
   const imageInputRef = useRef<HTMLInputElement>(null);
-  const csvInputRef = useRef<HTMLInputElement>(null);
 
   const [welcomeOpen, setWelcomeOpen] = useState(showWelcome);
   const [openGroups, setOpenGroups] = useState<Set<string>>(() => {
@@ -304,10 +291,7 @@ export default function InventoryClient({
   const [sortBy, setSortBy] = useState<"name" | "avail-asc" | "date-desc" | "price-asc">("name");
   const [editCostPrice, setEditCostPrice] = useState("");
   const [viewMode, setViewMode] = useState<"grouped" | "flat">("grouped");
-  const [importOpen, setImportOpen] = useState(false);
   const categories = isAdmin ? ADMIN_CATEGORIES : BASE_CATEGORIES;
-  const [importRows, setImportRows] = useState<ImportRow[]>([]);
-  const [importSubmitting, setImportSubmitting] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -949,68 +933,6 @@ export default function InventoryClient({
     XLSX.writeFile(wb, "inventory.xlsx");
   }
 
-  function parseImportFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => {
-      const data = new Uint8Array(ev.target?.result as ArrayBuffer);
-      const wb = XLSX.read(data, { type: "array" });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const raw = XLSX.utils.sheet_to_json<Record<string, string>>(ws, { defval: "" });
-      const rows: ImportRow[] = raw.map(r => {
-        const plant_name = (r["Plant Name"] || r["plant_name"] || r["name"] || "").toString().trim();
-        const qty = parseInt((r["Quantity"] || r["quantity"] || r["qty"] || "0").toString(), 10);
-        const valid = !!plant_name && !isNaN(qty) && qty > 0;
-        return {
-          plant_name,
-          variety: (r["Variety"] || r["variety"] || "").toString().trim(),
-          pot_size: (r["Pot Size"] || r["pot_size"] || r["size"] || "").toString().trim(),
-          quantity: isNaN(qty) ? 0 : qty,
-          category: (r["Category"] || r["category"] || "").toString().trim(),
-          description: (r["Description"] || r["description"] || "").toString().trim(),
-          notes: (r["Notes"] || r["notes"] || "").toString().trim(),
-          cost_price: (r["Cost Price"] || r["cost_price"] || r["cost"] || "").toString().trim(),
-          valid,
-          error: !plant_name ? "Missing plant name" : !valid ? "Invalid quantity" : undefined,
-        };
-      });
-      setImportRows(rows);
-      setImportOpen(true);
-    };
-    reader.readAsArrayBuffer(file);
-  }
-
-  async function submitImport() {
-    const validRows = importRows.filter(r => r.valid);
-    if (!validRows.length) return;
-    setImportSubmitting(true);
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setImportSubmitting(false); return; }
-    let success = 0;
-    for (const r of validRows) {
-      const { error } = await supabase.from("inventory").insert({
-        seller_id: user.id,
-        plant_name: r.plant_name,
-        variety: r.variety || null,
-        pot_size: r.pot_size || null,
-        quantity: r.quantity,
-        category: r.category || null,
-        description: r.description || null,
-        notes: r.notes || null,
-        cost_cents: r.cost_price ? dollarsToCents(r.cost_price) : null,
-        images: [],
-      });
-      if (!error) success++;
-    }
-    setImportSubmitting(false);
-    setImportOpen(false);
-    setImportRows([]);
-    toast.success(`${success} item${success !== 1 ? "s" : ""} added to inventory`);
-    router.refresh();
-  }
 
   // ── Flat list row ─────────────────────────────────────────────────────────
   function renderFlatRow(row: Row, plantName: string) {
@@ -1681,10 +1603,9 @@ export default function InventoryClient({
               <LayoutList size={14} />
             </button>
           </div>
-          <button onClick={() => csvInputRef.current?.click()} className={cn(buttonVariants({ variant: "outline", size: "sm" }), "flex items-center gap-1.5")}>
+          <Link href="/dashboard/inventory/import" className={cn(buttonVariants({ variant: "outline", size: "sm" }), "flex items-center gap-1.5")}>
             <Upload size={13} /> Import
-          </button>
-          <input ref={csvInputRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={parseImportFile} />
+          </Link>
           <button onClick={exportExcel} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>Export</button>
           <Link href="/dashboard/create" className={cn(buttonVariants({ size: "sm" }), "bg-green-700 hover:bg-green-800")}>+ Add</Link>
         </div>
@@ -2370,63 +2291,6 @@ export default function InventoryClient({
         </DialogContent>
       </Dialog>
 
-      {/* ── CSV Import Preview ── */}
-      <Dialog open={importOpen} onOpenChange={o => { if (!o) { setImportOpen(false); setImportRows([]); } }}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Import Preview</DialogTitle>
-            <DialogDescription>
-              {importRows.filter(r => r.valid).length} of {importRows.length} rows are valid and will be added to inventory.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="mt-2 border rounded-lg overflow-hidden">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="bg-muted/30">
-                  <th className="px-3 py-2 text-left font-medium text-muted-foreground">Plant Name</th>
-                  <th className="px-3 py-2 text-left font-medium text-muted-foreground">Variety</th>
-                  <th className="px-3 py-2 text-left font-medium text-muted-foreground">Size</th>
-                  <th className="px-3 py-2 text-left font-medium text-muted-foreground">Qty</th>
-                  <th className="px-3 py-2 text-left font-medium text-muted-foreground">Category</th>
-                  <th className="px-3 py-2 text-left font-medium text-muted-foreground">Cost</th>
-                  <th className="px-3 py-2 text-left font-medium text-muted-foreground">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {importRows.map((r, i) => (
-                  <tr key={i} className={cn("border-t border-border/40", !r.valid && "bg-red-50 dark:bg-red-900/10")}>
-                    <td className="px-3 py-2 font-medium">{r.plant_name || <span className="text-red-500 italic">missing</span>}</td>
-                    <td className="px-3 py-2 text-muted-foreground">{r.variety || "—"}</td>
-                    <td className="px-3 py-2 text-muted-foreground">{r.pot_size || "—"}</td>
-                    <td className={cn("px-3 py-2 tabular-nums", r.quantity <= 0 && "text-red-500")}>{r.quantity}</td>
-                    <td className="px-3 py-2 text-muted-foreground">{r.category || "—"}</td>
-                    <td className="px-3 py-2 text-muted-foreground">{r.cost_price ? `$${r.cost_price}` : "—"}</td>
-                    <td className="px-3 py-2">
-                      {r.valid
-                        ? <span className="text-green-600 font-medium">Ready</span>
-                        : <span className="text-red-500">{r.error}</span>}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="mt-4 text-xs text-muted-foreground">
-            <p className="font-medium mb-1">Expected columns (case-insensitive):</p>
-            <p>Plant Name · Variety · Pot Size · Quantity · Category · Description · Notes · Cost Price</p>
-          </div>
-          <div className="flex gap-2 pt-2">
-            <Button variant="outline" onClick={() => { setImportOpen(false); setImportRows([]); }} className="flex-1">Cancel</Button>
-            <Button
-              onClick={submitImport}
-              disabled={importSubmitting || importRows.filter(r => r.valid).length === 0}
-              className="flex-1 bg-green-700 hover:bg-green-800"
-            >
-              {importSubmitting ? "Importing…" : `Add ${importRows.filter(r => r.valid).length} Items`}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* ── How Inventory Works ── */}
       <Dialog open={showHelp} onOpenChange={setShowHelp}>
