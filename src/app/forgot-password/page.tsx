@@ -71,7 +71,7 @@ function ForgotForm() {
             />
           </div>
         </CardContent>
-        <CardFooter className="flex flex-col gap-3 pt-2">
+        <CardFooter className="flex flex-col gap-3 pt-6">
           <Button type="submit" className="w-full bg-green-700 hover:bg-green-800" disabled={loading}>
             {loading ? "Sending…" : "Send reset link"}
           </Button>
