@@ -52,6 +52,16 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
     }
   }, [user]);
 
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => { document.body.style.overflow = ""; };
+  }, [mobileOpen]);
+
   // Refresh counts on mount and whenever the route changes
   useEffect(() => {
     fetchUnreadCount();
@@ -229,9 +239,9 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
         </div>
       </div>
 
-      {/* Mobile menu */}
+      {/* Mobile menu — fixed overlay so it scrolls independently */}
       {mobileOpen && (
-        <div className="md:hidden border-t bg-background px-4 py-4 space-y-1">
+        <div className="md:hidden fixed inset-x-0 top-16 bottom-0 z-40 bg-background overflow-y-auto border-t px-4 py-4 space-y-1">
           <MobileLink href="/shop" onClick={closeMenu}>Shop</MobileLink>
           <MobileLink href="/auctions" onClick={closeMenu}>Auctions</MobileLink>
           <MobileLink href="/community" onClick={closeMenu}>Community</MobileLink>
