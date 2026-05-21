@@ -56,7 +56,7 @@ function ForgotForm() {
         <CardDescription>Enter your email and we&apos;ll send you a reset link.</CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
-        <CardContent className="space-y-4 pt-2">
+        <CardContent className="space-y-4 pt-2 pb-6">
           {error && <p className="text-sm text-destructive">{error}</p>}
           <div className="space-y-1">
             <Label htmlFor="email">Email address</Label>
@@ -71,7 +71,7 @@ function ForgotForm() {
             />
           </div>
         </CardContent>
-        <CardFooter className="flex flex-col gap-3 pt-6">
+        <CardFooter className="flex flex-col gap-3">
           <Button type="submit" className="w-full bg-green-700 hover:bg-green-800" disabled={loading}>
             {loading ? "Sending…" : "Send reset link"}
           </Button>
