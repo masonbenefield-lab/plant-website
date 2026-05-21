@@ -90,9 +90,6 @@ export default function LoginPage() {
               <Link href="/signup" className="underline">Sign up</Link>
             </p>
             <p className="text-sm text-muted-foreground text-center">
-              <Link href="/forgot-password?mode=username" className="underline">Forgot your username?</Link>
-            </p>
-            <p className="text-sm text-muted-foreground text-center">
               <Link href="/forgot-password" className="underline">Forgot your password?</Link>
             </p>
           </CardFooter>
