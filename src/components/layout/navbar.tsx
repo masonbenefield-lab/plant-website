@@ -123,6 +123,9 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
             <Link href="/community" className="text-muted-foreground hover:text-foreground transition-colors">
               Community
             </Link>
+            <Link href="/giveaway" className="text-muted-foreground hover:text-foreground transition-colors">
+              Giveaway
+            </Link>
             <Link href="/pricing" className="text-muted-foreground hover:text-foreground transition-colors">
               Pricing
             </Link>
@@ -266,6 +269,7 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
               <MobileLink href="/garden" onClick={closeMenu}>My Garden</MobileLink>
               <MobileLink href="/following" onClick={closeMenu}>Following</MobileLink>
               <MobileLink href="/community" onClick={closeMenu}>Community</MobileLink>
+              <MobileLink href="/giveaway" onClick={closeMenu}>Giveaway</MobileLink>
 
               {isAdmin && (
                 <>

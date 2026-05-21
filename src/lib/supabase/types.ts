@@ -495,6 +495,49 @@ export interface Database {
         Update: Record<string, never>;
         Relationships: [];
       };
+      giveaway_months: {
+        Row: {
+          month: string;
+          plant_name: string;
+          description: string | null;
+          image_url: string | null;
+          winner_user_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          month: string;
+          plant_name: string;
+          description?: string | null;
+          image_url?: string | null;
+          winner_user_id?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          month?: string;
+          plant_name?: string;
+          description?: string | null;
+          image_url?: string | null;
+          winner_user_id?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      giveaway_entries: {
+        Row: {
+          id: string;
+          user_id: string;
+          month: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          month: string;
+          created_at?: string;
+        };
+        Update: Record<string, never>;
+        Relationships: [];
+      };
       follows: {
         Row: {
           id: string;
