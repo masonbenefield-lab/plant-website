@@ -169,7 +169,7 @@ export default function SignupPage() {
               </div>
             </div>
           </CardContent>
-          <CardFooter className="flex flex-col gap-3 pt-2">
+          <CardFooter className="flex flex-col gap-3 pt-6">
             <label className="flex items-start gap-2 cursor-pointer text-sm text-muted-foreground">
               <input
                 type="checkbox"
