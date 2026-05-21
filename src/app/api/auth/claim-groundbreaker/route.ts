@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdmin } from "@supabase/supabase-js";
 import { GROUNDBREAKER_CAP } from "@/lib/plan-limits";
+import { sendWelcomeEmail } from "@/lib/email";
 
 export async function POST() {
   const supabase = await createClient();
@@ -15,11 +16,16 @@ export async function POST() {
 
   const { data: profile } = await admin
     .from("profiles")
-    .select("groundbreaker")
+    .select("groundbreaker, username")
     .eq("id", user.id)
     .single();
 
   if (profile?.groundbreaker) return NextResponse.json({ ok: true, already: true });
+
+  // Send welcome email on first signup
+  if (user.email && profile?.username) {
+    sendWelcomeEmail({ email: user.email, username: profile.username }).catch(() => {});
+  }
 
   const { count } = await admin
     .from("profiles")

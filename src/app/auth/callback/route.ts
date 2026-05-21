@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdmin } from "@supabase/supabase-js";
 import { GROUNDBREAKER_CAP } from "@/lib/plan-limits";
+import { sendWelcomeEmail } from "@/lib/email";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -20,9 +21,14 @@ export async function GET(request: Request) {
 
       const { data: profile } = await admin
         .from("profiles")
-        .select("groundbreaker")
+        .select("groundbreaker, username")
         .eq("id", session.user.id)
         .single();
+
+      // Send welcome email on first confirmed signup
+      if (!profile?.groundbreaker && session.user.email && profile?.username) {
+        sendWelcomeEmail({ email: session.user.email, username: profile.username }).catch(() => {});
+      }
 
       if (!profile?.groundbreaker) {
         const { count } = await admin

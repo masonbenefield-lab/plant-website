@@ -747,3 +747,101 @@ export async function sendLowStockAlert({
     `,
   });
 }
+
+export async function sendWelcomeEmail({
+  email,
+  username,
+}: {
+  email: string;
+  username: string;
+}) {
+  const resend = getResend();
+  const url = (process.env.NEXT_PUBLIC_APP_URL ?? "https://plantet.shop").replace(/\/$/, "");
+
+  await resend.emails.send({
+    from: FROM,
+    to: email,
+    subject: "Welcome to Plantet 🪴",
+    html: `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Welcome to Plantet</title>
+</head>
+<body style="margin:0;padding:0;background:#f0fdf4;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;-webkit-font-smoothing:antialiased;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0fdf4;">
+    <tr>
+      <td align="center" style="padding:32px 16px 48px;">
+
+        <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.07);">
+
+          <!-- Header -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#14532d 0%,#166534 60%,#15803d 100%);padding:40px 32px 36px;text-align:center;">
+              <p style="margin:0 0 10px;color:#bbf7d0;font-size:13px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;">🌿 Plantet</p>
+              <h1 style="margin:0 0 10px;color:#ffffff;font-size:28px;font-weight:800;line-height:1.2;">Welcome, ${username}!</h1>
+              <p style="margin:0;color:#bbf7d0;font-size:16px;line-height:1.5;">You've joined a community of plant lovers.<br>Here's how to make the most of Plantet.</p>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:36px 32px 8px;">
+
+              <!-- Section 1: Garden -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;background:#f0fdf4;border-radius:12px;overflow:hidden;">
+                <tr>
+                  <td style="padding:24px;">
+                    <p style="margin:0 0 6px;font-size:22px;">🪴</p>
+                    <h2 style="margin:0 0 8px;font-size:18px;font-weight:700;color:#14532d;">Start your garden log</h2>
+                    <p style="margin:0 0 16px;font-size:14px;color:#374151;line-height:1.6;">Track every plant you own — add photos, log care events, note where you got it, and watch your collection grow over time. Make it public to share your garden with the community.</p>
+                    <a href="${url}/garden" style="display:inline-block;padding:10px 22px;background:#15803d;color:#ffffff;border-radius:8px;text-decoration:none;font-size:14px;font-weight:600;">Add your first plant →</a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Section 2: Buyers -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;background:#f8fafc;border-radius:12px;overflow:hidden;">
+                <tr>
+                  <td style="padding:24px;">
+                    <p style="margin:0 0 6px;font-size:22px;">🛒</p>
+                    <h2 style="margin:0 0 8px;font-size:18px;font-weight:700;color:#1e293b;">Find plants you'll love</h2>
+                    <p style="margin:0 0 16px;font-size:14px;color:#374151;line-height:1.6;">Browse fixed-price listings or jump into a live auction. Filter by category, price, and more. Wishlist anything you're eyeing so you don't lose track of it.</p>
+                    <a href="${url}/shop" style="display:inline-block;padding:10px 22px;background:#1e293b;color:#ffffff;border-radius:8px;text-decoration:none;font-size:14px;font-weight:600;margin-right:8px;">Browse the shop →</a>
+                    <a href="${url}/auctions" style="display:inline-block;padding:10px 22px;background:#ffffff;color:#1e293b;border-radius:8px;text-decoration:none;font-size:14px;font-weight:600;border:1.5px solid #e2e8f0;margin-top:8px;">Live auctions →</a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Section 3: Sellers -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:36px;background:#f8fafc;border-radius:12px;overflow:hidden;">
+                <tr>
+                  <td style="padding:24px;">
+                    <p style="margin:0 0 6px;font-size:22px;">🌱</p>
+                    <h2 style="margin:0 0 8px;font-size:18px;font-weight:700;color:#1e293b;">Sell your plants</h2>
+                    <p style="margin:0 0 16px;font-size:14px;color:#374151;line-height:1.6;">Got extras to share? Set up your storefront in minutes — list plants at a fixed price, run timed auctions, and get paid directly to your bank. Free to start, no listing fees.</p>
+                    <a href="${url}/dashboard" style="display:inline-block;padding:10px 22px;background:#ffffff;color:#1e293b;border-radius:8px;text-decoration:none;font-size:14px;font-weight:600;border:1.5px solid #e2e8f0;">Set up your storefront →</a>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:0 32px 36px;text-align:center;">
+              <p style="margin:0 0 6px;font-size:13px;color:#9ca3af;">Questions? Just reply to this email — we'd love to hear from you.</p>
+              <p style="margin:0;font-size:12px;color:#d1d5db;">© ${new Date().getFullYear()} Plantet · <a href="${url}/privacy-policy" style="color:#9ca3af;text-decoration:none;">Privacy Policy</a></p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`,
+  });
+}
