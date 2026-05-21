@@ -832,7 +832,6 @@ export async function sendWelcomeEmail({
           <!-- Footer -->
           <tr>
             <td style="padding:0 32px 36px;text-align:center;">
-              <p style="margin:0 0 6px;font-size:13px;color:#9ca3af;">Questions? Just reply to this email — we'd love to hear from you.</p>
               <p style="margin:0;font-size:12px;color:#d1d5db;">© ${new Date().getFullYear()} Plantet · <a href="${url}/privacy-policy" style="color:#9ca3af;text-decoration:none;">Privacy Policy</a></p>
             </td>
           </tr>
