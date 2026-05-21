@@ -18,15 +18,21 @@ export default async function GiveawayPage() {
   const deadline = new Date(now.getFullYear(), now.getMonth() + 1, 0)
     .toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }); // "May 31, 2026"
 
+  const nextMonthDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const nextMonth = nextMonthDate.toISOString().slice(0, 7); // "2026-06"
+  const nextMonthLabel = nextMonthDate.toLocaleDateString("en-US", { month: "long", year: "numeric" }); // "June 2026"
+  const nextMonthOpens = nextMonthDate.toLocaleDateString("en-US", { month: "long", day: "numeric" }); // "June 1"
+
   const admin = createAdminClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  // Current month giveaway + past winners (last 3 months)
-  const [{ data: giveaway }, { count: entryCount }, { data: pastGiveaways }] = await Promise.all([
+  // Current month giveaway + next month teaser + past winners (last 3 months)
+  const [{ data: giveaway }, { count: entryCount }, { data: nextGiveaway }, { data: pastGiveaways }] = await Promise.all([
     supabase.from("giveaway_months").select("*").eq("month", month).single(),
     admin.from("giveaway_entries").select("*", { count: "exact", head: true }).eq("month", month),
+    admin.from("giveaway_months").select("plant_name, description, image_url").eq("month", nextMonth).single(),
     admin
       .from("giveaway_months")
       .select("month, plant_name, image_url, winner_user_id")
@@ -110,6 +116,29 @@ export default async function GiveawayPage() {
               </div>
             </div>
           </div>
+
+          {/* Next month teaser */}
+          {nextGiveaway && (
+            <div className="rounded-2xl border border-dashed overflow-hidden">
+              <div className="flex items-center gap-2 px-5 py-3 bg-muted/50 border-b border-dashed">
+                <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Coming in {nextMonthLabel}</span>
+              </div>
+              <div className="flex gap-4 p-5 items-center">
+                {nextGiveaway.image_url && (
+                  <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-muted shrink-0">
+                    <Image src={nextGiveaway.image_url} alt={nextGiveaway.plant_name} fill className="object-cover" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-lg">{nextGiveaway.plant_name}</p>
+                  {nextGiveaway.description && (
+                    <p className="text-sm text-muted-foreground line-clamp-2 mt-0.5">{nextGiveaway.description}</p>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-2">Entries open {nextMonthOpens} — come back to enter</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* How it works */}
           <div className="space-y-4">
