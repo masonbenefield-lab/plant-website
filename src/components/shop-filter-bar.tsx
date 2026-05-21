@@ -57,9 +57,10 @@ export default function ShopFilterBar() {
   const category = params.get("category") ?? "";
   const location = params.get("location") ?? "";
   const inStock  = params.get("in_stock") === "1";
+  const onSale   = params.get("on_sale") === "1";
   const potSize  = params.get("pot_size") ?? "";
 
-  const hasFilters = q || sort !== "newest" || min || max || category || location || inStock || potSize;
+  const hasFilters = q || sort !== "newest" || min || max || category || location || inStock || onSale || potSize;
 
   const update = useCallback(
     (patch: Record<string, string>) => {
@@ -234,6 +235,19 @@ export default function ShopFilterBar() {
           In Stock Only
         </button>
 
+        {/* On Sale toggle */}
+        <button
+          onClick={() => update({ on_sale: onSale ? "" : "1" })}
+          className={cn(
+            "h-10 px-4 rounded-md border text-sm font-medium transition-colors whitespace-nowrap",
+            onSale
+              ? "bg-green-700 text-white border-green-700"
+              : "border-input bg-background text-muted-foreground hover:text-foreground hover:border-foreground"
+          )}
+        >
+          On Sale
+        </button>
+
         {/* Plant Guide toggle */}
         <button
           onClick={toggleGuide}
@@ -279,6 +293,9 @@ export default function ShopFilterBar() {
           )}
           {inStock && (
             <Chip label="In Stock Only" onRemove={() => update({ in_stock: "" })} />
+          )}
+          {onSale && (
+            <Chip label="On Sale" onRemove={() => update({ on_sale: "" })} />
           )}
           {potSize && (
             <Chip label={`Pot: ${potSize}`} onRemove={() => update({ pot_size: "" })} />

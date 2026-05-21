@@ -126,7 +126,7 @@ export default function AuctionFilterBar() {
           <Input
             id="auction-max-bid"
             type="number"
-            placeholder="Max bid $"
+            placeholder="Budget under $"
             min={0}
             defaultValue={maxBid}
             className="w-32"
@@ -184,7 +184,7 @@ export default function AuctionFilterBar() {
           className={cn(
             "h-10 px-4 rounded-md border text-sm font-medium transition-colors whitespace-nowrap",
             hasBuyNow
-              ? "bg-orange-600 text-white border-orange-600"
+              ? "bg-green-700 text-white border-green-700"
               : "border-input bg-background text-muted-foreground hover:text-foreground hover:border-foreground"
           )}
         >
@@ -197,7 +197,7 @@ export default function AuctionFilterBar() {
           className={cn(
             "h-10 px-4 rounded-md border text-sm font-medium transition-colors whitespace-nowrap",
             noBids
-              ? "bg-blue-600 text-white border-blue-600"
+              ? "bg-green-700 text-white border-green-700"
               : "border-input bg-background text-muted-foreground hover:text-foreground hover:border-foreground"
           )}
         >
