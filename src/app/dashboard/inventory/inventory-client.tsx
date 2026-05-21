@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useRef, useEffect } from "react";
+import { compressImage } from "@/lib/compress-image";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -440,9 +441,9 @@ export default function InventoryClient({
     e.target.value = "";
     setImageUploading(true);
     const supabase = createClient();
-    const ext = file.name.split(".").pop() ?? "jpg";
-    const path = `inventory/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-    const { error } = await supabase.storage.from("listings").upload(path, file);
+    const compressed = await compressImage(file);
+    const path = `inventory/${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
+    const { error } = await supabase.storage.from("listings").upload(path, compressed);
     if (error) { toast.error("Upload failed: " + error.message); setImageUploading(false); return; }
     const { data } = supabase.storage.from("listings").getPublicUrl(path);
     setEditImages(prev => [...prev, data.publicUrl]);

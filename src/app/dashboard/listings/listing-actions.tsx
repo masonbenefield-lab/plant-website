@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { compressImage } from "@/lib/compress-image";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -92,7 +93,8 @@ export default function ListingActions({ listing }: { listing: Listing }) {
     if (!user) { setUploading(false); return; }
 
     const newUrls: string[] = [];
-    for (const file of Array.from(files)) {
+    for (const rawFile of Array.from(files)) {
+      const file = await compressImage(rawFile);
       const path = `${user.id}/${Date.now()}-${file.name}`;
       const { error } = await supabase.storage.from("listings").upload(path, file, { upsert: true });
       if (error) {

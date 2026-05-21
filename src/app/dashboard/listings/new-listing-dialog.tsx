@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { compressImage } from "@/lib/compress-image";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -51,7 +52,8 @@ export default function NewListingDialog({ sellerId, planLimit, currentCount, ph
     const remaining = photoLimit !== null ? photoLimit - imageUrls.length : Infinity;
     const toUpload = Array.from(files).slice(0, remaining);
     const urls: string[] = [];
-    for (const file of toUpload) {
+    for (const rawFile of toUpload) {
+      const file = await compressImage(rawFile);
       const path = `${sellerId}/${Date.now()}-${file.name}`;
       const { error } = await supabase.storage.from("listings").upload(path, file, { upsert: true });
       if (!error) {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useTransition } from "react";
+import { compressImage } from "@/lib/compress-image";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
@@ -57,10 +58,9 @@ export default function NewCommunityPost() {
     setUploading(true);
     const supabase = createClient();
     const urls: string[] = [];
-    for (const file of toUpload) {
-      if (file.size > 8 * 1024 * 1024) { toast.error(`${file.name} too large (max 8 MB)`); continue; }
-      const ext = file.name.split(".").pop() ?? "jpg";
-      const path = `community/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    for (const rawFile of toUpload) {
+      const file = await compressImage(rawFile);
+      const path = `community/${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
       const { error } = await supabase.storage.from("listings").upload(path, file);
       if (error) { toast.error(`Failed to upload ${file.name}`); continue; }
       const { data: { publicUrl } } = supabase.storage.from("listings").getPublicUrl(path);

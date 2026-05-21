@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { PLANT_CATEGORIES } from "@/lib/categories";
+import { compressImage } from "@/lib/compress-image";
 import { AlertTriangle, Plus, X, Store } from "lucide-react";
 import { dollarsToCents } from "@/lib/stripe";
 import PotSizePicker from "@/components/pot-size-picker";
@@ -109,7 +110,8 @@ export default function CreateInventoryPage() {
     const remaining = photoLimit !== null ? photoLimit - imageUrls.length : Infinity;
     const toUpload = Array.from(files).slice(0, remaining);
     const urls: string[] = [];
-    for (const file of toUpload) {
+    for (const rawFile of toUpload) {
+      const file = await compressImage(rawFile);
       const path = `${user.id}/${Date.now()}-${file.name}`;
       const { error } = await supabase.storage.from("listings").upload(path, file, { upsert: true });
       if (error) { toast.error(`Upload failed: ${error.message}`); setUploading(false); return; }

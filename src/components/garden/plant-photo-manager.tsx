@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { compressImage } from "@/lib/compress-image";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
@@ -30,9 +31,9 @@ export function PlantPhotoManager({ plantId, initialImages, alt }: Props) {
     setUploading(true);
     const supabase = createClient();
     const urls: string[] = [];
-    for (const file of toUpload) {
-      const ext = file.name.split(".").pop() ?? "jpg";
-      const path = `garden/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    for (const rawFile of toUpload) {
+      const file = await compressImage(rawFile);
+      const path = `garden/${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
       const { error } = await supabase.storage.from("garden").upload(path, file);
       if (error) { toast.error(`Failed to upload ${file.name}`); continue; }
       const { data: { publicUrl } } = supabase.storage.from("garden").getPublicUrl(path);
