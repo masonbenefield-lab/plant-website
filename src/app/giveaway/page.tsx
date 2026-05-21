@@ -185,10 +185,10 @@ export default async function GiveawayPage() {
                   <p className="text-xs text-muted-foreground">{monthName(g.month)}</p>
                 </div>
                 {g.winner_user_id && winnerMap[g.winner_user_id] && (
-                  <div className="flex items-center gap-1.5 shrink-0">
+                  <Link href={`/sellers/${winnerMap[g.winner_user_id]}`} className="flex items-center gap-1.5 shrink-0 hover:text-green-700 transition-colors">
                     <Trophy size={13} className="text-amber-500" />
-                    <span className="text-xs font-medium">{winnerMap[g.winner_user_id]}</span>
-                  </div>
+                    <span className="text-xs font-medium hover:underline">{winnerMap[g.winner_user_id]}</span>
+                  </Link>
                 )}
               </div>
             ))}
