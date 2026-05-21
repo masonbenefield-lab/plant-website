@@ -6,6 +6,7 @@ export const PLANT_CATEGORIES = [
   "Ferns & Mosses",
   "Tropicals",
   "Herbs & Edibles",
+  "Fruit Trees",
   "Rare & Exotic",
   "Other",
 ] as const;
