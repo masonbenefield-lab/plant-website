@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -30,7 +30,9 @@ interface NavbarProps {
 export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessages = 0 }: NavbarProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const headerRef = useRef<HTMLElement>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [menuTop, setMenuTop] = useState(64);
   const [liveUnread, setLiveUnread] = useState(unreadMessages);
   const [hasNewFeed, setHasNewFeed] = useState(false);
 
@@ -52,14 +54,26 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
     }
   }, [user]);
 
-  // Lock body scroll when mobile menu is open
+  // Lock body scroll and track header bottom when mobile menu is open
   useEffect(() => {
     if (mobileOpen) {
       document.body.style.overflow = "hidden";
+      function updateTop() {
+        if (headerRef.current) {
+          setMenuTop(headerRef.current.getBoundingClientRect().bottom);
+        }
+      }
+      updateTop();
+      window.addEventListener("scroll", updateTop, { passive: true });
+      window.addEventListener("resize", updateTop);
+      return () => {
+        document.body.style.overflow = "";
+        window.removeEventListener("scroll", updateTop);
+        window.removeEventListener("resize", updateTop);
+      };
     } else {
       document.body.style.overflow = "";
     }
-    return () => { document.body.style.overflow = ""; };
   }, [mobileOpen]);
 
   // Refresh counts on mount and whenever the route changes
@@ -112,7 +126,7 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
   }
 
   return (
-    <header className="border-b bg-background sticky top-0 z-50">
+    <header ref={headerRef} className="border-b bg-background sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
 
         {/* Left: logo + desktop nav */}
@@ -239,9 +253,12 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
         </div>
       </div>
 
-      {/* Mobile menu — fixed overlay so it scrolls independently */}
+      {/* Mobile menu — fixed overlay anchored to actual header bottom */}
       {mobileOpen && (
-        <div className="md:hidden fixed inset-x-0 top-16 bottom-0 z-40 bg-background overflow-y-auto border-t px-4 py-4 space-y-1">
+        <div
+          className="md:hidden fixed inset-x-0 bottom-0 z-40 bg-background overflow-y-auto border-t px-4 py-4 space-y-1"
+          style={{ top: menuTop }}
+        >
           <MobileLink href="/shop" onClick={closeMenu}>Shop</MobileLink>
           <MobileLink href="/auctions" onClick={closeMenu}>Auctions</MobileLink>
           <MobileLink href="/community" onClick={closeMenu}>Community</MobileLink>
