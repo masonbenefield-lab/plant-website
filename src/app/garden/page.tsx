@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { GardenVisibilityToggle } from "@/components/garden/garden-visibility-toggle";
 import { PlantVisibilityToggle } from "@/components/garden/plant-visibility-toggle";
 import { GardenSearch } from "@/components/garden/garden-search";
+import GardenTabs from "@/components/garden/garden-tabs";
 import type { GardenPlantStatus } from "@/lib/supabase/types";
 
 const STATUS_LABEL: Record<GardenPlantStatus, string> = {
@@ -83,6 +84,8 @@ export default async function GardenPage({
           </Link>
         </div>
       </div>
+
+      <GardenTabs />
 
       {/* Search + filter row */}
       <div className="flex flex-wrap items-center gap-3">
