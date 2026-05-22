@@ -10,6 +10,8 @@ import { GardenVisibilityToggle } from "@/components/garden/garden-visibility-to
 import { PlantVisibilityToggle } from "@/components/garden/plant-visibility-toggle";
 import { GardenSearch } from "@/components/garden/garden-search";
 import GardenTabs from "@/components/garden/garden-tabs";
+import PinPlantButton from "@/components/garden/pin-plant-button";
+import GardenSettings from "@/components/garden/garden-settings";
 import type { GardenPlantStatus } from "@/lib/supabase/types";
 
 const STATUS_LABEL: Record<GardenPlantStatus, string> = {
@@ -41,13 +43,13 @@ export default async function GardenPage({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("garden_public, username")
+    .select("garden_public, username, garden_bio, open_to_trades, trades_disclaimer_accepted")
     .eq("id", user.id)
     .single();
 
   let query = supabase
     .from("garden_plants")
-    .select("id, name, variety, status, location, planted_at, images, is_public")
+    .select("id, name, variety, status, location, planted_at, images, is_public, pin_order")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
@@ -84,8 +86,20 @@ export default async function GardenPage({
           </Link>
         </div>
       </div>
+      <GardenSettings
+        initialBio={profile?.garden_bio ?? null}
+        initialOpenToTrades={profile?.open_to_trades ?? false}
+        disclaimerAccepted={profile?.trades_disclaimer_accepted ?? false}
+      />
+      </div>
 
       <GardenTabs />
+
+      {profile?.garden_public && (
+        <p className="text-xs text-muted-foreground -mt-4">
+          Pin up to 4 plants (📌 button on each card) to feature them on your community garden card.
+        </p>
+      )}
 
       {/* Search + filter row */}
       <div className="flex flex-wrap items-center gap-3">
@@ -169,6 +183,12 @@ export default async function GardenPage({
                   initialPublic={plant.is_public ?? true}
                   gardenPublic={profile?.garden_public ?? false}
                   variant="icon"
+                />
+              </div>
+              <div className="absolute top-2 left-2 z-10">
+                <PinPlantButton
+                  plantId={plant.id}
+                  initialPinOrder={(plant as { pin_order?: number | null }).pin_order ?? null}
                 />
               </div>
             </div>

@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { Sprout, Store } from "lucide-react";
+import { Sprout, Store, ArrowLeftRight, MessageSquare } from "lucide-react";
 import type { GardenPlantStatus, Database } from "@/lib/supabase/types";
 
 const STATUS_LABEL: Record<GardenPlantStatus, string> = {
@@ -34,7 +34,7 @@ export default async function PublicGardenPage({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, username, display_name, avatar_url, bio, garden_public, stripe_onboarded")
+    .select("id, username, display_name, avatar_url, bio, garden_public, stripe_onboarded, garden_bio, open_to_trades")
     .eq("username", username)
     .single();
 
@@ -81,21 +81,43 @@ export default async function PublicGardenPage({
           <p className="text-muted-foreground text-sm mt-0.5">
             {total} plant{total !== 1 ? "s" : ""}
           </p>
+          {profile.garden_bio && (
+            <p className="text-sm text-green-800 dark:text-green-300 mt-1.5 leading-relaxed max-w-lg font-medium">
+              {profile.garden_bio}
+            </p>
+          )}
           {profile.bio && (
-            <p className="text-sm text-muted-foreground mt-2 leading-relaxed max-w-lg">
+            <p className="text-sm text-muted-foreground mt-1 leading-relaxed max-w-lg">
               {profile.bio}
             </p>
           )}
+          {profile.open_to_trades && (
+            <div className="flex items-center gap-1.5 mt-2">
+              <span className="flex items-center gap-1.5 text-xs font-medium text-green-700 bg-green-100 dark:bg-green-900/40 dark:text-green-400 px-2.5 py-1 rounded-full">
+                <ArrowLeftRight size={11} />
+                Open to trades
+              </span>
+              <Link
+                href={`/messages?to=${profile.username}`}
+                className="text-xs text-muted-foreground hover:text-green-700 hover:underline flex items-center gap-1"
+              >
+                <MessageSquare size={11} />
+                Message to arrange
+              </Link>
+            </div>
+          )}
         </div>
-        {profile.stripe_onboarded && (
-          <Link
-            href={`/sellers/${profile.username}`}
-            className="shrink-0 flex items-center gap-1.5 text-sm px-4 py-2 rounded-full border border-green-300 bg-green-50 text-green-700 hover:bg-green-100 transition-colors font-medium"
-          >
-            <Store size={14} />
-            Visit shop
-          </Link>
-        )}
+        <div className="flex flex-col gap-2 shrink-0">
+          {profile.stripe_onboarded && (
+            <Link
+              href={`/sellers/${profile.username}`}
+              className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-full border border-green-300 bg-green-50 text-green-700 hover:bg-green-100 transition-colors font-medium"
+            >
+              <Store size={14} />
+              Visit shop
+            </Link>
+          )}
+        </div>
       </div>
 
       {total === 0 ? (

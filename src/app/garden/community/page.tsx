@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Sprout } from "lucide-react";
+import { Sprout, ArrowLeftRight } from "lucide-react";
 import GardenTabs from "@/components/garden/garden-tabs";
 import type { Database } from "@/lib/supabase/types";
 
@@ -21,14 +21,12 @@ export default async function CommunityGardensPage() {
 
   let profileQuery = admin
     .from("profiles")
-    .select("id, username, display_name, avatar_url")
+    .select("id, username, display_name, avatar_url, garden_bio, open_to_trades")
     .eq("garden_public", true)
     .is("deleted_at", null)
     .order("username");
 
-  if (user) {
-    profileQuery = profileQuery.neq("id", user.id);
-  }
+  if (user) profileQuery = profileQuery.neq("id", user.id);
 
   const { data: profiles } = await profileQuery;
   const profileIds = profiles?.map((p) => p.id) ?? [];
@@ -36,25 +34,24 @@ export default async function CommunityGardensPage() {
   const { data: plants } = profileIds.length
     ? await admin
         .from("garden_plants")
-        .select("user_id, images")
+        .select("user_id, images, pin_order, name")
         .in("user_id", profileIds)
         .or("is_public.eq.true,is_public.is.null")
-        .order("created_at", { ascending: false })
+        .order("pin_order", { ascending: true, nullsFirst: false })
     : { data: [] };
 
-  // Build per-user summary: plant count + cover image
-  const gardenMap: Record<string, { count: number; cover: string | null }> = {};
+  // Per-user: pinned photos first (up to 4), then fill from unpinned, track count
+  type GardenSummary = { count: number; photos: string[] };
+  const gardenMap: Record<string, GardenSummary> = {};
+
   for (const plant of plants ?? []) {
-    if (!gardenMap[plant.user_id]) {
-      gardenMap[plant.user_id] = { count: 0, cover: null };
-    }
+    if (!gardenMap[plant.user_id]) gardenMap[plant.user_id] = { count: 0, photos: [] };
     gardenMap[plant.user_id].count++;
-    if (!gardenMap[plant.user_id].cover && plant.images?.[0]) {
-      gardenMap[plant.user_id].cover = plant.images[0];
+    if (gardenMap[plant.user_id].photos.length < 4 && plant.images?.[0]) {
+      gardenMap[plant.user_id].photos.push(plant.images[0]);
     }
   }
 
-  // Only show profiles that actually have public plants
   const gardens = (profiles ?? []).filter((p) => (gardenMap[p.id]?.count ?? 0) > 0);
 
   return (
@@ -79,25 +76,31 @@ export default async function CommunityGardensPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {gardens.map((profile) => {
-            const { count, cover } = gardenMap[profile.id] ?? { count: 0, cover: null };
+            const { count, photos } = gardenMap[profile.id] ?? { count: 0, photos: [] };
             const name = profile.display_name || profile.username;
             return (
               <Link key={profile.id} href={`/gardens/${profile.username}`}>
                 <Card className="overflow-hidden hover:shadow-md transition-shadow group h-full">
-                  <div className="aspect-[4/3] relative bg-muted">
-                    {cover ? (
-                      <Image
-                        src={cover}
-                        alt={`${name}'s garden`}
-                        fill
-                        className="object-cover group-hover:scale-[1.02] transition-transform duration-300"
-                      />
-                    ) : (
-                      <div className="flex items-center justify-center h-full text-5xl">🪴</div>
-                    )}
+                  {/* 2×2 photo grid */}
+                  <div className="grid grid-cols-2 gap-0.5 bg-muted aspect-[4/3]">
+                    {[0, 1, 2, 3].map((i) => (
+                      <div key={i} className="relative overflow-hidden bg-muted">
+                        {photos[i] ? (
+                          <Image
+                            src={photos[i]}
+                            alt=""
+                            fill
+                            className="object-cover group-hover:scale-[1.03] transition-transform duration-300"
+                          />
+                        ) : (
+                          <div className="flex items-center justify-center h-full text-2xl">🪴</div>
+                        )}
+                      </div>
+                    ))}
                   </div>
+
                   <CardContent className="p-3 space-y-2">
                     <div className="flex items-center gap-2">
                       <Avatar className="h-6 w-6 shrink-0">
@@ -107,7 +110,18 @@ export default async function CommunityGardensPage() {
                         </AvatarFallback>
                       </Avatar>
                       <p className="font-semibold text-sm leading-tight truncate">{name}</p>
+                      {profile.open_to_trades && (
+                        <span className="ml-auto shrink-0 flex items-center gap-1 text-[10px] font-medium text-green-700 bg-green-100 dark:bg-green-900/40 dark:text-green-400 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                          <ArrowLeftRight size={9} />
+                          Trades
+                        </span>
+                      )}
                     </div>
+                    {profile.garden_bio && (
+                      <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                        {profile.garden_bio}
+                      </p>
+                    )}
                     <p className="text-xs text-muted-foreground">
                       {count} plant{count !== 1 ? "s" : ""}
                     </p>

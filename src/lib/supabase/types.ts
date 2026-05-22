@@ -28,6 +28,9 @@ export interface Database {
           plan: "seedling" | "grower" | "nursery";
           show_follower_count: boolean;
           garden_public: boolean;
+          garden_bio: string | null;
+          open_to_trades: boolean;
+          trades_disclaimer_accepted: boolean;
           shipping_days: number | null;
           vacation_mode: boolean;
           vacation_until: string | null;
@@ -61,6 +64,9 @@ export interface Database {
           plan?: "seedling" | "grower" | "nursery";
           show_follower_count?: boolean;
           garden_public?: boolean;
+          garden_bio?: string | null;
+          open_to_trades?: boolean;
+          trades_disclaimer_accepted?: boolean;
           shipping_days?: number | null;
           vacation_mode?: boolean;
           vacation_until?: string | null;
@@ -95,6 +101,9 @@ export interface Database {
           plan?: "seedling" | "grower" | "nursery";
           show_follower_count?: boolean;
           garden_public?: boolean;
+          garden_bio?: string | null;
+          open_to_trades?: boolean;
+          trades_disclaimer_accepted?: boolean;
           shipping_days?: number | null;
           vacation_mode?: boolean;
           vacation_until?: string | null;
@@ -767,6 +776,7 @@ export interface Database {
           repot_interval_days: number | null;
           prune_interval_days: number | null;
           is_public: boolean;
+          pin_order: number | null;
           shared_at: string | null;
           created_at: string;
         };
@@ -789,6 +799,7 @@ export interface Database {
           repot_interval_days?: number | null;
           prune_interval_days?: number | null;
           is_public?: boolean;
+          pin_order?: number | null;
           shared_at?: string | null;
           created_at?: string;
         };
@@ -809,6 +820,7 @@ export interface Database {
           repot_interval_days?: number | null;
           prune_interval_days?: number | null;
           is_public?: boolean;
+          pin_order?: number | null;
           shared_at?: string | null;
         };
         Relationships: [];
