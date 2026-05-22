@@ -114,8 +114,19 @@ export default async function DashboardListingsPage({
                       <ResumeButton listingId={listing.id} />
                     )}
                   </div>
-                  <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
-                    <span>{centsToDisplay(listing.price_cents)}</span>
+                  <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground flex-wrap">
+                    {(() => {
+                      const onSale = !!(listing.sale_price_cents && listing.sale_ends_at && new Date(listing.sale_ends_at) > new Date());
+                      return onSale ? (
+                        <span className="flex items-center gap-1.5">
+                          <span className="text-red-600 font-medium">{centsToDisplay(listing.sale_price_cents!)}</span>
+                          <span className="line-through">{centsToDisplay(listing.price_cents)}</span>
+                          <Badge className="bg-red-600 text-white text-[10px] px-1.5 py-0">SALE</Badge>
+                        </span>
+                      ) : (
+                        <span>{centsToDisplay(listing.price_cents)}</span>
+                      );
+                    })()}
                     <span>{listing.quantity} in stock</span>
                     {listing.images?.length > 0 && (
                       <span>{listing.images.length} photo{listing.images.length !== 1 ? "s" : ""}</span>
