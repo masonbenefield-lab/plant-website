@@ -33,7 +33,7 @@ export function ReferralCard({
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-sm">Refer friends for bonus entries</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Share your link. When someone signs up and adds their first plant to their garden, you get +1 entry into that month&apos;s giveaway.
+              Share your link. When someone signs up and adds their first plant to their Plantet garden, you get +1 entry into that month&apos;s giveaway.
             </p>
           </div>
         </div>
