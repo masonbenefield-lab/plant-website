@@ -4,7 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { Plus, X, Loader2, Sprout } from "lucide-react";
+import { Plus, X, Loader2, Sprout, Search } from "lucide-react";
 
 type Priority = "nice" | "want" | "must";
 
@@ -31,6 +31,7 @@ const PRIORITY_COLOR: Record<Priority, string> = {
 
 export function WishlistClient({ initialItems }: { initialItems: WishlistItem[] }) {
   const [items, setItems] = useState(initialItems);
+  const [q, setQ] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -74,8 +75,28 @@ export function WishlistClient({ initialItems }: { initialItems: WishlistItem[] 
     toast.success("Removed from wishlist");
   }
 
+  const filtered = q.trim()
+    ? items.filter((item) => {
+        const text = `${item.name} ${item.variety ?? ""}`.toLowerCase();
+        return text.includes(q.toLowerCase());
+      })
+    : items;
+
   return (
     <div className="space-y-4">
+      {/* Search + add row */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="relative">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search wishlist..."
+            className="pl-8 pr-3 py-2 text-sm rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-green-600 w-56"
+          />
+        </div>
+      </div>
+
       {/* Add button / form */}
       {!showForm ? (
         <button
@@ -176,10 +197,18 @@ export function WishlistClient({ initialItems }: { initialItems: WishlistItem[] 
         </Card>
       )}
 
+      {items.length > 0 && filtered.length === 0 && (
+        <Card>
+          <CardContent className="py-10 text-center">
+            <p className="text-sm text-muted-foreground">No plants match &ldquo;{q}&rdquo;</p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* List */}
-      {items.length > 0 && (
+      {filtered.length > 0 && (
         <div className="space-y-2">
-          {items.map((item) => (
+          {filtered.map((item) => (
             <Card key={item.id}>
               <CardContent className="p-4 flex items-start gap-3">
                 <div className="flex-1 min-w-0 space-y-1">
