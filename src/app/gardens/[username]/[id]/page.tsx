@@ -83,13 +83,13 @@ export default async function PublicPlantDetailPage({
       {/* Header */}
       <div className="space-y-2">
         <div className="flex items-center gap-3 flex-wrap">
-          <h1 className="text-2xl font-bold">{plant.name}</h1>
+          <h1 className="text-2xl font-bold">{plant.variety || plant.name}</h1>
           <span className={cn("text-sm px-2 py-0.5 rounded-full font-medium", STATUS_COLOR[status])}>
             {STATUS_LABEL[status]}
           </span>
         </div>
         {plant.variety && (
-          <p className="text-muted-foreground">{plant.variety}</p>
+          <p className="text-muted-foreground">{plant.name}</p>
         )}
       </div>
 

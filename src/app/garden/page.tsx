@@ -152,9 +152,9 @@ export default async function GardenPage({
                     )}
                   </div>
                   <CardContent className="p-3 space-y-1">
-                    <p className="font-semibold text-sm leading-tight">{plant.name}</p>
+                    <p className="font-semibold text-sm leading-tight">{plant.variety || plant.name}</p>
                     {plant.variety && (
-                      <p className="text-xs text-muted-foreground leading-tight">{plant.variety}</p>
+                      <p className="text-xs text-muted-foreground leading-tight">{plant.name}</p>
                     )}
                     <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
                       <span
