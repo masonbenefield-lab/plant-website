@@ -183,9 +183,9 @@ export function GardenForm({ mode, plant, initialValues }: GardenFormProps) {
               <button
                 type="button"
                 onClick={() => removePhoto(url)}
-                className="absolute top-1 right-1 w-5 h-5 bg-black/60 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                className="absolute top-1 right-1 w-6 h-6 bg-black/70 rounded-full flex items-center justify-center transition-opacity sm:opacity-0 sm:group-hover:opacity-100"
               >
-                <X size={11} className="text-white" />
+                <X size={12} className="text-white" />
               </button>
             </div>
           ))}

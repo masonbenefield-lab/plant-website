@@ -93,8 +93,7 @@ export function PlantPhotoManager({ plantId, initialImages, alt }: Props) {
             className={cn(
               "absolute bottom-3 right-3 flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full",
               "bg-black/60 text-white hover:bg-black/80 transition-colors backdrop-blur-sm",
-              !hasPhotos && "opacity-100",
-              hasPhotos && "opacity-0 group-hover:opacity-100 transition-opacity"
+              hasPhotos && "sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
             )}
           >
             {uploading ? <Loader2 size={13} className="animate-spin" /> : <Camera size={13} />}
@@ -130,7 +129,7 @@ export function PlantPhotoManager({ plantId, initialImages, alt }: Props) {
               <button
                 type="button"
                 onClick={() => removePhoto(i)}
-                className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-destructive text-white flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-opacity z-10"
+                className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-destructive text-white flex items-center justify-center transition-opacity sm:opacity-0 sm:group-hover/thumb:opacity-100 z-10"
                 aria-label="Remove photo"
               >
                 <X size={11} />
