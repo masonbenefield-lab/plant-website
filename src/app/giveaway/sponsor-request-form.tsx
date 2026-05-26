@@ -32,11 +32,19 @@ export function SponsorRequestForm({ hasOpenRequest }: { hasOpenRequest: boolean
   if (submitted) {
     return (
       <Card className="border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20">
-        <CardContent className="p-5 flex items-center gap-3">
-          <Gift size={18} className="text-green-700 shrink-0" />
-          <p className="text-sm text-green-800 dark:text-green-300 font-medium">
-            Your sponsor request is submitted — we&apos;ll reach out via your messages inbox.
-          </p>
+        <CardContent className="p-5 flex items-start gap-3">
+          <Gift size={18} className="text-green-700 shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm text-green-800 dark:text-green-300 font-medium">
+              Your sponsor request is submitted — we&apos;ll reach out via your messages inbox.
+            </p>
+            <button
+              onClick={() => { setSubmitted(false); setShowForm(true); setItemName(""); setMessage(""); }}
+              className="mt-2 text-xs text-green-700 dark:text-green-400 hover:underline"
+            >
+              Submit another request
+            </button>
+          </div>
         </CardContent>
       </Card>
     );

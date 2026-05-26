@@ -4,7 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Loader2, MessageSquare, ChevronDown, ChevronUp, Sprout } from "lucide-react";
+import { Loader2, MessageSquare, ChevronDown, ChevronUp, Sprout, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Request {
@@ -113,11 +113,14 @@ export function SponsorRequestsPanel({
                           </p>
                         )}
                         {req.status === "open" && (
-                          <ReplyForm
-                            requestId={req.id}
-                            recipientId={req.user_id}
-                            onReplied={() => markClosed(req.id)}
-                          />
+                          <>
+                            <ReplyForm
+                              requestId={req.id}
+                              recipientId={req.user_id}
+                              onReplied={() => markClosed(req.id)}
+                            />
+                            <CloseButton requestId={req.id} onClosed={() => markClosed(req.id)} />
+                          </>
                         )}
                       </div>
                     )}
@@ -129,6 +132,34 @@ export function SponsorRequestsPanel({
         )
       )}
     </div>
+  );
+}
+
+function CloseButton({ requestId, onClosed }: { requestId: string; onClosed: () => void }) {
+  const [closing, setClosing] = useState(false);
+
+  async function handleClose() {
+    setClosing(true);
+    const res = await fetch("/api/admin/sponsor-request-close", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ requestId }),
+    });
+    setClosing(false);
+    if (!res.ok) { toast.error("Failed to close request"); return; }
+    toast.success("Request closed");
+    onClosed();
+  }
+
+  return (
+    <button
+      onClick={handleClose}
+      disabled={closing}
+      className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50"
+    >
+      {closing ? <Loader2 size={12} className="animate-spin" /> : <X size={12} />}
+      Close without replying
+    </button>
   );
 }
 
