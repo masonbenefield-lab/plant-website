@@ -36,7 +36,15 @@ export async function POST() {
 
   if (!error) {
     // Increment lifetime referral counter on the referrer
-    await admin.rpc("increment_total_referrals", { user_id: profile.referred_by });
+    const { data: referrer } = await admin
+      .from("profiles")
+      .select("total_referrals")
+      .eq("id", profile.referred_by)
+      .single();
+    await admin
+      .from("profiles")
+      .update({ total_referrals: (referrer?.total_referrals ?? 0) + 1 })
+      .eq("id", profile.referred_by);
   }
 
   return NextResponse.json({ ok: true });
