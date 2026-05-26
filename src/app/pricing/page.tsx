@@ -19,7 +19,7 @@ const tiers = [
     commissionRate: 6.5,
     features: {
       inventory: "Free inventory management",
-      listings: "10 active listings",
+      listings: "Unlimited listings",
       photos: "5 photos per listing",
       auctions: "5 active auctions",
       commission: "6.5% platform commission",
@@ -44,7 +44,7 @@ const tiers = [
     commissionRate: 4.5,
     features: {
       inventory: "Free inventory management",
-      listings: "50 active listings",
+      listings: "Unlimited listings",
       photos: "10 photos per listing",
       auctions: "Unlimited auctions",
       commission: "4.5% platform commission",
@@ -797,8 +797,8 @@ const faqs = [
     a: "Yes. You can upgrade or downgrade at any time. Upgrades take effect immediately; downgrades apply at the end of your current billing period.",
   },
   {
-    q: "What happens if I exceed my listing limit?",
-    a: "You'll be prompted to upgrade before publishing a new listing. Your existing listings stay active — nothing gets removed.",
+    q: "Are there limits on how many listings I can have?",
+    a: "No — all plans including Seedling support unlimited listings. We make money when you sell, so there's no reason to cap your inventory. Auction limits still apply on the free Seedling plan (5 active auctions).",
   },
   {
     q: "Is the commission charged on top of the sale price?",

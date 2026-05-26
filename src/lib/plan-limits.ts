@@ -12,8 +12,8 @@ export function getPlanLimits(plan: Plan | null | undefined, isAdmin: boolean): 
   if (isAdmin) return { listings: null, auctions: null, photos: null };
   switch (plan) {
     case "nursery": return { listings: null, auctions: null, photos: 20  };
-    case "grower":  return { listings: 50,   auctions: null, photos: 10  };
-    default:        return { listings: 10,   auctions: 5,    photos: 5   };
+    case "grower":  return { listings: null, auctions: null, photos: 10  };
+    default:        return { listings: null, auctions: 5,    photos: 5   };
   }
 }
 

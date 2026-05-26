@@ -439,6 +439,10 @@ export default function InventoryClient({
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = "";
+    if (planLimits.photos !== null && editImages.length >= planLimits.photos) {
+      toast.error(`Your plan allows up to ${planLimits.photos} photos per listing. Upgrade to add more.`);
+      return;
+    }
     setImageUploading(true);
     const supabase = createClient();
     const compressed = await compressImage(file);
@@ -1907,7 +1911,7 @@ export default function InventoryClient({
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label>Photos</Label>
+                  <Label>Photos {planLimits.photos !== null && <span className="font-normal text-muted-foreground text-xs">({editImages.length}/{planLimits.photos})</span>}</Label>
                   {editImages.length > 1 && <span className="text-xs text-muted-foreground">First photo is the cover</span>}
                 </div>
                 {editImages.length > 0 && (
@@ -1930,9 +1934,11 @@ export default function InventoryClient({
                   </div>
                 )}
                 <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageAdd} />
-                <Button type="button" variant="outline" size="sm" onClick={() => imageInputRef.current?.click()} disabled={imageUploading} className="flex items-center gap-1.5 text-xs">
-                  <ImagePlus size={14} />{imageUploading ? "Uploading…" : "Add Photo"}
-                </Button>
+                {(planLimits.photos === null || editImages.length < planLimits.photos) && (
+                  <Button type="button" variant="outline" size="sm" onClick={() => imageInputRef.current?.click()} disabled={imageUploading} className="flex items-center gap-1.5 text-xs">
+                    <ImagePlus size={14} />{imageUploading ? "Uploading…" : "Add Photo"}
+                  </Button>
+                )}
               </div>
               <div className="flex flex-wrap gap-2 pt-1">
                 <Button onClick={submitEditListing} disabled={submitting || !price || !listQty} className="bg-green-700 hover:bg-green-800">
@@ -2098,7 +2104,7 @@ export default function InventoryClient({
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label>Photos</Label>
+                  <Label>Photos {planLimits.photos !== null && <span className="font-normal text-muted-foreground text-xs">({editImages.length}/{planLimits.photos})</span>}</Label>
                   {editImages.length > 1 && <span className="text-xs text-muted-foreground">Drag to reorder · First photo is the cover</span>}
                 </div>
                 {editImages.length > 0 && (
@@ -2140,9 +2146,11 @@ export default function InventoryClient({
                   </div>
                 )}
                 <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageAdd} />
-                <Button type="button" variant="outline" size="sm" onClick={() => imageInputRef.current?.click()} disabled={imageUploading} className="flex items-center gap-1.5 text-xs">
-                  <ImagePlus size={14} />{imageUploading ? "Uploading…" : "Add Photo"}
-                </Button>
+                {(planLimits.photos === null || editImages.length < planLimits.photos) && (
+                  <Button type="button" variant="outline" size="sm" onClick={() => imageInputRef.current?.click()} disabled={imageUploading} className="flex items-center gap-1.5 text-xs">
+                    <ImagePlus size={14} />{imageUploading ? "Uploading…" : "Add Photo"}
+                  </Button>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
