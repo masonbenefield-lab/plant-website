@@ -511,6 +511,10 @@ export interface Database {
           description: string | null;
           image_url: string | null;
           winner_user_id: string | null;
+          sponsor_name: string | null;
+          sponsor_username: string | null;
+          sponsor_logo_url: string | null;
+          sponsor_message: string | null;
           created_at: string;
         };
         Insert: {
@@ -519,6 +523,10 @@ export interface Database {
           description?: string | null;
           image_url?: string | null;
           winner_user_id?: string | null;
+          sponsor_name?: string | null;
+          sponsor_username?: string | null;
+          sponsor_logo_url?: string | null;
+          sponsor_message?: string | null;
           created_at?: string;
         };
         Update: {
@@ -527,6 +535,10 @@ export interface Database {
           description?: string | null;
           image_url?: string | null;
           winner_user_id?: string | null;
+          sponsor_name?: string | null;
+          sponsor_username?: string | null;
+          sponsor_logo_url?: string | null;
+          sponsor_message?: string | null;
           created_at?: string;
         };
         Relationships: [];

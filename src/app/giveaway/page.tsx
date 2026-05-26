@@ -30,7 +30,7 @@ export default async function GiveawayPage() {
 
   // Current month giveaway + next month teaser + past winners (last 3 months)
   const [{ data: giveaway }, { count: entryCount }, { data: nextGiveaway }, { data: pastGiveaways }] = await Promise.all([
-    supabase.from("giveaway_months").select("*").eq("month", month).single(),
+    supabase.from("giveaway_months").select("*, sponsor_name, sponsor_username, sponsor_logo_url, sponsor_message").eq("month", month).single(),
     admin.from("giveaway_entries").select("*", { count: "exact", head: true }).eq("month", month),
     admin.from("giveaway_months").select("plant_name, description, image_url").eq("month", nextMonth).single(),
     admin
@@ -77,6 +77,38 @@ export default async function GiveawayPage() {
 
       {giveaway ? (
         <>
+          {/* Sponsor banner */}
+          {giveaway.sponsor_name && (
+            <div className="rounded-xl border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 px-5 py-4 flex items-center gap-4">
+              {giveaway.sponsor_logo_url && (
+                <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-white border shrink-0">
+                  <Image src={giveaway.sponsor_logo_url} alt={giveaway.sponsor_name} fill className="object-contain p-1" />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-widest text-green-700 dark:text-green-400 mb-0.5">Prize donated by</p>
+                {giveaway.sponsor_username ? (
+                  <Link href={`/sellers/${giveaway.sponsor_username}`} className="font-bold text-sm hover:underline hover:text-green-700 transition-colors">
+                    {giveaway.sponsor_name}
+                  </Link>
+                ) : (
+                  <p className="font-bold text-sm">{giveaway.sponsor_name}</p>
+                )}
+                {giveaway.sponsor_message && (
+                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{giveaway.sponsor_message}</p>
+                )}
+              </div>
+              {giveaway.sponsor_username && (
+                <Link
+                  href={`/sellers/${giveaway.sponsor_username}`}
+                  className="shrink-0 text-xs font-medium text-green-700 hover:underline whitespace-nowrap"
+                >
+                  Visit shop →
+                </Link>
+              )}
+            </div>
+          )}
+
           {/* Plant card */}
           <div className="rounded-2xl border overflow-hidden shadow-sm">
             {giveaway.image_url && (

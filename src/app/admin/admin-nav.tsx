@@ -12,6 +12,7 @@ const links = [
   { href: "/admin/orders",      label: "Orders" },
   { href: "/admin/reports",     label: "Reports" },
   { href: "/admin/violations",  label: "Violations" },
+  { href: "/admin/giveaway",    label: "Giveaway" },
 ];
 
 export default function AdminNav({ pendingReports = 0, repeatViolators = 0 }: { pendingReports?: number; repeatViolators?: number }) {
