@@ -22,6 +22,7 @@ import type { Database } from "@/lib/supabase/types";
 import { findProhibitedWord, censorWord, logViolation } from "@/lib/profanity";
 import { MapPin, Lock, Mail, KeyRound, Trash2 } from "lucide-react";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 
@@ -273,25 +274,7 @@ export default function AccountForm({
               </p>
             </div>
           ) : plan === "seedling" ? (
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">Upgrade to unlock lower commissions, more listings, and buyer digest exposure.</p>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-lg border p-3 space-y-2">
-                  <p className="text-sm font-semibold">Grower — $9/mo</p>
-                  <p className="text-xs text-muted-foreground">50 listings · 4.5% commission · digest exposure</p>
-                  <Button size="sm" className="w-full bg-green-700 hover:bg-green-800" disabled={subscribing} onClick={() => startSubscription("grower", "monthly")}>
-                    {subscribing ? "Redirecting…" : "Upgrade"}
-                  </Button>
-                </div>
-                <div className="rounded-lg border p-3 space-y-2">
-                  <p className="text-sm font-semibold">Nursery — $29/mo</p>
-                  <p className="text-xs text-muted-foreground">Unlimited listings · 20 photos · 3% commission · full digest + homepage</p>
-                  <Button size="sm" className="w-full bg-green-700 hover:bg-green-800" disabled={subscribing} onClick={() => startSubscription("nursery", "monthly")}>
-                    {subscribing ? "Redirecting…" : "Upgrade"}
-                  </Button>
-                </div>
-              </div>
-            </div>
+            <BillingToggleSection subscribing={subscribing} startSubscription={startSubscription} />
           ) : (
             <div className="space-y-3">
               {hasSubscription ? (
@@ -827,6 +810,80 @@ export default function AccountForm({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function BillingToggleSection({
+  subscribing,
+  startSubscription,
+}: {
+  subscribing: boolean;
+  startSubscription: (plan: "grower" | "nursery", billing: "monthly" | "annual") => void;
+}) {
+  const [billing, setBilling] = useState<"monthly" | "annual">("monthly");
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground">Upgrade to unlock lower commissions, more listings, and buyer digest exposure.</p>
+
+      {/* Billing toggle */}
+      <div className="flex items-center gap-2">
+        <div className="flex rounded-full border border-border p-0.5 text-xs font-medium">
+          <button
+            type="button"
+            onClick={() => setBilling("monthly")}
+            className={cn(
+              "px-3 py-1 rounded-full transition-colors",
+              billing === "monthly" ? "bg-green-700 text-white" : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            Monthly
+          </button>
+          <button
+            type="button"
+            onClick={() => setBilling("annual")}
+            className={cn(
+              "px-3 py-1 rounded-full transition-colors",
+              billing === "annual" ? "bg-green-700 text-white" : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            Annual
+          </button>
+        </div>
+        {billing === "annual" && (
+          <span className="text-xs font-medium text-green-700 bg-green-100 dark:bg-green-900/40 dark:text-green-400 px-2 py-0.5 rounded-full">
+            Save 2 months
+          </span>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-lg border p-3 space-y-2">
+          <p className="text-sm font-semibold">
+            Grower — {billing === "annual" ? "$90/yr" : "$9/mo"}
+          </p>
+          {billing === "annual" && (
+            <p className="text-xs text-green-700 dark:text-green-400 font-medium">$7.50/mo · 2 months free</p>
+          )}
+          <p className="text-xs text-muted-foreground">50 listings · 4.5% commission · digest exposure</p>
+          <Button size="sm" className="w-full bg-green-700 hover:bg-green-800" disabled={subscribing} onClick={() => startSubscription("grower", billing)}>
+            {subscribing ? "Redirecting…" : "Upgrade"}
+          </Button>
+        </div>
+        <div className="rounded-lg border p-3 space-y-2">
+          <p className="text-sm font-semibold">
+            Nursery — {billing === "annual" ? "$290/yr" : "$29/mo"}
+          </p>
+          {billing === "annual" && (
+            <p className="text-xs text-green-700 dark:text-green-400 font-medium">$24.17/mo · 2 months free</p>
+          )}
+          <p className="text-xs text-muted-foreground">Unlimited listings · 20 photos · 3% commission · full digest + homepage</p>
+          <Button size="sm" className="w-full bg-green-700 hover:bg-green-800" disabled={subscribing} onClick={() => startSubscription("nursery", billing)}>
+            {subscribing ? "Redirecting…" : "Upgrade"}
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
