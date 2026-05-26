@@ -35,7 +35,7 @@ export default async function GiveawayPage() {
     admin.from("giveaway_months").select("plant_name, description, image_url").eq("month", nextMonth).single(),
     admin
       .from("giveaway_months")
-      .select("month, plant_name, image_url, winner_user_id")
+      .select("month, plant_name, image_url, winner_user_id, sponsor_name, sponsor_username")
       .not("winner_user_id", "is", null)
       .order("month", { ascending: false })
       .limit(3),
@@ -215,6 +215,18 @@ export default async function GiveawayPage() {
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm truncate">{g.plant_name}</p>
                   <p className="text-xs text-muted-foreground">{monthName(g.month)}</p>
+                  {g.sponsor_name && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Donated by{" "}
+                      {g.sponsor_username ? (
+                        <Link href={`/sellers/${g.sponsor_username}`} className="hover:text-green-700 hover:underline transition-colors font-medium">
+                          {g.sponsor_name}
+                        </Link>
+                      ) : (
+                        <span className="font-medium">{g.sponsor_name}</span>
+                      )}
+                    </p>
+                  )}
                 </div>
                 {g.winner_user_id && winnerMap[g.winner_user_id] && (
                   <Link href={`/sellers/${winnerMap[g.winner_user_id]}`} className="flex items-center gap-1.5 shrink-0 hover:text-green-700 transition-colors">
