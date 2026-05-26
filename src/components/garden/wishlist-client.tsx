@@ -32,6 +32,7 @@ const PRIORITY_COLOR: Record<Priority, string> = {
 export function WishlistClient({ initialItems }: { initialItems: WishlistItem[] }) {
   const [items, setItems] = useState(initialItems);
   const [q, setQ] = useState("");
+  const [activeQ, setActiveQ] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -75,17 +76,20 @@ export function WishlistClient({ initialItems }: { initialItems: WishlistItem[] 
     toast.success("Removed from wishlist");
   }
 
-  const filtered = q.trim()
+  const filtered = activeQ.trim()
     ? items.filter((item) => {
         const text = `${item.name} ${item.variety ?? ""}`.toLowerCase();
-        return text.includes(q.toLowerCase());
+        return text.includes(activeQ.toLowerCase());
       })
     : items;
 
   return (
     <div className="space-y-4">
       {/* Search + add row */}
-      <div className="flex items-center gap-3 flex-wrap">
+      <form
+        className="flex items-center gap-2"
+        onSubmit={(e) => { e.preventDefault(); setActiveQ(q); }}
+      >
         <div className="relative">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
           <input
@@ -95,7 +99,10 @@ export function WishlistClient({ initialItems }: { initialItems: WishlistItem[] 
             className="pl-8 pr-3 py-2 text-sm rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-green-600 w-56"
           />
         </div>
-      </div>
+        <button type="submit" className="px-3 py-2 text-sm rounded-lg bg-green-700 text-white hover:bg-green-800 transition-colors font-medium">
+          Search
+        </button>
+      </form>
 
       {/* Add button / form */}
       {!showForm ? (
@@ -200,7 +207,7 @@ export function WishlistClient({ initialItems }: { initialItems: WishlistItem[] 
       {items.length > 0 && filtered.length === 0 && (
         <Card>
           <CardContent className="py-10 text-center">
-            <p className="text-sm text-muted-foreground">No plants match &ldquo;{q}&rdquo;</p>
+            <p className="text-sm text-muted-foreground">No plants match &ldquo;{activeQ}&rdquo;</p>
           </CardContent>
         </Card>
       )}

@@ -32,26 +32,35 @@ export default function CommunityGardensGrid({
   currentUserId: string | null;
 }) {
   const [q, setQ] = useState("");
+  const [activeQ, setActiveQ] = useState("");
 
-  const filtered = q.trim()
+  const filtered = activeQ.trim()
     ? gardens.filter((p) => {
         const name = (p.display_name || p.username).toLowerCase();
-        return name.includes(q.toLowerCase());
+        return name.includes(activeQ.toLowerCase());
       })
     : gardens;
 
   return (
     <div className="space-y-4">
       {/* Search */}
-      <div className="relative max-w-xs">
-        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Search gardens..."
-          className="w-full pl-8 pr-3 py-2 text-sm rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-green-600"
-        />
-      </div>
+      <form
+        className="flex items-center gap-2 max-w-xs"
+        onSubmit={(e) => { e.preventDefault(); setActiveQ(q); }}
+      >
+        <div className="relative flex-1">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search gardens..."
+            className="w-full pl-8 pr-3 py-2 text-sm rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-green-600"
+          />
+        </div>
+        <button type="submit" className="px-3 py-2 text-sm rounded-lg bg-green-700 text-white hover:bg-green-800 transition-colors font-medium">
+          Search
+        </button>
+      </form>
 
       {filtered.length === 0 ? (
         <Card>
