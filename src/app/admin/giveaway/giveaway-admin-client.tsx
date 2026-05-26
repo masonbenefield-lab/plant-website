@@ -5,7 +5,8 @@ import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Loader2, ChevronDown, ChevronUp, X } from "lucide-react";
+import { Loader2, ChevronDown, ChevronUp, X, Trophy, RefreshCw, Check } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface GiveawayMonth {
   month: string;
@@ -57,12 +58,15 @@ export function GiveawayAdminClient({ months }: { months: GiveawayMonth[] }) {
             </button>
 
             {expandedMonth === m.month && (
-              <div className="border-t px-4 pb-4">
+              <div className="border-t px-4 pb-4 space-y-6">
                 <SponsorForm
                   month={m.month}
                   initial={data[m.month]}
                   onSave={(updated) => setData((prev) => ({ ...prev, [m.month]: updated }))}
                 />
+                <div className="border-t pt-4">
+                  <WinnerPicker month={m.month} />
+                </div>
               </div>
             )}
           </CardContent>
@@ -207,6 +211,122 @@ function SponsorForm({
           </button>
         )}
       </div>
+    </div>
+  );
+}
+
+interface PickedUser {
+  rank: number;
+  user_id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  base_entries: number;
+  bonus_entries: number;
+  total_entries: number;
+  total_pool: number;
+}
+
+function WinnerPicker({ month }: { month: string }) {
+  const [picking, setPicking] = useState(false);
+  const [results, setResults] = useState<PickedUser[] | null>(null);
+  const [totalEntrants, setTotalEntrants] = useState(0);
+  const [totalPool, setTotalPool] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  async function handlePick() {
+    setPicking(true);
+    setResults(null);
+    setSaved(false);
+    const res = await fetch("/api/admin/giveaway-pick-winner", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ month }),
+    });
+    const data = await res.json();
+    setPicking(false);
+    if (!res.ok) { toast.error(data.error ?? "Failed to pick winner"); return; }
+    setResults(data.results);
+    setTotalEntrants(data.total_entrants);
+    setTotalPool(data.total_pool);
+  }
+
+  async function handleSave(userId: string) {
+    setSaving(true);
+    const res = await fetch("/api/admin/giveaway-save-winner", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ month, winner_user_id: userId }),
+    });
+    const data = await res.json();
+    setSaving(false);
+    if (!res.ok) { toast.error(data.error ?? "Failed to save winner"); return; }
+    setSaved(true);
+    toast.success("Winner saved!");
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-semibold">Pick Winner</p>
+        <button
+          onClick={handlePick}
+          disabled={picking}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-green-700 text-white hover:bg-green-800 disabled:opacity-50 transition-colors"
+        >
+          {picking ? <Loader2 size={12} className="animate-spin" /> : results ? <RefreshCw size={12} /> : <Trophy size={12} />}
+          {picking ? "Drawing…" : results ? "Re-roll" : "Draw winner"}
+        </button>
+      </div>
+
+      {results && (
+        <div className="space-y-2">
+          <p className="text-xs text-muted-foreground">
+            {totalEntrants} {totalEntrants === 1 ? "entrant" : "entrants"} · {totalPool} weighted slots
+          </p>
+          {results.map((r) => (
+            <div
+              key={r.user_id}
+              className={cn(
+                "flex items-center gap-3 rounded-lg border p-3",
+                r.rank === 0 && "border-green-400 dark:border-green-600 bg-green-50 dark:bg-green-900/20"
+              )}
+            >
+              <div className="w-8 h-8 rounded-full bg-muted overflow-hidden shrink-0 border">
+                {r.avatar_url ? (
+                  <Image src={r.avatar_url} alt={r.username} width={32} height={32} className="object-cover w-full h-full" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-xs font-bold text-muted-foreground">
+                    {r.username.slice(0, 1).toUpperCase()}
+                  </div>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                  {r.rank === 0 && <Trophy size={12} className="text-amber-500 shrink-0" />}
+                  <p className="text-sm font-semibold truncate">{r.username}</p>
+                  {r.display_name && <p className="text-xs text-muted-foreground truncate">· {r.display_name}</p>}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {r.rank === 0 ? "Winner" : `Backup #${r.rank}`} · {r.total_entries} {r.total_entries === 1 ? "entry" : "entries"}
+                  {r.bonus_entries > 0 && <span className="text-green-600"> (+{r.bonus_entries} referral)</span>}
+                </p>
+              </div>
+              {r.rank === 0 && (
+                <button
+                  onClick={() => handleSave(r.user_id)}
+                  disabled={saving || saved}
+                  className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-green-700 text-white hover:bg-green-800 disabled:opacity-50 transition-colors"
+                >
+                  {saving ? <Loader2 size={11} className="animate-spin" /> : saved ? <Check size={11} /> : null}
+                  {saved ? "Saved!" : "Confirm winner"}
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
