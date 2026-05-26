@@ -12,7 +12,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "You must accept the disclaimer to enable trades." }, { status: 400 });
   }
 
-  const update: Record<string, unknown> = {
+  const update: { garden_bio: string | null; open_to_trades: boolean; trades_disclaimer_accepted?: boolean } = {
     garden_bio: garden_bio?.trim() || null,
     open_to_trades: !!open_to_trades,
   };
