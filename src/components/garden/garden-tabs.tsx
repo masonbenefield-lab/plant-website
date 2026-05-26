@@ -7,11 +7,14 @@ import { cn } from "@/lib/utils";
 export default function GardenTabs() {
   const pathname = usePathname();
   const isCommunity = pathname.startsWith("/garden/community");
+  const isWishlist = pathname.startsWith("/garden/wishlist");
+  const isMyGarden = !isCommunity && !isWishlist;
 
   return (
     <div className="flex gap-1 border-b mb-6">
-      <TabLink href="/garden" active={!isCommunity}>My Garden</TabLink>
+      <TabLink href="/garden" active={isMyGarden}>My Garden</TabLink>
       <TabLink href="/garden/community" active={isCommunity}>Community Gardens</TabLink>
+      <TabLink href="/garden/wishlist" active={isWishlist}>Wishlist</TabLink>
     </div>
   );
 }

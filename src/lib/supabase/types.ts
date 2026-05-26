@@ -826,6 +826,33 @@ export interface Database {
         Relationships: [];
       };
 
+      wishlist_items: {
+        Row: {
+          id: string;
+          user_id: string;
+          name: string;
+          variety: string | null;
+          notes: string | null;
+          priority: "nice" | "want" | "must";
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          name: string;
+          variety?: string | null;
+          notes?: string | null;
+          priority?: "nice" | "want" | "must";
+          created_at?: string;
+        };
+        Update: {
+          name?: string;
+          variety?: string | null;
+          notes?: string | null;
+          priority?: "nice" | "want" | "must";
+        };
+      };
+
       garden_events: {
         Row: {
           id: string;
