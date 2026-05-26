@@ -19,6 +19,10 @@
     {
       "path": "/api/cron/garden-reminders",
       "schedule": "0 9 1 * *"
+    },
+    {
+      "path": "/api/cron/cleanup-sponsor-requests",
+      "schedule": "0 3 * * *"
     }
   ]
 }
