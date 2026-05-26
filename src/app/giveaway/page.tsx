@@ -72,8 +72,24 @@ export default async function GiveawayPage() {
 
     alreadyEntered = !!entry;
     hasOpenSponsorRequest = !!sponsorReq;
-    referralCode = profile?.referral_code ?? null;
     bonusEntriesThisMonth = bonusCount ?? 0;
+
+    // Backfill referral code for existing users who signed up before this feature
+    if (profile?.referral_code) {
+      referralCode = profile.referral_code;
+    } else {
+      const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+      let code: string | null = null;
+      for (let i = 0; i < 5; i++) {
+        const candidate = Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+        const { data: existing } = await admin.from("profiles").select("id").eq("referral_code", candidate).maybeSingle();
+        if (!existing) { code = candidate; break; }
+      }
+      if (code) {
+        await admin.from("profiles").update({ referral_code: code }).eq("id", user.id);
+        referralCode = code;
+      }
+    }
   }
 
   const monthName = (m: string) => {
