@@ -8,9 +8,10 @@ import { cn } from "@/lib/utils";
 interface Props {
   plantId: string;
   initialPinOrder: number | null;
+  onPinChange?: (pinOrder: number | null) => void;
 }
 
-export default function PinPlantButton({ plantId, initialPinOrder }: Props) {
+export default function PinPlantButton({ plantId, initialPinOrder, onPinChange }: Props) {
   const [pinOrder, setPinOrder] = useState(initialPinOrder);
   const [isPending, startTransition] = useTransition();
 
@@ -29,6 +30,7 @@ export default function PinPlantButton({ plantId, initialPinOrder }: Props) {
         return;
       }
       setPinOrder(data.pinOrder);
+      onPinChange?.(data.pinOrder);
       toast.success(data.pinOrder ? `Pinned to slot ${data.pinOrder}` : "Unpinned");
     });
   }
