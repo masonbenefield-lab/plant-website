@@ -543,6 +543,29 @@ export interface Database {
         };
         Relationships: [];
       };
+      giveaway_sponsor_requests: {
+        Row: {
+          id: string;
+          user_id: string;
+          item_name: string;
+          message: string | null;
+          status: "open" | "closed";
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          item_name: string;
+          message?: string | null;
+          status?: "open" | "closed";
+          created_at?: string;
+        };
+        Update: {
+          status?: "open" | "closed";
+        };
+        Relationships: [];
+      };
+
       giveaway_entries: {
         Row: {
           id: string;

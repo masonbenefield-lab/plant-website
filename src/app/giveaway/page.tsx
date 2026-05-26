@@ -6,6 +6,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { Database } from "@/lib/supabase/types";
 import { EnterButton } from "./enter-button";
+import { SponsorRequestForm } from "./sponsor-request-form";
 import { Gift, Users, Trophy } from "lucide-react";
 
 export default async function GiveawayPage() {
@@ -48,16 +49,18 @@ export default async function GiveawayPage() {
     : { data: [] as { id: string; username: string }[] };
   const winnerMap = Object.fromEntries((winnerProfiles ?? []).map((p) => [p.id, p.username]));
 
-  // Check if current user has already entered
+  // Check if current user has already entered + has open sponsor request
   let alreadyEntered = false;
-  if (user && giveaway) {
-    const { data: entry } = await supabase
-      .from("giveaway_entries")
-      .select("id")
-      .eq("user_id", user.id)
-      .eq("month", month)
-      .single();
+  let hasOpenSponsorRequest = false;
+  if (user) {
+    const [{ data: entry }, { data: sponsorReq }] = await Promise.all([
+      giveaway
+        ? supabase.from("giveaway_entries").select("id").eq("user_id", user.id).eq("month", month).single()
+        : Promise.resolve({ data: null }),
+      supabase.from("giveaway_sponsor_requests").select("id").eq("user_id", user.id).eq("status", "open").maybeSingle(),
+    ]);
     alreadyEntered = !!entry;
+    hasOpenSponsorRequest = !!sponsorReq;
   }
 
   const monthName = (m: string) => {
@@ -237,6 +240,20 @@ export default async function GiveawayPage() {
               </div>
             ))}
           </div>
+        </div>
+      )}
+      {/* Sponsor donation request */}
+      {user ? (
+        <SponsorRequestForm hasOpenRequest={hasOpenSponsorRequest} />
+      ) : (
+        <div className="rounded-2xl border border-dashed p-6 text-center space-y-2">
+          <p className="font-semibold flex items-center justify-center gap-2">
+            <Gift size={18} className="text-green-700" />
+            Want to donate a prize?
+          </p>
+          <p className="text-sm text-muted-foreground">
+            <Link href="/login" className="text-green-700 hover:underline font-medium">Sign in</Link> to submit a donation request for a future giveaway.
+          </p>
         </div>
       )}
     </div>
