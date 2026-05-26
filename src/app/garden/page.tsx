@@ -91,7 +91,6 @@ export default async function GardenPage({
         initialOpenToTrades={profile?.open_to_trades ?? false}
         disclaimerAccepted={profile?.trades_disclaimer_accepted ?? false}
       />
-      </div>
 
       <GardenTabs />
 
