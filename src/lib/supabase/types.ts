@@ -851,6 +851,7 @@ export interface Database {
           notes?: string | null;
           priority?: "nice" | "want" | "must";
         };
+        Relationships: [];
       };
 
       garden_events: {

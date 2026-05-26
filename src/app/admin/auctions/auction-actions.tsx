@@ -17,7 +17,7 @@ export function CancelAuctionButton({ auctionId, plantName, currentStatus }: { a
     const supabase = createClient();
     const { error } = await supabase
       .from("auctions")
-      .update({ status: "cancelled" as const })
+      .update({ status: "cancelled" })
       .eq("id", auctionId);
     setLoading(false);
     if (error) { toast.error(error.message); return; }
