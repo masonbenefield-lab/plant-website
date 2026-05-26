@@ -48,7 +48,7 @@ export function PhotoGallery({ images, alt }: PhotoGalleryProps) {
           src={images[activeIndex]}
           alt={alt}
           fill
-          className="object-cover transition-opacity duration-200"
+          className="object-contain transition-opacity duration-200"
         />
       </div>
 

@@ -74,7 +74,7 @@ export function PlantPhotoManager({ plantId, initialImages, alt }: Props) {
             src={images[activeIndex]}
             alt={alt}
             fill
-            className="object-cover cursor-zoom-in"
+            className="object-contain cursor-zoom-in"
             onClick={() => { setLightboxIndex(activeIndex); setLightboxOpen(true); }}
           />
         ) : (
