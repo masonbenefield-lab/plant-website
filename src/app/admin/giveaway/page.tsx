@@ -2,8 +2,7 @@ import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import type { Database } from "@/lib/supabase/types";
-import { GiveawayAdminClient } from "./giveaway-admin-client";
-import { SponsorRequestsPanel } from "./sponsor-requests-panel";
+import { GiveawayAdminTabs } from "./giveaway-admin-tabs";
 
 export default async function AdminGiveawayPage() {
   const supabase = await createClient();
@@ -31,7 +30,6 @@ export default async function AdminGiveawayPage() {
       .limit(50),
   ]);
 
-  // Fetch requester profiles
   const userIds = [...new Set((requests ?? []).map((r) => r.user_id))];
   const { data: requesters } = userIds.length
     ? await admin.from("profiles").select("id, username, display_name, avatar_url").in("id", userIds)
@@ -39,26 +37,10 @@ export default async function AdminGiveawayPage() {
   const requesterMap = Object.fromEntries((requesters ?? []).map((p) => [p.id, p]));
 
   return (
-    <div className="p-8 max-w-3xl space-y-10">
-      {/* Donation requests */}
-      <div className="space-y-4">
-        <div>
-          <h1 className="text-2xl font-bold">Donation Requests</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Users who want to sponsor a giveaway. Reply via their messages inbox.
-          </p>
-        </div>
-        <SponsorRequestsPanel requests={requests ?? []} requesterMap={requesterMap} />
-      </div>
-
-      {/* Sponsor settings per month */}
-      <div className="space-y-4">
-        <div>
-          <h2 className="text-xl font-bold">Monthly Sponsors</h2>
-          <p className="text-muted-foreground text-sm mt-1">Set the sponsor shown on the public giveaway page.</p>
-        </div>
-        <GiveawayAdminClient months={months ?? []} />
-      </div>
-    </div>
+    <GiveawayAdminTabs
+      months={months ?? []}
+      requests={requests ?? []}
+      requesterMap={requesterMap}
+    />
   );
 }
