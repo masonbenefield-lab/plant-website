@@ -230,6 +230,21 @@ export default async function GiveawayPage() {
         </div>
       )}
 
+      {/* Referral card */}
+      {user && referralCode ? (
+        <ReferralCard referralCode={referralCode} bonusEntries={bonusEntriesThisMonth} />
+      ) : !user ? (
+        <div className="rounded-2xl border border-dashed p-6 text-center space-y-2">
+          <p className="font-semibold flex items-center justify-center gap-2">
+            <Gift size={18} className="text-green-700" />
+            Get bonus entries
+          </p>
+          <p className="text-sm text-muted-foreground">
+            <Link href="/login" className="text-green-700 hover:underline font-medium">Sign in</Link> to get your referral link and earn extra entries.
+          </p>
+        </div>
+      ) : null}
+
       {/* Past winners */}
       {pastGiveaways && pastGiveaways.length > 0 && (
         <div className="space-y-4">
@@ -271,21 +286,6 @@ export default async function GiveawayPage() {
           </div>
         </div>
       )}
-      {/* Referral card */}
-      {user && referralCode ? (
-        <ReferralCard referralCode={referralCode} bonusEntries={bonusEntriesThisMonth} />
-      ) : !user ? (
-        <div className="rounded-2xl border border-dashed p-6 text-center space-y-2">
-          <p className="font-semibold flex items-center justify-center gap-2">
-            <Gift size={18} className="text-green-700" />
-            Get bonus entries
-          </p>
-          <p className="text-sm text-muted-foreground">
-            <Link href="/login" className="text-green-700 hover:underline font-medium">Sign in</Link> to get your referral link and earn extra entries.
-          </p>
-        </div>
-      ) : null}
-
       {/* Sponsor donation request */}
       {user ? (
         <SponsorRequestForm hasOpenRequest={hasOpenSponsorRequest} />
