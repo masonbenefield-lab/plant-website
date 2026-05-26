@@ -102,29 +102,36 @@ function SponsorForm({
     toast.success("Logo uploaded");
   }
 
+  async function saveSponsor(payload: { sponsor_name: string | null; sponsor_username: string | null; sponsor_logo_url: string | null; sponsor_message: string | null }) {
+    const res = await fetch("/api/admin/giveaway-sponsor", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ month, ...payload }),
+    });
+    const data = await res.json();
+    if (!res.ok) { toast.error(data.error ?? "Failed to save"); return false; }
+    return true;
+  }
+
   async function handleSave() {
     setSaving(true);
-    const supabase = createClient();
-    const { error } = await supabase
-      .from("giveaway_months")
-      .update({
-        sponsor_name: name.trim() || null,
-        sponsor_username: username.trim() || null,
-        sponsor_logo_url: logoUrl || null,
-        sponsor_message: message.trim() || null,
-      })
-      .eq("month", month);
+    const ok = await saveSponsor({
+      sponsor_name: name.trim() || null,
+      sponsor_username: username.trim() || null,
+      sponsor_logo_url: logoUrl || null,
+      sponsor_message: message.trim() || null,
+    });
     setSaving(false);
-    if (error) { toast.error(error.message); return; }
+    if (!ok) return;
     onSave({ ...initial, sponsor_name: name.trim() || null, sponsor_username: username.trim() || null, sponsor_logo_url: logoUrl || null, sponsor_message: message.trim() || null });
     toast.success("Sponsor saved");
   }
 
   async function handleClear() {
     setSaving(true);
-    const supabase = createClient();
-    await supabase.from("giveaway_months").update({ sponsor_name: null, sponsor_username: null, sponsor_logo_url: null, sponsor_message: null }).eq("month", month);
+    const ok = await saveSponsor({ sponsor_name: null, sponsor_username: null, sponsor_logo_url: null, sponsor_message: null });
     setSaving(false);
+    if (!ok) return;
     setName(""); setUsername(""); setMessage(""); setLogoUrl("");
     onSave({ ...initial, sponsor_name: null, sponsor_username: null, sponsor_logo_url: null, sponsor_message: null });
     toast.success("Sponsor cleared");
