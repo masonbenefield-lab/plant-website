@@ -49,6 +49,7 @@ export default async function GardenPage({
     .from("garden_plants")
     .select("id, name, variety, status, location, planted_at, images, is_public, pin_order")
     .eq("user_id", user.id)
+    .order("pin_order", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: false });
 
   if (status && ["thriving", "growing", "dormant", "struggling", "dead"].includes(status)) {
