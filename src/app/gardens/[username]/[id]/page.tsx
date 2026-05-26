@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { ChevronLeft } from "lucide-react";
 import { PhotoGallery } from "@/components/garden/photo-gallery";
+import type { Metadata } from "next";
 import type { GardenPlantStatus, Database } from "@/lib/supabase/types";
 
 const STATUS_LABEL: Record<GardenPlantStatus, string> = {
@@ -32,6 +33,69 @@ const SOURCE_TYPE_LABEL: Record<string, string> = {
   propagation: "Propagation",
   gift: "Gift",
 };
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ username: string; id: string }>;
+}): Promise<Metadata> {
+  const { username, id } = await params;
+  const supabase = await createClient();
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("id, display_name, username, garden_public")
+    .eq("username", username)
+    .single();
+
+  if (!profile || !profile.garden_public) return { title: "Plant · Plantet" };
+
+  const admin = createAdminClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
+  const { data: plant } = await admin
+    .from("garden_plants")
+    .select("name, variety, status, images, public_notes")
+    .eq("id", id)
+    .eq("user_id", profile.id)
+    .or("is_public.eq.true,is_public.is.null")
+    .single();
+
+  if (!plant) return { title: "Plant · Plantet" };
+
+  const rawName = profile.display_name || profile.username;
+  const displayName = rawName?.endsWith("s") ? `${rawName}'` : `${rawName}'s`;
+  const plantTitle = plant.variety || plant.name;
+  const title = `${plantTitle} · ${displayName} Garden`;
+
+  const statusLabel = STATUS_LABEL[plant.status as GardenPlantStatus] ?? plant.status;
+  const description = plant.public_notes
+    ? `${statusLabel} · ${plant.public_notes.slice(0, 140)}${plant.public_notes.length > 140 ? "…" : ""}`
+    : plant.variety
+    ? `${plant.name} · ${statusLabel} · In ${displayName} garden on Plantet.`
+    : `${statusLabel} · In ${displayName} garden on Plantet.`;
+
+  const firstImage = plant.images?.[0];
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      ...(firstImage && { images: [{ url: firstImage }] }),
+      type: "article",
+    },
+    twitter: {
+      card: firstImage ? "summary_large_image" : "summary",
+      title,
+      description,
+      ...(firstImage && { images: [firstImage] }),
+    },
+  };
+}
 
 export default async function PublicPlantDetailPage({
   params,

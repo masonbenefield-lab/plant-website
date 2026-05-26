@@ -6,6 +6,7 @@ import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { Sprout, Store, ArrowLeftRight, MessageSquare } from "lucide-react";
+import type { Metadata } from "next";
 import type { GardenPlantStatus, Database } from "@/lib/supabase/types";
 
 const STATUS_LABEL: Record<GardenPlantStatus, string> = {
@@ -23,6 +24,48 @@ const STATUS_COLOR: Record<GardenPlantStatus, string> = {
   struggling: "bg-orange-100 text-orange-700",
   dead: "bg-gray-100 text-gray-500",
 };
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ username: string }>;
+}): Promise<Metadata> {
+  const { username } = await params;
+  const supabase = await createClient();
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("display_name, username, avatar_url, bio, garden_bio, garden_public")
+    .eq("username", username)
+    .single();
+
+  if (!profile || !profile.garden_public) return { title: "Garden · Plantet" };
+
+  const rawName = profile.display_name || profile.username;
+  const displayName = rawName?.endsWith("s") ? `${rawName}'` : `${rawName}'s`;
+  const title = `${displayName} Garden · Plantet`;
+  const description =
+    profile.garden_bio ||
+    profile.bio ||
+    `Browse ${displayName} plant collection on Plantet.`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      ...(profile.avatar_url && { images: [{ url: profile.avatar_url, width: 400, height: 400 }] }),
+      type: "profile",
+    },
+    twitter: {
+      card: "summary",
+      title,
+      description,
+      ...(profile.avatar_url && { images: [profile.avatar_url] }),
+    },
+  };
+}
 
 export default async function PublicGardenPage({
   params,
