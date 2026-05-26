@@ -34,7 +34,7 @@ export default async function GiveawayPage() {
   const [{ data: giveaway }, { count: entryCount }, { data: nextGiveaway }, { data: pastGiveaways }] = await Promise.all([
     supabase.from("giveaway_months").select("*, sponsor_name, sponsor_username, sponsor_logo_url, sponsor_message").eq("month", month).single(),
     admin.from("giveaway_entries").select("*", { count: "exact", head: true }).eq("month", month),
-    admin.from("giveaway_months").select("plant_name, description, image_url").eq("month", nextMonth).single(),
+    admin.from("giveaway_months").select("plant_name, description, image_url, sponsor_name, sponsor_username").eq("month", nextMonth).single(),
     admin
       .from("giveaway_months")
       .select("month, plant_name, image_url, winner_user_id, sponsor_name, sponsor_username")
@@ -198,7 +198,19 @@ export default async function GiveawayPage() {
                   {nextGiveaway.description && (
                     <p className="text-sm text-muted-foreground line-clamp-2 mt-0.5">{nextGiveaway.description}</p>
                   )}
-                  <p className="text-xs text-muted-foreground mt-2">Entries open {nextMonthOpens} — come back to enter</p>
+                  {nextGiveaway.sponsor_name && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Donated by{" "}
+                      {nextGiveaway.sponsor_username ? (
+                        <Link href={`/sellers/${nextGiveaway.sponsor_username}`} className="font-medium hover:underline hover:text-green-700 transition-colors">
+                          {nextGiveaway.sponsor_name}
+                        </Link>
+                      ) : (
+                        <span className="font-medium">{nextGiveaway.sponsor_name}</span>
+                      )}
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-1">Entries open {nextMonthOpens} — come back to enter</p>
                 </div>
               </div>
             </div>
