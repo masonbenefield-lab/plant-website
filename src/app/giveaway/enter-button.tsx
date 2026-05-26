@@ -2,17 +2,19 @@
 
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
-import { Loader2, CheckCircle2 } from "lucide-react";
+import { Loader2, CheckCircle2, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
 
 interface Props {
-  monthLabel: string; // e.g. "May 2026"
+  monthLabel: string;
   initialEntered: boolean;
+  referralCode?: string | null;
 }
 
-export function EnterButton({ monthLabel, initialEntered }: Props) {
+export function EnterButton({ monthLabel, initialEntered, referralCode }: Props) {
   const [entered, setEntered] = useState(initialEntered);
   const [isPending, startTransition] = useTransition();
+  const [copied, setCopied] = useState(false);
 
   function handleEnter() {
     startTransition(async () => {
@@ -27,11 +29,36 @@ export function EnterButton({ monthLabel, initialEntered }: Props) {
     });
   }
 
+  function handleCopy() {
+    if (!referralCode) return;
+    const url = `${window.location.origin}/signup?ref=${referralCode}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
   if (entered) {
     return (
-      <div className="flex items-center gap-2 text-green-700 font-semibold text-lg">
-        <CheckCircle2 size={22} />
-        You&apos;re entered for {monthLabel}!
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 text-green-700 font-semibold text-lg">
+          <CheckCircle2 size={22} />
+          You&apos;re entered for {monthLabel}!
+        </div>
+        {referralCode && (
+          <div className="rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 px-4 py-3 space-y-2">
+            <p className="text-xs font-medium text-green-800 dark:text-green-300">
+              Boost your chances — share your referral link. Every friend who joins and adds a plant earns you +1 extra entry.
+            </p>
+            <button
+              onClick={handleCopy}
+              className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-md bg-green-700 text-white hover:bg-green-800 transition-colors"
+            >
+              {copied ? <Check size={12} /> : <Copy size={12} />}
+              {copied ? "Copied!" : "Copy referral link"}
+            </button>
+          </div>
+        )}
       </div>
     );
   }

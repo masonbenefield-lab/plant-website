@@ -175,7 +175,7 @@ export default async function GiveawayPage() {
                     </p>
                   </div>
                 ) : (
-                  <EnterButton monthLabel={monthLabel} initialEntered={alreadyEntered} />
+                  <EnterButton monthLabel={monthLabel} initialEntered={alreadyEntered} referralCode={referralCode} />
                 )}
               </div>
             </div>
