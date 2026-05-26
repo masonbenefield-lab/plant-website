@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -151,12 +151,7 @@ function SponsorForm({
         </div>
         <div className="space-y-1">
           <label className="text-xs font-medium text-muted-foreground">Plantet username (optional)</label>
-          <input
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="Links to their shop"
-            className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-green-600"
-          />
+          <UsernameTypeahead value={username} onChange={setUsername} />
         </div>
       </div>
 
@@ -212,6 +207,107 @@ function SponsorForm({
           </button>
         )}
       </div>
+    </div>
+  );
+}
+
+interface UserResult {
+  id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+}
+
+function UsernameTypeahead({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [results, setResults] = useState<UserResult[]>([]);
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (!value.trim()) { setResults([]); setOpen(false); return; }
+    debounceRef.current = setTimeout(async () => {
+      setLoading(true);
+      const res = await fetch(`/api/admin/search-users?q=${encodeURIComponent(value)}`);
+      const data = await res.json();
+      setResults(Array.isArray(data) ? data : []);
+      setOpen(true);
+      setLoading(false);
+    }, 300);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [value]);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  function select(user: UserResult) {
+    onChange(user.username);
+    setOpen(false);
+    setResults([]);
+  }
+
+  return (
+    <div ref={containerRef} className="relative">
+      <div className="relative">
+        <input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onFocus={() => results.length > 0 && setOpen(true)}
+          placeholder="Search by username…"
+          className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-green-600"
+          autoComplete="off"
+        />
+        {loading && (
+          <Loader2 size={13} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-muted-foreground" />
+        )}
+      </div>
+
+      {open && results.length > 0 && (
+        <div className="absolute z-50 top-full mt-1 w-full rounded-lg border bg-popover shadow-lg overflow-hidden">
+          {results.map((u) => (
+            <button
+              key={u.id}
+              type="button"
+              onMouseDown={() => select(u)}
+              className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted transition-colors text-left"
+            >
+              <div className="w-7 h-7 rounded-full bg-muted overflow-hidden shrink-0 border">
+                {u.avatar_url ? (
+                  <Image src={u.avatar_url} alt={u.username} width={28} height={28} className="object-cover w-full h-full" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-xs font-bold text-muted-foreground">
+                    {u.username.slice(0, 1).toUpperCase()}
+                  </div>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{u.username}</p>
+                {u.display_name && (
+                  <p className="text-xs text-muted-foreground truncate">{u.display_name}</p>
+                )}
+              </div>
+            </button>
+          ))}
+          {results.length === 0 && !loading && (
+            <p className="px-3 py-2.5 text-sm text-muted-foreground">No users found</p>
+          )}
+        </div>
+      )}
+
+      {open && !loading && results.length === 0 && value.trim().length > 0 && (
+        <div className="absolute z-50 top-full mt-1 w-full rounded-lg border bg-popover shadow-lg px-3 py-2.5">
+          <p className="text-sm text-muted-foreground">No users found for &ldquo;{value}&rdquo;</p>
+        </div>
+      )}
     </div>
   );
 }
