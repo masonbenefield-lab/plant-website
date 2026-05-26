@@ -142,7 +142,7 @@ export default async function GardenPage({
           {plants!.map((plant) => (
             <div key={plant.id} className="relative">
               <Link href={`/garden/${plant.id}`}>
-                <Card className="overflow-hidden hover:shadow-md transition-shadow h-full">
+                <Card className={cn("overflow-hidden hover:shadow-md transition-shadow h-full", (plant as { pin_order?: number | null }).pin_order && "ring-2 ring-green-500")}>
                   <div className="aspect-square relative bg-muted">
                     {plant.images?.[0] ? (
                       <Image src={plant.images[0]} alt={plant.name} fill className="object-cover" />

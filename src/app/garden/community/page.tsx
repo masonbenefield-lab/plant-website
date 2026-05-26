@@ -5,6 +5,7 @@ import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sprout, ArrowLeftRight } from "lucide-react";
+import { cn } from "@/lib/utils";
 import GardenTabs from "@/components/garden/garden-tabs";
 import type { Database } from "@/lib/supabase/types";
 
@@ -19,16 +20,12 @@ export default async function CommunityGardensPage() {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  let profileQuery = admin
+  const { data: profiles } = await admin
     .from("profiles")
     .select("id, username, display_name, avatar_url, garden_bio, open_to_trades")
     .eq("garden_public", true)
     .is("deleted_at", null)
     .order("username");
-
-  if (user) profileQuery = profileQuery.neq("id", user.id);
-
-  const { data: profiles } = await profileQuery;
   const profileIds = profiles?.map((p) => p.id) ?? [];
 
   const { data: plants } = profileIds.length
@@ -80,9 +77,15 @@ export default async function CommunityGardensPage() {
           {gardens.map((profile) => {
             const { count, photos } = gardenMap[profile.id] ?? { count: 0, photos: [] };
             const name = profile.display_name || profile.username;
+            const isOwnGarden = user?.id === profile.id;
             return (
-              <Link key={profile.id} href={`/gardens/${profile.username}`}>
-                <Card className="overflow-hidden hover:shadow-md transition-shadow group h-full">
+              <Link key={profile.id} href={isOwnGarden ? `/garden` : `/gardens/${profile.username}`}>
+                <Card className={cn("overflow-hidden hover:shadow-md transition-shadow group h-full relative", isOwnGarden && "ring-2 ring-green-500")}>
+                  {isOwnGarden && (
+                    <div className="absolute top-2 left-2 z-10 text-[10px] font-semibold bg-green-600 text-white px-2 py-0.5 rounded-full">
+                      Your garden
+                    </div>
+                  )}
                   {/* 2×2 photo grid */}
                   <div className="grid grid-cols-2 gap-0.5 bg-muted aspect-[4/3]">
                     {[0, 1, 2, 3].map((i) => (
