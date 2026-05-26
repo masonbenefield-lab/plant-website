@@ -27,7 +27,7 @@ import {
   ChevronRight, ChevronDown, MoreHorizontal, Plus,
   ImagePlus, X, Store, Gavel, Pencil, HelpCircle,
   AlertTriangle, GripVertical, Copy, StickyNote, ArrowUpDown,
-  LayoutList, LayoutGrid, Upload, Truck,
+  LayoutList, LayoutGrid, Upload, Truck, Loader2,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import PotSizePicker from "@/components/pot-size-picker";
@@ -192,7 +192,7 @@ export default function InventoryClient({
   isAdmin = false,
   showWelcome = false,
   stripeOnboarded = false,
-  planLimits = { listings: 10, auctions: 5, photos: 5 },
+  planLimits = { listings: null, auctions: 5, photos: 5 },
 }: {
   activeRows: Row[];
   archivedRows: Row[];
@@ -274,6 +274,20 @@ export default function InventoryClient({
   const [editWeightOz, setEditWeightOz] = useState("");
   const [editFreeShipping, setEditFreeShipping] = useState(false);
   const [dragPhotoIdx, setDragPhotoIdx] = useState<number | null>(null);
+
+  // Bulk selection
+  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
+  const [bulkPrice, setBulkPrice] = useState("");
+  const [bulkActing, setBulkActing] = useState(false);
+  const isNursery = planLimits.photos === 20;
+
+  function toggleRowSelect(rowId: string) {
+    setSelectedRows(prev => {
+      const next = new Set(prev);
+      if (next.has(rowId)) next.delete(rowId); else next.add(rowId);
+      return next;
+    });
+  }
 
   // Sold modal
   const [soldPrice, setSoldPrice] = useState("");
@@ -550,6 +564,28 @@ export default function InventoryClient({
     setSubmitting(false);
     toast.success("Listing updated.");
     setModal(null);
+    router.refresh();
+  }
+
+  async function handleBulkAction(action: "pause" | "resume" | "remove" | "price") {
+    // Collect listing IDs from selected inventory rows
+    const rows = activeRows.flatMap(r => r.id ? [r] : []).filter(r => selectedRows.has(r.id) && r.listing_id);
+    if (!rows.length) { toast.error("No selected rows have active listings"); return; }
+    const listingIds = rows.map(r => r.listing_id!);
+    const priceCents = action === "price" ? Math.round(parseFloat(bulkPrice) * 100) : undefined;
+    if (action === "price" && (!priceCents || priceCents <= 0)) { toast.error("Enter a valid price"); return; }
+    setBulkActing(true);
+    const res = await fetch("/api/listings/bulk-action", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ listingIds, action, priceCents }),
+    });
+    const data = await res.json();
+    setBulkActing(false);
+    if (!res.ok) { toast.error(data.error ?? "Action failed"); return; }
+    toast.success(`Updated ${data.updated} listing${data.updated === 1 ? "" : "s"}`);
+    setSelectedRows(new Set());
+    setBulkPrice("");
     router.refresh();
   }
 
@@ -948,9 +984,19 @@ export default function InventoryClient({
     return (
       <tr
         key={row.id}
-        className="border-t border-border/40 hover:bg-muted/20 transition-colors"
+        className={cn("border-t border-border/40 hover:bg-muted/20 transition-colors", selectedRows.has(row.id) && "bg-green-50/50 dark:bg-green-900/10")}
       >
-        <td className="py-2.5 pl-4 pr-1 text-sm font-medium max-w-[160px] truncate">{plantName}</td>
+        <td className="py-2.5 pl-3 pr-1 w-8">
+          {row.listing_id && (
+            <input
+              type="checkbox"
+              className="accent-green-700"
+              checked={selectedRows.has(row.id)}
+              onChange={() => toggleRowSelect(row.id)}
+            />
+          )}
+        </td>
+        <td className="py-2.5 pl-1 pr-1 text-sm font-medium max-w-[160px] truncate">{plantName}</td>
         <td className="px-2 py-2.5 text-sm text-muted-foreground max-w-[120px] truncate">{row.variety || "—"}</td>
         <td className="px-2 py-2.5 text-sm">
           {row.pot_size
@@ -1653,6 +1699,33 @@ export default function InventoryClient({
         )}
       </div>
 
+      {/* Bulk action bar */}
+      {selectedRows.size > 0 && (
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20 px-4 py-2.5">
+          <span className="text-sm font-medium text-green-800 dark:text-green-300 mr-1">{selectedRows.size} selected</span>
+          <button onClick={() => handleBulkAction("pause")} disabled={bulkActing} className="px-3 py-1 text-xs font-medium rounded-md border hover:bg-muted transition-colors disabled:opacity-50">Pause all</button>
+          <button onClick={() => handleBulkAction("resume")} disabled={bulkActing} className="px-3 py-1 text-xs font-medium rounded-md border hover:bg-muted transition-colors disabled:opacity-50">Resume all</button>
+          <button onClick={() => handleBulkAction("remove")} disabled={bulkActing} className="px-3 py-1 text-xs font-medium rounded-md border border-red-200 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50">Remove from shop</button>
+          {isNursery && (
+            <div className="flex items-center gap-1.5 ml-1">
+              <span className="text-xs text-muted-foreground">Set price:</span>
+              <input
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={bulkPrice}
+                onChange={e => setBulkPrice(e.target.value)}
+                placeholder="$0.00"
+                className="w-20 px-2 py-1 text-xs rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-green-600"
+              />
+              <button onClick={() => handleBulkAction("price")} disabled={bulkActing || !bulkPrice} className="px-3 py-1 text-xs font-medium rounded-md bg-green-700 text-white hover:bg-green-800 transition-colors disabled:opacity-50">Apply</button>
+            </div>
+          )}
+          {bulkActing && <Loader2 size={14} className="animate-spin text-muted-foreground" />}
+          <button onClick={() => setSelectedRows(new Set())} className="ml-auto text-xs text-muted-foreground hover:text-foreground">Clear</button>
+        </div>
+      )}
+
       {activeGroups.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">
           <p className="text-4xl mb-4">📦</p>
@@ -1666,7 +1739,18 @@ export default function InventoryClient({
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-muted/30">
-                <th className="py-2.5 pl-4 pr-1 text-left text-xs font-medium text-muted-foreground">Plant</th>
+                <th className="py-2.5 pl-3 pr-1 w-8">
+                  <input
+                    type="checkbox"
+                    className="accent-green-700"
+                    checked={activeGroups.flatMap(g => g.variants).filter(r => r.listing_id).every(r => selectedRows.has(r.id))}
+                    onChange={e => {
+                      const all = activeGroups.flatMap(g => g.variants).filter(r => r.listing_id).map(r => r.id);
+                      setSelectedRows(e.target.checked ? new Set(all) : new Set());
+                    }}
+                  />
+                </th>
+                <th className="py-2.5 pl-1 pr-1 text-left text-xs font-medium text-muted-foreground">Plant</th>
                 <th className="px-2 py-2.5 text-left text-xs font-medium text-muted-foreground">Variety</th>
                 <th className="px-2 py-2.5 text-left text-xs font-medium text-muted-foreground">Size</th>
                 <th className="px-2 py-2.5 text-left text-xs font-medium text-muted-foreground">Stock</th>
