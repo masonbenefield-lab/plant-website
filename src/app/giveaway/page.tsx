@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import type { Database } from "@/lib/supabase/types";
 import { EnterButton } from "./enter-button";
 import { SponsorRequestForm } from "./sponsor-request-form";
+import { ReferralCard } from "./referral-card";
 import { Gift, Users, Trophy } from "lucide-react";
 
 export default async function GiveawayPage() {
@@ -49,18 +50,30 @@ export default async function GiveawayPage() {
     : { data: [] as { id: string; username: string }[] };
   const winnerMap = Object.fromEntries((winnerProfiles ?? []).map((p) => [p.id, p.username]));
 
-  // Check if current user has already entered + has open sponsor request
+  // Check if current user has already entered + has open sponsor request + referral data
   let alreadyEntered = false;
   let hasOpenSponsorRequest = false;
+  let referralCode: string | null = null;
+  let bonusEntriesThisMonth = 0;
+
   if (user) {
-    const [{ data: entry }, { data: sponsorReq }] = await Promise.all([
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
+    const [{ data: entry }, { data: sponsorReq }, { data: profile }, { count: bonusCount }] = await Promise.all([
       giveaway
         ? supabase.from("giveaway_entries").select("id").eq("user_id", user.id).eq("month", month).single()
         : Promise.resolve({ data: null }),
       supabase.from("giveaway_sponsor_requests").select("id").eq("user_id", user.id).eq("status", "open").maybeSingle(),
+      admin.from("profiles").select("referral_code").eq("id", user.id).single(),
+      admin.from("referral_activations").select("id", { count: "exact", head: true })
+        .eq("referrer_id", user.id)
+        .gte("activated_at", monthStart),
     ]);
+
     alreadyEntered = !!entry;
     hasOpenSponsorRequest = !!sponsorReq;
+    referralCode = profile?.referral_code ?? null;
+    bonusEntriesThisMonth = bonusCount ?? 0;
   }
 
   const monthName = (m: string) => {
@@ -242,6 +255,21 @@ export default async function GiveawayPage() {
           </div>
         </div>
       )}
+      {/* Referral card */}
+      {user && referralCode ? (
+        <ReferralCard referralCode={referralCode} bonusEntries={bonusEntriesThisMonth} />
+      ) : !user ? (
+        <div className="rounded-2xl border border-dashed p-6 text-center space-y-2">
+          <p className="font-semibold flex items-center justify-center gap-2">
+            <Gift size={18} className="text-green-700" />
+            Get bonus entries
+          </p>
+          <p className="text-sm text-muted-foreground">
+            <Link href="/login" className="text-green-700 hover:underline font-medium">Sign in</Link> to get your referral link and earn extra entries.
+          </p>
+        </div>
+      ) : null}
+
       {/* Sponsor donation request */}
       {user ? (
         <SponsorRequestForm hasOpenRequest={hasOpenSponsorRequest} />

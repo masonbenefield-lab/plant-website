@@ -148,12 +148,26 @@ export function GardenForm({ mode, plant, initialValues }: GardenFormProps) {
       if (mode === "add") {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) { toast.error("Not signed in"); return; }
+
+        // Check if this is their first plant before inserting
+        const { count: existingCount } = await supabase
+          .from("garden_plants")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user.id);
+        const isFirstPlant = (existingCount ?? 0) === 0;
+
         const { data, error } = await supabase
           .from("garden_plants")
           .insert({ ...payload, user_id: user.id })
           .select("id")
           .single();
         if (error) { toast.error("Failed to add plant"); return; }
+
+        // Fire referral activation if this is their first plant
+        if (isFirstPlant) {
+          fetch("/api/garden/activate-referral", { method: "POST" }).catch(() => {});
+        }
+
         toast.success(`${name} added to your garden`);
         router.push(`/garden/${data.id}`);
         router.refresh();

@@ -254,12 +254,23 @@ export function ImportClient() {
       setProgress({ done: i + 1, total: drafts.length });
     }
 
+    // Check if this is their first plant before bulk import
+    const { count: existingCount } = await supabase
+      .from("garden_plants")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id);
+    const isFirstPlant = (existingCount ?? 0) === 0;
+
     const { error } = await supabase.from("garden_plants").insert(rows);
     setSubmitting(false);
 
     if (error) {
       toast.error("Import failed. Please try again.");
       return;
+    }
+
+    if (isFirstPlant) {
+      fetch("/api/garden/activate-referral", { method: "POST" }).catch(() => {});
     }
 
     toast.success(`${rows.length} plant${rows.length > 1 ? "s" : ""} added to your garden!`);

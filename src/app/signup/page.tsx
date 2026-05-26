@@ -20,6 +20,7 @@ export default function SignupPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const planParam = searchParams.get("plan") ?? "seedling";
+  const refParam = searchParams.get("ref") ?? null;
   const planInfo = PLAN_LABELS[planParam] ?? null;
 
   const [email, setEmail] = useState("");
@@ -50,7 +51,7 @@ export default function SignupPage() {
       password,
       options: {
         emailRedirectTo: `${window.location.origin}/auth/callback`,
-        data: { username, display_name: displayName.trim() || null, plan: planParam, email_marketing_opt_in: emailOptIn },
+        data: { username, display_name: displayName.trim() || null, plan: planParam, email_marketing_opt_in: emailOptIn, referral_code: refParam },
       },
     });
 

@@ -46,6 +46,9 @@ export interface Database {
           shipping_services: string[] | null;
           deleted_at: string | null;
           feed_last_seen_at: string | null;
+          referral_code: string | null;
+          referred_by: string | null;
+          total_referrals: number;
           created_at: string;
         };
         Insert: {
@@ -82,6 +85,9 @@ export interface Database {
           shipping_services?: string[] | null;
           deleted_at?: string | null;
           feed_last_seen_at?: string | null;
+          referral_code?: string | null;
+          referred_by?: string | null;
+          total_referrals?: number;
           created_at?: string;
         };
         Update: {
@@ -119,6 +125,9 @@ export interface Database {
           groundbreaker_number?: number | null;
           deleted_at?: string | null;
           feed_last_seen_at?: string | null;
+          referral_code?: string | null;
+          referred_by?: string | null;
+          total_referrals?: number;
         };
         Relationships: [];
       };
@@ -504,6 +513,28 @@ export interface Database {
         Update: Record<string, never>;
         Relationships: [];
       };
+      referral_activations: {
+        Row: {
+          id: string;
+          referrer_id: string;
+          referred_id: string;
+          activated_at: string;
+        };
+        Insert: {
+          id?: string;
+          referrer_id: string;
+          referred_id: string;
+          activated_at?: string;
+        };
+        Update: {
+          id?: string;
+          referrer_id?: string;
+          referred_id?: string;
+          activated_at?: string;
+        };
+        Relationships: [];
+      };
+
       giveaway_months: {
         Row: {
           month: string;

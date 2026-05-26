@@ -4,6 +4,11 @@ import { createClient as createAdmin } from "@supabase/supabase-js";
 import { GROUNDBREAKER_CAP } from "@/lib/plan-limits";
 import { sendWelcomeEmail } from "@/lib/email";
 
+function generateReferralCode(): string {
+  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+  return Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+}
+
 export async function POST() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -16,7 +21,7 @@ export async function POST() {
 
   const { data: profile } = await admin
     .from("profiles")
-    .select("groundbreaker, username")
+    .select("groundbreaker, username, referral_code")
     .eq("id", user.id)
     .single();
 
@@ -27,21 +32,49 @@ export async function POST() {
     sendWelcomeEmail({ email: user.email, username: profile.username }).catch(() => {});
   }
 
+  // Generate a unique referral code for this user
+  let referralCode = profile?.referral_code;
+  if (!referralCode) {
+    let attempts = 0;
+    while (attempts < 5) {
+      const candidate = generateReferralCode();
+      const { data: existing } = await admin
+        .from("profiles")
+        .select("id")
+        .eq("referral_code", candidate)
+        .maybeSingle();
+      if (!existing) { referralCode = candidate; break; }
+      attempts++;
+    }
+  }
+
+  // Wire up referrer if signup included a ref code
+  let referredBy: string | null = null;
+  const refCode = user.user_metadata?.referral_code as string | undefined;
+  if (refCode) {
+    const { data: referrer } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("referral_code", refCode)
+      .maybeSingle();
+    if (referrer && referrer.id !== user.id) referredBy = referrer.id;
+  }
+
   const { count } = await admin
     .from("profiles")
     .select("*", { count: "exact", head: true })
     .eq("groundbreaker", true);
 
+  const profileUpdate: Record<string, unknown> = { referral_code: referralCode };
+  if (referredBy) profileUpdate.referred_by = referredBy;
+
   if ((count ?? 0) < GROUNDBREAKER_CAP) {
-    await admin
-      .from("profiles")
-      .update({
-        groundbreaker: true,
-        groundbreaker_number: (count ?? 0) + 1,
-        plan: "nursery",
-      })
-      .eq("id", user.id);
+    profileUpdate.groundbreaker = true;
+    profileUpdate.groundbreaker_number = (count ?? 0) + 1;
+    profileUpdate.plan = "nursery";
   }
+
+  await admin.from("profiles").update(profileUpdate).eq("id", user.id);
 
   return NextResponse.json({ ok: true });
 }
