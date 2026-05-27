@@ -61,7 +61,7 @@ export default async function PublicGardenPage({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, username, display_name, avatar_url, bio, garden_public, stripe_onboarded, garden_bio, open_to_trades")
+    .select("id, username, display_name, avatar_url, garden_public, garden_bio, open_to_trades")
     .eq("username", username)
     .single();
 
@@ -111,11 +111,6 @@ export default async function PublicGardenPage({
           {profile.garden_bio && (
             <p className="text-sm text-green-800 dark:text-green-300 mt-1.5 leading-relaxed max-w-lg font-medium">
               {profile.garden_bio}
-            </p>
-          )}
-          {profile.bio && (
-            <p className="text-sm text-muted-foreground mt-1 leading-relaxed max-w-lg">
-              {profile.bio}
             </p>
           )}
           {profile.open_to_trades && (
