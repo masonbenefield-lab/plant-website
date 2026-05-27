@@ -14,6 +14,9 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Garden care reminder emails are disabled — intervals are for personal tracking only
+  return NextResponse.json({ sent: 0, disabled: true });
+
   const supabase = adminClient();
   const month = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" });
 
