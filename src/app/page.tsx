@@ -188,8 +188,7 @@ export default async function LandingPage() {
                 The marketplace<br className="hidden sm:block" /> for plant lovers
               </h1>
               <p className="text-base sm:text-lg text-green-100 mb-8 max-w-lg mx-auto lg:mx-0">
-                Buy, sell, and connect with nurseries and fellow plant enthusiasts.
-                Your plant community — all in one place.
+                Track your collection, connect with fellow growers, and buy or sell plants — all in one place.
               </p>
 
               {/* Dual CTA */}
@@ -206,7 +205,11 @@ export default async function LandingPage() {
               <p className="text-sm text-green-100/80 text-center lg:text-left">
                 or{" "}
                 <Link href="/auctions" className="font-medium text-white underline underline-offset-2 hover:text-green-200">
-                  browse live auctions →
+                  browse live auctions
+                </Link>
+                {" · "}
+                <Link href="/garden" className="font-medium text-white underline underline-offset-2 hover:text-green-200">
+                  start your garden log →
                 </Link>
               </p>
 
@@ -282,6 +285,78 @@ export default async function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* ── Garden log feature spotlight ──────────────────────────── */}
+      <section className="py-16 sm:py-20 px-4 bg-green-50 dark:bg-green-950/20">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-10">
+            <span className="inline-block bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 text-xs font-semibold uppercase tracking-widest px-4 py-1.5 rounded-full mb-4">
+              Free for everyone
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-bold mb-3">Your personal plant journal</h2>
+            <p className="text-muted-foreground max-w-xl mx-auto">
+              Log every plant you own, track care events, and watch your collection grow over time. No purchase needed — just sign up and start adding plants.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
+            {[
+              { icon: "📸", title: "Photo journal",     desc: "Add photos over time and watch your plants grow. Multiple images per plant." },
+              { icon: "🗓️", title: "Care schedule",     desc: "Set intervals for watering, fertilizing, repotting, and pruning." },
+              { icon: "📋", title: "Event log",         desc: "Record every care event with notes. Build a full history for each plant." },
+              { icon: "🌍", title: "Share your garden", desc: "Make your garden public and share the link. Others can browse your collection." },
+              { icon: "💚", title: "Wishlist",          desc: "Build a list of plants you're hunting for and share it with friends." },
+              { icon: "✅", title: "Verified origins",  desc: "Tag where a plant came from — if it's a Plantet seller, they can verify it publicly." },
+            ].map((f) => (
+              <div key={f.title} className="bg-card rounded-2xl border p-5 shadow-sm">
+                <span className="text-2xl mb-3 block">{f.icon}</span>
+                <p className="font-semibold mb-1">{f.title}</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
+              </div>
+            ))}
+          </div>
+          <div className="text-center">
+            <Link href="/signup" className={cn(buttonVariants({ size: "lg" }), "bg-green-700 hover:bg-green-800 text-white font-semibold px-10")}>
+              Start your garden log — it&apos;s free
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Garden showcase ──────────────────────────────────────── */}
+      {gardenShowcase.length > 0 && (
+        <section className="py-16 sm:py-20 px-4 bg-background">
+          <div className="max-w-5xl mx-auto">
+            <div className="text-center mb-10">
+              <span className="inline-block text-xs font-semibold uppercase tracking-widest text-green-700 bg-green-100 px-3 py-1 rounded-full mb-3">From the community</span>
+              <h2 className="text-2xl sm:text-3xl font-bold">See what people are growing</h2>
+              <p className="text-muted-foreground mt-2 max-w-md mx-auto text-sm">Plant lovers keeping a digital garden log — photos, care notes, and growth over time.</p>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {gardenShowcase.map((plant) => (
+                <Link key={plant.id} href={`/gardens/${plant.username}`} className="group relative aspect-square rounded-xl overflow-hidden bg-muted">
+                  <Image
+                    src={plant.image}
+                    alt={plant.name}
+                    fill
+                    className="object-cover transition-transform duration-300 group-hover:scale-105"
+                    sizes="(max-width: 640px) 50vw, 25vw"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                  <div className="absolute bottom-0 left-0 right-0 p-3">
+                    <p className="text-white text-sm font-semibold leading-tight truncate">{plant.name}</p>
+                    <p className="text-white/70 text-xs truncate">by {plant.username}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+            <div className="text-center mt-8">
+              <Link href="/garden" className={cn(buttonVariants({ variant: "outline" }), "gap-2")}>
+                🪴 Start your own garden log
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ── Live auctions ─────────────────────────────────────────── */}
       {liveAuctions && liveAuctions.length > 0 && (
@@ -476,42 +551,6 @@ export default async function LandingPage() {
           )}
         </div>
       </section>
-
-      {/* ── Garden showcase ──────────────────────────────────────── */}
-      {gardenShowcase.length > 0 && (
-        <section className="py-16 sm:py-20 px-4">
-          <div className="max-w-5xl mx-auto">
-            <div className="text-center mb-10">
-              <span className="inline-block text-xs font-semibold uppercase tracking-widest text-green-700 bg-green-100 px-3 py-1 rounded-full mb-3">From the community</span>
-              <h2 className="text-2xl sm:text-3xl font-bold">See what people are growing</h2>
-              <p className="text-muted-foreground mt-2 max-w-md mx-auto text-sm">Plant lovers keeping a digital garden log — photos, care notes, and growth over time.</p>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {gardenShowcase.map((plant) => (
-                <Link key={plant.id} href={`/gardens/${plant.username}`} className="group relative aspect-square rounded-xl overflow-hidden bg-muted">
-                  <Image
-                    src={plant.image}
-                    alt={plant.name}
-                    fill
-                    className="object-cover transition-transform duration-300 group-hover:scale-105"
-                    sizes="(max-width: 640px) 50vw, 25vw"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                  <div className="absolute bottom-0 left-0 right-0 p-3">
-                    <p className="text-white text-sm font-semibold leading-tight truncate">{plant.name}</p>
-                    <p className="text-white/70 text-xs truncate">by {plant.username}</p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-            <div className="text-center mt-8">
-              <Link href="/garden" className={cn(buttonVariants({ variant: "outline" }), "gap-2")}>
-                🪴 Start your own garden log
-              </Link>
-            </div>
-          </div>
-        </section>
-      )}
 
       {/* ── Transparent pricing ───────────────────────────────────── */}
       <section className="py-16 sm:py-20 px-4 bg-muted">
