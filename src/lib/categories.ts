@@ -4,10 +4,12 @@ export const PLANT_CATEGORIES = [
   "Orchids",
   "Carnivorous Plants",
   "Ferns & Mosses",
-  "Tropicals",
   "Herbs & Edibles",
   "Fruit Trees",
+  "Outdoor & Perennials",
   "Rare & Exotic",
+  "Seasonal",
+  "Garden Supplies",
   "Other",
 ] as const;
 

@@ -37,8 +37,9 @@ import { findProhibitedWord, censorWord, logViolation } from "@/lib/profanity";
 import type { PlanLimits } from "@/lib/plan-limits";
 
 const BASE_CATEGORIES = [
-  "Tropical", "Succulent", "Cactus", "Carnivorous", "Orchid",
-  "Fern", "Herb", "Rare", "Seasonal", "Other",
+  "Aroids", "Succulents & Cacti", "Orchids", "Carnivorous Plants",
+  "Ferns & Mosses", "Herbs & Edibles", "Fruit Trees", "Outdoor & Perennials",
+  "Rare & Exotic", "Seasonal", "Garden Supplies", "Other",
 ];
 const ADMIN_CATEGORIES = [...BASE_CATEGORIES, "Hidden"];
 
