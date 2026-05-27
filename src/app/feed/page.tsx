@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createAdminClient } from "@supabase/supabase-js";
+import type { Database } from "@/lib/supabase/types";
 import FeedUpdates from "@/components/feed-updates";
 import FeedList from "./feed-list";
 import { CareReminders } from "./care-reminders";
@@ -62,7 +64,11 @@ export default async function FeedPage() {
   const sellerMap = Object.fromEntries((sellers ?? []).map((s) => [s.id, s]));
 
   // ── Pending origin verification requests ────────────────────────────────
-  const { data: pendingOriginRequests } = await supabase
+  const feedAdmin = createAdminClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+  const { data: pendingOriginRequests } = await feedAdmin
     .from("plant_origin_requests")
     .select("id, plant_name, requester_username")
     .eq("verifier_user_id", user.id)
