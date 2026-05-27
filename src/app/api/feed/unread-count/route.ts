@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createAdminClient } from "@supabase/supabase-js";
+import type { Database } from "@/lib/supabase/types";
 import { NextResponse } from "next/server";
 
 export async function GET() {
@@ -29,6 +31,16 @@ export async function GET() {
     supabase.from("announcements").select("id", { count: "exact", head: true }).in("seller_id", sellerIds).gt("created_at", since),
   ]);
 
-  const hasNew = (l ?? 0) + (a ?? 0) + (g ?? 0) + (n ?? 0) > 0;
+  const admin = createAdminClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+  const { count: pendingOrigin } = await admin
+    .from("plant_origin_requests")
+    .select("id", { count: "exact", head: true })
+    .eq("verifier_user_id", user.id)
+    .eq("status", "pending");
+
+  const hasNew = (l ?? 0) + (a ?? 0) + (g ?? 0) + (n ?? 0) + (pendingOrigin ?? 0) > 0;
   return NextResponse.json({ hasNew });
 }

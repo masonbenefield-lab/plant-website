@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Loader2, CheckCircle2, X } from "lucide-react";
 import { toast } from "sonner";
 
@@ -46,7 +47,9 @@ export function OriginRequestCards({ initialRequests }: { initialRequests: Origi
         >
           <div className="flex-1 min-w-0">
             <p className="text-sm">
-              <span className="font-semibold">@{req.requester_username}</span>{" "}
+              <Link href={`/sellers/${req.requester_username}`} className="font-semibold hover:underline hover:text-green-700 transition-colors">
+                @{req.requester_username}
+              </Link>{" "}
               says they got a{" "}
               <span className="font-semibold">{req.plant_name}</span>{" "}
               from you — is that right?
