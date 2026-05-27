@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useTransition } from "react";
+import { useState, useRef, useTransition, useEffect } from "react";
 import { compressImage } from "@/lib/compress-image";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -123,6 +123,18 @@ export function GardenForm({ mode, plant, initialValues }: GardenFormProps) {
   function removePhoto(url: string) {
     setImages((prev) => prev.filter((u) => u !== url));
   }
+
+  // Auto-create origin request for existing plants that have from_user_id but no confirmed verification
+  useEffect(() => {
+    if (mode === "edit" && plant?.from_user_id && !plant?.origin_verified) {
+      fetch("/api/garden/origin-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plant_id: plant.id, verifier_user_id: plant.from_user_id }),
+      }).catch(() => {});
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function handleSourceNameChange(val: string) {
     setSourceName(val);
