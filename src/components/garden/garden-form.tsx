@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { X, Upload, Loader2 } from "lucide-react";
+import { X, Upload, Loader2, CheckCircle2 } from "lucide-react";
 import type { GardenPlantStatus } from "@/lib/supabase/types";
 
 const STATUS_OPTIONS: { value: GardenPlantStatus; label: string }[] = [
@@ -88,6 +88,11 @@ export function GardenForm({ mode, plant, initialValues }: GardenFormProps) {
   const [pruneInterval, setPruneInterval] = useState(plant?.prune_interval_days?.toString() ?? "");
   const [uploading, setUploading] = useState(false);
   const [shareToFeed, setShareToFeed] = useState(false);
+  const [resolvedUserId, setResolvedUserId] = useState<string | null>(plant?.from_user_id ?? null);
+  const [resolvedUsername, setResolvedUsername] = useState<string | null>(null);
+  const [checkingUser, setCheckingUser] = useState(false);
+  const [sourceNameTouched, setSourceNameTouched] = useState(false);
+  const userCheckRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   async function handlePhotoUpload(files: FileList) {
     if (images.length >= MAX_PHOTOS) {
@@ -117,6 +122,32 @@ export function GardenForm({ mode, plant, initialValues }: GardenFormProps) {
     setImages((prev) => prev.filter((u) => u !== url));
   }
 
+  function handleSourceNameChange(val: string) {
+    setSourceName(val);
+    setSourceNameTouched(true);
+    setResolvedUserId(null);
+    setResolvedUsername(null);
+    if (userCheckRef.current) clearTimeout(userCheckRef.current);
+    if (!val.trim() || val.trim().length < 2) return;
+    userCheckRef.current = setTimeout(async () => {
+      setCheckingUser(true);
+      try {
+        const res = await fetch(`/api/users/search?q=${encodeURIComponent(val.trim())}`);
+        const data = await res.json();
+        const exact = (data.users ?? []).find(
+          (u: { id: string; username: string }) =>
+            u.username.toLowerCase() === val.trim().toLowerCase()
+        );
+        if (exact) {
+          setResolvedUserId(exact.id);
+          setResolvedUsername(exact.username);
+        }
+      } finally {
+        setCheckingUser(false);
+      }
+    }, 600);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) {
@@ -126,6 +157,12 @@ export function GardenForm({ mode, plant, initialValues }: GardenFormProps) {
 
     startTransition(async () => {
       const supabase = createClient();
+
+      // from_user_id: include if user touched the field (to allow clearing too)
+      const fromUserIdPayload = sourceNameTouched
+        ? { from_user_id: resolvedUserId, ...(resolvedUserId ? { origin_verified: false } : {}) }
+        : {};
+
       const payload = {
         name: name.trim(),
         variety: variety.trim() || null,
@@ -143,6 +180,7 @@ export function GardenForm({ mode, plant, initialValues }: GardenFormProps) {
         fertilize_interval_days: fertilizeInterval ? parseInt(fertilizeInterval) : null,
         repot_interval_days: repotInterval ? parseInt(repotInterval) : null,
         prune_interval_days: pruneInterval ? parseInt(pruneInterval) : null,
+        ...fromUserIdPayload,
       };
 
       if (mode === "add") {
@@ -158,7 +196,7 @@ export function GardenForm({ mode, plant, initialValues }: GardenFormProps) {
 
         const { data, error } = await supabase
           .from("garden_plants")
-          .insert({ ...payload, user_id: user.id })
+          .insert({ ...payload, user_id: user.id, from_user_id: resolvedUserId })
           .select("id")
           .single();
         if (error) { toast.error("Failed to add plant"); return; }
@@ -166,6 +204,15 @@ export function GardenForm({ mode, plant, initialValues }: GardenFormProps) {
         // Fire referral activation if this is their first plant
         if (isFirstPlant) {
           fetch("/api/garden/activate-referral", { method: "POST" }).catch(() => {});
+        }
+
+        // Send origin verification request if a Plantet user was matched
+        if (resolvedUserId) {
+          fetch("/api/garden/origin-request", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ plant_id: data.id, verifier_user_id: resolvedUserId }),
+          }).catch(() => {});
         }
 
         toast.success(`${name} added to your garden`);
@@ -177,6 +224,16 @@ export function GardenForm({ mode, plant, initialValues }: GardenFormProps) {
           .update(payload)
           .eq("id", plant!.id);
         if (error) { toast.error("Failed to save changes"); return; }
+
+        // Send/reset origin verification request if source was changed and matched
+        if (sourceNameTouched && resolvedUserId) {
+          fetch("/api/garden/origin-request", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ plant_id: plant!.id, verifier_user_id: resolvedUserId }),
+          }).catch(() => {});
+        }
+
         toast.success("Changes saved");
         router.push(`/garden/${plant!.id}`);
         router.refresh();
@@ -302,11 +359,34 @@ export function GardenForm({ mode, plant, initialValues }: GardenFormProps) {
               ))}
             </SelectContent>
           </Select>
-          <Input
-            value={sourceName}
-            onChange={(e) => setSourceName(e.target.value)}
-            placeholder="Name / seller / friend"
-          />
+          <div className="space-y-1">
+            <Input
+              value={sourceName}
+              onChange={(e) => handleSourceNameChange(e.target.value)}
+              placeholder="Name / seller / friend"
+            />
+            {checkingUser && (
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <Loader2 size={11} className="animate-spin" /> Checking...
+              </p>
+            )}
+            {resolvedUsername && !checkingUser && (
+              <p className="text-xs text-green-700 flex items-center gap-1">
+                <CheckCircle2 size={11} />
+                @{resolvedUsername} is on Plantet — they&apos;ll be asked to confirm
+              </p>
+            )}
+            {mode === "edit" && !sourceNameTouched && plant?.from_user_id && !plant?.origin_verified && (
+              <p className="text-xs text-amber-600 flex items-center gap-1">
+                Waiting for confirmation from the seller
+              </p>
+            )}
+            {mode === "edit" && !sourceNameTouched && plant?.origin_verified && (
+              <p className="text-xs text-green-700 flex items-center gap-1">
+                <CheckCircle2 size={11} /> Verified
+              </p>
+            )}
+          </div>
         </div>
       </div>
 

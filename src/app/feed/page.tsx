@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import FollowButton from "@/components/follow-button";
 import { FeedExplainer } from "@/components/feed-explainer";
 import { FeedMarkSeen } from "./feed-mark-seen";
+import { OriginRequestCards } from "@/components/garden/origin-request-card";
 
 export default async function FeedPage() {
   const supabase = await createClient();
@@ -59,6 +60,14 @@ export default async function FeedPage() {
     : [{ data: [] }, { data: [] }, { data: [] }, { data: [] }, { data: [] }];
 
   const sellerMap = Object.fromEntries((sellers ?? []).map((s) => [s.id, s]));
+
+  // ── Pending origin verification requests ────────────────────────────────
+  const { data: pendingOriginRequests } = await supabase
+    .from("plant_origin_requests")
+    .select("id, plant_name, requester_username")
+    .eq("verifier_user_id", user.id)
+    .eq("status", "pending")
+    .order("created_at", { ascending: false });
 
   // ── Today's care reminders ──────────────────────────────────────────────
   const { data: gardenPlants } = await supabase
@@ -235,6 +244,9 @@ export default async function FeedPage() {
   return (
     <div className="max-w-3xl mx-auto px-4 py-10">
       <FeedMarkSeen />
+      {pendingOriginRequests && pendingOriginRequests.length > 0 && (
+        <OriginRequestCards initialRequests={pendingOriginRequests} />
+      )}
       <FeedUpdates sellerIds={sellerIds} />
       {careItems.length > 0 && <CareReminders items={careItems} />}
       <h1 className="text-2xl font-bold mb-2">Feed</h1>

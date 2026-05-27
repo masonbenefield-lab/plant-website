@@ -850,6 +850,8 @@ export interface Database {
           is_public: boolean;
           pin_order: number | null;
           shared_at: string | null;
+          from_user_id: string | null;
+          origin_verified: boolean;
           created_at: string;
         };
         Insert: {
@@ -873,6 +875,8 @@ export interface Database {
           is_public?: boolean;
           pin_order?: number | null;
           shared_at?: string | null;
+          from_user_id?: string | null;
+          origin_verified?: boolean;
           created_at?: string;
         };
         Update: {
@@ -894,6 +898,35 @@ export interface Database {
           is_public?: boolean;
           pin_order?: number | null;
           shared_at?: string | null;
+          from_user_id?: string | null;
+          origin_verified?: boolean;
+        };
+        Relationships: [];
+      };
+
+      plant_origin_requests: {
+        Row: {
+          id: string;
+          plant_id: string;
+          requester_id: string;
+          verifier_user_id: string;
+          plant_name: string;
+          requester_username: string;
+          status: "pending" | "confirmed" | "denied";
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          plant_id: string;
+          requester_id: string;
+          verifier_user_id: string;
+          plant_name: string;
+          requester_username: string;
+          status?: "pending" | "confirmed" | "denied";
+          created_at?: string;
+        };
+        Update: {
+          status?: "pending" | "confirmed" | "denied";
         };
         Relationships: [];
       };

@@ -48,7 +48,7 @@ export default async function GardenPlantDetailPage({
 
   const { id } = await params;
 
-  const [{ data: plant }, { data: events }, { data: profile }] = await Promise.all([
+  const [{ data: plant }, { data: events }, { data: profile }, { data: originRequest }] = await Promise.all([
     supabase
       .from("garden_plants")
       .select("*")
@@ -66,6 +66,13 @@ export default async function GardenPlantDetailPage({
       .select("garden_public, username")
       .eq("id", user.id)
       .single(),
+    supabase
+      .from("plant_origin_requests")
+      .select("id, status, requester_username")
+      .eq("plant_id", id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
 
   if (!plant) notFound();
@@ -186,7 +193,18 @@ export default async function GardenPlantDetailPage({
                 />
               )}
               {plant.source_name && (
-                <DetailRow label="From" value={plant.source_name} />
+                <div className="flex justify-between gap-3 text-sm">
+                  <span className="text-muted-foreground shrink-0">From</span>
+                  <span className="font-medium text-right flex items-center gap-1">
+                    {plant.source_name}
+                    {plant.origin_verified && (
+                      <span className="text-xs text-green-700 font-normal ml-1">✓ verified</span>
+                    )}
+                    {!plant.origin_verified && originRequest?.status === "pending" && (
+                      <span className="text-xs text-amber-600 font-normal ml-1">pending confirmation</span>
+                    )}
+                  </span>
+                </div>
               )}
               <DetailRow
                 label="Added"

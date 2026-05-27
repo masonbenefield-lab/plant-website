@@ -120,13 +120,24 @@ export default async function PublicPlantDetailPage({
 
   const { data: plant } = await admin
     .from("garden_plants")
-    .select("id, name, variety, status, location, planted_at, source_type, source_name, images, public_notes")
+    .select("id, name, variety, status, location, planted_at, source_type, source_name, images, public_notes, from_user_id, origin_verified")
     .eq("id", id)
     .eq("user_id", profile.id)
     .or("is_public.eq.true,is_public.is.null")
     .single();
 
   if (!plant) notFound();
+
+  // Look up verified source username if applicable
+  let verifiedSourceUsername: string | null = null;
+  if (plant.origin_verified && plant.from_user_id) {
+    const { data: sourceProfile } = await admin
+      .from("profiles")
+      .select("username")
+      .eq("id", plant.from_user_id)
+      .single();
+    verifiedSourceUsername = sourceProfile?.username ?? null;
+  }
 
   const status = plant.status as GardenPlantStatus;
   const rawName = profile.display_name || profile.username;
@@ -198,8 +209,19 @@ export default async function PublicPlantDetailPage({
                   value={SOURCE_TYPE_LABEL[plant.source_type] ?? plant.source_type}
                 />
               )}
-              {plant.source_name && (
-                <DetailRow label="From" value={plant.source_name} />
+              {verifiedSourceUsername && (
+                <div className="flex justify-between gap-3 text-sm">
+                  <span className="text-muted-foreground shrink-0">From</span>
+                  <Link
+                    href={`/sellers/${verifiedSourceUsername}`}
+                    className="font-medium text-green-700 hover:underline flex items-center gap-1"
+                  >
+                    @{verifiedSourceUsername}
+                    <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5 text-green-600" aria-label="Verified">
+                      <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </Link>
+                </div>
               )}
             </CardContent>
           </Card>
