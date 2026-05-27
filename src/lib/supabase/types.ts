@@ -50,6 +50,7 @@ export interface Database {
           referred_by: string | null;
           total_referrals: number;
           country: string | null;
+          wishlist_public: boolean;
           created_at: string;
         };
         Insert: {
@@ -90,6 +91,7 @@ export interface Database {
           referred_by?: string | null;
           total_referrals?: number;
           country?: string | null;
+          wishlist_public?: boolean;
           created_at?: string;
         };
         Update: {
@@ -131,6 +133,7 @@ export interface Database {
           referred_by?: string | null;
           total_referrals?: number;
           country?: string | null;
+          wishlist_public?: boolean;
         };
         Relationships: [];
       };
