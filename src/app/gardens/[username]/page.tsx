@@ -1,29 +1,12 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
-import { Card, CardContent } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
-import { Sprout, Store, ArrowLeftRight, MessageSquare } from "lucide-react";
+import { ArrowLeftRight, MessageSquare, Store } from "lucide-react";
 import type { Metadata } from "next";
-import type { GardenPlantStatus, Database } from "@/lib/supabase/types";
-
-const STATUS_LABEL: Record<GardenPlantStatus, string> = {
-  thriving: "Thriving",
-  growing: "Growing",
-  dormant: "Dormant",
-  struggling: "Struggling",
-  dead: "Dead",
-};
-
-const STATUS_COLOR: Record<GardenPlantStatus, string> = {
-  thriving: "bg-green-100 text-green-700",
-  growing: "bg-emerald-100 text-emerald-700",
-  dormant: "bg-yellow-100 text-yellow-700",
-  struggling: "bg-orange-100 text-orange-700",
-  dead: "bg-gray-100 text-gray-500",
-};
+import type { Database } from "@/lib/supabase/types";
+import { GardenPublicGrid } from "@/components/garden/garden-public-grid";
+import type { GardenPlantStatus } from "@/lib/supabase/types";
 
 export async function generateMetadata({
   params,
@@ -151,71 +134,17 @@ export default async function PublicGardenPage({
           )}
         </div>
         <div className="flex flex-col gap-2 shrink-0">
-          {profile.stripe_onboarded && (
-            <Link
-              href={`/sellers/${profile.username}`}
-              className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-full border border-green-300 bg-green-50 text-green-700 hover:bg-green-100 transition-colors font-medium"
-            >
-              <Store size={14} />
-              Visit shop
-            </Link>
-          )}
+          <Link
+            href={`/sellers/${profile.username}`}
+            className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-full border border-green-300 bg-green-50 text-green-700 hover:bg-green-100 transition-colors font-medium"
+          >
+            <Store size={14} />
+            Visit shop
+          </Link>
         </div>
       </div>
 
-      {total === 0 ? (
-        <Card>
-          <CardContent className="py-16 text-center space-y-3">
-            <Sprout className="mx-auto text-muted-foreground" size={36} />
-            <p className="font-medium">No plants added yet</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-5">
-          {plants!.map((plant) => (
-            <Link key={plant.id} href={`/gardens/${username}/${plant.id}`}>
-              <Card className="overflow-hidden h-full hover:shadow-md transition-shadow group">
-                <div className="aspect-[4/3] relative bg-muted">
-                  {plant.images?.[0] ? (
-                    <Image
-                      src={plant.images[0]}
-                      alt={plant.name}
-                      fill
-                      className="object-cover group-hover:scale-[1.02] transition-transform duration-300"
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center h-full text-5xl">🪴</div>
-                  )}
-                </div>
-                <CardContent className="p-4 space-y-1.5">
-                  <p className="font-semibold leading-tight">{plant.variety || plant.name}</p>
-                  {plant.variety && (
-                    <p className="text-sm text-muted-foreground leading-tight">{plant.name}</p>
-                  )}
-                  <div className="flex items-center gap-2 flex-wrap pt-0.5">
-                    <span className={cn("text-xs px-2 py-0.5 rounded-full font-medium", STATUS_COLOR[plant.status as GardenPlantStatus])}>
-                      {STATUS_LABEL[plant.status as GardenPlantStatus]}
-                    </span>
-                    {plant.location && (
-                      <span className="text-xs text-muted-foreground truncate">{plant.location}</span>
-                    )}
-                  </div>
-                  {plant.planted_at && (
-                    <p className="text-xs text-muted-foreground">
-                      Planted {new Date(plant.planted_at).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
-                    </p>
-                  )}
-                  {(plant as { public_notes?: string | null }).public_notes && (
-                    <p className="text-sm text-muted-foreground leading-snug line-clamp-2 pt-1 border-t">
-                      {(plant as { public_notes?: string | null }).public_notes}
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
-      )}
+      <GardenPublicGrid plants={(plants ?? []).map((p) => ({ ...p, images: p.images as string[] | null }))} username={username} />
 
       <p className="text-center text-xs text-muted-foreground pt-4">
         Shared on{" "}
