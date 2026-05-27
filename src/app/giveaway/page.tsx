@@ -55,6 +55,7 @@ export default async function GiveawayPage() {
   let hasOpenSponsorRequest = false;
   let referralCode: string | null = null;
   let bonusEntriesThisMonth = 0;
+  let userCountry: string | null = null;
 
   if (user) {
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
@@ -64,7 +65,7 @@ export default async function GiveawayPage() {
         ? supabase.from("giveaway_entries").select("id").eq("user_id", user.id).eq("month", month).single()
         : Promise.resolve({ data: null }),
       supabase.from("giveaway_sponsor_requests").select("id").eq("user_id", user.id).eq("status", "open").maybeSingle(),
-      admin.from("profiles").select("referral_code").eq("id", user.id).single(),
+      admin.from("profiles").select("referral_code, country").eq("id", user.id).single(),
       admin.from("referral_activations").select("id", { count: "exact", head: true })
         .eq("referrer_id", user.id)
         .gte("activated_at", monthStart),
@@ -73,6 +74,7 @@ export default async function GiveawayPage() {
     alreadyEntered = !!entry;
     hasOpenSponsorRequest = !!sponsorReq;
     bonusEntriesThisMonth = bonusCount ?? 0;
+    userCountry = profile?.country ?? null;
 
     // Backfill referral code for existing users who signed up before this feature
     if (profile?.referral_code) {
@@ -175,7 +177,7 @@ export default async function GiveawayPage() {
                     </p>
                   </div>
                 ) : (
-                  <EnterButton monthLabel={monthLabel} initialEntered={alreadyEntered} referralCode={referralCode} />
+                  <EnterButton monthLabel={monthLabel} initialEntered={alreadyEntered} referralCode={referralCode} userCountry={userCountry} />
                 )}
               </div>
             </div>

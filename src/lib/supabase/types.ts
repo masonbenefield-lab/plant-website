@@ -49,6 +49,7 @@ export interface Database {
           referral_code: string | null;
           referred_by: string | null;
           total_referrals: number;
+          country: string | null;
           created_at: string;
         };
         Insert: {
@@ -88,6 +89,7 @@ export interface Database {
           referral_code?: string | null;
           referred_by?: string | null;
           total_referrals?: number;
+          country?: string | null;
           created_at?: string;
         };
         Update: {
@@ -128,6 +130,7 @@ export interface Database {
           referral_code?: string | null;
           referred_by?: string | null;
           total_referrals?: number;
+          country?: string | null;
         };
         Relationships: [];
       };
