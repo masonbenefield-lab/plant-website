@@ -55,6 +55,8 @@ interface GardenFormProps {
     fertilize_interval_days: number | null;
     repot_interval_days: number | null;
     prune_interval_days: number | null;
+    from_user_id: string | null;
+    origin_verified: boolean;
   };
   initialValues?: {
     name?: string;
