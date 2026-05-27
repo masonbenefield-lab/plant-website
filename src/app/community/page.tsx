@@ -143,9 +143,9 @@ export default async function CommunityPage({
         {!isSavedView && (
           <>
             <FilterChip href={buildHref({ sort: validSort, q: searchQuery })} label="All" active={!validType} />
-            <FilterChip href={buildHref({ type: "help", sort: validSort, q: searchQuery })} label="Help Requests" active={validType === "help"} />
-            <FilterChip href={buildHref({ type: "show_and_tell", sort: validSort, q: searchQuery })} label="Show & Tell" active={validType === "show_and_tell"} />
-            <FilterChip href={buildHref({ type: "discussion", sort: validSort, q: searchQuery })} label="Discussions" active={validType === "discussion"} />
+            <FilterChip href={buildHref({ type: "help", sort: validSort, q: searchQuery })} label="Help Requests" active={validType === "help"} title="Ask for advice, plant ID, or troubleshooting help" />
+            <FilterChip href={buildHref({ type: "show_and_tell", sort: validSort, q: searchQuery })} label="Show & Tell" active={validType === "show_and_tell"} title="Share a plant, growth update, or proud moment" />
+            <FilterChip href={buildHref({ type: "discussion", sort: validSort, q: searchQuery })} label="Discussions" active={validType === "discussion"} title="Open-ended conversations about care, species, or anything plant-related" />
           </>
         )}
       </div>
@@ -257,13 +257,14 @@ export default async function CommunityPage({
 }
 
 function FilterChip({
-  href, label, active, small, icon,
+  href, label, active, small, icon, title,
 }: {
-  href: string; label: string; active: boolean; small?: boolean; icon?: React.ReactNode;
+  href: string; label: string; active: boolean; small?: boolean; icon?: React.ReactNode; title?: string;
 }) {
   return (
     <Link
       href={href}
+      title={title}
       className={cn(
         "rounded-full font-medium transition-colors border flex items-center gap-1",
         small ? "px-2.5 py-1 text-xs" : "px-3 py-1.5 text-sm",

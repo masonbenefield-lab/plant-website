@@ -77,7 +77,19 @@ export default async function DashboardListingsPage({
       <p className="text-sm text-muted-foreground mb-6">To create a new listing, open an inventory item and click "List in Shop".</p>
 
       {!listings?.length ? (
-        <p className="text-muted-foreground">No listings yet.</p>
+        <div className="flex flex-col items-center justify-center text-center py-16 px-4 rounded-lg border border-dashed">
+          <div className="text-4xl mb-3">🌿</div>
+          <h2 className="text-lg font-semibold mb-1">No listings yet</h2>
+          <p className="text-sm text-muted-foreground max-w-sm mb-5">
+            Listings are created from your Inventory page. Open any inventory item and click <strong>List in Shop</strong> to set a price and make it visible to buyers.
+          </p>
+          <Link
+            href="/dashboard/inventory"
+            className="inline-flex items-center justify-center rounded-md bg-green-700 hover:bg-green-800 text-white px-4 py-2 text-sm font-medium transition-colors"
+          >
+            Go to Inventory →
+          </Link>
+        </div>
       ) : (
         <div className="space-y-3">
           {listings.map((listing) => (

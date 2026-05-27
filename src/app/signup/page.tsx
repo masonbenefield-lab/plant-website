@@ -195,7 +195,7 @@ export default function SignupPage() {
                 className="mt-0.5 accent-green-700"
               />
               <span>
-                Send me a weekly plant digest — new arrivals, hot auctions, and picks from shops I follow. Unsubscribe anytime.
+                Send me the weekly plant digest — new arrivals, hot auctions, and picks from shops I follow. Delivered every Sunday. Unsubscribe anytime.
               </span>
             </label>
             <Button type="submit" className="w-full bg-green-700 hover:bg-green-800" disabled={loading || !ageConfirmed}>

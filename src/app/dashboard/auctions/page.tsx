@@ -68,7 +68,19 @@ export default async function DashboardAuctionsPage({
       <p className="text-sm text-muted-foreground mb-6">To create a new auction, open an inventory item and click "Auction".</p>
 
       {!auctions?.length ? (
-        <p className="text-muted-foreground">No auctions yet.</p>
+        <div className="flex flex-col items-center justify-center text-center py-16 px-4 rounded-lg border border-dashed">
+          <div className="text-4xl mb-3">🔨</div>
+          <h2 className="text-lg font-semibold mb-1">No auctions yet</h2>
+          <p className="text-sm text-muted-foreground max-w-sm mb-5">
+            Auctions are created from your Inventory page. Open any inventory item and click <strong>Auction</strong> to set a starting bid, optional Buy Now price, and an end time.
+          </p>
+          <Link
+            href="/dashboard/inventory"
+            className="inline-flex items-center justify-center rounded-md bg-green-700 hover:bg-green-800 text-white px-4 py-2 text-sm font-medium transition-colors"
+          >
+            Go to Inventory →
+          </Link>
+        </div>
       ) : (
         <div className="space-y-3">
           {auctions.map((auction) => (

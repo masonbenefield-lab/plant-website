@@ -125,9 +125,14 @@ export default async function GardenPage({
               {status ? `No ${STATUS_LABEL[status as GardenPlantStatus]?.toLowerCase()} plants` : "Your garden is empty"}
             </p>
             {!status && (
-              <p className="text-muted-foreground text-sm">
-                Track your plants, care routines, and growth over time.
-              </p>
+              <div className="space-y-2 max-w-sm mx-auto">
+                <p className="text-muted-foreground text-sm">
+                  My Garden is your personal plant journal — track every plant you own, log care events (watering, fertilizing, repotting), and monitor each plant&apos;s health over time.
+                </p>
+                <p className="text-muted-foreground text-sm">
+                  You can make your garden public so followers can browse your collection on your storefront, and optionally share new additions to your followers&apos; feeds.
+                </p>
+              </div>
             )}
             {!status && (
               <Link href="/garden/new" className={cn(buttonVariants(), "bg-green-700 hover:bg-green-800 mt-2")}>

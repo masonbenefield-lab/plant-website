@@ -959,3 +959,90 @@ CREATE POLICY "Users manage own blocks" ON blocks
 - src/app/feed/page.tsx (FeedMarkSeen on load)
 - src/components/garden/share-plant-button.tsx (24-hour reshare warning dialog)
 - src/lib/supabase/types.ts (feed_last_seen_at added to profiles)
+
+---
+
+## 2026-05-26 — Giveaway referral system, pricing audit, bulk listing tools, UX improvements
+
+### Features built
+
+#### Giveaway: Donation request management
+- **Close button on donation requests** — Admin can close a request without replying. Calls `/api/admin/sponsor-request-close` (service role write).
+- **"Submit another request" button** — After a user submits a donation request, the confirmation screen now has a button to reset and submit a new one.
+- **Donation Requests tab** — Admin giveaway page reorganized into two tabs: "Monthly Sponsors" and "Donation Requests". Requests tab shows open/closed filter. Green badge on tab shows count of open requests.
+- **Auto-delete closed requests** — New cron job (`/api/cron/cleanup-sponsor-requests`, daily at 3am UTC) deletes closed donation requests older than 30 days.
+
+#### Giveaway: Referral system
+- **Referral codes** — Each user gets a unique 8-char alphanumeric code generated on signup (or backfilled on first giveaway page visit for existing users). Stored as `referral_code` on profiles.
+- **Referred_by tracking** — Signup page reads `?ref=` URL param. `claim-groundbreaker` route looks up the referrer and stores `referred_by` on the new user's profile.
+- **Activation on first plant** — Referral only counts when the referred user adds their first plant to their garden. `garden-form.tsx` and `import-client.tsx` call `/api/garden/activate-referral` on first plant add. Idempotent via `UNIQUE(referred_id)` constraint.
+- **`total_referrals` counter** — Profiles have a `total_referrals` integer column incremented on each successful activation. Useful for marketing analytics.
+- **Referral card on giveaway page** — Logged-in users see their shareable referral link with a copy button. Shows "+N bonus entries this month" badge when they have active referrals.
+- **Post-entry nudge** — After entering the giveaway, the enter button area shows a referral card with specific language: "Every friend who signs up and adds at least one plant to their Plantet garden earns you +1 extra entry."
+- **Weighted winner picker** — Admin giveaway page has a "Draw Winner" button per month. Builds a weighted pool (1 base + referral activations per user), Fisher-Yates shuffle, picks 1 winner + 5 backups. Shows results with username, bonus entries, and total pool weight. "Confirm Winner" saves to DB.
+- **Next month teaser** — Giveaway page shows the next month's plant in the Coming Soon section, including sponsor name, if one has been set in admin.
+- **Bonus entries count** — Giveaway page fetches `referral_activations` for the current month per user and passes to ReferralCard and EnterButton.
+
+#### Pricing audit
+- **Unlimited listings for all plans** — Removed listing limits from all three plans (Seedling, Grower, Nursery). All plans now show "Unlimited listings." Pricing page FAQ updated accordingly.
+- **Photo limits enforced in UI** — Inventory edit modal now blocks adding photos past the plan limit (5/10/20). Photo button hidden at limit; label shows count `(3/5)`. Upload error replaced with upgrade toast.
+
+#### Bulk listing tools
+- **Bulk select in flat/table inventory view** — Checkboxes appear on rows that have an active listing. Select-all checkbox in table header.
+- **Bulk action bar** — Appears above the table when rows are selected. Actions: Pause, Resume, Remove from Shop, Update Price (Nursery plan only).
+- **`/api/listings/bulk-action` route** — POST endpoint accepts `{ listingIds, action, priceCents? }`. Verifies all listings belong to the authenticated seller. Actions: pause → status="paused", resume → status="active", remove → pause + clear inventory.listing_id, price → update price_cents.
+
+#### UX improvements (audit fixes)
+- **Listings dashboard empty state** — Replaced bare "No listings yet." with an illustrated empty state (🌿 emoji, explanation that listings come from Inventory, "Go to Inventory →" green button).
+- **Auctions dashboard empty state** — Replaced bare "No auctions yet." with illustrated empty state (🔨 emoji, explanation that auctions come from Inventory, "Go to Inventory →" green button).
+- **"How auctions work" collapsible** — Added a collapsible info panel above the bid card on every auction detail page. Collapsed by default. Explains: minimum bid, Buy Now, sniping protection (2-minute extension), no-bid outcome, and what to do when you win.
+
+### SQL migrations required
+Run in Supabase SQL editor:
+```sql
+-- Referral system
+ALTER TABLE profiles
+  ADD COLUMN IF NOT EXISTS referral_code text UNIQUE,
+  ADD COLUMN IF NOT EXISTS referred_by text,
+  ADD COLUMN IF NOT EXISTS total_referrals integer NOT NULL DEFAULT 0;
+
+CREATE TABLE IF NOT EXISTS referral_activations (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  referrer_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  referred_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  activated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE(referred_id)
+);
+ALTER TABLE referral_activations ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Service role only" ON referral_activations FOR ALL USING (false);
+```
+
+### Files created
+- `src/app/api/admin/sponsor-request-close/route.ts`
+- `src/app/api/cron/cleanup-sponsor-requests/route.ts`
+- `src/app/api/admin/giveaway-pick-winner/route.ts`
+- `src/app/api/admin/giveaway-save-winner/route.ts`
+- `src/app/api/garden/activate-referral/route.ts`
+- `src/app/api/listings/bulk-action/route.ts`
+- `src/app/giveaway/referral-card.tsx`
+- `src/app/admin/giveaway/giveaway-admin-tabs.tsx`
+
+### Files modified
+- `src/lib/plan-limits.ts` — listings set to null (unlimited) for all plans
+- `src/lib/supabase/types.ts` — referral_code, referred_by, total_referrals on profiles; referral_activations table
+- `src/app/signup/page.tsx` — reads ?ref= param, passes referral_code in signup metadata
+- `src/app/api/auth/claim-groundbreaker/route.ts` — generates referral code, stores referred_by
+- `src/components/garden/garden-form.tsx` — first-plant detection, activate-referral call
+- `src/components/garden/import-client.tsx` — same first-plant check for bulk import
+- `src/app/giveaway/page.tsx` — referral code backfill, bonus entries fetch, next month teaser, ReferralCard
+- `src/app/giveaway/enter-button.tsx` — post-entry referral nudge with plant-add requirement language
+- `src/app/giveaway/sponsor-request-form.tsx` — "Submit another request" button
+- `src/app/admin/giveaway/giveaway-admin-client.tsx` — WinnerPicker component
+- `src/app/admin/giveaway/sponsor-requests-panel.tsx` — CloseButton component
+- `src/app/admin/giveaway/page.tsx` — delegates to GiveawayAdminTabs
+- `src/app/pricing/page.tsx` — unlimited listings copy, FAQ update
+- `src/app/dashboard/inventory/inventory-client.tsx` — photo limit enforcement, bulk select/action bar
+- `src/app/dashboard/listings/page.tsx` — illustrated empty state
+- `src/app/dashboard/auctions/page.tsx` — illustrated empty state
+- `src/app/auctions/[id]/auction-bid-panel.tsx` — "How auctions work" collapsible
+- `vercel.json` — added cleanup-sponsor-requests cron

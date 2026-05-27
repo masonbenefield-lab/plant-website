@@ -248,7 +248,10 @@ export default async function ShopPage({
                         by {seller.username}
                       </Link>
                       {topSellerSet.has(listing.seller_id) && (
-                        <span className="text-xs font-semibold text-amber-700 bg-amber-100 dark:bg-amber-900/40 dark:text-amber-400 px-1.5 py-0.5 rounded-full">
+                        <span
+                          title="This seller has 10+ reviews with a 4.5★ or higher average"
+                          className="text-xs font-semibold text-amber-700 bg-amber-100 dark:bg-amber-900/40 dark:text-amber-400 px-1.5 py-0.5 rounded-full cursor-help"
+                        >
                           ⭐ Top Seller
                         </span>
                       )}

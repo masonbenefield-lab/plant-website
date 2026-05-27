@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { centsToDisplay, dollarsToCents } from "@/lib/stripe";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import type { AuctionStatus } from "@/lib/supabase/types";
 
 interface AuctionData {
@@ -51,6 +52,7 @@ export default function AuctionBidPanel({
   const [showAllBids, setShowAllBids] = useState(false);
   const [allBids, setAllBids] = useState<Bid[]>([]);
   const [loadingAllBids, setLoadingAllBids] = useState(false);
+  const [showHowItWorks, setShowHowItWorks] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
@@ -204,6 +206,27 @@ export default function AuctionBidPanel({
 
   return (
     <div className="space-y-4">
+      {/* How auctions work — collapsible info */}
+      <div className="rounded-md border text-sm overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setShowHowItWorks((v) => !v)}
+          className="w-full flex items-center justify-between px-3 py-2.5 text-left text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+        >
+          <span className="font-medium text-foreground">How auctions work</span>
+          {showHowItWorks ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+        </button>
+        {showHowItWorks && (
+          <div className="px-3 pb-3 pt-1 space-y-2 text-muted-foreground border-t bg-muted/30">
+            <p><strong className="text-foreground">Place a bid</strong> — enter any amount above the current bid. The highest bidder when the timer hits zero wins.</p>
+            <p><strong className="text-foreground">Buy Now</strong> — if the seller set a Buy Now price, you can skip bidding and purchase immediately at that price.</p>
+            <p><strong className="text-foreground">Sniping protection</strong> — bids placed in the last 2 minutes extend the auction by 2 minutes, giving everyone a fair chance.</p>
+            <p><strong className="text-foreground">No bids = no charge</strong> — if the auction ends with no bids, nothing happens. No payment, no obligation.</p>
+            <p><strong className="text-foreground">Winning</strong> — if you win, you&apos;ll see a &quot;Complete Purchase&quot; button to check out with your shipping address.</p>
+          </div>
+        )}
+      </div>
+
       {!connected && (
         <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
           Connection interrupted — live updates paused. Bids may not reflect the latest state.
