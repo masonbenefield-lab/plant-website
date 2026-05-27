@@ -43,17 +43,21 @@ export async function generateMetadata({
   const displayName = rawName?.endsWith("s") ? `${rawName}'` : `${rawName}'s`;
   const title = `${displayName} Plant Wishlist · Plantet`;
 
+  const description = `See which plants ${displayName} wants to grow next on Plantet.`;
+
   return {
     title,
-    description: `See which plants ${displayName} wants to grow next on Plantet.`,
+    description,
     openGraph: {
       title,
-      description: `See which plants ${displayName} wants to grow next on Plantet.`,
+      description,
       ...(profile.avatar_url && { images: [{ url: profile.avatar_url, width: 400, height: 400 }] }),
+      type: "profile",
     },
     twitter: {
       card: "summary",
       title,
+      description,
       ...(profile.avatar_url && { images: [profile.avatar_url] }),
     },
   };
