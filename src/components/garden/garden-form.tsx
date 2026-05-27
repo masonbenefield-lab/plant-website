@@ -375,7 +375,7 @@ export function GardenForm({ mode, plant, initialValues }: GardenFormProps) {
             {resolvedUsername && !checkingUser && (
               <p className="text-xs text-green-700 flex items-center gap-1">
                 <CheckCircle2 size={11} />
-                @{resolvedUsername} is on Plantet — they&apos;ll be asked to confirm
+                @{resolvedUsername}{" "}is on Plantet — they&apos;ll be asked to confirm
               </p>
             )}
             {mode === "edit" && !sourceNameTouched && plant?.from_user_id && !plant?.origin_verified && (
