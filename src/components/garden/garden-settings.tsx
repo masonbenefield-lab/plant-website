@@ -25,6 +25,7 @@ export default function GardenSettings({ initialBio, initialOpenToTrades, discla
   const [openToTrades, setOpenToTrades] = useState(initialOpenToTrades);
   const [showDisclaimer, setShowDisclaimer] = useState(false);
   const [disclaimerChecked, setDisclaimerChecked] = useState(false);
+  const [acceptedInSession, setAcceptedInSession] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   function handleTradesToggle() {
@@ -36,6 +37,7 @@ export default function GardenSettings({ initialBio, initialOpenToTrades, discla
   }
 
   function acceptDisclaimer() {
+    setAcceptedInSession(true);
     setDisclaimerChecked(false);
     setShowDisclaimer(false);
     setOpenToTrades(true);
@@ -49,7 +51,7 @@ export default function GardenSettings({ initialBio, initialOpenToTrades, discla
         body: JSON.stringify({
           garden_bio: bio,
           open_to_trades: openToTrades,
-          disclaimer_accepted: openToTrades ? (disclaimerAccepted || disclaimerChecked) : false,
+          disclaimer_accepted: openToTrades ? (disclaimerAccepted || acceptedInSession) : false,
         }),
       });
       if (!res.ok) {
