@@ -29,7 +29,7 @@ export async function GET(req: Request) {
   if (!plants?.length) return NextResponse.json({ sent: 0 });
 
   // Get last events for all these plants
-  const plantIds = plants.map((p) => p.id);
+  const plantIds = (plants ?? []).map((p) => p.id);
   const { data: lastEvents } = await supabase
     .from("garden_events")
     .select("plant_id, event_type, event_date")
