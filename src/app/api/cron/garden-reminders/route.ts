@@ -47,7 +47,7 @@ export async function GET(req: Request) {
 
   // Group plants by user
   const byUser: Record<string, typeof plants> = {};
-  for (const plant of plants) {
+  for (const plant of (plants ?? [])) {
     if (!byUser[plant.user_id]) byUser[plant.user_id] = [];
     byUser[plant.user_id].push(plant);
   }
