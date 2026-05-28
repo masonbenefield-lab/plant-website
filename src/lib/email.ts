@@ -334,7 +334,7 @@ export function makeUnsubToken(userId: string): string {
 }
 
 function unsubUrl(userId: string): string {
-  const base = (process.env.NEXT_PUBLIC_APP_URL ?? "https://plantet.com").replace(/\/$/, "");
+  const base = (process.env.NEXT_PUBLIC_APP_URL ?? "https://plantet.shop").replace(/\/$/, "");
   return `${base}/api/unsubscribe?uid=${userId}&sig=${makeUnsubToken(userId)}`;
 }
 
@@ -437,7 +437,7 @@ export function buildDigestHtml({
   freshListings: DigestListing[];
   hotAuctions: DigestAuction[];
 }): string {
-  const siteUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://plantet.com").replace(/\/$/, "");
+  const siteUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://plantet.shop").replace(/\/$/, "");
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -566,7 +566,7 @@ export async function sendReengagementEmail({
   userId: string;
   freshListings: DigestListing[];
 }) {
-  const siteUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://plantet.com").replace(/\/$/, "");
+  const siteUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://plantet.shop").replace(/\/$/, "");
   const listingsHtml = freshListings.length ? listingSection("What's new on Plantet", freshListings, siteUrl) : "";
 
   const html = `<!DOCTYPE html>
@@ -660,7 +660,7 @@ export async function sendGardenCareReminder({
   month: string;
   items: { plantName: string; careType: string; nextDueDate: string }[];
 }) {
-  const siteUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://plantet.com").replace(/\/$/, "");
+  const siteUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://plantet.shop").replace(/\/$/, "");
   const rows = items.map((item) => `
     <tr>
       <td style="padding:8px 12px;font-size:13px;color:#111827;border-bottom:1px solid #f3f4f6;">${item.plantName}</td>
