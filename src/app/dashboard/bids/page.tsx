@@ -68,13 +68,14 @@ export default async function MyBidsPage() {
     }
   }
 
+  const userId = user.id;
   type AuctionRow = NonNullable<typeof auctions>[number];
   function classify(a: AuctionRow): "winning" | "outbid" | "won" | "lost" | "no_winner" {
     const active = a.status === "active" && new Date(a.ends_at) > new Date();
-    if (active) return a.current_bidder_id === user.id ? "winning" : "outbid";
+    if (active) return a.current_bidder_id === userId ? "winning" : "outbid";
     if (a.status === "ended") {
       if (!a.current_bidder_id) return "no_winner";
-      return a.current_bidder_id === user.id ? "won" : "lost";
+      return a.current_bidder_id === userId ? "won" : "lost";
     }
     return "lost";
   }
