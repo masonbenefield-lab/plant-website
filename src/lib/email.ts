@@ -474,6 +474,22 @@ export function buildDigestHtml({
           ${listingSection("Fresh picks this week", freshListings, siteUrl)}
           ${auctionSection(hotAuctions, siteUrl)}
 
+          <!-- Giveaway banner -->
+          <tr>
+            <td style="padding:8px 32px 0;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;overflow:hidden;">
+                <tr>
+                  <td style="padding:24px 28px;">
+                    <p style="margin:0 0 4px;font-size:18px;">🎁</p>
+                    <p style="margin:0 0 6px;font-size:15px;font-weight:700;color:#14532d;">Monthly Giveaway</p>
+                    <p style="margin:0 0 16px;font-size:13px;color:#166534;line-height:1.6;">Enter for a chance to win this month's plant prize. One entry per member — entries reset each month.</p>
+                    <a href="${siteUrl}/giveaway" style="display:inline-block;background:#15803d;color:#ffffff;font-size:13px;font-weight:600;text-decoration:none;padding:10px 24px;border-radius:7px;">Enter the giveaway →</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
           <!-- Main CTA -->
           <tr>
             <td style="padding:8px 32px 40px;text-align:center;">
