@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -20,26 +19,15 @@ export default function AuctionActions({ auctionId }: { auctionId: string }) {
 
   async function cancelAuction() {
     setCancelling(true);
-    const supabase = createClient();
-    const { data: auctionData } = await supabase
-      .from("auctions")
-      .select("inventory_id")
-      .eq("id", auctionId)
-      .single();
-    const { error } = await supabase
-      .from("auctions")
-      .update({ status: "cancelled" })
-      .eq("id", auctionId)
-      .eq("status", "active");
+    const res = await fetch("/api/auctions/cancel", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ auctionId }),
+    });
+    const data = await res.json();
     setCancelling(false);
-    if (error) { toast.error(error.message); return; }
-    if (auctionData?.inventory_id) {
-      await supabase.from("inventory").update({
-        auction_id: null,
-        auction_quantity: null,
-      }).eq("id", auctionData.inventory_id);
-    }
-    toast.success("Auction cancelled");
+    if (!res.ok) { toast.error(data.error ?? "Failed to cancel auction"); return; }
+    toast.success("Auction cancelled" + (data.notified > 0 ? ` — ${data.notified} bidder${data.notified !== 1 ? "s" : ""} notified` : ""));
     setOpen(false);
     router.refresh();
   }

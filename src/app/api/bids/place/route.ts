@@ -10,6 +10,13 @@ function adminClient() {
   );
 }
 
+function getMinIncrement(currentBidCents: number): number {
+  if (currentBidCents < 1000)  return 100;   // under $10   → +$1
+  if (currentBidCents < 5000)  return 200;   // $10–$49     → +$2
+  if (currentBidCents < 20000) return 500;   // $50–$199    → +$5
+  return 1000;                                // $200+       → +$10
+}
+
 export async function POST(request: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -40,9 +47,10 @@ export async function POST(request: Request) {
   if (new Date(auction.ends_at) <= new Date()) return NextResponse.json({ error: "Auction has ended" }, { status: 400 });
   if (auction.seller_id === user.id) return NextResponse.json({ error: "You can't bid on your own auction" }, { status: 400 });
 
-  const minBid = auction.current_bid_cents + 1;
+  const minIncrement = getMinIncrement(auction.current_bid_cents);
+  const minBid = auction.current_bid_cents + minIncrement;
   if (amountCents < minBid) {
-    return NextResponse.json({ error: `Bid must be at least $${(minBid / 100).toFixed(2)}` }, { status: 400 });
+    return NextResponse.json({ error: `Minimum bid is $${(minBid / 100).toFixed(2)} (minimum increment: $${(minIncrement / 100).toFixed(0)})` }, { status: 400 });
   }
 
   const { error: bidError } = await admin.from("bids").insert({

@@ -53,6 +53,7 @@ export default function AuctionBidPanel({
   const [allBids, setAllBids] = useState<Bid[]>([]);
   const [loadingAllBids, setLoadingAllBids] = useState(false);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
+  const [pendingConfirm, setPendingConfirm] = useState<number | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -133,17 +134,37 @@ export default function AuctionBidPanel({
     return () => clearInterval(id);
   }, [auction.ends_at]);
 
-  async function placeBid(e: React.FormEvent) {
+  function getMinIncrement(currentBidCents: number): number {
+    if (currentBidCents < 1000)  return 100;
+    if (currentBidCents < 5000)  return 200;
+    if (currentBidCents < 20000) return 500;
+    return 1000;
+  }
+
+  function getQuickBidOptions(currentBidCents: number): number[] {
+    if (currentBidCents < 1000)  return [100, 200, 500];
+    if (currentBidCents < 5000)  return [200, 500, 1000];
+    if (currentBidCents < 20000) return [500, 1000, 2500];
+    return [1000, 2500, 5000];
+  }
+
+  function handleBidSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!userId) return toast.error("Sign in to bid");
     if (userId === auction.seller_id) return toast.error("You can't bid on your own auction");
-
     const cents = dollarsToCents(bidAmount);
-    const minBid = auction.current_bid_cents + 1;
-    if (cents < minBid) {
-      return toast.error(`Bid must be at least ${centsToDisplay(minBid)}`);
+    const minIncrement = getMinIncrement(auction.current_bid_cents);
+    const minBid = auction.current_bid_cents + minIncrement;
+    if (isNaN(cents) || cents < minBid) {
+      return toast.error(`Minimum bid is ${centsToDisplay(minBid)}`);
     }
+    setPendingConfirm(cents);
+  }
 
+  async function confirmBid() {
+    if (!pendingConfirm) return;
+    const cents = pendingConfirm;
+    setPendingConfirm(null);
     setPlacing(true);
     const res = await fetch("/api/bids/place", {
       method: "POST",
@@ -300,28 +321,56 @@ export default function AuctionBidPanel({
       )}
 
       {!isEnded && userId && userId !== auction.seller_id && buyerStripeOnboarded && (
-        <form onSubmit={placeBid} className="flex gap-2">
-          <div className="flex-1">
-            <Label htmlFor="bid" className="sr-only">Bid amount</Label>
-            <Input
-              id="bid"
-              type="number"
-              min={((auction.current_bid_cents + 1) / 100).toFixed(2)}
-              step="0.01"
-              placeholder={`Min ${centsToDisplay(auction.current_bid_cents + 1)}`}
-              value={bidAmount}
-              onChange={(e) => setBidAmount(e.target.value)}
-              required
-            />
+        <div className="space-y-2">
+          {/* Quick bid buttons */}
+          <div className="flex gap-2">
+            {getQuickBidOptions(auction.current_bid_cents).map((inc) => (
+              <button
+                key={inc}
+                type="button"
+                onClick={() => setBidAmount(((auction.current_bid_cents + inc) / 100).toFixed(2))}
+                className="flex-1 text-xs font-medium border border-green-300 text-green-700 rounded-lg py-1.5 hover:bg-green-50 transition-colors"
+              >
+                +{centsToDisplay(inc)}
+              </button>
+            ))}
           </div>
-          <Button
-            type="submit"
-            disabled={placing}
-            className="bg-green-700 hover:bg-green-800"
-          >
-            {placing ? "…" : "Place Bid"}
-          </Button>
-        </form>
+          {/* Bid input + submit */}
+          <form onSubmit={handleBidSubmit} className="flex gap-2">
+            <div className="flex-1">
+              <Label htmlFor="bid" className="sr-only">Bid amount</Label>
+              <Input
+                id="bid"
+                type="number"
+                min={((auction.current_bid_cents + getMinIncrement(auction.current_bid_cents)) / 100).toFixed(2)}
+                step="0.01"
+                placeholder={`Min ${centsToDisplay(auction.current_bid_cents + getMinIncrement(auction.current_bid_cents))}`}
+                value={bidAmount}
+                onChange={(e) => setBidAmount(e.target.value)}
+                required
+              />
+            </div>
+            <Button
+              type="submit"
+              disabled={placing}
+              className="bg-green-700 hover:bg-green-800"
+            >
+              {placing ? "…" : "Place Bid"}
+            </Button>
+          </form>
+          {/* Confirmation step */}
+          {pendingConfirm !== null && (
+            <div className="rounded-lg border border-green-300 bg-green-50 dark:bg-green-900/20 dark:border-green-800 px-4 py-3 flex items-center justify-between gap-3">
+              <p className="text-sm font-medium text-green-800 dark:text-green-300">
+                Confirm bid of <span className="font-bold">{centsToDisplay(pendingConfirm)}</span>?
+              </p>
+              <div className="flex gap-2 shrink-0">
+                <Button size="sm" variant="outline" onClick={() => setPendingConfirm(null)}>Cancel</Button>
+                <Button size="sm" onClick={confirmBid} className="bg-green-700 hover:bg-green-800">Confirm</Button>
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
       {!userId && !isEnded && (

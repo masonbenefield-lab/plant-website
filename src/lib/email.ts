@@ -241,6 +241,28 @@ export async function sendOutbidNotification({
   });
 }
 
+export async function sendAuctionCancelled({
+  bidderEmail,
+  plantName,
+  auctionId,
+}: {
+  bidderEmail: string;
+  plantName: string;
+  auctionId: string;
+}) {
+  const resend = getResend();
+  await resend.emails.send({
+    from: FROM,
+    to: bidderEmail,
+    subject: `Auction cancelled: ${plantName}`,
+    html: `
+      <p>The auction for <strong>${plantName}</strong> has been cancelled by the seller.</p>
+      <p>Your bid has been voided — you will not be charged.</p>
+      <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/auctions/${auctionId}">View auction</a></p>
+    `,
+  });
+}
+
 export async function sendNewOrderAlert({
   sellerEmail,
   plantName,

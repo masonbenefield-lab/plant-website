@@ -201,6 +201,7 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
                   <DropdownMenuItem><Link href="/dashboard" className="block w-full">Dashboard</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href="/dashboard/inventory" className="block w-full">Inventory</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href="/dashboard/offers" className="block w-full">Offers</Link></DropdownMenuItem>
+                  <DropdownMenuItem><Link href="/dashboard/bids" className="block w-full">My Bids</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href="/wishlist" className="block w-full">Wishlist</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href="/orders" className="block w-full">My Purchases</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href="/feed" className="block w-full">Feed</Link></DropdownMenuItem>
@@ -278,6 +279,7 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
                 <span className="text-sm font-medium">{username}</span>
               </div>
               <p className="px-3 pt-2 pb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Shopping</p>
+              <MobileLink href="/dashboard/bids" onClick={closeMenu}>My Bids</MobileLink>
               <MobileLink href="/wishlist" onClick={closeMenu}>Wishlist</MobileLink>
               <MobileLink href="/orders" onClick={closeMenu}>My Purchases</MobileLink>
               <MobileLink href="/messages" onClick={closeMenu}>Messages{liveUnread > 0 ? ` (${liveUnread})` : ""}</MobileLink>
