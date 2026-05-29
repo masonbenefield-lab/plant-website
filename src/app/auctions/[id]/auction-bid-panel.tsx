@@ -19,6 +19,7 @@ interface AuctionData {
   current_bid_cents: number;
   starting_bid_cents: number;
   buy_now_price_cents: number | null;
+  reserve_price_cents: number | null;
   ends_at: string;
   seller_id: string;
   current_bidder_id: string | null;
@@ -273,6 +274,13 @@ export default function AuctionBidPanel({
                 <p className="text-xs text-orange-600 font-medium mt-0.5">
                   Buy Now: {centsToDisplay(auction.buy_now_price_cents)}
                 </p>
+              )}
+              {auction.reserve_price_cents && (
+                auction.current_bid_cents >= auction.reserve_price_cents ? (
+                  <p className="text-xs text-green-700 font-medium mt-0.5">✓ Reserve met</p>
+                ) : (
+                  <p className="text-xs text-amber-600 font-medium mt-0.5">Reserve not met</p>
+                )
               )}
             </div>
             <div className="text-right">
