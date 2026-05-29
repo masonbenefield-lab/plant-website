@@ -2073,10 +2073,10 @@ export default function InventoryClient({
               <div className="space-y-1">
                 <Label>When sold out</Label>
                 <Select value={soldOutBehavior} onValueChange={v => setSoldOutBehavior(v as "mark_sold_out" | "auto_pause")}>
-                  <SelectTrigger className="h-8 text-sm">
+                  <SelectTrigger className="w-full text-sm">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="min-w-[220px]">
                     <SelectItem value="mark_sold_out">Stay visible as "Sold Out"</SelectItem>
                     <SelectItem value="auto_pause">Auto-hide listing</SelectItem>
                   </SelectContent>
