@@ -462,13 +462,15 @@ export default async function SellerStorefront({
                         {item.variety && (
                           <span className="text-xs text-muted-foreground">· {item.variety}</span>
                         )}
-                        {item.priority && item.priority !== "want" && (
+                        {item.priority && (
                           <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium ${
                             item.priority === "must"
                               ? "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300"
+                              : item.priority === "want"
+                              ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400"
                               : "bg-muted text-muted-foreground"
                           }`}>
-                            {item.priority === "must" ? "Must have" : "Nice to have"}
+                            {item.priority === "must" ? "Must have" : item.priority === "want" ? "Want it" : "Nice to have"}
                           </span>
                         )}
                       </div>
