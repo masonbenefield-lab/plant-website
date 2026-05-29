@@ -155,24 +155,31 @@ function PlantDetailsForm({
       </div>
       <div className="space-y-2">
         <label className="text-xs font-medium text-muted-foreground">Plant photo</label>
-        <div className="flex items-center gap-3">
+        <div className="space-y-2">
+          <div className="flex items-center gap-3">
+            {imageUrl && (
+              <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-muted border shrink-0">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={imageUrl} alt={plantName || "Plant"} className="w-full h-full object-cover" />
+                <button
+                  onClick={() => setImageUrl("")}
+                  className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-destructive text-white flex items-center justify-center"
+                >
+                  <X size={9} />
+                </button>
+              </div>
+            )}
+            <label className="cursor-pointer flex items-center gap-2 px-3 py-2 text-sm rounded-md border border-dashed border-border hover:border-green-400 hover:text-green-700 transition-colors text-muted-foreground">
+              {uploading ? <Loader2 size={14} className="animate-spin" /> : null}
+              {uploading ? "Uploading…" : imageUrl ? "Replace photo" : "Upload photo"}
+              <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploading} />
+            </label>
+          </div>
           {imageUrl && (
-            <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-muted border shrink-0">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={imageUrl} alt={plantName || "Plant"} className="w-full h-full object-cover" />
-              <button
-                onClick={() => setImageUrl("")}
-                className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-destructive text-white flex items-center justify-center"
-              >
-                <X size={9} />
-              </button>
-            </div>
+            <p className="text-[10px] text-muted-foreground break-all font-mono bg-muted/50 px-2 py-1 rounded">
+              {imageUrl}
+            </p>
           )}
-          <label className="cursor-pointer flex items-center gap-2 px-3 py-2 text-sm rounded-md border border-dashed border-border hover:border-green-400 hover:text-green-700 transition-colors text-muted-foreground">
-            {uploading ? <Loader2 size={14} className="animate-spin" /> : null}
-            {uploading ? "Uploading…" : imageUrl ? "Replace photo" : "Upload photo"}
-            <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploading} />
-          </label>
         </div>
       </div>
       <button
