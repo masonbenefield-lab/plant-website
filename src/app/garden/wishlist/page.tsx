@@ -14,7 +14,8 @@ export default async function WishlistPage() {
       .from("wishlist_items")
       .select("id, name, variety, notes, priority, created_at")
       .eq("user_id", user.id)
-      .order("created_at", { ascending: false }),
+      .order("name", { ascending: true })
+      .order("variety", { ascending: true }),
     supabase
       .from("profiles")
       .select("username, wishlist_public")
