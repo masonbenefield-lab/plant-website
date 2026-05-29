@@ -106,12 +106,17 @@ export function WishlistClient({ initialItems }: { initialItems: WishlistItem[] 
     toast.success("Removed from wishlist");
   }
 
-  const filtered = activeQ.trim()
+  const filtered = (activeQ.trim()
     ? items.filter((item) => {
         const text = `${item.name} ${item.variety ?? ""}`.toLowerCase();
         return text.includes(activeQ.toLowerCase());
       })
-    : items;
+    : items
+  ).slice().sort((a, b) => {
+    const aKey = (a.variety || a.name).toLowerCase();
+    const bKey = (b.variety || b.name).toLowerCase();
+    return aKey < bKey ? -1 : aKey > bKey ? 1 : 0;
+  });
 
   return (
     <div className="space-y-4">
