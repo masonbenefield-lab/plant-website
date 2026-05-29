@@ -8,6 +8,7 @@ import { SponsorRequestsPanel } from "./sponsor-requests-panel";
 type Month = {
   month: string;
   plant_name: string;
+  description: string | null;
   image_url: string | null;
   sponsor_name: string | null;
   sponsor_username: string | null;

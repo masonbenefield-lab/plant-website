@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 interface GiveawayMonth {
   month: string;
   plant_name: string;
+  description: string | null;
   image_url: string | null;
   sponsor_name: string | null;
   sponsor_username: string | null;
@@ -59,11 +60,18 @@ export function GiveawayAdminClient({ months }: { months: GiveawayMonth[] }) {
 
             {expandedMonth === m.month && (
               <div className="border-t px-4 pb-4 space-y-6">
-                <SponsorForm
+                <PlantDetailsForm
                   month={m.month}
                   initial={data[m.month]}
                   onSave={(updated) => setData((prev) => ({ ...prev, [m.month]: updated }))}
                 />
+                <div className="border-t pt-4">
+                  <SponsorForm
+                    month={m.month}
+                    initial={data[m.month]}
+                    onSave={(updated) => setData((prev) => ({ ...prev, [m.month]: updated }))}
+                  />
+                </div>
                 <div className="border-t pt-4">
                   <WinnerPicker month={m.month} />
                 </div>
@@ -72,6 +80,106 @@ export function GiveawayAdminClient({ months }: { months: GiveawayMonth[] }) {
           </CardContent>
         </Card>
       ))}
+    </div>
+  );
+}
+
+function PlantDetailsForm({
+  month,
+  initial,
+  onSave,
+}: {
+  month: string;
+  initial: GiveawayMonth;
+  onSave: (updated: GiveawayMonth) => void;
+}) {
+  const [plantName, setPlantName] = useState(initial.plant_name ?? "");
+  const [description, setDescription] = useState(initial.description ?? "");
+  const [imageUrl, setImageUrl] = useState(initial.image_url ?? "");
+  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    const supabase = createClient();
+    const ext = file.name.split(".").pop();
+    const path = `giveaway-plants/${month}-${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("garden").upload(path, file, { upsert: true });
+    if (error) { toast.error("Image upload failed: " + error.message); setUploading(false); return; }
+    const { data: { publicUrl } } = supabase.storage.from("garden").getPublicUrl(path);
+    setImageUrl(publicUrl);
+    setUploading(false);
+    toast.success("Image uploaded");
+  }
+
+  async function handleSave() {
+    if (!plantName.trim()) { toast.error("Plant name is required"); return; }
+    setSaving(true);
+    const res = await fetch("/api/admin/giveaway-plant", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ month, plant_name: plantName, description, image_url: imageUrl || null }),
+    });
+    const data = await res.json();
+    setSaving(false);
+    if (!res.ok) { toast.error(data.error ?? "Failed to save"); return; }
+    onSave({ ...initial, plant_name: plantName.trim(), description: description.trim() || null, image_url: imageUrl || null });
+    toast.success("Plant details saved");
+  }
+
+  return (
+    <div className="pt-4 space-y-4">
+      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Plant Details</p>
+      <div className="space-y-1">
+        <label className="text-xs font-medium text-muted-foreground">Plant name *</label>
+        <input
+          value={plantName}
+          onChange={(e) => setPlantName(e.target.value)}
+          placeholder="e.g. Cravens Craving Fig"
+          className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-green-600"
+        />
+      </div>
+      <div className="space-y-1">
+        <label className="text-xs font-medium text-muted-foreground">Description (optional)</label>
+        <textarea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="A short description shown on the giveaway page…"
+          rows={3}
+          className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-green-600 resize-none"
+        />
+      </div>
+      <div className="space-y-2">
+        <label className="text-xs font-medium text-muted-foreground">Plant photo</label>
+        <div className="flex items-center gap-3">
+          {imageUrl && (
+            <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-muted border shrink-0">
+              <Image src={imageUrl} alt={plantName || "Plant"} fill className="object-cover" />
+              <button
+                onClick={() => setImageUrl("")}
+                className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-destructive text-white flex items-center justify-center"
+              >
+                <X size={9} />
+              </button>
+            </div>
+          )}
+          <label className="cursor-pointer flex items-center gap-2 px-3 py-2 text-sm rounded-md border border-dashed border-border hover:border-green-400 hover:text-green-700 transition-colors text-muted-foreground">
+            {uploading ? <Loader2 size={14} className="animate-spin" /> : null}
+            {uploading ? "Uploading…" : imageUrl ? "Replace photo" : "Upload photo"}
+            <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploading} />
+          </label>
+        </div>
+      </div>
+      <button
+        onClick={handleSave}
+        disabled={saving || !plantName.trim()}
+        className="px-4 py-2 text-sm font-medium rounded-md bg-green-700 text-white hover:bg-green-800 disabled:opacity-50 transition-colors flex items-center gap-1.5"
+      >
+        {saving ? <Loader2 size={13} className="animate-spin" /> : null}
+        Save plant details
+      </button>
     </div>
   );
 }

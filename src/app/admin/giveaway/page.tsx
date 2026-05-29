@@ -20,7 +20,7 @@ export default async function AdminGiveawayPage() {
   const [{ data: months }, { data: requests }] = await Promise.all([
     admin
       .from("giveaway_months")
-      .select("month, plant_name, image_url, sponsor_name, sponsor_username, sponsor_logo_url, sponsor_message")
+      .select("month, plant_name, description, image_url, sponsor_name, sponsor_username, sponsor_logo_url, sponsor_message")
       .order("month", { ascending: false })
       .limit(12),
     admin
