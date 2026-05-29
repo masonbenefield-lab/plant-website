@@ -146,7 +146,7 @@ export default async function GiveawayPage() {
           {/* Plant card */}
           <div className="rounded-2xl border overflow-hidden shadow-sm">
             {giveaway.image_url && (
-              <div className="relative w-full aspect-square bg-muted">
+              <div className="relative w-full aspect-[3/4] bg-muted">
                 <Image src={giveaway.image_url} alt={giveaway.plant_name} fill sizes="(max-width: 768px) 100vw, 800px" className="object-cover" />
               </div>
             )}
