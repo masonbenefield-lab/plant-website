@@ -27,7 +27,7 @@ export async function GET(request: Request) {
 
       // Send welcome email on first confirmed signup
       if (!profile?.groundbreaker && session.user.email && profile?.username) {
-        sendWelcomeEmail({ email: session.user.email, username: profile.username }).catch(() => {});
+        sendWelcomeEmail({ recipientEmail: session.user.email, username: profile.username }).catch(() => {});
       }
 
       if (!profile?.groundbreaker) {

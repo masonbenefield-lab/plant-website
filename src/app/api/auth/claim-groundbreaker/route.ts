@@ -29,7 +29,7 @@ export async function POST() {
 
   // Send welcome email on first signup
   if (user.email && profile?.username) {
-    sendWelcomeEmail({ email: user.email, username: profile.username }).catch(() => {});
+    sendWelcomeEmail({ recipientEmail: user.email, username: profile.username }).catch(() => {});
   }
 
   // Generate a unique referral code for this user
