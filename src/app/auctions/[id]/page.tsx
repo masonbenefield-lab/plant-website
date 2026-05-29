@@ -62,11 +62,17 @@ export default async function AuctionPage({
 
   if (!auction) notFound();
 
-  const [{ data: seller }, { data: bids }, { data: { user } }] = await Promise.all([
+  const [{ data: seller }, { data: bids }, { data: { user } }, { data: invShipping }] = await Promise.all([
     supabase.from("profiles").select("id, username, avatar_url").eq("id", auction.seller_id).single(),
     supabase.from("bids").select("id, amount_cents, created_at, bidder_id").eq("auction_id", id).order("created_at", { ascending: false }).limit(10),
     supabase.auth.getUser(),
+    auction.inventory_id
+      ? supabase.from("inventory").select("free_shipping, shipping_cost_cents, shipping_weight_oz").eq("id", auction.inventory_id).single()
+      : Promise.resolve({ data: null }),
   ]);
+
+  const shippingFree = invShipping?.free_shipping ?? auction.free_shipping;
+  const shippingCostCents = invShipping?.shipping_cost_cents ?? auction.shipping_cost_cents;
 
   const bidderIds = [...new Set(bids?.map((b) => b.bidder_id) ?? [])];
   const { data: bidders } = bidderIds.length
@@ -132,8 +138,8 @@ export default async function AuctionPage({
           <div className="mb-4">
             <ShippingEstimate
               auctionId={auction.id}
-              freeShipping={auction.free_shipping}
-              shippingCostCents={auction.shipping_cost_cents}
+              freeShipping={shippingFree}
+              shippingCostCents={shippingCostCents}
             />
           </div>
 

@@ -71,10 +71,16 @@ export default async function ListingPage({
 
   if (!listing) notFound();
 
-  const [{ data: seller }, { data: { user } }] = await Promise.all([
+  const [{ data: seller }, { data: { user } }, { data: invShipping }] = await Promise.all([
     supabase.from("profiles").select("id, username, avatar_url, stripe_onboarded, shipping_days, vacation_mode, vacation_until, offers_enabled").eq("id", listing.seller_id).single(),
     supabase.auth.getUser(),
+    listing.inventory_id
+      ? supabase.from("inventory").select("free_shipping, shipping_cost_cents, shipping_weight_oz").eq("id", listing.inventory_id).single()
+      : Promise.resolve({ data: null }),
   ]);
+
+  const shippingFree = invShipping?.free_shipping ?? listing.free_shipping;
+  const shippingCostCents = invShipping?.shipping_cost_cents ?? listing.shipping_cost_cents;
 
   // Sibling listings: same seller + plant_name + variety, different sizes
   let siblingQuery = supabase
@@ -211,8 +217,8 @@ export default async function ListingPage({
             )}
             <ShippingEstimate
               listingId={listing.id}
-              freeShipping={listing.free_shipping}
-              shippingCostCents={listing.shipping_cost_cents}
+              freeShipping={shippingFree}
+              shippingCostCents={shippingCostCents}
             />
           </div>
 
