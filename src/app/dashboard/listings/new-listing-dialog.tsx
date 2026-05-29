@@ -248,6 +248,9 @@ export default function NewListingDialog({ sellerId, planLimit, currentCount, ph
               </div>
             )}
           </div>
+          {!shippingMode && (
+            <p className="text-xs text-amber-700 dark:text-amber-400">Choose a shipping option above to continue.</p>
+          )}
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancel

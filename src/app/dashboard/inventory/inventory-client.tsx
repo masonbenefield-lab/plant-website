@@ -2003,6 +2003,9 @@ export default function InventoryClient({
                     </div>
                   )}
                 </div>
+                {!listingShippingMode && (
+                  <p className="text-xs text-amber-700 dark:text-amber-400">Choose a shipping option above to continue.</p>
+                )}
                 <div className="flex gap-2 pt-1">
                   <Button variant="outline" onClick={() => setModal(null)} className="flex-1">Cancel</Button>
                   <Button
@@ -2222,6 +2225,9 @@ export default function InventoryClient({
                     </div>
                   )}
                 </div>
+                {!auctionShippingMode && (
+                  <p className="text-xs text-amber-700 dark:text-amber-400">Choose a shipping option above to continue.</p>
+                )}
                 <div className="rounded-md border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-3 text-xs text-amber-800 dark:text-amber-300">
                   <label className="flex items-start gap-2 cursor-pointer">
                     <input
