@@ -41,7 +41,8 @@ export function GiveawayAdminClient({ months }: { months: GiveawayMonth[] }) {
               <div className="flex items-center gap-3">
                 {m.image_url && (
                   <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-muted shrink-0">
-                    <Image src={m.image_url} alt={m.plant_name} fill className="object-cover" />
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={m.image_url} alt={m.plant_name} className="w-full h-full object-cover" />
                   </div>
                 )}
                 <div>
@@ -157,7 +158,8 @@ function PlantDetailsForm({
         <div className="flex items-center gap-3">
           {imageUrl && (
             <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-muted border shrink-0">
-              <Image src={imageUrl} alt={plantName || "Plant"} fill className="object-cover" />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={imageUrl} alt={plantName || "Plant"} className="w-full h-full object-cover" />
               <button
                 onClick={() => setImageUrl("")}
                 className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-destructive text-white flex items-center justify-center"
@@ -286,7 +288,8 @@ function SponsorForm({
         <div className="flex items-center gap-3">
           {logoUrl && (
             <div className="relative w-14 h-14 rounded-lg overflow-hidden bg-muted border shrink-0">
-              <Image src={logoUrl} alt="Sponsor logo" fill className="object-contain p-1" />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={logoUrl} alt="Sponsor logo" className="w-full h-full object-contain p-1" />
               <button
                 onClick={() => setLogoUrl("")}
                 className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-destructive text-white flex items-center justify-center"
