@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
+import { compressImage } from "@/lib/compress-image";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Loader2, ChevronDown, ChevronUp, X, Trophy, RefreshCw, Check } from "lucide-react";
@@ -100,11 +101,18 @@ function PlantDetailsForm({
   const [saving, setSaving] = useState(false);
 
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const rawFile = e.target.files?.[0];
+    if (!rawFile) return;
+
+    const isHeic = /\.(heic|heif)$/i.test(rawFile.name) || rawFile.type === "image/heic" || rawFile.type === "image/heif";
+    if (isHeic) {
+      toast.error("HEIC photos aren't supported by browsers. On iPhone, share the photo and choose \"Most Compatible\" format, or convert to JPEG first.", { duration: 6000 });
+      return;
+    }
+
     setUploading(true);
-    const ext = file.name.split(".").pop();
-    const path = `giveaway-plants/${month}-${Date.now()}.${ext}`;
+    const file = await compressImage(rawFile);
+    const path = `giveaway-plants/${month}-${Date.now()}.jpg`;
     const form = new FormData();
     form.append("file", file);
     form.append("path", path);
