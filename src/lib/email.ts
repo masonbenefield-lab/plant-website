@@ -263,6 +263,190 @@ export async function sendAuctionCancelled({
   });
 }
 
+export async function sendWelcomeEmail({
+  recipientEmail,
+  username,
+}: {
+  recipientEmail: string;
+  username: string;
+}) {
+  const resend = getResend();
+  const siteUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://plantet.shop").replace(/\/$/, "");
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Welcome to Plantet</title>
+</head>
+<body style="margin:0;padding:0;background:#f0fdf4;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;-webkit-font-smoothing:antialiased;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0fdf4;">
+    <tr>
+      <td align="center" style="padding:32px 16px 48px;">
+
+        <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.07);">
+
+          <!-- Header -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#14532d 0%,#166534 60%,#15803d 100%);padding:40px 32px 36px;text-align:center;">
+              <p style="margin:0 0 10px;color:#bbf7d0;font-size:13px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;">🌿 Plantet</p>
+              <h1 style="margin:0 0 8px;color:#ffffff;font-size:28px;font-weight:700;line-height:1.25;">Welcome to Plantet!</h1>
+              <p style="margin:0;color:#86efac;font-size:14px;font-weight:500;">Your plant community is ready.</p>
+            </td>
+          </tr>
+
+          <!-- Greeting -->
+          <tr>
+            <td style="padding:32px 32px 8px;">
+              <p style="margin:0 0 8px;font-size:18px;font-weight:600;color:#111827;">Hey ${username} 👋</p>
+              <p style="margin:0;font-size:14px;color:#6b7280;line-height:1.7;">You're now part of a community built for plant lovers — whether you're hunting for a rare find, growing your own collection, or looking to sell some cuttings. Here's everything you can do on Plantet.</p>
+            </td>
+          </tr>
+
+          <!-- Feature highlights -->
+          <tr>
+            <td style="padding:24px 32px 8px;">
+              <p style="margin:0 0 16px;font-size:15px;font-weight:700;color:#111827;">What you can do</p>
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td width="50%" style="padding:0 6px 12px 0;vertical-align:top;">
+                    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;">
+                      <tr><td style="padding:14px 16px;">
+                        <p style="margin:0 0 4px;font-size:18px;">🛒</p>
+                        <p style="margin:0 0 4px;font-size:13px;font-weight:700;color:#14532d;">Shop &amp; Auctions</p>
+                        <p style="margin:0;font-size:12px;color:#4b7c5e;line-height:1.5;">Browse fixed-price listings or bid on live timed auctions from nurseries and collectors.</p>
+                      </td></tr>
+                    </table>
+                  </td>
+                  <td width="50%" style="padding:0 0 12px 6px;vertical-align:top;">
+                    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;">
+                      <tr><td style="padding:14px 16px;">
+                        <p style="margin:0 0 4px;font-size:18px;">🪴</p>
+                        <p style="margin:0 0 4px;font-size:13px;font-weight:700;color:#14532d;">Garden Log</p>
+                        <p style="margin:0;font-size:12px;color:#4b7c5e;line-height:1.5;">Track every plant you own — photos, care schedule, event history, and a shareable public garden.</p>
+                      </td></tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td width="50%" style="padding:0 6px 12px 0;vertical-align:top;">
+                    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;">
+                      <tr><td style="padding:14px 16px;">
+                        <p style="margin:0 0 4px;font-size:18px;">💬</p>
+                        <p style="margin:0 0 4px;font-size:13px;font-weight:700;color:#14532d;">Community</p>
+                        <p style="margin:0;font-size:12px;color:#4b7c5e;line-height:1.5;">Ask for help, show off a plant you're proud of, or join a discussion with fellow growers.</p>
+                      </td></tr>
+                    </table>
+                  </td>
+                  <td width="50%" style="padding:0 0 12px 6px;vertical-align:top;">
+                    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;">
+                      <tr><td style="padding:14px 16px;">
+                        <p style="margin:0 0 4px;font-size:18px;">📣</p>
+                        <p style="margin:0 0 4px;font-size:13px;font-weight:700;color:#14532d;">Follow Sellers</p>
+                        <p style="margin:0;font-size:12px;color:#4b7c5e;line-height:1.5;">Follow your favorite shops and get their new arrivals and restocks straight in your feed.</p>
+                      </td></tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td width="50%" style="padding:0 6px 0 0;vertical-align:top;">
+                    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;">
+                      <tr><td style="padding:14px 16px;">
+                        <p style="margin:0 0 4px;font-size:18px;">💚</p>
+                        <p style="margin:0 0 4px;font-size:13px;font-weight:700;color:#14532d;">Wishlist</p>
+                        <p style="margin:0;font-size:12px;color:#4b7c5e;line-height:1.5;">Save listings and auctions you love, and build a wishlist of plants you're hunting for.</p>
+                      </td></tr>
+                    </table>
+                  </td>
+                  <td width="50%" style="padding:0 0 0 6px;vertical-align:top;">
+                    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;">
+                      <tr><td style="padding:14px 16px;">
+                        <p style="margin:0 0 4px;font-size:18px;">🎁</p>
+                        <p style="margin:0 0 4px;font-size:13px;font-weight:700;color:#14532d;">Monthly Giveaway</p>
+                        <p style="margin:0;font-size:12px;color:#4b7c5e;line-height:1.5;">Every month we give away a plant prize. One entry per member — enter any time.</p>
+                      </td></tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Buyer / Seller columns -->
+          <tr>
+            <td style="padding:24px 32px 8px;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td width="50%" style="padding:0 6px 0 0;vertical-align:top;">
+                    <table width="100%" cellpadding="0" cellspacing="0" style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;">
+                      <tr><td style="padding:16px;">
+                        <p style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#92400e;">For Buyers</p>
+                        <p style="margin:0 0 6px;font-size:12px;color:#78350f;line-height:1.6;">✔ Browse the shop and live auctions</p>
+                        <p style="margin:0 0 6px;font-size:12px;color:#78350f;line-height:1.6;">✔ Bid in real time with snipe protection</p>
+                        <p style="margin:0;font-size:12px;color:#78350f;line-height:1.6;">✔ Track your plants in the garden log</p>
+                      </td></tr>
+                    </table>
+                  </td>
+                  <td width="50%" style="padding:0 0 0 6px;vertical-align:top;">
+                    <table width="100%" cellpadding="0" cellspacing="0" style="background:#ecfdf5;border:1px solid #6ee7b7;border-radius:10px;">
+                      <tr><td style="padding:16px;">
+                        <p style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#065f46;">For Sellers</p>
+                        <p style="margin:0 0 6px;font-size:12px;color:#064e3b;line-height:1.6;">✔ Build a free public storefront</p>
+                        <p style="margin:0 0 6px;font-size:12px;color:#064e3b;line-height:1.6;">✔ List plants or run timed auctions</p>
+                        <p style="margin:0;font-size:12px;color:#064e3b;line-height:1.6;">✔ Get paid directly via Stripe — no monthly fee</p>
+                      </td></tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- CTA -->
+          <tr>
+            <td style="padding:32px 32px 40px;text-align:center;">
+              <a href="${siteUrl}/account" style="display:inline-block;background:#15803d;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:14px 36px;border-radius:8px;">Complete your profile →</a>
+              <p style="margin:14px 0 0;font-size:12px;color:#9ca3af;">Add a photo, bio, and location so buyers and fellow plant lovers can find you.</p>
+            </td>
+          </tr>
+
+          <!-- Divider -->
+          <tr>
+            <td style="padding:0 32px;">
+              <div style="height:1px;background:#e5e7eb;"></div>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:24px 32px;text-align:center;">
+              <p style="margin:0 0 6px;font-size:12px;color:#9ca3af;line-height:1.6;">You're receiving this because you created a Plantet account.</p>
+              <p style="margin:0;font-size:12px;color:#9ca3af;">
+                <a href="${siteUrl}/account" style="color:#6b7280;text-decoration:underline;">Account settings</a>
+                &nbsp;·&nbsp;
+                <a href="${siteUrl}/privacy-policy" style="color:#6b7280;text-decoration:underline;">Privacy Policy</a>
+                &nbsp;·&nbsp;
+                © ${new Date().getFullYear()} Plantet
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  await resend.emails.send({
+    from: FROM,
+    to: recipientEmail,
+    subject: "Welcome to Plantet 🌱",
+    html,
+  });
+}
+
 export async function sendNewOrderAlert({
   sellerEmail,
   plantName,
