@@ -6,6 +6,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { centsToDisplay } from "@/lib/stripe";
 import { Pagination } from "@/components/pagination";
 import DashboardSearch from "@/components/dashboard-search";
+import { DeleteScheduledAuctionButton } from "./auction-actions";
+import { LocalDate } from "@/components/local-date";
 
 const PAGE_SIZE = 25;
 
@@ -105,14 +107,19 @@ export default async function DashboardAuctionsPage({
                     {auction.buy_now_price_cents && (
                       <span className="text-orange-600 font-medium">Buy Now: {centsToDisplay(auction.buy_now_price_cents)}</span>
                     )}
-                    <span>Ends: {new Date(auction.ends_at).toLocaleString()}</span>
+                    <span>Ends: <LocalDate iso={auction.ends_at} /></span>
                   </div>
                 </div>
-                {auction.status === "active" && (
-                  <Link href={`/auctions/${auction.id}`} className="text-sm text-muted-foreground hover:underline shrink-0">
-                    View →
-                  </Link>
-                )}
+                <div className="flex items-center gap-2 shrink-0">
+                  {auction.status === "active" && (
+                    <Link href={`/auctions/${auction.id}`} className="text-sm text-muted-foreground hover:underline">
+                      View →
+                    </Link>
+                  )}
+                  {auction.status === "scheduled" && (
+                    <DeleteScheduledAuctionButton auctionId={auction.id} />
+                  )}
+                </div>
               </CardContent>
             </Card>
           ))}

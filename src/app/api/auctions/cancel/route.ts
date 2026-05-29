@@ -27,7 +27,24 @@ export async function POST(request: Request) {
 
   if (!auction) return NextResponse.json({ error: "Auction not found" }, { status: 404 });
   if (auction.seller_id !== user.id) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-  if (auction.status !== "active") return NextResponse.json({ error: "Auction is not active" }, { status: 400 });
+  if (auction.status !== "active" && auction.status !== "scheduled") {
+    return NextResponse.json({ error: "Auction cannot be cancelled" }, { status: 400 });
+  }
+
+  // Scheduled auctions have no bids — just delete and release inventory
+  if (auction.status === "scheduled") {
+    const { error } = await admin.from("auctions").delete().eq("id", auctionId);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    if (auction.inventory_id) {
+      await admin
+        .from("inventory")
+        .update({ auction_id: null, auction_quantity: null })
+        .eq("id", auction.inventory_id);
+    }
+
+    return NextResponse.json({ ok: true, notified: 0 });
+  }
 
   // Get all unique bidders
   const { data: bids } = await admin

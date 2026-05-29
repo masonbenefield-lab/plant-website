@@ -12,6 +12,52 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
+export function DeleteScheduledAuctionButton({ auctionId }: { auctionId: string }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  async function deleteAuction() {
+    setDeleting(true);
+    const res = await fetch("/api/auctions/cancel", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ auctionId }),
+    });
+    const data = await res.json();
+    setDeleting(false);
+    if (!res.ok) { toast.error(data.error ?? "Failed to delete auction"); return; }
+    toast.success("Scheduled auction deleted");
+    setOpen(false);
+    router.refresh();
+  }
+
+  return (
+    <>
+      <Button variant="outline" size="sm" onClick={() => setOpen(true)} className="text-red-600 border-red-200 hover:bg-red-50">
+        Delete
+      </Button>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete scheduled auction?</DialogTitle>
+            <DialogDescription>
+              This auction hasn&apos;t started yet. Deleting it will remove it permanently and release the inventory allocation.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 mt-2">
+            <Button variant="outline" onClick={() => setOpen(false)} className="flex-1">Keep it</Button>
+            <Button variant="destructive" onClick={deleteAuction} disabled={deleting} className="flex-1">
+              {deleting ? "Deleting…" : "Delete auction"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
 export default function AuctionActions({ auctionId }: { auctionId: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
