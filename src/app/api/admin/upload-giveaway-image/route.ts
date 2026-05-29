@@ -23,11 +23,11 @@ export async function POST(req: Request) {
 
   const arrayBuffer = await file.arrayBuffer();
   const { error } = await admin.storage
-    .from("garden")
+    .from("listings")
     .upload(path, arrayBuffer, { contentType: file.type, upsert: true });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  const { data: { publicUrl } } = admin.storage.from("garden").getPublicUrl(path);
+  const { data: { publicUrl } } = admin.storage.from("listings").getPublicUrl(path);
   return NextResponse.json({ publicUrl });
 }
