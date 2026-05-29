@@ -115,8 +115,8 @@ export default async function GiveawayPage() {
           {giveaway.sponsor_name && (
             <div className="rounded-xl border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 px-5 py-4 flex items-center gap-4">
               {giveaway.sponsor_logo_url && (
-                <div className="relative w-14 h-14 rounded-xl overflow-hidden shrink-0">
-                  <Image src={giveaway.sponsor_logo_url} alt={giveaway.sponsor_name} fill className="object-cover" />
+                <div className="relative w-20 h-20 rounded-xl overflow-hidden shrink-0">
+                  <Image src={giveaway.sponsor_logo_url} alt={giveaway.sponsor_name} fill sizes="80px" className="object-cover" />
                 </div>
               )}
               <div className="flex-1 min-w-0">
