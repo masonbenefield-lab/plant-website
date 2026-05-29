@@ -115,8 +115,8 @@ export default async function GiveawayPage() {
           {giveaway.sponsor_name && (
             <div className="rounded-xl border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 px-5 py-4 flex items-center gap-4">
               {giveaway.sponsor_logo_url && (
-                <div className="relative w-20 h-20 rounded-full overflow-hidden shrink-0">
-                  <Image src={giveaway.sponsor_logo_url} alt={giveaway.sponsor_name} fill sizes="160px" className="object-cover" />
+                <div className="relative w-28 h-28 rounded-full overflow-hidden shrink-0">
+                  <Image src={giveaway.sponsor_logo_url} alt={giveaway.sponsor_name} fill sizes="256px" className="object-cover" />
                 </div>
               )}
               <div className="flex-1 min-w-0">
@@ -146,8 +146,8 @@ export default async function GiveawayPage() {
           {/* Plant card */}
           <div className="rounded-2xl border overflow-hidden shadow-sm">
             {giveaway.image_url && (
-              <div className="relative w-full aspect-[4/3] bg-black">
-                <Image src={giveaway.image_url} alt={giveaway.plant_name} fill sizes="(max-width: 768px) 100vw, 800px" className="object-contain" />
+              <div className="relative w-full aspect-square bg-muted">
+                <Image src={giveaway.image_url} alt={giveaway.plant_name} fill sizes="(max-width: 768px) 100vw, 800px" className="object-cover" />
               </div>
             )}
             <div className="p-6 sm:p-8 space-y-4">
