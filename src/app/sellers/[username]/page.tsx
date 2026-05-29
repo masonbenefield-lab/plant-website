@@ -6,7 +6,7 @@ import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Star, MapPin, Sprout } from "lucide-react";
+import { Star, MapPin, Sprout, Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import FollowButton from "@/components/follow-button";
 import ReportButton from "@/components/report-button";
@@ -76,7 +76,7 @@ export default async function SellerStorefront({
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  const [{ data: listings }, { data: auctions }, { data: ratings }, { count: followerCount }, { data: gardenPlants }, { data: announcements }] =
+  const [{ data: listings }, { data: auctions }, { data: ratings }, { count: followerCount }, { data: gardenPlants }, { data: announcements }, { data: wishlistItems }] =
     await Promise.all([
       supabase.from("listings").select("*").eq("seller_id", profile.id).eq("status", "active").or("category.neq.Hidden,category.is.null").order("created_at", { ascending: false }),
       profile.stripe_onboarded
@@ -88,6 +88,9 @@ export default async function SellerStorefront({
         ? createAdminClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!).from("garden_plants").select("id, name, variety, status, location, planted_at, images, public_notes").eq("user_id", profile.id).or("is_public.eq.true,is_public.is.null").order("created_at", { ascending: false })
         : Promise.resolve({ data: [] }),
       supabase.from("announcements").select("id, body, photos, created_at").eq("seller_id", profile.id).order("created_at", { ascending: false }).limit(20),
+      profile.wishlist_public
+        ? createAdminClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!).from("wishlist_items").select("id, name, variety, notes, priority").eq("user_id", profile.id).order("name", { ascending: true }).order("variety", { ascending: true })
+        : Promise.resolve({ data: [] }),
     ]);
 
   const reviewerIds = [...new Set(ratings?.map((r) => r.reviewer_id) ?? [])];
@@ -250,6 +253,9 @@ export default async function SellerStorefront({
           <TabsTrigger value="reviews">Reviews ({ratings?.length ?? 0})</TabsTrigger>
           {profile.garden_public && (
             <TabsTrigger value="garden">Garden ({gardenPlants?.length ?? 0})</TabsTrigger>
+          )}
+          {profile.wishlist_public && (
+            <TabsTrigger value="wishlist">Wishlist ({wishlistItems?.length ?? 0})</TabsTrigger>
           )}
         </TabsList>
 
@@ -431,6 +437,46 @@ export default async function SellerStorefront({
                       )}
                     </CardContent>
                   </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        )}
+        {profile.wishlist_public && (
+          <TabsContent value="wishlist" className="mt-6">
+            {!wishlistItems?.length ? (
+              <Card>
+                <CardContent className="py-16 text-center space-y-3">
+                  <Heart className="mx-auto text-muted-foreground" size={36} />
+                  <p className="font-medium">No wishlist items yet</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-2">
+                {wishlistItems.map((item) => (
+                  <div key={item.id} className="flex items-start gap-3 rounded-lg border bg-card px-4 py-3">
+                    <Heart size={16} className="mt-0.5 shrink-0 text-rose-400" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium text-sm">{item.name}</span>
+                        {item.variety && (
+                          <span className="text-xs text-muted-foreground">· {item.variety}</span>
+                        )}
+                        {item.priority && item.priority !== "want" && (
+                          <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium ${
+                            item.priority === "must"
+                              ? "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300"
+                              : "bg-muted text-muted-foreground"
+                          }`}>
+                            {item.priority === "must" ? "Must have" : "Nice to have"}
+                          </span>
+                        )}
+                      </div>
+                      {item.notes && (
+                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{item.notes}</p>
+                      )}
+                    </div>
+                  </div>
                 ))}
               </div>
             )}
