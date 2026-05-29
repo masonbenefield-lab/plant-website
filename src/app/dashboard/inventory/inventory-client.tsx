@@ -825,6 +825,9 @@ export default function InventoryClient({
         images: editImages,
         category: editCategory || null,
         pot_size: editPotSize || null,
+        free_shipping: editShippingMode === "free",
+        shipping_cost_cents: editShippingMode === "flat" ? dollarsToCents(editShippingCost) : null,
+        shipping_weight_oz: editShippingMode === "weight" && editWeightOz !== "" ? Math.max(1, Math.round(parseFloat(editWeightOz))) : null,
       }).eq("id", modal.row.listing_id);
     }
     setSubmitting(false);
@@ -1258,6 +1261,10 @@ export default function InventoryClient({
               <div className="flex items-center gap-1 text-xs text-green-700 font-medium">
                 <Truck size={11} /> Free shipping
               </div>
+            ) : row.shipping_cost_cents ? (
+              <div className="flex items-center gap-1 text-xs text-muted-foreground font-medium">
+                <Truck size={11} /> ${(row.shipping_cost_cents / 100).toFixed(2)} flat rate
+              </div>
             ) : !row.shipping_weight_oz ? (
               <button
                 onClick={() => openModal({ type: "edit", row })}
@@ -1276,6 +1283,10 @@ export default function InventoryClient({
             {row.free_shipping ? (
               <div className="flex items-center gap-1 text-xs text-green-700 font-medium">
                 <Truck size={11} /> Free shipping
+              </div>
+            ) : row.shipping_cost_cents ? (
+              <div className="flex items-center gap-1 text-xs text-muted-foreground font-medium">
+                <Truck size={11} /> ${(row.shipping_cost_cents / 100).toFixed(2)} flat rate
               </div>
             ) : !row.shipping_weight_oz ? (
               <button
@@ -1442,6 +1453,10 @@ export default function InventoryClient({
                 <div className="flex items-center gap-1 text-xs text-green-700 font-medium">
                   <Truck size={11} /> Free shipping
                 </div>
+              ) : row.shipping_cost_cents ? (
+                <div className="flex items-center gap-1 text-xs text-muted-foreground font-medium">
+                  <Truck size={11} /> ${(row.shipping_cost_cents / 100).toFixed(2)} flat rate
+                </div>
               ) : !row.shipping_weight_oz ? (
                 <button
                   onClick={() => openModal({ type: "edit", row })}
@@ -1463,6 +1478,10 @@ export default function InventoryClient({
               {row.free_shipping ? (
                 <div className="flex items-center gap-1 text-xs text-green-700 font-medium">
                   <Truck size={11} /> Free shipping
+                </div>
+              ) : row.shipping_cost_cents ? (
+                <div className="flex items-center gap-1 text-xs text-muted-foreground font-medium">
+                  <Truck size={11} /> ${(row.shipping_cost_cents / 100).toFixed(2)} flat rate
                 </div>
               ) : !row.shipping_weight_oz ? (
                 <button

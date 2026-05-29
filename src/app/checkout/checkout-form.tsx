@@ -186,6 +186,11 @@ export default function CheckoutForm({ listingId, auctionId, offerId, priceCents
       return;
     }
 
+    if (data.flatRate) {
+      await createOrder({ shippingCostCents: data.flatRateCents as number });
+      return;
+    }
+
     setRates(data.rates ?? []);
     setSelectedRate(data.rates?.[0] ?? null);
     const firstRateCents = data.rates?.[0] ? Math.round(parseFloat(data.rates[0].amount) * 100) : 0;

@@ -26,6 +26,7 @@ export function ShippingEstimate({ listingId, auctionId, freeShipping, shippingC
   const [loading, setLoading] = useState(false);
   const [rates, setRates] = useState<ShippoRate[] | null>(null);
   const [isFreeResult, setIsFreeResult] = useState(false);
+  const [flatResult, setFlatResult] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   if (freeShipping) {
@@ -51,6 +52,7 @@ export function ShippingEstimate({ listingId, auctionId, freeShipping, shippingC
     setError(null);
     setRates(null);
     setIsFreeResult(false);
+    setFlatResult(null);
 
     const res = await fetch("/api/shipping/estimate", {
       method: "POST",
@@ -66,6 +68,10 @@ export function ShippingEstimate({ listingId, auctionId, freeShipping, shippingC
     }
     if (data.freeShipping) {
       setIsFreeResult(true);
+      return;
+    }
+    if (data.flatRate) {
+      setFlatResult(data.flatRateCents as number);
       return;
     }
     const sorted = [...(data.rates ?? [])].sort(
@@ -91,6 +97,7 @@ export function ShippingEstimate({ listingId, auctionId, freeShipping, shippingC
             setZip(e.target.value.replace(/\D/g, "").slice(0, 5));
             setRates(null);
             setIsFreeResult(false);
+            setFlatResult(null);
             setError(null);
           }}
           onKeyDown={(e) => { if (e.key === "Enter" && zip.length === 5) estimate(); }}
@@ -115,6 +122,12 @@ export function ShippingEstimate({ listingId, auctionId, freeShipping, shippingC
       {isFreeResult && (
         <p className="text-xs text-green-700 dark:text-green-400 font-medium">
           ✓ Free shipping to this ZIP code
+        </p>
+      )}
+
+      {flatResult !== null && (
+        <p className="text-xs font-medium">
+          Flat rate: {centsToDisplay(flatResult)} to any US address
         </p>
       )}
 

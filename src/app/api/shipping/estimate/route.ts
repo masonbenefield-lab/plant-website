@@ -28,11 +28,12 @@ export async function POST(request: Request) {
   let sellerId: string;
   let weightOz: number;
   let freeShipping = false;
+  let flatRateCents: number | null = null;
 
   if (listingId) {
     const { data: listing } = await admin
       .from("listings")
-      .select("seller_id, inventory_id, free_shipping, shipping_weight_oz")
+      .select("seller_id, inventory_id, free_shipping, shipping_weight_oz, shipping_cost_cents")
       .eq("id", listingId)
       .single();
     if (!listing) return NextResponse.json({ error: "Listing not found" }, { status: 404 });
@@ -41,19 +42,21 @@ export async function POST(request: Request) {
     if (listing.inventory_id) {
       const { data: inv } = await admin
         .from("inventory")
-        .select("shipping_weight_oz, free_shipping")
+        .select("shipping_weight_oz, free_shipping, shipping_cost_cents")
         .eq("id", listing.inventory_id)
         .single();
       freeShipping = inv?.free_shipping ?? listing.free_shipping;
+      flatRateCents = inv?.shipping_cost_cents ?? listing.shipping_cost_cents ?? null;
       weightOz = inv?.shipping_weight_oz ?? listing.shipping_weight_oz ?? 16;
     } else {
       freeShipping = listing.free_shipping;
+      flatRateCents = listing.shipping_cost_cents ?? null;
       weightOz = listing.shipping_weight_oz ?? 16;
     }
   } else {
     const { data: auction } = await admin
       .from("auctions")
-      .select("seller_id, inventory_id, free_shipping, shipping_weight_oz")
+      .select("seller_id, inventory_id, free_shipping, shipping_weight_oz, shipping_cost_cents")
       .eq("id", auctionId!)
       .single();
     if (!auction) return NextResponse.json({ error: "Auction not found" }, { status: 404 });
@@ -62,19 +65,25 @@ export async function POST(request: Request) {
     if (auction.inventory_id) {
       const { data: inv } = await admin
         .from("inventory")
-        .select("shipping_weight_oz, free_shipping")
+        .select("shipping_weight_oz, free_shipping, shipping_cost_cents")
         .eq("id", auction.inventory_id)
         .single();
       freeShipping = inv?.free_shipping ?? auction.free_shipping;
+      flatRateCents = inv?.shipping_cost_cents ?? auction.shipping_cost_cents ?? null;
       weightOz = inv?.shipping_weight_oz ?? auction.shipping_weight_oz ?? 16;
     } else {
       freeShipping = auction.free_shipping;
+      flatRateCents = auction.shipping_cost_cents ?? null;
       weightOz = auction.shipping_weight_oz ?? 16;
     }
   }
 
   if (freeShipping) {
     return NextResponse.json({ freeShipping: true });
+  }
+
+  if (flatRateCents) {
+    return NextResponse.json({ flatRate: true, flatRateCents });
   }
 
   const { data: seller } = await admin

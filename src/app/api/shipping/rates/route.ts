@@ -59,10 +59,11 @@ export async function POST(request: Request) {
     if (listing.inventory_id) {
       const { data: inv } = await supabase
         .from("inventory")
-        .select("shipping_weight_oz, free_shipping")
+        .select("shipping_weight_oz, free_shipping, shipping_cost_cents")
         .eq("id", listing.inventory_id)
         .single();
       if (inv?.free_shipping) return NextResponse.json({ rates: [], freeShipping: true });
+      if (inv?.shipping_cost_cents) return NextResponse.json({ rates: [], flatRate: true, flatRateCents: inv.shipping_cost_cents });
       weightOz = inv?.shipping_weight_oz ?? 16;
     } else {
       weightOz = 16;
@@ -79,10 +80,11 @@ export async function POST(request: Request) {
     if (auction.inventory_id) {
       const { data: inv } = await supabase
         .from("inventory")
-        .select("shipping_weight_oz, free_shipping")
+        .select("shipping_weight_oz, free_shipping, shipping_cost_cents")
         .eq("id", auction.inventory_id)
         .single();
       if (inv?.free_shipping) return NextResponse.json({ rates: [], freeShipping: true });
+      if (inv?.shipping_cost_cents) return NextResponse.json({ rates: [], flatRate: true, flatRateCents: inv.shipping_cost_cents });
       weightOz = inv?.shipping_weight_oz ?? 16;
     } else {
       weightOz = 16;
