@@ -15,7 +15,7 @@ export async function POST() {
 
   if (!profile?.is_admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  await sendWelcomeEmail({ email: user.email!, username: profile.username ?? "there" });
+  await sendWelcomeEmail({ recipientEmail: user.email!, username: profile.username ?? "there" });
 
   return NextResponse.json({ ok: true });
 }
