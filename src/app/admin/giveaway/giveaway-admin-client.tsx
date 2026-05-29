@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
-import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Loader2, ChevronDown, ChevronUp, X, Trophy, RefreshCw, Check } from "lucide-react";
@@ -103,14 +102,16 @@ function PlantDetailsForm({
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
-    const supabase = createClient();
     const ext = file.name.split(".").pop();
     const path = `giveaway-plants/${month}-${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from("garden").upload(path, file, { upsert: true });
-    if (error) { toast.error("Image upload failed: " + error.message); setUploading(false); return; }
-    const { data: { publicUrl } } = supabase.storage.from("garden").getPublicUrl(path);
-    setImageUrl(publicUrl);
+    const form = new FormData();
+    form.append("file", file);
+    form.append("path", path);
+    const res = await fetch("/api/admin/upload-giveaway-image", { method: "POST", body: form });
+    const data = await res.json();
     setUploading(false);
+    if (!res.ok) { toast.error("Image upload failed: " + (data.error ?? "Unknown error")); return; }
+    setImageUrl(data.publicUrl);
     toast.success("Image uploaded");
   }
 
@@ -204,13 +205,15 @@ function SponsorForm({
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
-    const supabase = createClient();
     const path = `giveaway-sponsors/${month}-${Date.now()}.${file.name.split(".").pop()}`;
-    const { error } = await supabase.storage.from("garden").upload(path, file, { upsert: true });
-    if (error) { toast.error("Logo upload failed"); setUploading(false); return; }
-    const { data: { publicUrl } } = supabase.storage.from("garden").getPublicUrl(path);
-    setLogoUrl(publicUrl);
+    const form = new FormData();
+    form.append("file", file);
+    form.append("path", path);
+    const res = await fetch("/api/admin/upload-giveaway-image", { method: "POST", body: form });
+    const data = await res.json();
     setUploading(false);
+    if (!res.ok) { toast.error("Logo upload failed: " + (data.error ?? "Unknown error")); return; }
+    setLogoUrl(data.publicUrl);
     toast.success("Logo uploaded");
   }
 
