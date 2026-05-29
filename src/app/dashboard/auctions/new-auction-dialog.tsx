@@ -165,9 +165,9 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
             <div className="space-y-1">
               <Label htmlFor="starting_bid">Starting Bid ($) *</Label>
               <Input id="starting_bid" name="starting_bid" type="number" min={0.01} step={0.01} required disabled={atAuctionLimit} />
-              <PriceSuggestion plantName={plantName} variety={variety} label="bid" />
             </div>
           </div>
+          <PriceSuggestion plantName={plantName} variety={variety} label="bid" />
           <div className="space-y-1">
             <Label htmlFor="buy_now_price">Buy Now Price ($) <span className="font-normal text-muted-foreground">(optional)</span></Label>
             <Input id="buy_now_price" name="buy_now_price" type="number" min={0.01} step={0.01} placeholder="Leave blank to disable" disabled={atAuctionLimit} />

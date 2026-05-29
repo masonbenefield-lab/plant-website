@@ -2165,7 +2165,6 @@ export default function InventoryClient({
                   <div className="space-y-1">
                     <Label htmlFor="modal-bid">Starting Bid ($) *</Label>
                     <Input id="modal-bid" type="number" min={0.01} step={0.01} value={startingBid} onChange={e => setStartingBid(e.target.value)} placeholder="0.00" autoFocus />
-                    <PriceSuggestion plantName={modal.row.plant_name} variety={modal.row.variety} label="bid" />
                   </div>
                   <div className="space-y-1">
                     <Label htmlFor="modal-auc-qty">Quantity *</Label>
@@ -2173,6 +2172,7 @@ export default function InventoryClient({
                     <p className="text-xs text-muted-foreground">{a} available</p>
                   </div>
                 </div>
+                <PriceSuggestion plantName={modal.row.plant_name} variety={modal.row.variety} label="bid" />
                 <div className="space-y-1">
                   <Label htmlFor="modal-buy-now">Buy Now Price ($) <span className="font-normal text-muted-foreground">(optional)</span></Label>
                   <Input id="modal-buy-now" type="number" min={0.01} step={0.01} value={buyNowPrice} onChange={e => setBuyNowPrice(e.target.value)} placeholder="Leave blank to disable" />
