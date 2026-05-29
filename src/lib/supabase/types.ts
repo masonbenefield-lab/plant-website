@@ -448,6 +448,7 @@ export interface Database {
           category: string | null;
           pot_size: string | null;
           shipping_weight_oz: number | null;
+          shipping_cost_cents: number | null;
           free_shipping: boolean;
           archived_at: string | null;
           created_at: string;
@@ -470,6 +471,7 @@ export interface Database {
           category?: string | null;
           pot_size?: string | null;
           shipping_weight_oz?: number | null;
+          shipping_cost_cents?: number | null;
           free_shipping?: boolean;
           archived_at?: string | null;
           created_at?: string;
@@ -490,6 +492,7 @@ export interface Database {
           category?: string | null;
           pot_size?: string | null;
           shipping_weight_oz?: number | null;
+          shipping_cost_cents?: number | null;
           free_shipping?: boolean;
           archived_at?: string | null;
         };

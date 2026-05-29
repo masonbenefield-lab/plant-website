@@ -69,6 +69,7 @@ type Row = {
   listing_last_activated_at: string | null;
   auctions: AuctionSummary[];
   shipping_weight_oz: number | null;
+  shipping_cost_cents: number | null;
   free_shipping: boolean;
   low_stock_threshold: number | null;
   cost_cents: number | null;
@@ -278,8 +279,9 @@ export default function InventoryClient({
   const [editImages, setEditImages] = useState<string[]>([]);
   const [imageUploading, setImageUploading] = useState(false);
   const [editLowStockThreshold, setEditLowStockThreshold] = useState("");
+  const [editShippingMode, setEditShippingMode] = useState<"" | "free" | "flat" | "weight">("");
+  const [editShippingCost, setEditShippingCost] = useState("");
   const [editWeightOz, setEditWeightOz] = useState("");
-  const [editFreeShipping, setEditFreeShipping] = useState(false);
   const [dragPhotoIdx, setDragPhotoIdx] = useState<number | null>(null);
 
   // Bulk selection
@@ -384,15 +386,21 @@ export default function InventoryClient({
     if (m.type === "listing") {
       setPrice("");
       setListQty(String(Math.max(1, avail(m.row))));
-      setListingShippingCost("");
       if (m.row.free_shipping) {
         setListingShippingMode("free");
+        setListingShippingCost("");
+        setListingShippingWeightOz("");
+      } else if (m.row.shipping_cost_cents) {
+        setListingShippingMode("flat");
+        setListingShippingCost(String(m.row.shipping_cost_cents / 100));
         setListingShippingWeightOz("");
       } else if (m.row.shipping_weight_oz) {
         setListingShippingMode("weight");
         setListingShippingWeightOz(String(m.row.shipping_weight_oz));
+        setListingShippingCost("");
       } else {
         setListingShippingMode("");
+        setListingShippingCost("");
         setListingShippingWeightOz("");
       }
     }
@@ -416,15 +424,21 @@ export default function InventoryClient({
       }
       setStartingBid(""); setBuyNowPrice(""); setEndsAt(""); setStartsAt(""); setReservePrice("");
       setAuctionQty(String(Math.max(1, avail(m.row))));
-      setAuctionShippingCost("");
       if (m.row.free_shipping) {
         setAuctionShippingMode("free");
+        setAuctionShippingCost("");
+        setAuctionShippingWeightOz("");
+      } else if (m.row.shipping_cost_cents) {
+        setAuctionShippingMode("flat");
+        setAuctionShippingCost(String(m.row.shipping_cost_cents / 100));
         setAuctionShippingWeightOz("");
       } else if (m.row.shipping_weight_oz) {
         setAuctionShippingMode("weight");
         setAuctionShippingWeightOz(String(m.row.shipping_weight_oz));
+        setAuctionShippingCost("");
       } else {
         setAuctionShippingMode("");
+        setAuctionShippingCost("");
         setAuctionShippingWeightOz("");
       }
     }
@@ -439,8 +453,23 @@ export default function InventoryClient({
       setEditImages([...m.row.images]);
       setEditLowStockThreshold(m.row.low_stock_threshold != null ? String(m.row.low_stock_threshold) : "");
       setEditCostPrice(m.row.cost_cents != null ? String(m.row.cost_cents / 100) : "");
-      setEditWeightOz(m.row.shipping_weight_oz != null ? String(m.row.shipping_weight_oz) : "");
-      setEditFreeShipping(m.row.free_shipping ?? false);
+      if (m.row.free_shipping) {
+        setEditShippingMode("free");
+        setEditWeightOz("");
+        setEditShippingCost("");
+      } else if (m.row.shipping_cost_cents) {
+        setEditShippingMode("flat");
+        setEditShippingCost(String(m.row.shipping_cost_cents / 100));
+        setEditWeightOz("");
+      } else if (m.row.shipping_weight_oz) {
+        setEditShippingMode("weight");
+        setEditWeightOz(String(m.row.shipping_weight_oz));
+        setEditShippingCost("");
+      } else {
+        setEditShippingMode("");
+        setEditWeightOz("");
+        setEditShippingCost("");
+      }
       setDragPhotoIdx(null);
       setSaveTemplateName("");
       // Load seller's templates
@@ -761,8 +790,9 @@ export default function InventoryClient({
       images: editImages,
       low_stock_threshold: editLowStockThreshold !== "" ? Number(editLowStockThreshold) : null,
       cost_cents: editCostPrice !== "" ? dollarsToCents(editCostPrice) : null,
-      shipping_weight_oz: editWeightOz !== "" ? Math.max(1, Math.round(parseFloat(editWeightOz))) : null,
-      free_shipping: editFreeShipping,
+      free_shipping: editShippingMode === "free",
+      shipping_cost_cents: editShippingMode === "flat" ? dollarsToCents(editShippingCost) : null,
+      shipping_weight_oz: editShippingMode === "weight" && editWeightOz !== "" ? Math.max(1, Math.round(parseFloat(editWeightOz))) : null,
     }).eq("id", modal.row.id);
     if (error) { toast.error(error.message); setSubmitting(false); return; }
     if (modal.row.listing_id) {
@@ -2398,29 +2428,53 @@ export default function InventoryClient({
                   />
                   <p className="text-xs text-muted-foreground">Warn when available ≤ this</p>
                 </div>
-                <div className="space-y-1">
-                  <Label htmlFor="edit-weight">Ship weight (oz) <span className="font-normal text-muted-foreground">(optional)</span></Label>
-                  <Input
-                    id="edit-weight"
-                    type="number"
-                    min={1}
-                    step={1}
-                    value={editWeightOz}
-                    onChange={e => setEditWeightOz(e.target.value)}
-                    placeholder="e.g. 16"
-                    disabled={editFreeShipping}
-                  />
-                  <p className="text-xs text-muted-foreground">Used for live shipping quotes</p>
-                  <label className="flex items-center gap-2 pt-1 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={editFreeShipping}
-                      onChange={e => setEditFreeShipping(e.target.checked)}
-                      className="h-4 w-4 rounded border-gray-300 accent-green-700"
-                    />
-                    <span className="text-sm font-medium">Offer free shipping</span>
-                    <span className="text-xs text-muted-foreground">(you absorb the cost)</span>
-                  </label>
+                <div className="space-y-1 col-span-2">
+                  <Label>Shipping <span className="font-normal text-muted-foreground">(optional — required to list)</span></Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(["free", "flat", "weight"] as const).map((mode) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => setEditShippingMode(editShippingMode === mode ? "" : mode)}
+                        className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
+                          editShippingMode === mode
+                            ? "border-green-700 bg-green-50 text-green-800 dark:bg-green-950/40 dark:text-green-300 dark:border-green-600"
+                            : "border-input hover:bg-muted"
+                        }`}
+                      >
+                        {mode === "free" ? "Free" : mode === "flat" ? "Flat rate" : "By weight"}
+                      </button>
+                    ))}
+                  </div>
+                  {editShippingMode === "flat" && (
+                    <div className="flex items-center gap-2 pt-1">
+                      <span className="text-sm text-muted-foreground">$</span>
+                      <Input
+                        type="number"
+                        min={0.01}
+                        step={0.01}
+                        placeholder="e.g. 6.99"
+                        value={editShippingCost}
+                        onChange={e => setEditShippingCost(e.target.value)}
+                        className="max-w-[120px]"
+                      />
+                      <span className="text-xs text-muted-foreground">charged to buyer</span>
+                    </div>
+                  )}
+                  {editShippingMode === "weight" && (
+                    <div className="flex items-center gap-2 pt-1">
+                      <Input
+                        type="number"
+                        min={0.1}
+                        step={0.1}
+                        placeholder="e.g. 16"
+                        value={editWeightOz}
+                        onChange={e => setEditWeightOz(e.target.value)}
+                        className="max-w-[100px]"
+                      />
+                      <span className="text-xs text-muted-foreground">oz — rate calculated at checkout</span>
+                    </div>
+                  )}
                 </div>
               </div>
               {/* Templates */}
