@@ -245,6 +245,9 @@ export default function InventoryClient({
   const [soldOutBehavior, setSoldOutBehavior] = useState<"mark_sold_out" | "auto_pause">("mark_sold_out");
   const [careGuidePdfUrl, setCareGuidePdfUrl] = useState<string | null>(null);
   const [careGuidePdfUploading, setCareGuidePdfUploading] = useState(false);
+  const [listingShippingMode, setListingShippingMode] = useState<"" | "free" | "flat" | "weight">("");
+  const [listingShippingCost, setListingShippingCost] = useState("");
+  const [listingShippingWeightOz, setListingShippingWeightOz] = useState("");
 
   // Listing templates
   type ListingTemplate = { id: string; name: string; plant_name: string; variety: string | null; category: string | null; pot_size: string | null; description: string | null; price_cents: number | null };
@@ -260,6 +263,9 @@ export default function InventoryClient({
   const [reservePrice, setReservePrice] = useState("");
   const [auctionQty, setAuctionQty] = useState("");
   const [auctionAck, setAuctionAck] = useState(false);
+  const [auctionShippingMode, setAuctionShippingMode] = useState<"" | "free" | "flat" | "weight">("");
+  const [auctionShippingCost, setAuctionShippingCost] = useState("");
+  const [auctionShippingWeightOz, setAuctionShippingWeightOz] = useState("");
 
   // Edit item modal
   const [editPlantName, setEditPlantName] = useState("");
@@ -378,6 +384,17 @@ export default function InventoryClient({
     if (m.type === "listing") {
       setPrice("");
       setListQty(String(Math.max(1, avail(m.row))));
+      setListingShippingCost("");
+      if (m.row.free_shipping) {
+        setListingShippingMode("free");
+        setListingShippingWeightOz("");
+      } else if (m.row.shipping_weight_oz) {
+        setListingShippingMode("weight");
+        setListingShippingWeightOz(String(m.row.shipping_weight_oz));
+      } else {
+        setListingShippingMode("");
+        setListingShippingWeightOz("");
+      }
     }
     if (m.type === "edit-listing") {
       setPrice(m.row.listing_price_cents ? String(m.row.listing_price_cents / 100) : "");
@@ -399,6 +416,17 @@ export default function InventoryClient({
       }
       setStartingBid(""); setBuyNowPrice(""); setEndsAt(""); setStartsAt(""); setReservePrice("");
       setAuctionQty(String(Math.max(1, avail(m.row))));
+      setAuctionShippingCost("");
+      if (m.row.free_shipping) {
+        setAuctionShippingMode("free");
+        setAuctionShippingWeightOz("");
+      } else if (m.row.shipping_weight_oz) {
+        setAuctionShippingMode("weight");
+        setAuctionShippingWeightOz(String(m.row.shipping_weight_oz));
+      } else {
+        setAuctionShippingMode("");
+        setAuctionShippingWeightOz("");
+      }
     }
     if (m.type === "edit") {
       setEditPlantName(m.row.plant_name);
@@ -525,6 +553,9 @@ export default function InventoryClient({
       category: modal.row.category || null,
       pot_size: modal.row.pot_size || null,
       inventory_id: modal.row.id,
+      free_shipping: listingShippingMode === "free",
+      shipping_cost_cents: listingShippingMode === "flat" ? dollarsToCents(listingShippingCost) : null,
+      shipping_weight_oz: listingShippingMode === "weight" ? Number(listingShippingWeightOz) : null,
     }).select("id").single();
     if (error) { toast.error(error.message); setSubmitting(false); return; }
     await supabase.from("inventory").update({ listing_id: newListing.id, listing_quantity: qty }).eq("id", modal.row.id);
@@ -660,6 +691,9 @@ export default function InventoryClient({
       category: modal.row.category || null,
       pot_size: modal.row.pot_size || null,
       inventory_id: modal.row.id,
+      free_shipping: auctionShippingMode === "free",
+      shipping_cost_cents: auctionShippingMode === "flat" ? dollarsToCents(auctionShippingCost) : null,
+      shipping_weight_oz: auctionShippingMode === "weight" ? Number(auctionShippingWeightOz) : null,
     }).select("id").single();
     if (error) { toast.error(error.message); setSubmitting(false); return; }
     setSubmitting(false);
@@ -1921,9 +1955,65 @@ export default function InventoryClient({
                   <Input id="modal-qty" type="number" min={1} max={a} value={listQty} onChange={e => setListQty(e.target.value)} />
                   <p className="text-xs text-muted-foreground">{a} available</p>
                 </div>
+                <div className="space-y-2">
+                  <Label>Shipping <span className="text-destructive">*</span></Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(["free", "flat", "weight"] as const).map((mode) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => setListingShippingMode(mode)}
+                        className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
+                          listingShippingMode === mode
+                            ? "border-green-700 bg-green-50 text-green-800 dark:bg-green-950/40 dark:text-green-300 dark:border-green-600"
+                            : "border-input hover:bg-muted"
+                        }`}
+                      >
+                        {mode === "free" ? "Free" : mode === "flat" ? "Flat rate" : "By weight"}
+                      </button>
+                    ))}
+                  </div>
+                  {listingShippingMode === "flat" && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">$</span>
+                      <Input
+                        type="number"
+                        min={0.01}
+                        step={0.01}
+                        placeholder="e.g. 6.99"
+                        value={listingShippingCost}
+                        onChange={e => setListingShippingCost(e.target.value)}
+                        className="max-w-[120px]"
+                      />
+                      <span className="text-xs text-muted-foreground">flat rate</span>
+                    </div>
+                  )}
+                  {listingShippingMode === "weight" && (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        min={0.1}
+                        step={0.1}
+                        placeholder="oz"
+                        value={listingShippingWeightOz}
+                        onChange={e => setListingShippingWeightOz(e.target.value)}
+                        className="max-w-[90px]"
+                      />
+                      <span className="text-xs text-muted-foreground">oz — rate calculated at checkout</span>
+                    </div>
+                  )}
+                </div>
                 <div className="flex gap-2 pt-1">
                   <Button variant="outline" onClick={() => setModal(null)} className="flex-1">Cancel</Button>
-                  <Button onClick={submitListing} disabled={submitting || !price || !listQty} className="flex-1 bg-green-700 hover:bg-green-800">
+                  <Button
+                    onClick={submitListing}
+                    disabled={
+                      submitting || !price || !listQty || !listingShippingMode ||
+                      (listingShippingMode === "weight" && !listingShippingWeightOz) ||
+                      (listingShippingMode === "flat" && !listingShippingCost)
+                    }
+                    className="flex-1 bg-green-700 hover:bg-green-800"
+                  >
                     {submitting ? "Publishing…" : "Go Live"}
                   </Button>
                 </div>
@@ -2084,6 +2174,54 @@ export default function InventoryClient({
                   <Label htmlFor="modal-ends">End Date & Time *</Label>
                   <Input id="modal-ends" type="datetime-local" value={endsAt} onChange={e => setEndsAt(e.target.value)} min={new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16)} />
                 </div>
+                <div className="space-y-2">
+                  <Label>Shipping <span className="text-destructive">*</span></Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(["free", "flat", "weight"] as const).map((mode) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => setAuctionShippingMode(mode)}
+                        className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
+                          auctionShippingMode === mode
+                            ? "border-green-700 bg-green-50 text-green-800 dark:bg-green-950/40 dark:text-green-300 dark:border-green-600"
+                            : "border-input hover:bg-muted"
+                        }`}
+                      >
+                        {mode === "free" ? "Free" : mode === "flat" ? "Flat rate" : "By weight"}
+                      </button>
+                    ))}
+                  </div>
+                  {auctionShippingMode === "flat" && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">$</span>
+                      <Input
+                        type="number"
+                        min={0.01}
+                        step={0.01}
+                        placeholder="e.g. 6.99"
+                        value={auctionShippingCost}
+                        onChange={e => setAuctionShippingCost(e.target.value)}
+                        className="max-w-[120px]"
+                      />
+                      <span className="text-xs text-muted-foreground">flat rate</span>
+                    </div>
+                  )}
+                  {auctionShippingMode === "weight" && (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        min={0.1}
+                        step={0.1}
+                        placeholder="oz"
+                        value={auctionShippingWeightOz}
+                        onChange={e => setAuctionShippingWeightOz(e.target.value)}
+                        className="max-w-[90px]"
+                      />
+                      <span className="text-xs text-muted-foreground">oz — rate calculated at checkout</span>
+                    </div>
+                  )}
+                </div>
                 <div className="rounded-md border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-3 text-xs text-amber-800 dark:text-amber-300">
                   <label className="flex items-start gap-2 cursor-pointer">
                     <input
@@ -2097,7 +2235,16 @@ export default function InventoryClient({
                 </div>
                 <div className="flex gap-2 pt-1">
                   <Button variant="outline" onClick={() => { setModal(null); setAuctionAck(false); }} className="flex-1">Cancel</Button>
-                  <Button onClick={submitAuction} disabled={submitting || !startingBid || !endsAt || !auctionQty || !auctionAck} className="flex-1 bg-green-700 hover:bg-green-800">
+                  <Button
+                    onClick={submitAuction}
+                    disabled={
+                      submitting || !startingBid || !endsAt || !auctionQty || !auctionAck ||
+                      !auctionShippingMode ||
+                      (auctionShippingMode === "weight" && !auctionShippingWeightOz) ||
+                      (auctionShippingMode === "flat" && !auctionShippingCost)
+                    }
+                    className="flex-1 bg-green-700 hover:bg-green-800"
+                  >
                     {submitting ? "Starting…" : "Start Auction"}
                   </Button>
                 </div>
