@@ -269,6 +269,13 @@ export default async function AuctionsPage({
                           </div>
                         )}
                       </div>
+                      {auction.free_shipping ? (
+                        <p className="text-xs text-green-700 dark:text-green-400 font-medium mt-1.5">Free shipping</p>
+                      ) : auction.shipping_cost_cents ? (
+                        <p className="text-xs text-muted-foreground mt-1.5">+ {centsToDisplay(auction.shipping_cost_cents)} shipping</p>
+                      ) : auction.shipping_weight_oz ? (
+                        <p className="text-xs text-muted-foreground mt-1.5">Calculated shipping</p>
+                      ) : null}
                     </CardContent>
                   </Link>
                   {seller && (

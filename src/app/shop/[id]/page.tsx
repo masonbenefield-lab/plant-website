@@ -20,6 +20,7 @@ import TrackView from "@/components/track-view";
 import SizePicker from "@/components/size-picker";
 import ListingShareButton from "@/components/listing-share-button";
 import { ListingComments } from "@/components/listing-comments";
+import { ShippingEstimate } from "@/components/shipping-estimate";
 
 export async function generateMetadata({
   params,
@@ -202,11 +203,18 @@ export default async function ListingPage({
             </p>
           )}
 
-          {seller?.shipping_days && (
-            <p className="mt-3 text-xs text-muted-foreground">
-              🚚 Ships within {seller.shipping_days} day{seller.shipping_days !== 1 ? "s" : ""}
-            </p>
-          )}
+          <div className="mt-3 space-y-1.5">
+            {seller?.shipping_days && (
+              <p className="text-xs text-muted-foreground">
+                🚚 Ships within {seller.shipping_days} day{seller.shipping_days !== 1 ? "s" : ""}
+              </p>
+            )}
+            <ShippingEstimate
+              listingId={listing.id}
+              freeShipping={listing.free_shipping}
+              shippingCostCents={listing.shipping_cost_cents}
+            />
+          </div>
 
           {seller?.vacation_mode && (
             <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 px-3 py-2 text-xs text-amber-800 dark:text-amber-300">

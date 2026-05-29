@@ -10,6 +10,7 @@ import WishlistButton from "@/components/wishlist-button";
 import ReportButton from "@/components/report-button";
 import ImageGallery from "@/components/image-gallery";
 import ListingShareButton from "@/components/listing-share-button";
+import { ShippingEstimate } from "@/components/shipping-estimate";
 
 export async function generateMetadata({
   params,
@@ -127,6 +128,14 @@ export default async function AuctionPage({
               {auction.description}
             </p>
           )}
+
+          <div className="mb-4">
+            <ShippingEstimate
+              auctionId={auction.id}
+              freeShipping={auction.free_shipping}
+              shippingCostCents={auction.shipping_cost_cents}
+            />
+          </div>
 
           {auction.status === "scheduled" && auction.starts_at && (
             <div className="mb-4 rounded-md border border-blue-200 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-800 px-3 py-2 text-sm text-blue-800 dark:text-blue-300">

@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { centsToDisplay, dollarsToCents } from "@/lib/stripe";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, AlertTriangle } from "lucide-react";
 import type { AuctionStatus } from "@/lib/supabase/types";
 
 interface AuctionData {
@@ -32,6 +32,11 @@ interface Bid {
   bidder: { username: string } | null;
 }
 
+interface PendingConfirm {
+  cents: number;
+  maxCents: number | null;
+}
+
 export default function AuctionBidPanel({
   auction: initialAuction,
   userId,
@@ -47,6 +52,8 @@ export default function AuctionBidPanel({
   const [auction, setAuction] = useState(initialAuction);
   const [bids, setBids] = useState(initialBids);
   const [bidAmount, setBidAmount] = useState("");
+  const [maxBidAmount, setMaxBidAmount] = useState("");
+  const [showMaxBid, setShowMaxBid] = useState(false);
   const [placing, setPlacing] = useState(false);
   const [timeLeft, setTimeLeft] = useState("");
   const [connected, setConnected] = useState(true);
@@ -54,7 +61,7 @@ export default function AuctionBidPanel({
   const [allBids, setAllBids] = useState<Bid[]>([]);
   const [loadingAllBids, setLoadingAllBids] = useState(false);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
-  const [pendingConfirm, setPendingConfirm] = useState<number | null>(null);
+  const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -72,7 +79,6 @@ export default function AuctionBidPanel({
         { event: "INSERT", schema: "public", table: "bids", filter: `auction_id=eq.${auction.id}` },
         (payload) => {
           const newBid = payload.new as { id: string; amount_cents: number; created_at: string; bidder_id: string };
-          // Add immediately with null bidder, then patch with real username
           setBids((prev) => [
             { id: newBid.id, amount_cents: newBid.amount_cents, created_at: newBid.created_at, bidder: null },
             ...prev.slice(0, 9),
@@ -159,18 +165,27 @@ export default function AuctionBidPanel({
     if (isNaN(cents) || cents < minBid) {
       return toast.error(`Minimum bid is ${centsToDisplay(minBid)}`);
     }
-    setPendingConfirm(cents);
+
+    let maxCents: number | null = null;
+    if (showMaxBid && maxBidAmount.trim()) {
+      maxCents = dollarsToCents(maxBidAmount);
+      if (isNaN(maxCents) || maxCents < cents) {
+        return toast.error("Max bid must be at least your current bid amount");
+      }
+    }
+
+    setPendingConfirm({ cents, maxCents });
   }
 
   async function confirmBid() {
     if (!pendingConfirm) return;
-    const cents = pendingConfirm;
+    const { cents, maxCents } = pendingConfirm;
     setPendingConfirm(null);
     setPlacing(true);
     const res = await fetch("/api/bids/place", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ auctionId: auction.id, amountCents: cents }),
+      body: JSON.stringify({ auctionId: auction.id, amountCents: cents, maxBidCents: maxCents }),
     });
     const data = await res.json();
     setPlacing(false);
@@ -180,10 +195,21 @@ export default function AuctionBidPanel({
       return;
     }
 
-    toast.success(`Bid of ${centsToDisplay(cents)} placed!`);
-    if (data.extended) toast.info("Auction extended — bid placed in final 2 minutes");
+    if (data.outbidByProxy) {
+      toast.warning(
+        `Your bid of ${centsToDisplay(cents)} was placed but immediately outbid by a proxy bid (${centsToDisplay(data.proxyBid)}).`,
+        { duration: 6000 }
+      );
+    } else {
+      toast.success(`Bid of ${centsToDisplay(cents)} placed!`);
+      if (maxCents) toast.info(`Auto-bidding enabled up to ${centsToDisplay(maxCents)}`, { duration: 4000 });
+      if (data.extended) toast.info("Auction extended — bid placed in final 2 minutes");
+    }
     setBidAmount("");
-    if (data.previousBidderId && data.previousBidderId !== userId) {
+    setMaxBidAmount("");
+    setShowMaxBid(false);
+
+    if (!data.outbidByProxy && data.previousBidderId && data.previousBidderId !== userId) {
       fetch("/api/bids/notify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -225,6 +251,11 @@ export default function AuctionBidPanel({
   const isWinner = isEnded && auction.current_bidder_id === userId;
   const msLeft = new Date(auction.ends_at).getTime() - Date.now();
   const isNearEnd = !isEnded && msLeft > 0 && msLeft < 5 * 60 * 1000;
+  const minBidForDisplay = auction.current_bid_cents + getMinIncrement(auction.current_bid_cents);
+
+  function isSafetyWarning(cents: number): boolean {
+    return cents >= minBidForDisplay * 3;
+  }
 
   return (
     <div className="space-y-4">
@@ -241,6 +272,7 @@ export default function AuctionBidPanel({
         {showHowItWorks && (
           <div className="px-3 pb-3 pt-1 space-y-2 text-muted-foreground border-t bg-muted/30">
             <p><strong className="text-foreground">Place a bid</strong> — enter any amount above the current bid. The highest bidder when the timer hits zero wins.</p>
+            <p><strong className="text-foreground">Max bid (proxy)</strong> — set a maximum you&apos;re willing to pay. The system will automatically bid the minimum increment on your behalf whenever you&apos;re outbid, up to your max.</p>
             <p><strong className="text-foreground">Buy Now</strong> — if the seller set a Buy Now price, you can skip bidding and purchase immediately at that price.</p>
             <p><strong className="text-foreground">Sniping protection</strong> — bids placed in the last 2 minutes extend the auction by 2 minutes, giving everyone a fair chance.</p>
             <p><strong className="text-foreground">No bids = no charge</strong> — if the auction ends with no bids, nothing happens. No payment, no obligation.</p>
@@ -343,38 +375,112 @@ export default function AuctionBidPanel({
               </button>
             ))}
           </div>
-          {/* Bid input + submit */}
-          <form onSubmit={handleBidSubmit} className="flex gap-2">
-            <div className="flex-1">
-              <Label htmlFor="bid" className="sr-only">Bid amount</Label>
-              <Input
-                id="bid"
-                type="number"
-                min={((auction.current_bid_cents + getMinIncrement(auction.current_bid_cents)) / 100).toFixed(2)}
-                step="0.01"
-                placeholder={`Min ${centsToDisplay(auction.current_bid_cents + getMinIncrement(auction.current_bid_cents))}`}
-                value={bidAmount}
-                onChange={(e) => setBidAmount(e.target.value)}
-                required
-              />
+
+          {/* Bid form */}
+          <form onSubmit={handleBidSubmit} className="space-y-2">
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <Label htmlFor="bid" className="sr-only">Bid amount</Label>
+                <Input
+                  id="bid"
+                  type="number"
+                  min={(minBidForDisplay / 100).toFixed(2)}
+                  step="0.01"
+                  placeholder={`Min ${centsToDisplay(minBidForDisplay)}`}
+                  value={bidAmount}
+                  onChange={(e) => setBidAmount(e.target.value)}
+                  required
+                />
+              </div>
+              <Button
+                type="submit"
+                disabled={placing}
+                className="bg-green-700 hover:bg-green-800"
+              >
+                {placing ? "…" : "Place Bid"}
+              </Button>
             </div>
-            <Button
-              type="submit"
-              disabled={placing}
-              className="bg-green-700 hover:bg-green-800"
+
+            {/* Max bid toggle */}
+            <button
+              type="button"
+              onClick={() => {
+                setShowMaxBid((v) => !v);
+                if (showMaxBid) setMaxBidAmount("");
+              }}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
             >
-              {placing ? "…" : "Place Bid"}
-            </Button>
+              {showMaxBid ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+              {showMaxBid ? "Hide max bid" : "Set a max bid (optional)"}
+            </button>
+
+            {showMaxBid && (
+              <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
+                <div>
+                  <Label htmlFor="maxBid" className="text-xs font-medium">Max bid</Label>
+                  <p className="text-xs text-muted-foreground mb-1.5">
+                    System auto-bids the minimum increment on your behalf whenever you&apos;re outbid, up to this amount.
+                  </p>
+                  <Input
+                    id="maxBid"
+                    type="number"
+                    min={(minBidForDisplay / 100).toFixed(2)}
+                    step="0.01"
+                    placeholder={`e.g. ${centsToDisplay(minBidForDisplay * 5)}`}
+                    value={maxBidAmount}
+                    onChange={(e) => setMaxBidAmount(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
           </form>
+
           {/* Confirmation step */}
           {pendingConfirm !== null && (
-            <div className="rounded-lg border border-green-300 bg-green-50 dark:bg-green-900/20 dark:border-green-800 px-4 py-3 flex items-center justify-between gap-3">
-              <p className="text-sm font-medium text-green-800 dark:text-green-300">
-                Confirm bid of <span className="font-bold">{centsToDisplay(pendingConfirm)}</span>?
-              </p>
-              <div className="flex gap-2 shrink-0">
-                <Button size="sm" variant="outline" onClick={() => setPendingConfirm(null)}>Cancel</Button>
-                <Button size="sm" onClick={confirmBid} className="bg-green-700 hover:bg-green-800">Confirm</Button>
+            <div className={cn(
+              "rounded-lg border px-4 py-3 space-y-3",
+              isSafetyWarning(pendingConfirm.cents)
+                ? "border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800"
+                : "border-green-300 bg-green-50 dark:bg-green-900/20 dark:border-green-800"
+            )}>
+              {isSafetyWarning(pendingConfirm.cents) && (
+                <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
+                  <AlertTriangle size={15} className="shrink-0" />
+                  <p className="text-xs font-semibold">
+                    This bid is much higher than the minimum ({centsToDisplay(minBidForDisplay)}). Double-check before confirming.
+                  </p>
+                </div>
+              )}
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className={cn(
+                    "text-sm font-medium",
+                    isSafetyWarning(pendingConfirm.cents)
+                      ? "text-amber-800 dark:text-amber-300"
+                      : "text-green-800 dark:text-green-300"
+                  )}>
+                    Confirm bid of{" "}
+                    <span className="font-bold">{centsToDisplay(pendingConfirm.cents)}</span>?
+                  </p>
+                  {pendingConfirm.maxCents && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Auto-bidding up to {centsToDisplay(pendingConfirm.maxCents)}
+                    </p>
+                  )}
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <Button size="sm" variant="outline" onClick={() => setPendingConfirm(null)}>Cancel</Button>
+                  <Button
+                    size="sm"
+                    onClick={confirmBid}
+                    className={isSafetyWarning(pendingConfirm.cents)
+                      ? "bg-amber-600 hover:bg-amber-700"
+                      : "bg-green-700 hover:bg-green-800"
+                    }
+                  >
+                    Confirm
+                  </Button>
+                </div>
               </div>
             </div>
           )}

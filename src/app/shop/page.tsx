@@ -237,6 +237,13 @@ export default async function ShopPage({
                           {listing.quantity} left
                         </Badge>
                       </div>
+                      {listing.free_shipping ? (
+                        <p className="text-xs text-green-700 dark:text-green-400 font-medium mt-1.5">Free shipping</p>
+                      ) : listing.shipping_cost_cents ? (
+                        <p className="text-xs text-muted-foreground mt-1.5">+ {centsToDisplay(listing.shipping_cost_cents)} shipping</p>
+                      ) : listing.shipping_weight_oz ? (
+                        <p className="text-xs text-muted-foreground mt-1.5">Calculated shipping</p>
+                      ) : null}
                     </CardContent>
                   </Link>
                   {seller && (

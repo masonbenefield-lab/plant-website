@@ -22,7 +22,11 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Sign in to bid" }, { status: 401 });
 
-  const { auctionId, amountCents } = await request.json() as { auctionId: string; amountCents: number };
+  const { auctionId, amountCents, maxBidCents } = await request.json() as {
+    auctionId: string;
+    amountCents: number;
+    maxBidCents?: number | null;
+  };
 
   const admin = adminClient();
 
@@ -53,13 +57,67 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: `Minimum bid is $${(minBid / 100).toFixed(2)} (minimum increment: $${(minIncrement / 100).toFixed(0)})` }, { status: 400 });
   }
 
+  if (maxBidCents !== null && maxBidCents !== undefined && maxBidCents < amountCents) {
+    return NextResponse.json({ error: "Max bid must be at least your current bid amount" }, { status: 400 });
+  }
+
+  // Insert the incoming bid
   const { error: bidError } = await admin.from("bids").insert({
     auction_id: auctionId,
     bidder_id: user.id,
     amount_cents: amountCents,
+    max_bid_cents: maxBidCents ?? null,
   });
   if (bidError) return NextResponse.json({ error: bidError.message }, { status: 500 });
 
+  // Check if the current leader has a proxy max that can auto-respond
+  if (auction.current_bidder_id && auction.current_bidder_id !== user.id) {
+    const { data: proxyRows } = await admin
+      .from("bids")
+      .select("max_bid_cents")
+      .eq("auction_id", auctionId)
+      .eq("bidder_id", auction.current_bidder_id)
+      .not("max_bid_cents", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    const proxyMax = proxyRows?.[0]?.max_bid_cents ?? null;
+
+    if (proxyMax !== null) {
+      const counterCents = amountCents + getMinIncrement(amountCents);
+      if (counterCents <= proxyMax) {
+        // Proxy fires: insert auto-counter bid for the previous leader
+        const { error: proxyBidError } = await admin.from("bids").insert({
+          auction_id: auctionId,
+          bidder_id: auction.current_bidder_id,
+          amount_cents: counterCents,
+        });
+        if (proxyBidError) return NextResponse.json({ error: proxyBidError.message }, { status: 500 });
+
+        // Update auction with proxy counter (with snipe protection)
+        const now = new Date();
+        const endsAt = new Date(auction.ends_at);
+        const SNIPE_WINDOW_MS = 2 * 60 * 1000;
+        const extended = endsAt.getTime() - now.getTime() < SNIPE_WINDOW_MS;
+        const newEndsAt = extended ? new Date(now.getTime() + SNIPE_WINDOW_MS).toISOString() : undefined;
+
+        await admin.from("auctions").update({
+          current_bid_cents: counterCents,
+          current_bidder_id: auction.current_bidder_id,
+          ...(extended ? { ends_at: newEndsAt } : {}),
+        }).eq("id", auctionId);
+
+        return NextResponse.json({
+          ok: true,
+          outbidByProxy: true,
+          proxyBid: counterCents,
+          previousBidderId: null, // current leader still leads — don't notify them
+        });
+      }
+    }
+  }
+
+  // Normal win: incoming bidder takes the lead
   const now = new Date();
   const endsAt = new Date(auction.ends_at);
   const SNIPE_WINDOW_MS = 2 * 60 * 1000;

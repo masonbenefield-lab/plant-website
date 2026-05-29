@@ -349,6 +349,7 @@ export interface Database {
           auction_id: string;
           bidder_id: string;
           amount_cents: number;
+          max_bid_cents: number | null;
           created_at: string;
         };
         Insert: {
@@ -356,6 +357,7 @@ export interface Database {
           auction_id: string;
           bidder_id: string;
           amount_cents: number;
+          max_bid_cents?: number | null;
           created_at?: string;
         };
         Update: Record<string, never>;
