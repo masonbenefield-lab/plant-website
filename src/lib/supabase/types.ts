@@ -207,6 +207,9 @@ export interface Database {
           care_guide_pdf_url: string | null;
           scheduled_delete_at: string | null;
           last_activated_at: string | null;
+          shipping_weight_oz: number | null;
+          shipping_cost_cents: number | null;
+          free_shipping: boolean;
           created_at: string;
         };
         Insert: {
@@ -230,6 +233,9 @@ export interface Database {
           care_guide_pdf_url?: string | null;
           scheduled_delete_at?: string | null;
           last_activated_at?: string | null;
+          shipping_weight_oz?: number | null;
+          shipping_cost_cents?: number | null;
+          free_shipping?: boolean;
           created_at?: string;
         };
         Update: {
@@ -252,6 +258,9 @@ export interface Database {
           care_guide_pdf_url?: string | null;
           scheduled_delete_at?: string | null;
           last_activated_at?: string | null;
+          shipping_weight_oz?: number | null;
+          shipping_cost_cents?: number | null;
+          free_shipping?: boolean;
         };
         Relationships: [];
       };
@@ -277,6 +286,9 @@ export interface Database {
           reminder_sent: boolean;
           reserve_price_cents: number | null;
           starts_at: string | null;
+          shipping_weight_oz: number | null;
+          shipping_cost_cents: number | null;
+          free_shipping: boolean;
           created_at: string;
         };
         Insert: {
@@ -300,6 +312,9 @@ export interface Database {
           reminder_sent?: boolean;
           reserve_price_cents?: number | null;
           starts_at?: string | null;
+          shipping_weight_oz?: number | null;
+          shipping_cost_cents?: number | null;
+          free_shipping?: boolean;
           created_at?: string;
         };
         Update: {
@@ -322,6 +337,9 @@ export interface Database {
           reminder_sent?: boolean;
           reserve_price_cents?: number | null;
           starts_at?: string | null;
+          shipping_weight_oz?: number | null;
+          shipping_cost_cents?: number | null;
+          free_shipping?: boolean;
         };
         Relationships: [];
       };

@@ -37,6 +37,7 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
   const [plantName, setPlantName] = useState("");
   const [variety, setVariety] = useState("");
   const [potSize, setPotSize] = useState("");
+  const [shippingMode, setShippingMode] = useState<"" | "free" | "flat" | "weight">("");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const atAuctionLimit = planLimit !== null && currentCount >= planLimit;
@@ -91,6 +92,9 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
       ends_at: endsAt,
       images: imageUrls,
       pot_size: potSize || null,
+      free_shipping: shippingMode === "free",
+      shipping_cost_cents: shippingMode === "flat" ? dollarsToCents(data.get("shipping_cost") as string) : null,
+      shipping_weight_oz: shippingMode === "weight" ? Number(data.get("shipping_weight_oz")) : null,
     });
 
     setSaving(false);
@@ -103,6 +107,7 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
       setPlantName("");
       setVariety("");
       setPotSize("");
+      setShippingMode("");
       form.reset();
       router.refresh();
     }
@@ -224,9 +229,58 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
               onChange={(e) => { if (e.target.files) uploadImages(e.target.files); }}
             />
           </div>
+          <div className="space-y-2">
+            <Label>Shipping <span className="text-destructive">*</span></Label>
+            <div className="grid grid-cols-3 gap-2">
+              {(["free", "flat", "weight"] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setShippingMode(mode)}
+                  disabled={atAuctionLimit}
+                  className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
+                    shippingMode === mode
+                      ? "border-green-700 bg-green-50 text-green-800 dark:bg-green-950/40 dark:text-green-300 dark:border-green-600"
+                      : "border-input hover:bg-muted"
+                  }`}
+                >
+                  {mode === "free" ? "Free" : mode === "flat" ? "Flat rate" : "By weight"}
+                </button>
+              ))}
+            </div>
+            {shippingMode === "flat" && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">$</span>
+                <Input
+                  name="shipping_cost"
+                  type="number"
+                  min={0.01}
+                  step={0.01}
+                  placeholder="e.g. 6.99"
+                  required
+                  className="max-w-[140px]"
+                />
+                <span className="text-xs text-muted-foreground">flat rate charged to buyer</span>
+              </div>
+            )}
+            {shippingMode === "weight" && (
+              <div className="flex items-center gap-2">
+                <Input
+                  name="shipping_weight_oz"
+                  type="number"
+                  min={0.1}
+                  step={0.1}
+                  placeholder="e.g. 12"
+                  required
+                  className="max-w-[100px]"
+                />
+                <span className="text-xs text-muted-foreground">oz — rate calculated at checkout</span>
+              </div>
+            )}
+          </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={saving || atAuctionLimit} className="bg-green-700 hover:bg-green-800">
+            <Button type="submit" disabled={saving || atAuctionLimit || !shippingMode} className="bg-green-700 hover:bg-green-800">
               {saving ? "Saving…" : "Create auction"}
             </Button>
           </div>
