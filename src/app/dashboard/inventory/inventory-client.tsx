@@ -541,6 +541,17 @@ export default function InventoryClient({
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { toast.error("Not logged in"); setSubmitting(false); return; }
 
+    const { data: profile } = await supabase.from("profiles").select("ship_from_address").eq("id", user.id).single();
+    const hasShipFrom = !!(profile?.ship_from_address as { street1?: string } | null)?.street1;
+    if (!hasShipFrom) {
+      toast.error("Ship-from address required", {
+        description: "Add your ship-from address in Account Settings before creating a listing.",
+        action: { label: "Account Settings", onClick: () => router.push("/account#shipping") },
+      });
+      setSubmitting(false);
+      return;
+    }
+
     if (planLimits.listings !== null) {
       const { count } = await supabase.from("listings").select("id", { count: "exact", head: true }).eq("seller_id", user.id).eq("status", "active");
       if ((count ?? 0) >= planLimits.listings) {
@@ -670,6 +681,17 @@ export default function InventoryClient({
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { toast.error("Not logged in"); setSubmitting(false); return; }
+
+    const { data: profile } = await supabase.from("profiles").select("ship_from_address").eq("id", user.id).single();
+    const hasShipFrom = !!(profile?.ship_from_address as { street1?: string } | null)?.street1;
+    if (!hasShipFrom) {
+      toast.error("Ship-from address required", {
+        description: "Add your ship-from address in Account Settings before starting an auction.",
+        action: { label: "Account Settings", onClick: () => router.push("/account#shipping") },
+      });
+      setSubmitting(false);
+      return;
+    }
 
     if (planLimits.auctions !== null) {
       const { count } = await supabase.from("auctions").select("id", { count: "exact", head: true }).eq("seller_id", user.id).eq("status", "active");
