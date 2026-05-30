@@ -6,7 +6,7 @@ import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Star, MapPin, Sprout, Heart } from "lucide-react";
+import { Star, MapPin, Sprout, Heart, MessageCircle, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import FollowButton from "@/components/follow-button";
 import ReportButton from "@/components/report-button";
@@ -76,7 +76,7 @@ export default async function SellerStorefront({
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  const [{ data: listings }, { data: auctions }, { data: ratings }, { count: followerCount }, { data: gardenPlants }, { data: announcements }, { data: wishlistItems }] =
+  const [{ data: listings }, { data: auctions }, { data: ratings }, { count: followerCount }, { data: gardenPlants }, { data: announcements }, { data: wishlistItems }, { data: communityPosts }] =
     await Promise.all([
       supabase.from("listings").select("*").eq("seller_id", profile.id).eq("status", "active").or("category.neq.Hidden,category.is.null").order("created_at", { ascending: false }),
       profile.stripe_onboarded
@@ -91,7 +91,18 @@ export default async function SellerStorefront({
       profile.wishlist_public
         ? createAdminClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!).from("wishlist_items").select("id, name, variety, notes, priority").eq("user_id", profile.id).order("name", { ascending: true }).order("variety", { ascending: true })
         : Promise.resolve({ data: [] }),
+      supabase.from("community_posts").select("id, post_type, title, body, photos, solved, created_at").eq("user_id", profile.id).order("created_at", { ascending: false }).limit(50),
     ]);
+
+  // Fetch reply counts for community posts
+  const postIds = (communityPosts ?? []).map((p) => p.id);
+  const { data: replyCounts } = postIds.length
+    ? await supabase.from("community_replies").select("post_id").in("post_id", postIds)
+    : { data: [] };
+  const replyCountMap: Record<string, number> = {};
+  for (const r of replyCounts ?? []) {
+    replyCountMap[r.post_id] = (replyCountMap[r.post_id] ?? 0) + 1;
+  }
 
   const reviewerIds = [...new Set(ratings?.map((r) => r.reviewer_id) ?? [])];
   const { data: reviewers } = reviewerIds.length
@@ -256,6 +267,9 @@ export default async function SellerStorefront({
           )}
           {profile.wishlist_public && (
             <TabsTrigger value="wishlist">Wishlist ({wishlistItems?.length ?? 0})</TabsTrigger>
+          )}
+          {(communityPosts?.length ?? 0) > 0 && (
+            <TabsTrigger value="posts">Posts ({communityPosts?.length ?? 0})</TabsTrigger>
           )}
         </TabsList>
 
@@ -482,6 +496,45 @@ export default async function SellerStorefront({
                 ))}
               </div>
             )}
+          </TabsContent>
+        )}
+        {(communityPosts?.length ?? 0) > 0 && (
+          <TabsContent value="posts" className="mt-6">
+            <div className="space-y-3 max-w-2xl">
+              {(communityPosts ?? []).map((post) => {
+                const TYPE_LABEL: Record<string, string> = { help: "Help Request", show_and_tell: "Show & Tell", discussion: "Discussion" };
+                const TYPE_COLOR: Record<string, string> = {
+                  help: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+                  show_and_tell: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400",
+                  discussion: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+                };
+                const replyCount = replyCountMap[post.id] ?? 0;
+                return (
+                  <a key={post.id} href={`/community/${post.id}`} className="block rounded-xl border bg-card p-4 hover:shadow-md transition-shadow">
+                    <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                      <span className={cn("text-xs px-1.5 py-0.5 rounded-full font-medium", TYPE_COLOR[post.post_type])}>
+                        {TYPE_LABEL[post.post_type]}
+                      </span>
+                      {post.solved && (
+                        <span className="flex items-center gap-0.5 text-xs text-green-700 font-medium">
+                          <CheckCircle2 size={12} /> Solved
+                        </span>
+                      )}
+                    </div>
+                    <p className="font-semibold text-sm leading-snug">{post.title}</p>
+                    {post.body && (
+                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">{post.body}</p>
+                    )}
+                    <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                      <span>{new Date(post.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+                      <span className="flex items-center gap-1">
+                        <MessageCircle size={11} /> {replyCount} {replyCount === 1 ? "reply" : "replies"}
+                      </span>
+                    </div>
+                  </a>
+                );
+              })}
+            </div>
           </TabsContent>
         )}
       </Tabs>

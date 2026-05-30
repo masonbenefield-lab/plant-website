@@ -47,6 +47,7 @@ export default async function CommunityPage({
 
   const isSavedView = view === "saved";
   const isGardensView = view === "gardens";
+  const isMineView = view === "mine";
   const validType = (["help", "show_and_tell", "discussion"] as const).find((t) => t === type);
   const validSort = (["newest", "most_replies", "unanswered"] as const).find((s) => s === sort) ?? "newest";
   const searchQuery = q?.trim() ?? "";
@@ -89,7 +90,17 @@ export default async function CommunityPage({
 
   let posts: { id: string; user_id: string; post_type: string; title: string; body: string | null; photos: unknown; solved: boolean; created_at: string }[] = [];
 
-  if (isSavedView) {
+  if (isMineView) {
+    if (user) {
+      const { data } = await supabase
+        .from("community_posts")
+        .select("id, user_id, post_type, title, body, photos, solved, created_at")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      posts = data ?? [];
+    }
+  } else if (isSavedView) {
     if (user) {
       const { data: follows } = await supabase
         .from("community_post_follows")
@@ -108,7 +119,7 @@ export default async function CommunityPage({
         posts = (data ?? []).sort((a, b) => (orderMap[a.id] ?? 0) - (orderMap[b.id] ?? 0));
       }
     }
-  } else {
+  } else if (!isGardensView) {
     let query = supabase
       .from("community_posts")
       .select("id, user_id, post_type, title, body, photos, solved, created_at")
@@ -192,9 +203,10 @@ export default async function CommunityPage({
 
           {/* Filter chips */}
           <div className="flex flex-wrap gap-2 mb-3">
-            <FilterChip href="/community" label="All Posts" active={!isSavedView} />
+            <FilterChip href="/community" label="All Posts" active={!isSavedView && !isMineView} />
             <FilterChip href="/community?view=saved" label="Saved" active={isSavedView} icon={<Bookmark size={12} />} />
-            {!isSavedView && (
+            {user && <FilterChip href="/community?view=mine" label="My Posts" active={isMineView} />}
+            {!isSavedView && !isMineView && (
               <>
                 <FilterChip href={buildHref({ sort: validSort, q: searchQuery })} label="All" active={!validType} />
                 <FilterChip href={buildHref({ type: "help", sort: validSort, q: searchQuery })} label="Help Requests" active={validType === "help"} title="Ask for advice, plant ID, or troubleshooting help" />
@@ -205,7 +217,7 @@ export default async function CommunityPage({
           </div>
 
           {/* Sort chips */}
-          {!isSavedView && (
+          {!isSavedView && !isMineView && (
             <div className="flex flex-wrap gap-2 mb-6">
               <FilterChip href={buildHref({ type: validType, q: searchQuery })} label="Newest" active={validSort === "newest"} small />
               <FilterChip href={buildHref({ type: validType, sort: "most_replies", q: searchQuery })} label="Most Replies" active={validSort === "most_replies"} small />
@@ -213,13 +225,24 @@ export default async function CommunityPage({
             </div>
           )}
 
-          {isSavedView && <div className="mb-6" />}
+          {(isSavedView || isMineView) && <div className="mb-6" />}
 
           {/* Posts list / empty states */}
           {posts.length === 0 ? (
             <div className="text-center py-20 border rounded-xl bg-muted/30">
-              <p className="text-4xl mb-4">{isSavedView ? "🔖" : "🌿"}</p>
-              {isSavedView && !user ? (
+              <p className="text-4xl mb-4">{isSavedView ? "🔖" : isMineView ? "✍️" : "🌿"}</p>
+              {isMineView && !user ? (
+                <>
+                  <p className="font-semibold mb-1">Sign in to see your posts</p>
+                  <Link href="/login" className={cn(buttonVariants(), "bg-green-700 hover:bg-green-800 mt-3")}>Sign in</Link>
+                </>
+              ) : isMineView ? (
+                <>
+                  <p className="font-semibold mb-1">You haven&apos;t posted yet</p>
+                  <p className="text-sm text-muted-foreground mb-4">Share a question, a plant, or start a discussion.</p>
+                  <Link href="/community/new" className={cn(buttonVariants(), "bg-green-700 hover:bg-green-800")}>Create your first post</Link>
+                </>
+              ) : isSavedView && !user ? (
                 <>
                   <p className="font-semibold mb-1">Sign in to save posts</p>
                   <p className="text-sm text-muted-foreground mb-4">Bookmark posts to find them again later.</p>
