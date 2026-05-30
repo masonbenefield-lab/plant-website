@@ -15,6 +15,7 @@ interface ReportActionsProps {
   auctionId: string | null;
   reportedUserId: string | null;
   communityPostId: string | null;
+  communityReplyId: string | null;
   targetName: string;
 }
 
@@ -35,7 +36,7 @@ async function auditLog(
   });
 }
 
-export function ReportActions({ reportId, listingId, auctionId, reportedUserId, communityPostId, targetName }: ReportActionsProps) {
+export function ReportActions({ reportId, listingId, auctionId, reportedUserId, communityPostId, communityReplyId, targetName }: ReportActionsProps) {
   const router = useRouter();
   const [dismissOpen, setDismissOpen] = useState(false);
   const [resolveOpen, setResolveOpen] = useState(false);
@@ -90,6 +91,10 @@ export function ReportActions({ reportId, listingId, auctionId, reportedUserId, 
       const { error } = await supabase.from("auctions").update({ status: "cancelled" }).eq("id", auctionId);
       if (error) { toast.error(error.message); setLoading(false); return; }
       if (user) await auditLog(supabase, user.id, "cancel_auction_via_report", "auction", auctionId, `report:${reportId}`);
+    } else if (communityReplyId) {
+      const { error } = await supabase.from("community_replies").delete().eq("id", communityReplyId);
+      if (error) { toast.error(error.message); setLoading(false); return; }
+      if (user) await auditLog(supabase, user.id, "delete_reply_via_report", "community_reply", communityReplyId, `report:${reportId}`);
     } else if (communityPostId) {
       const { error } = await supabase.from("community_posts").delete().eq("id", communityPostId);
       if (error) { toast.error(error.message); setLoading(false); return; }
@@ -116,7 +121,7 @@ export function ReportActions({ reportId, listingId, auctionId, reportedUserId, 
     router.refresh();
   }
 
-  const removeLabel = listingId ? "Delete listing" : auctionId ? "Cancel auction" : communityPostId ? "Delete post" : "Archive user";
+  const removeLabel = listingId ? "Delete listing" : auctionId ? "Cancel auction" : communityReplyId ? "Delete reply" : communityPostId ? "Delete post" : "Archive user";
 
   return (
     <div className="flex items-center gap-2 flex-wrap">
@@ -153,7 +158,7 @@ export function ReportActions({ reportId, listingId, auctionId, reportedUserId, 
         <DialogContent className="max-w-sm">
           <DialogHeader><DialogTitle>{removeLabel}?</DialogTitle></DialogHeader>
           <p className="text-sm text-muted-foreground">
-            This will {listingId ? "permanently delete the listing" : auctionId ? "cancel the auction" : communityPostId ? "permanently delete the post" : "archive the user and pause their content"} for <strong>{targetName}</strong>, then resolve the report.
+            This will {listingId ? "permanently delete the listing" : auctionId ? "cancel the auction" : communityReplyId ? "permanently delete the reply" : communityPostId ? "permanently delete the post" : "archive the user and pause their content"} for <strong>{targetName}</strong>, then resolve the report.
           </p>
           <div className="space-y-1.5 mt-2">
             <Label htmlFor="remove-note">Internal note <span className="font-normal text-muted-foreground">(optional)</span></Label>

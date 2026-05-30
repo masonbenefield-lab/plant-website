@@ -10,17 +10,19 @@ const statusColor: Record<string, string> = {
 };
 
 const typeLabel: Record<string, string> = {
-  listing:        "Listing",
-  auction:        "Auction",
-  user:           "User",
-  community_post: "Community Post",
+  listing:          "Listing",
+  auction:          "Auction",
+  user:             "User",
+  community_post:   "Community Post",
+  community_reply:  "Reply",
 };
 
 const typeColor: Record<string, string> = {
-  listing:        "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400",
-  auction:        "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400",
-  user:           "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400",
-  community_post: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400",
+  listing:          "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400",
+  auction:          "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400",
+  user:             "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400",
+  community_post:   "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400",
+  community_reply:  "bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-400",
 };
 
 export default async function AdminReportsPage({
@@ -34,7 +36,7 @@ export default async function AdminReportsPage({
 
   let query = supabase
     .from("reports")
-    .select("id, reason, details, status, admin_note, created_at, reporter_id, listing_id, auction_id, reported_user_id, community_post_id")
+    .select("id, reason, details, status, admin_note, created_at, reporter_id, listing_id, auction_id, reported_user_id, community_post_id, community_reply_id")
     .order("created_at", { ascending: false });
 
   if (!showAll) query = query.eq("status", "pending");
@@ -50,26 +52,36 @@ export default async function AdminReportsPage({
   ]);
 
   // Gather IDs to resolve names
-  const reporterIds    = [...new Set((reports ?? []).map(r => r.reporter_id).filter((x): x is string => x !== null))];
-  const listingIds     = [...new Set((reports ?? []).map(r => r.listing_id).filter((x): x is string => x !== null))];
-  const auctionIds     = [...new Set((reports ?? []).map(r => r.auction_id).filter((x): x is string => x !== null))];
-  const userIds        = [...new Set((reports ?? []).map(r => r.reported_user_id).filter((x): x is string => x !== null))];
+  const reporterIds      = [...new Set((reports ?? []).map(r => r.reporter_id).filter((x): x is string => x !== null))];
+  const listingIds       = [...new Set((reports ?? []).map(r => r.listing_id).filter((x): x is string => x !== null))];
+  const auctionIds       = [...new Set((reports ?? []).map(r => r.auction_id).filter((x): x is string => x !== null))];
+  const userIds          = [...new Set((reports ?? []).map(r => r.reported_user_id).filter((x): x is string => x !== null))];
   const communityPostIds = [...new Set((reports ?? []).map(r => r.community_post_id).filter((x): x is string => x !== null))];
+  const communityReplyIds = [...new Set((reports ?? []).map(r => r.community_reply_id).filter((x): x is string => x !== null))];
 
-  const [{ data: reporters }, { data: listings }, { data: auctions }, { data: reportedUsers }, { data: communityPosts }] =
+  const [{ data: reporters }, { data: listings }, { data: auctions }, { data: reportedUsers }, { data: communityPosts }, { data: communityReplies }] =
     await Promise.all([
-      reporterIds.length     ? supabase.from("profiles").select("id, username").in("id", reporterIds)                   : { data: [] },
-      listingIds.length      ? supabase.from("listings").select("id, plant_name").in("id", listingIds)                  : { data: [] },
-      auctionIds.length      ? supabase.from("auctions").select("id, plant_name").in("id", auctionIds)                  : { data: [] },
-      userIds.length         ? supabase.from("profiles").select("id, username").in("id", userIds)                       : { data: [] },
-      communityPostIds.length ? supabase.from("community_posts").select("id, title").in("id", communityPostIds)         : { data: [] },
+      reporterIds.length      ? supabase.from("profiles").select("id, username").in("id", reporterIds)                                    : { data: [] },
+      listingIds.length       ? supabase.from("listings").select("id, plant_name").in("id", listingIds)                                   : { data: [] },
+      auctionIds.length       ? supabase.from("auctions").select("id, plant_name").in("id", auctionIds)                                   : { data: [] },
+      userIds.length          ? supabase.from("profiles").select("id, username").in("id", userIds)                                        : { data: [] },
+      communityPostIds.length  ? supabase.from("community_posts").select("id, title, body").in("id", communityPostIds)                    : { data: [] },
+      communityReplyIds.length ? supabase.from("community_replies").select("id, body, post_id, user_id").in("id", communityReplyIds)      : { data: [] },
     ]);
 
-  const reporterMap      = Object.fromEntries((reporters      ?? []).map(r => [r.id, r]));
-  const listingMap       = Object.fromEntries((listings       ?? []).map(l => [l.id, l]));
-  const auctionMap       = Object.fromEntries((auctions       ?? []).map(a => [a.id, a]));
-  const reportedUserMap  = Object.fromEntries((reportedUsers  ?? []).map(u => [u.id, u]));
-  const communityPostMap = Object.fromEntries((communityPosts ?? []).map(p => [p.id, p]));
+  // Fetch usernames for reply authors
+  const replyAuthorIds = [...new Set((communityReplies ?? []).map(r => r.user_id).filter(Boolean))];
+  const { data: replyAuthors } = replyAuthorIds.length
+    ? await supabase.from("profiles").select("id, username").in("id", replyAuthorIds)
+    : { data: [] };
+  const replyAuthorMap = Object.fromEntries((replyAuthors ?? []).map(u => [u.id, u.username]));
+
+  const reporterMap       = Object.fromEntries((reporters       ?? []).map(r => [r.id, r]));
+  const listingMap        = Object.fromEntries((listings        ?? []).map(l => [l.id, l]));
+  const auctionMap        = Object.fromEntries((auctions        ?? []).map(a => [a.id, a]));
+  const reportedUserMap   = Object.fromEntries((reportedUsers   ?? []).map(u => [u.id, u]));
+  const communityPostMap  = Object.fromEntries((communityPosts  ?? []).map(p => [p.id, p]));
+  const communityReplyMap = Object.fromEntries((communityReplies ?? []).map(r => [r.id, r]));
 
   return (
     <div className="p-8">
@@ -123,23 +135,37 @@ export default async function AdminReportsPage({
           </thead>
           <tbody>
             {(reports ?? []).map((r, i) => {
-              const type = r.listing_id ? "listing" : r.auction_id ? "auction" : r.community_post_id ? "community_post" : "user";
+              const type = r.listing_id ? "listing" : r.auction_id ? "auction" : r.community_reply_id ? "community_reply" : r.community_post_id ? "community_post" : "user";
+              const reply = r.community_reply_id ? communityReplyMap[r.community_reply_id] : null;
               const target =
-                r.listing_id        ? listingMap[r.listing_id]
-                : r.auction_id      ? auctionMap[r.auction_id]
+                r.listing_id         ? listingMap[r.listing_id]
+                : r.auction_id       ? auctionMap[r.auction_id]
                 : r.community_post_id ? communityPostMap[r.community_post_id]
-                : r.reported_user_id ? reportedUserMap[r.reported_user_id]
+                : r.reported_user_id  ? reportedUserMap[r.reported_user_id]
                 : null;
-              const targetName = target
-                ? ("plant_name" in target ? target.plant_name : "title" in target ? target.title : (target as { username: string }).username)
-                : "Deleted";
+              const targetName = r.community_reply_id
+                ? `Reply by ${replyAuthorMap[reply?.user_id ?? ""] ?? "unknown"}`
+                : target
+                  ? ("plant_name" in target ? target.plant_name : "title" in target ? target.title : (target as { username: string }).username)
+                  : "Deleted";
               const targetHref =
-                r.listing_id        ? `/shop/${r.listing_id}`
-                : r.auction_id      ? `/auctions/${r.auction_id}`
+                r.listing_id          ? `/shop/${r.listing_id}`
+                : r.auction_id        ? `/auctions/${r.auction_id}`
+                : r.community_reply_id && reply ? `/community/${reply.post_id}`
                 : r.community_post_id ? `/community/${r.community_post_id}`
                 : r.reported_user_id && target ? `/sellers/${(target as { username: string }).username}`
                 : null;
               const reporter = r.reporter_id ? reporterMap[r.reporter_id] : null;
+
+              // Inline content preview for community posts and replies
+              const contentPreview = r.community_reply_id
+                ? reply?.body ?? null
+                : r.community_post_id && target && "body" in target
+                  ? (target as { title: string; body: string | null }).body
+                  : null;
+              const contentTitle = r.community_post_id && target && "title" in target
+                ? (target as { title: string }).title
+                : null;
 
               return (
                 <tr key={r.id} className={i % 2 === 0 ? "bg-card" : "bg-muted/20"}>
@@ -148,13 +174,21 @@ export default async function AdminReportsPage({
                       {typeLabel[type]}
                     </span>
                   </td>
-                  <td className="px-4 py-3 font-medium">
+                  <td className="px-4 py-3 font-medium max-w-[220px]">
                     {targetHref ? (
-                      <Link href={targetHref} className="hover:underline text-green-700 max-w-[160px] truncate block" target="_blank">
+                      <Link href={targetHref} className="hover:underline text-green-700 truncate block" target="_blank">
                         {targetName}
                       </Link>
                     ) : (
                       <span className="text-muted-foreground">{targetName}</span>
+                    )}
+                    {contentTitle && (
+                      <p className="text-xs text-muted-foreground mt-0.5 font-normal truncate">{contentTitle}</p>
+                    )}
+                    {contentPreview && (
+                      <p className="text-xs text-muted-foreground mt-0.5 font-normal line-clamp-2 leading-relaxed border-l-2 border-muted pl-2">
+                        {contentPreview}
+                      </p>
                     )}
                   </td>
                   <td className="px-4 py-3">
@@ -188,6 +222,7 @@ export default async function AdminReportsPage({
                         auctionId={r.auction_id}
                         reportedUserId={r.reported_user_id}
                         communityPostId={r.community_post_id}
+                        communityReplyId={r.community_reply_id}
                         targetName={targetName}
                       />
                     ) : (
