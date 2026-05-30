@@ -183,6 +183,7 @@ export default function InventoryClient({
   showWelcome = false,
   stripeOnboarded = false,
   hasReturnPolicy = true,
+  hasShippingTimeline = true,
   planLimits = { listings: null, auctions: 5, photos: 5 },
 }: {
   activeRows: Row[];
@@ -196,6 +197,7 @@ export default function InventoryClient({
   showWelcome?: boolean;
   stripeOnboarded?: boolean;
   hasReturnPolicy?: boolean;
+  hasShippingTimeline?: boolean;
   planLimits?: PlanLimits;
 }) {
   const router = useRouter();
@@ -1644,6 +1646,14 @@ export default function InventoryClient({
           <strong>Your listings are not visible to buyers yet.</strong> They appear on your personal storefront, but won&apos;t show in the public shop or auctions until you{" "}
           <a href="/account#seller-payments" className="underline font-medium hover:opacity-80">connect your Stripe account</a>.
           Buyers also cannot purchase until this is set up.
+        </div>
+      )}
+
+      {!hasShippingTimeline && (
+        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
+          <strong>Set your shipping timeline before listing.</strong>{" "}
+          Buyers want to know how quickly you ship.{" "}
+          <a href="/account#shipping-days" className="underline font-medium hover:opacity-80">Set it now →</a>
         </div>
       )}
 

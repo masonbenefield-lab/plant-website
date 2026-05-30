@@ -509,7 +509,7 @@ export default function AccountForm({
               </button>
             </div>
 
-            <div className="space-y-1">
+            <div id="shipping-days" className="space-y-1">
               <Label>Shipping timeline</Label>
               <div className="flex items-center gap-2">
                 <select
