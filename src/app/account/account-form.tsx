@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -50,6 +50,16 @@ export default function AccountForm({
   const [offersEnabled, setOffersEnabled] = useState((profile as { offers_enabled?: boolean } | null)?.offers_enabled !== false);
   const [announcement, setAnnouncement] = useState((profile as { announcement?: string | null } | null)?.announcement ?? "");
   const [emailOptIn, setEmailOptIn] = useState(profile?.email_marketing_opt_in ?? false);
+
+  useEffect(() => {
+    const hash = window.location.hash.slice(1);
+    if (!hash) return;
+    const el = document.getElementById(hash);
+    if (!el) return;
+    el.classList.add("anchor-flash");
+    const t = setTimeout(() => el.classList.remove("anchor-flash"), 2000);
+    return () => clearTimeout(t);
+  }, []);
 
   const rawShipFrom = profile?.ship_from_address as { name?: string; street1?: string; city?: string; state?: string; zip?: string; country?: string; phone?: string } | null;
   const [shipFrom, setShipFrom] = useState({
