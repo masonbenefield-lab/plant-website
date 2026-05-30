@@ -14,6 +14,7 @@ import ShareButton from "@/components/share-button";
 import { MessageButton } from "@/components/message-button";
 import RateSellerForm from "@/app/orders/rate-seller-form";
 import { StorefrontListings, StorefrontAuctions } from "./storefront-listings";
+import { DeletePostButton } from "@/components/community/delete-post-button";
 import type { GardenPlantStatus, Database } from "@/lib/supabase/types";
 
 const GARDEN_STATUS_LABEL: Record<GardenPlantStatus, string> = {
@@ -509,29 +510,37 @@ export default async function SellerStorefront({
                   discussion: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
                 };
                 const replyCount = replyCountMap[post.id] ?? 0;
+                const isOwnPost = user?.id === profile.id;
                 return (
-                  <a key={post.id} href={`/community/${post.id}`} className="block rounded-xl border bg-card p-4 hover:shadow-md transition-shadow">
-                    <div className="flex items-center gap-2 flex-wrap mb-1.5">
-                      <span className={cn("text-xs px-1.5 py-0.5 rounded-full font-medium", TYPE_COLOR[post.post_type])}>
-                        {TYPE_LABEL[post.post_type]}
-                      </span>
-                      {post.solved && (
-                        <span className="flex items-center gap-0.5 text-xs text-green-700 font-medium">
-                          <CheckCircle2 size={12} /> Solved
+                  <div key={post.id} className="relative group">
+                    <a href={`/community/${post.id}`} className="block rounded-xl border bg-card p-4 hover:shadow-md transition-shadow">
+                      <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                        <span className={cn("text-xs px-1.5 py-0.5 rounded-full font-medium", TYPE_COLOR[post.post_type])}>
+                          {TYPE_LABEL[post.post_type]}
                         </span>
+                        {post.solved && (
+                          <span className="flex items-center gap-0.5 text-xs text-green-700 font-medium">
+                            <CheckCircle2 size={12} /> Solved
+                          </span>
+                        )}
+                      </div>
+                      <p className="font-semibold text-sm leading-snug">{post.title}</p>
+                      {post.body && (
+                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">{post.body}</p>
                       )}
-                    </div>
-                    <p className="font-semibold text-sm leading-snug">{post.title}</p>
-                    {post.body && (
-                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">{post.body}</p>
+                      <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                        <span>{new Date(post.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+                        <span className="flex items-center gap-1">
+                          <MessageCircle size={11} /> {replyCount} {replyCount === 1 ? "reply" : "replies"}
+                        </span>
+                      </div>
+                    </a>
+                    {isOwnPost && (
+                      <div className="absolute top-3 right-3 group-hover:opacity-100 focus-within:opacity-100 opacity-0 transition-opacity z-10 bg-card rounded-lg shadow-sm border px-2 py-1" onClick={(e) => e.stopPropagation()}>
+                        <DeletePostButton postId={post.id} redirectTo={`/sellers/${profile.username}`} />
+                      </div>
                     )}
-                    <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                      <span>{new Date(post.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
-                      <span className="flex items-center gap-1">
-                        <MessageCircle size={11} /> {replyCount} {replyCount === 1 ? "reply" : "replies"}
-                      </span>
-                    </div>
-                  </a>
+                  </div>
                 );
               })}
             </div>

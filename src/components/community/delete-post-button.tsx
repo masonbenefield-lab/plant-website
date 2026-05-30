@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
-export function DeletePostButton({ postId }: { postId: string }) {
+export function DeletePostButton({ postId, redirectTo = "/community" }: { postId: string; redirectTo?: string }) {
   const router = useRouter();
   const [confirm, setConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -19,7 +19,7 @@ export function DeletePostButton({ postId }: { postId: string }) {
     });
     if (res.ok) {
       toast.success("Post deleted");
-      router.push("/community");
+      router.push(redirectTo);
       router.refresh();
     } else {
       toast.error("Failed to delete post");
