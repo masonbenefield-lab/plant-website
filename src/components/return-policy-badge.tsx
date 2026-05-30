@@ -32,9 +32,12 @@ export function ReturnPolicyBadge({
 
   return (
     <div className="space-y-1">
-      <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium", color)}>
-        {icon} {label}
-      </span>
+      <div className="flex items-center gap-1.5">
+        <span className="text-xs text-muted-foreground">Returns:</span>
+        <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium", color)}>
+          {icon} {label}
+        </span>
+      </div>
       {notes && (
         <p className="text-xs text-muted-foreground leading-relaxed">{notes}</p>
       )}
