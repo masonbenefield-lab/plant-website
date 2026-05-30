@@ -56,7 +56,7 @@ export default async function ShopPage({
   if (category) query = query.eq("category", category);
   if (min) query = query.gte("price_cents", Math.round(Number(min) * 100));
   if (max) query = query.lte("price_cents", Math.round(Number(max) * 100));
-  if (in_stock === "1") query = query.gt("in_stock", 0);
+  if (in_stock === "1") query = query.gt("quantity", 0);
   if (on_sale === "1") query = query.not("sale_price_cents", "is", null).gt("sale_ends_at", new Date().toISOString());
   if (pot_size) query = query.eq("pot_size", pot_size);
   if (locationSellerIds !== null) {
