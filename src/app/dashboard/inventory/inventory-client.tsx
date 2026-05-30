@@ -271,6 +271,9 @@ export default function InventoryClient({
   const [variantQty, setVariantQty] = useState("1");
   const [variantNotes, setVariantNotes] = useState("");
 
+  // Edit Item advanced section
+  const [showEditAdvanced, setShowEditAdvanced] = useState(false);
+
   // Inline listing management panel
   const [managingListingId, setManagingListingId] = useState<string | null>(null);
   const [inlinePrice, setInlinePrice] = useState("");
@@ -435,6 +438,13 @@ export default function InventoryClient({
       createClient().from("listing_templates").select("id, name, plant_name, variety, category, pot_size, description, price_cents").then(({ data }) => {
         if (data) setTemplates(data);
       });
+    }
+    if (m.type === "edit") {
+      const hasAdvanced = !!(
+        m.row.cost_cents || m.row.low_stock_threshold ||
+        m.row.free_shipping || m.row.shipping_cost_cents || m.row.shipping_weight_oz
+      );
+      setShowEditAdvanced(hasAdvanced);
     }
     if (m.type === "sold") {
       setSoldPrice(""); setSoldQuantity("1"); setSoldNote("");
@@ -1711,6 +1721,23 @@ export default function InventoryClient({
             Clear
           </button>
         )}
+        {viewMode === "grouped" && activeGroups.length > 0 && (
+          <div className="flex items-center gap-1 ml-auto">
+            <button
+              onClick={() => setOpenGroups(new Set(activeGroups.map(g => g.key)))}
+              className="text-xs text-muted-foreground hover:text-foreground underline self-center"
+            >
+              Expand all
+            </button>
+            <span className="text-muted-foreground text-xs">·</span>
+            <button
+              onClick={() => setOpenGroups(new Set())}
+              className="text-xs text-muted-foreground hover:text-foreground underline self-center"
+            >
+              Collapse all
+            </button>
+          </div>
+        )}
       </div>
 
       {activeGroups.length === 0 ? (
@@ -2223,125 +2250,90 @@ export default function InventoryClient({
                   </Button>
                 )}
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label htmlFor="edit-cost">Cost per unit ($) <span className="font-normal text-muted-foreground">(optional)</span></Label>
-                  <Input
-                    id="edit-cost"
-                    type="number"
-                    min={0}
-                    step={0.01}
-                    value={editCostPrice}
-                    onChange={e => setEditCostPrice(e.target.value)}
-                    placeholder="0.00"
-                  />
-                  <p className="text-xs text-muted-foreground">Private — used to calculate margin</p>
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="edit-threshold">Low stock alert <span className="font-normal text-muted-foreground">(optional)</span></Label>
-                  <Input
-                    id="edit-threshold"
-                    type="number"
-                    min={0}
-                    value={editLowStockThreshold}
-                    onChange={e => setEditLowStockThreshold(e.target.value)}
-                    placeholder="e.g. 3"
-                  />
-                  <p className="text-xs text-muted-foreground">Warn when available ≤ this</p>
-                </div>
-                <div className="space-y-1 col-span-2">
-                  <Label>Shipping <span className="font-normal text-muted-foreground">(optional — required to list)</span></Label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {(["free", "flat", "weight"] as const).map((mode) => (
-                      <button
-                        key={mode}
-                        type="button"
-                        onClick={() => setEditShippingMode(editShippingMode === mode ? "" : mode)}
-                        className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
-                          editShippingMode === mode
-                            ? "border-green-700 bg-green-50 text-green-800 dark:bg-green-950/40 dark:text-green-300 dark:border-green-600"
-                            : "border-input hover:bg-muted"
-                        }`}
-                      >
-                        {mode === "free" ? "Free" : mode === "flat" ? "Flat rate" : "By weight"}
-                      </button>
-                    ))}
-                  </div>
-                  {editShippingMode === "flat" && (
-                    <div className="flex items-center gap-2 pt-1">
-                      <span className="text-sm text-muted-foreground">$</span>
-                      <Input
-                        type="number"
-                        min={0.01}
-                        step={0.01}
-                        placeholder="e.g. 6.99"
-                        value={editShippingCost}
-                        onChange={e => setEditShippingCost(e.target.value)}
-                        className="max-w-[120px]"
-                      />
-                      <span className="text-xs text-muted-foreground">charged to buyer</span>
-                    </div>
+              {/* Advanced options — collapsible */}
+              <div className="border-t pt-3">
+                <button
+                  type="button"
+                  onClick={() => setShowEditAdvanced(v => !v)}
+                  className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors w-full"
+                >
+                  {showEditAdvanced ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                  <span className="font-medium">Advanced options</span>
+                  {!showEditAdvanced && (
+                    <span className="text-xs ml-1 opacity-70">
+                      {[
+                        editShippingMode && (editShippingMode === "free" ? "Free shipping" : editShippingMode === "flat" ? `$${editShippingCost} shipping` : "Weight-based shipping"),
+                        editCostPrice && `$${editCostPrice} cost`,
+                        editLowStockThreshold && `Alert ≤${editLowStockThreshold}`,
+                      ].filter(Boolean).join(" · ")}
+                    </span>
                   )}
-                  {editShippingMode === "weight" && (
-                    <div className="flex items-center gap-2 pt-1">
-                      <Input
-                        type="number"
-                        min={0.1}
-                        step={0.1}
-                        placeholder="e.g. 16"
-                        value={editWeightOz}
-                        onChange={e => setEditWeightOz(e.target.value)}
-                        className="max-w-[100px]"
-                      />
-                      <span className="text-xs text-muted-foreground">oz — rate calculated at checkout</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-              {/* Templates */}
-              {templates.length > 0 && (
-                <div className="space-y-1 border-t pt-3">
-                  <Label>Load template</Label>
-                  <div className="flex flex-wrap gap-1.5">
-                    {templates.map(t => (
-                      <div key={t.id} className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditPlantName(t.plant_name);
-                            setEditVariety(t.variety ?? "");
-                            setEditCategory(t.category ?? "");
-                            setEditPotSize(t.pot_size ?? "");
-                            setEditDescription(t.description ?? "");
-                            toast.success(`Loaded "${t.name}"`);
-                          }}
-                          className="text-xs bg-muted hover:bg-muted/70 px-2 py-1 rounded border"
-                        >
-                          {t.name}
-                        </button>
-                        <button type="button" onClick={() => deleteTemplate(t.id)} className="text-muted-foreground hover:text-destructive">
-                          <X size={10} />
-                        </button>
+                </button>
+
+                {showEditAdvanced && (
+                  <div className="space-y-4 mt-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label htmlFor="edit-cost">Cost per unit ($) <span className="font-normal text-muted-foreground text-xs">(optional)</span></Label>
+                        <Input id="edit-cost" type="number" min={0} step={0.01} value={editCostPrice} onChange={e => setEditCostPrice(e.target.value)} placeholder="0.00" />
+                        <p className="text-xs text-muted-foreground">Private — used to calculate margin</p>
                       </div>
-                    ))}
+                      <div className="space-y-1">
+                        <Label htmlFor="edit-threshold">Low stock alert <span className="font-normal text-muted-foreground text-xs">(optional)</span></Label>
+                        <Input id="edit-threshold" type="number" min={0} value={editLowStockThreshold} onChange={e => setEditLowStockThreshold(e.target.value)} placeholder="e.g. 3" />
+                        <p className="text-xs text-muted-foreground">Warn when available ≤ this</p>
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Shipping <span className="font-normal text-muted-foreground text-xs">(optional — required to list)</span></Label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {(["free", "flat", "weight"] as const).map((mode) => (
+                          <button key={mode} type="button" onClick={() => setEditShippingMode(editShippingMode === mode ? "" : mode)}
+                            className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors ${editShippingMode === mode ? "border-green-700 bg-green-50 text-green-800 dark:bg-green-950/40 dark:text-green-300 dark:border-green-600" : "border-input hover:bg-muted"}`}
+                          >
+                            {mode === "free" ? "Free" : mode === "flat" ? "Flat rate" : "By weight"}
+                          </button>
+                        ))}
+                      </div>
+                      {editShippingMode === "flat" && (
+                        <div className="flex items-center gap-2 pt-1">
+                          <span className="text-sm text-muted-foreground">$</span>
+                          <Input type="number" min={0.01} step={0.01} placeholder="e.g. 6.99" value={editShippingCost} onChange={e => setEditShippingCost(e.target.value)} className="max-w-[120px]" />
+                          <span className="text-xs text-muted-foreground">charged to buyer</span>
+                        </div>
+                      )}
+                      {editShippingMode === "weight" && (
+                        <div className="flex items-center gap-2 pt-1">
+                          <Input type="number" min={0.1} step={0.1} placeholder="e.g. 16" value={editWeightOz} onChange={e => setEditWeightOz(e.target.value)} className="max-w-[100px]" />
+                          <span className="text-xs text-muted-foreground">oz — rate calculated at checkout</span>
+                        </div>
+                      )}
+                    </div>
+                    {/* Templates */}
+                    {templates.length > 0 && (
+                      <div className="space-y-1">
+                        <Label>Load template</Label>
+                        <div className="flex flex-wrap gap-1.5">
+                          {templates.map(t => (
+                            <div key={t.id} className="flex items-center gap-1">
+                              <button type="button" onClick={() => { setEditPlantName(t.plant_name); setEditVariety(t.variety ?? ""); setEditCategory(t.category ?? ""); setEditPotSize(t.pot_size ?? ""); setEditDescription(t.description ?? ""); toast.success(`Loaded "${t.name}"`); }}
+                                className="text-xs bg-muted hover:bg-muted/70 px-2 py-1 rounded border"
+                              >{t.name}</button>
+                              <button type="button" onClick={() => deleteTemplate(t.id)} className="text-muted-foreground hover:text-destructive"><X size={10} /></button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <div className="space-y-1">
+                      <Label>Save as template <span className="text-muted-foreground font-normal text-xs">(optional)</span></Label>
+                      <div className="flex gap-2">
+                        <Input value={saveTemplateName} onChange={e => setSaveTemplateName(e.target.value)} placeholder="Template name, e.g. Monstera" className="text-sm" onKeyDown={e => e.key === "Enter" && saveAsTemplate()} />
+                        <Button type="button" variant="outline" size="sm" onClick={saveAsTemplate} disabled={savingTemplate || !saveTemplateName.trim()}>{savingTemplate ? "…" : "Save"}</Button>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              )}
-              <div className="space-y-1 border-t pt-3">
-                <Label>Save as template <span className="text-muted-foreground font-normal">(optional)</span></Label>
-                <div className="flex gap-2">
-                  <Input
-                    value={saveTemplateName}
-                    onChange={e => setSaveTemplateName(e.target.value)}
-                    placeholder="Template name, e.g. Monstera"
-                    className="text-sm"
-                    onKeyDown={e => e.key === "Enter" && saveAsTemplate()}
-                  />
-                  <Button type="button" variant="outline" size="sm" onClick={saveAsTemplate} disabled={savingTemplate || !saveTemplateName.trim()}>
-                    {savingTemplate ? "…" : "Save"}
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">Saves current name, variety, category, pot size, and description as a reusable template.</p>
+                )}
               </div>
               <div className="flex gap-2 pt-1">
                 <Button variant="outline" onClick={() => setModal(null)} className="flex-1">Cancel</Button>
