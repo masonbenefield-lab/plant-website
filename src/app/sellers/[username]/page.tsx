@@ -536,7 +536,7 @@ export default async function SellerStorefront({
                       </div>
                     </a>
                     {isOwnPost && (
-                      <div className="absolute top-3 right-3 group-hover:opacity-100 focus-within:opacity-100 opacity-0 transition-opacity z-10 bg-card rounded-lg shadow-sm border px-2 py-1" onClick={(e) => e.stopPropagation()}>
+                      <div className="absolute top-3 right-3 group-hover:opacity-100 focus-within:opacity-100 opacity-0 transition-opacity z-10 bg-card rounded-lg shadow-sm border px-2 py-1">
                         <DeletePostButton postId={post.id} redirectTo={`/sellers/${profile.username}`} />
                       </div>
                     )}
