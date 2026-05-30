@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Upload, X, Loader2, HelpCircle, Camera, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { findProhibitedWord, censorWord, logViolation } from "@/lib/profanity";
 
 const MAX_PHOTOS = 5;
 
@@ -73,6 +74,20 @@ export default function NewCommunityPost() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim()) { toast.error("Title is required"); return; }
+    const titleHit = findProhibitedWord(title);
+    if (titleHit) {
+      toast.error(`Your title contains a prohibited word: "${censorWord(titleHit)}"`);
+      logViolation(titleHit, "community-post-title", title);
+      return;
+    }
+    if (body.trim()) {
+      const bodyHit = findProhibitedWord(body);
+      if (bodyHit) {
+        toast.error(`Your post contains a prohibited word: "${censorWord(bodyHit)}"`);
+        logViolation(bodyHit, "community-post-body", body);
+        return;
+      }
+    }
     startTransition(async () => {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();

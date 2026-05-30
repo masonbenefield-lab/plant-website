@@ -44,6 +44,7 @@ interface ReportButtonProps {
   auctionId?: string;
   reportedUserId?: string;
   communityPostId?: string;
+  communityReplyId?: string;
   targetName: string;
   initialReported?: boolean;
 }
@@ -54,6 +55,7 @@ export default function ReportButton({
   auctionId,
   reportedUserId,
   communityPostId,
+  communityReplyId,
   targetName,
   initialReported = false,
 }: ReportButtonProps) {
@@ -64,7 +66,7 @@ export default function ReportButton({
   const [loading, setLoading] = useState(false);
 
   const isUserReport = !!reportedUserId;
-  const isPostReport = !!communityPostId;
+  const isPostReport = !!communityPostId || !!communityReplyId;
   const reasons = isUserReport ? USER_REASONS : isPostReport ? POST_REASONS : LISTING_REASONS;
 
   async function handleSubmit(e: React.FormEvent) {
@@ -88,6 +90,7 @@ export default function ReportButton({
       auction_id: auctionId ?? null,
       reported_user_id: reportedUserId ?? null,
       community_post_id: communityPostId ?? null,
+      community_reply_id: communityReplyId ?? null,
       reason,
       details: details.trim() || null,
     });
@@ -133,7 +136,7 @@ export default function ReportButton({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Report {isUserReport ? "user" : isPostReport ? "post" : "listing"}</DialogTitle>
+            <DialogTitle>Report {isUserReport ? "user" : communityReplyId ? "reply" : isPostReport ? "post" : "listing"}</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground -mt-1 mb-1">
             Reporting: <strong className="text-foreground">{targetName}</strong>

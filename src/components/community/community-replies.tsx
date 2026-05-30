@@ -11,6 +11,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { CheckCircle2, Loader2, Trash2, Upload, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import ReportButton from "@/components/report-button";
+import { findProhibitedWord, censorWord, logViolation } from "@/lib/profanity";
 
 type Reply = {
   id: string;
@@ -64,6 +66,12 @@ export function CommunityReplies({ postId, postType, postOwnerId, currentUserId,
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!body.trim()) return;
+    const hit = findProhibitedWord(body);
+    if (hit) {
+      toast.error(`Your reply contains a prohibited word: "${censorWord(hit)}"`);
+      logViolation(hit, "community-reply", body);
+      return;
+    }
     startTransition(async () => {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
@@ -191,14 +199,23 @@ export function CommunityReplies({ postId, postType, postOwnerId, currentUserId,
                 </button>
               )}
             </div>
-            {currentUserId === reply.user_id && (
-              <button
-                onClick={() => handleDelete(reply.id)}
-                className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-red-600 transition-all shrink-0"
-              >
-                <Trash2 size={14} />
-              </button>
-            )}
+            <div className="flex items-center gap-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+              {currentUserId !== reply.user_id && (
+                <ReportButton
+                  userId={currentUserId}
+                  communityReplyId={reply.id}
+                  targetName={`reply by ${reply.username}`}
+                />
+              )}
+              {currentUserId === reply.user_id && (
+                <button
+                  onClick={() => handleDelete(reply.id)}
+                  className="text-muted-foreground hover:text-red-600 transition-colors"
+                >
+                  <Trash2 size={14} />
+                </button>
+              )}
+            </div>
           </div>
         </div>
       ))}

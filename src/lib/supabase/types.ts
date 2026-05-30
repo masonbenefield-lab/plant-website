@@ -682,6 +682,7 @@ export interface Database {
           auction_id: string | null;
           reported_user_id: string | null;
           community_post_id: string | null;
+          community_reply_id: string | null;
           reason: string;
           details: string | null;
           status: string;
@@ -697,6 +698,7 @@ export interface Database {
           auction_id?: string | null;
           reported_user_id?: string | null;
           community_post_id?: string | null;
+          community_reply_id?: string | null;
           reason: string;
           details?: string | null;
           status?: string;

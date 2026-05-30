@@ -10,6 +10,7 @@ import { MessageCircle, CheckCircle2, Bookmark } from "lucide-react";
 import { CommunitySearchBar } from "@/components/community-search-bar";
 import { PostFollowButton } from "@/components/community/post-follow-button";
 import CommunityGardensGrid from "@/components/garden/community-gardens-grid";
+import ReportButton from "@/components/report-button";
 import type { Database } from "@/lib/supabase/types";
 
 export const dynamic = "force-dynamic";
@@ -139,13 +140,14 @@ export default async function CommunityPage({
 
   // Fetch which posts the current user has saved (for bookmark state on cards)
   let followedPostIds = new Set<string>();
+  let reportedPostIds = new Set<string>();
   if (user && postIds.length) {
-    const { data: userFollows } = await supabase
-      .from("community_post_follows")
-      .select("post_id")
-      .eq("user_id", user.id)
-      .in("post_id", postIds);
+    const [{ data: userFollows }, { data: userReports }] = await Promise.all([
+      supabase.from("community_post_follows").select("post_id").eq("user_id", user.id).in("post_id", postIds),
+      supabase.from("reports").select("community_post_id").eq("reporter_id", user.id).in("community_post_id", postIds),
+    ]);
     followedPostIds = new Set((userFollows ?? []).map((f) => f.post_id));
+    reportedPostIds = new Set((userReports ?? []).map((r) => r.community_post_id).filter(Boolean) as string[]);
   }
 
   // Apply client-side sort / filter after reply counts are known (non-saved view)
@@ -252,7 +254,7 @@ export default async function CommunityPage({
                 const replyCount = replyCountMap[post.id] ?? 0;
                 const isFollowed = followedPostIds.has(post.id);
                 return (
-                  <div key={post.id} className="relative">
+                  <div key={post.id} className="relative group">
                     <Link
                       href={`/community/${post.id}`}
                       className="block rounded-xl border bg-card p-4 hover:shadow-md transition-shadow"
@@ -298,6 +300,16 @@ export default async function CommunityPage({
                     <div className="absolute top-3 right-3">
                       <PostFollowButton postId={post.id} initialFollowing={isFollowed} size="sm" />
                     </div>
+                    {user && post.user_id !== user.id && (
+                      <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <ReportButton
+                          userId={user.id}
+                          communityPostId={post.id}
+                          targetName={post.title}
+                          initialReported={reportedPostIds.has(post.id)}
+                        />
+                      </div>
+                    )}
                   </div>
                 );
               })}
