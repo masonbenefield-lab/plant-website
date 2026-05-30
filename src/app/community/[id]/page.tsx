@@ -8,6 +8,7 @@ import { ChevronLeft, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CommunityReplies } from "@/components/community/community-replies";
 import { PostFollowButton } from "@/components/community/post-follow-button";
+import { DeletePostButton } from "@/components/community/delete-post-button";
 import ReportButton from "@/components/report-button";
 
 const TYPE_LABEL = { help: "Help Request", show_and_tell: "Show & Tell", discussion: "Discussion" } as const;
@@ -111,16 +112,18 @@ export default async function CommunityPostPage({
           <span className="text-xs text-muted-foreground">
             {new Date(post.created_at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
           </span>
-          {!isOwner && (
-            <span className="ml-auto">
+          <span className="ml-auto flex items-center gap-3">
+            {isOwner ? (
+              <DeletePostButton postId={post.id} />
+            ) : (
               <ReportButton
                 userId={user?.id ?? null}
                 communityPostId={post.id}
                 targetName={post.title}
                 initialReported={!!reportRow}
               />
-            </span>
-          )}
+            )}
+          </span>
         </div>
       </div>
 
