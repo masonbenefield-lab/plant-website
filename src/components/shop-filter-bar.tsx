@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useCallback, useTransition, useState, useEffect, useRef, Suspense } from "react";
-import { X, MapPin, Leaf } from "lucide-react";
+import { X, MapPin, Leaf, SlidersHorizontal } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { PLANT_CATEGORIES } from "@/lib/categories";
@@ -21,6 +21,7 @@ export default function ShopFilterBar() {
   const params = useSearchParams();
   const [, startTransition] = useTransition();
   const [showGuide, setShowGuide] = useState(true);
+  const [showMore, setShowMore] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [searchValue, setSearchValue] = useState(() => params.get("q") ?? "");
@@ -31,6 +32,11 @@ export default function ShopFilterBar() {
     const stored = localStorage.getItem("plant-guide-visible");
     if (stored === "false") setShowGuide(false);
   }, []);
+
+  // Auto-open More Filters panel if those params are active on load
+  useEffect(() => {
+    if (params.get("location") || params.get("pot_size")) setShowMore(true);
+  }, [params]);
 
   // Close suggestions when clicking outside
   useEffect(() => {
@@ -60,12 +66,13 @@ export default function ShopFilterBar() {
   const onSale   = params.get("on_sale") === "1";
   const potSize  = params.get("pot_size") ?? "";
 
+  const hasMoreActive = !!(location || potSize);
   const hasFilters = q || sort !== "newest" || min || max || category || location || inStock || onSale || potSize;
 
   const update = useCallback(
     (patch: Record<string, string>) => {
       const next = new URLSearchParams(params.toString());
-      next.delete("page"); // reset to page 1 on filter change
+      next.delete("page");
       for (const [k, v] of Object.entries(patch)) {
         if (v) next.set(k, v);
         else next.delete(k);
@@ -89,7 +96,6 @@ export default function ShopFilterBar() {
   }
 
   function selectSuggestion(s: string) {
-    // If "Plant — Variety", search just by the plant name part
     const q = s.includes(" — ") ? s.split(" — ")[0] : s;
     setSearchValue(q);
     setSuggestions([]);
@@ -99,8 +105,8 @@ export default function ShopFilterBar() {
 
   return (
     <div className="space-y-3 mb-6">
-      {/* Filter row */}
-      <div className="flex flex-wrap gap-3 items-end">
+      {/* Primary filter row */}
+      <div className="flex flex-wrap gap-2 items-center">
         {/* Search with autocomplete */}
         <div className="flex-1 min-w-[180px] relative" ref={searchRef}>
           <label htmlFor="shop-search" className="sr-only">Search plants or varieties</label>
@@ -193,59 +199,49 @@ export default function ShopFilterBar() {
           />
         </fieldset>
 
-        {/* Location */}
-        <div className="relative">
-          <label htmlFor="shop-location" className="sr-only">Filter by location</label>
-          <MapPin size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-          <Input
-            id="shop-location"
-            placeholder="Location (state, country…)"
-            defaultValue={location}
-            className="pl-8 w-44"
-            onChange={(e) => debounce(() => update({ location: e.target.value }))}
-          />
-        </div>
-
-        {/* Pot size */}
-        <div>
-          <label htmlFor="shop-pot-size" className="sr-only">Filter by pot size</label>
-          <select
-            id="shop-pot-size"
-            value={potSize}
-            onChange={(e) => update({ pot_size: e.target.value })}
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+        {/* Toggle group: In Stock + On Sale */}
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => update({ in_stock: inStock ? "" : "1" })}
+            className={cn(
+              "h-10 px-3 rounded-l-md border text-sm font-medium transition-colors whitespace-nowrap",
+              inStock
+                ? "bg-green-700 text-white border-green-700"
+                : "border-input bg-background text-muted-foreground hover:text-foreground hover:border-foreground"
+            )}
           >
-            <option value="">Any Size</option>
-            {POT_SIZES.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
+            In Stock
+          </button>
+          <button
+            onClick={() => update({ on_sale: onSale ? "" : "1" })}
+            className={cn(
+              "h-10 px-3 rounded-r-md border-t border-b border-r text-sm font-medium transition-colors whitespace-nowrap",
+              onSale
+                ? "bg-green-700 text-white border-green-700"
+                : "border-input bg-background text-muted-foreground hover:text-foreground hover:border-foreground"
+            )}
+          >
+            On Sale
+          </button>
         </div>
 
-        {/* In Stock toggle */}
+        {/* More Filters toggle */}
         <button
-          onClick={() => update({ in_stock: inStock ? "" : "1" })}
+          onClick={() => setShowMore((v) => !v)}
           className={cn(
-            "h-10 px-4 rounded-md border text-sm font-medium transition-colors whitespace-nowrap",
-            inStock
-              ? "bg-green-700 text-white border-green-700"
+            "h-10 px-3 rounded-md border text-sm font-medium transition-colors flex items-center gap-1.5 whitespace-nowrap",
+            (showMore || hasMoreActive)
+              ? "bg-background border-foreground text-foreground"
               : "border-input bg-background text-muted-foreground hover:text-foreground hover:border-foreground"
           )}
         >
-          In Stock Only
-        </button>
-
-        {/* On Sale toggle */}
-        <button
-          onClick={() => update({ on_sale: onSale ? "" : "1" })}
-          className={cn(
-            "h-10 px-4 rounded-md border text-sm font-medium transition-colors whitespace-nowrap",
-            onSale
-              ? "bg-green-700 text-white border-green-700"
-              : "border-input bg-background text-muted-foreground hover:text-foreground hover:border-foreground"
+          <SlidersHorizontal size={14} />
+          More Filters
+          {hasMoreActive && (
+            <span className="ml-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-green-700 text-[10px] text-white font-bold">
+              {[location, potSize].filter(Boolean).length}
+            </span>
           )}
-        >
-          On Sale
         </button>
 
         {/* Plant Guide toggle */}
@@ -263,6 +259,49 @@ export default function ShopFilterBar() {
           Plant Guide
         </button>
       </div>
+
+      {/* More Filters panel */}
+      {showMore && (
+        <div className="flex flex-wrap gap-3 items-center rounded-md border border-dashed border-border px-4 py-3">
+          {/* Location */}
+          <div className="relative">
+            <label htmlFor="shop-location" className="sr-only">Filter by location</label>
+            <MapPin size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            <Input
+              id="shop-location"
+              placeholder="Location (state, country…)"
+              defaultValue={location}
+              className="pl-8 w-52"
+              onChange={(e) => debounce(() => update({ location: e.target.value }))}
+            />
+          </div>
+
+          {/* Pot size */}
+          <div className="flex items-center gap-2">
+            <label htmlFor="shop-pot-size" className="text-sm text-muted-foreground whitespace-nowrap">Pot Size</label>
+            <select
+              id="shop-pot-size"
+              value={potSize}
+              onChange={(e) => update({ pot_size: e.target.value })}
+              className="h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="">Any</option>
+              {POT_SIZES.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+
+          {hasMoreActive && (
+            <button
+              onClick={() => { update({ location: "", pot_size: "" }); }}
+              className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      )}
 
       {showGuide && (
         <Suspense>
@@ -292,7 +331,7 @@ export default function ShopFilterBar() {
             <Chip label={`📍 ${location}`} onRemove={() => update({ location: "" })} />
           )}
           {inStock && (
-            <Chip label="In Stock Only" onRemove={() => update({ in_stock: "" })} />
+            <Chip label="In Stock" onRemove={() => update({ in_stock: "" })} />
           )}
           {onSale && (
             <Chip label="On Sale" onRemove={() => update({ on_sale: "" })} />
