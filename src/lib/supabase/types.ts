@@ -32,6 +32,7 @@ export interface Database {
           open_to_trades: boolean;
           trades_disclaimer_accepted: boolean;
           shipping_days: number | null;
+          shipping_days_max: number | null;
           vacation_mode: boolean;
           vacation_until: string | null;
           offers_enabled: boolean;
@@ -73,6 +74,7 @@ export interface Database {
           open_to_trades?: boolean;
           trades_disclaimer_accepted?: boolean;
           shipping_days?: number | null;
+          shipping_days_max?: number | null;
           vacation_mode?: boolean;
           vacation_until?: string | null;
           offers_enabled?: boolean;
@@ -115,6 +117,7 @@ export interface Database {
           open_to_trades?: boolean;
           trades_disclaimer_accepted?: boolean;
           shipping_days?: number | null;
+          shipping_days_max?: number | null;
           vacation_mode?: boolean;
           vacation_until?: string | null;
           offers_enabled?: boolean;

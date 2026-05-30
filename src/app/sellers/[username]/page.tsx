@@ -221,7 +221,7 @@ export default async function SellerStorefront({
             )}
             {profile.shipping_days && (
               <span className="text-xs text-muted-foreground">
-                🚚 Ships within {profile.shipping_days} day{profile.shipping_days !== 1 ? "s" : ""}
+                🚚 Ships within {profile.shipping_days}{(profile as { shipping_days_max?: number | null }).shipping_days_max ? `–${(profile as { shipping_days_max?: number | null }).shipping_days_max}` : ""} day{((profile as { shipping_days_max?: number | null }).shipping_days_max ?? profile.shipping_days) !== 1 ? "s" : ""}
               </span>
             )}
           </div>

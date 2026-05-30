@@ -42,6 +42,7 @@ export default function AccountForm({
   const [bannerUrl, setBannerUrl] = useState(profile?.banner_url ?? "");
   const [showFollowerCount, setShowFollowerCount] = useState(profile?.show_follower_count ?? false);
   const [shippingDays, setShippingDays] = useState<number | "">(profile?.shipping_days ?? "");
+  const [shippingDaysMax, setShippingDaysMax] = useState<number | "">((profile as { shipping_days_max?: number | null } | null)?.shipping_days_max ?? "");
   const [vacationMode, setVacationMode] = useState(profile?.vacation_mode ?? false);
   const [vacationUntil, setVacationUntil] = useState(profile?.vacation_until ?? "");
   const [offersEnabled, setOffersEnabled] = useState((profile as { offers_enabled?: boolean } | null)?.offers_enabled !== false);
@@ -154,6 +155,7 @@ export default function AccountForm({
         banner_url: bannerUrl,
         show_follower_count: showFollowerCount,
         shipping_days: shippingDays === "" ? null : shippingDays,
+        shipping_days_max: shippingDaysMax === "" ? null : shippingDaysMax,
         vacation_mode: vacationMode,
         vacation_until: vacationUntil || null,
         offers_enabled: offersEnabled,
@@ -504,21 +506,44 @@ export default function AccountForm({
             </div>
 
             <div className="space-y-1">
-              <Label htmlFor="shipping-days">Shipping timeline</Label>
-              <select
-                id="shipping-days"
-                value={shippingDays}
-                onChange={(e) => setShippingDays(e.target.value === "" ? "" : Number(e.target.value))}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <option value="">Not specified</option>
-                <option value="1">Ships within 1 day</option>
-                <option value="2">Ships within 2 days</option>
-                <option value="3">Ships within 3 days</option>
-                <option value="5">Ships within 5 days</option>
-                <option value="7">Ships within 1 week</option>
-                <option value="14">Ships within 2 weeks</option>
-              </select>
+              <Label>Shipping timeline</Label>
+              <div className="flex items-center gap-2">
+                <select
+                  id="shipping-days"
+                  value={shippingDays}
+                  onChange={(e) => {
+                    const val = e.target.value === "" ? "" : Number(e.target.value);
+                    setShippingDays(val);
+                    if (val === "" || (shippingDaysMax !== "" && Number(val) >= Number(shippingDaysMax))) setShippingDaysMax("");
+                  }}
+                  className="flex h-10 flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <option value="">Not specified</option>
+                  <option value="1">1 day</option>
+                  <option value="2">2 days</option>
+                  <option value="3">3 days</option>
+                  <option value="5">5 days</option>
+                  <option value="7">1 week</option>
+                  <option value="14">2 weeks</option>
+                </select>
+                <span className="text-sm text-muted-foreground shrink-0">to</span>
+                <select
+                  id="shipping-days-max"
+                  value={shippingDaysMax}
+                  disabled={shippingDays === ""}
+                  onChange={(e) => setShippingDaysMax(e.target.value === "" ? "" : Number(e.target.value))}
+                  className="flex h-10 flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                >
+                  <option value="">No max</option>
+                  {shippingDays !== "" && Number(shippingDays) < 2  && <option value="2">2 days</option>}
+                  {shippingDays !== "" && Number(shippingDays) < 3  && <option value="3">3 days</option>}
+                  {shippingDays !== "" && Number(shippingDays) < 5  && <option value="5">5 days</option>}
+                  {shippingDays !== "" && Number(shippingDays) < 7  && <option value="7">1 week</option>}
+                  {shippingDays !== "" && Number(shippingDays) < 14 && <option value="14">2 weeks</option>}
+                  {shippingDays !== "" && Number(shippingDays) < 21 && <option value="21">3 weeks</option>}
+                  {shippingDays !== "" && Number(shippingDays) < 30 && <option value="30">1 month</option>}
+                </select>
+              </div>
               <p className="text-xs text-muted-foreground">Shown to buyers on your listings and storefront.</p>
             </div>
 

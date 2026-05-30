@@ -72,7 +72,7 @@ export default async function ListingPage({
   if (!listing) notFound();
 
   const [{ data: seller }, { data: { user } }, { data: invShipping }] = await Promise.all([
-    supabase.from("profiles").select("id, username, avatar_url, stripe_onboarded, shipping_days, vacation_mode, vacation_until, offers_enabled").eq("id", listing.seller_id).single(),
+    supabase.from("profiles").select("id, username, avatar_url, stripe_onboarded, shipping_days, shipping_days_max, vacation_mode, vacation_until, offers_enabled").eq("id", listing.seller_id).single(),
     supabase.auth.getUser(),
     listing.inventory_id
       ? supabase.from("inventory").select("free_shipping, shipping_cost_cents, shipping_weight_oz").eq("id", listing.inventory_id).single()
@@ -212,7 +212,7 @@ export default async function ListingPage({
           <div className="mt-3 space-y-1.5">
             {seller?.shipping_days && (
               <p className="text-xs text-muted-foreground">
-                🚚 Ships within {seller.shipping_days} day{seller.shipping_days !== 1 ? "s" : ""}
+                🚚 Ships within {seller.shipping_days}{(seller as { shipping_days_max?: number | null }).shipping_days_max ? `–${(seller as { shipping_days_max?: number | null }).shipping_days_max}` : ""} day{((seller as { shipping_days_max?: number | null }).shipping_days_max ?? seller.shipping_days) !== 1 ? "s" : ""}
               </p>
             )}
             <ShippingEstimate
