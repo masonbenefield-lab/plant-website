@@ -21,6 +21,7 @@ import SizePicker from "@/components/size-picker";
 import ListingShareButton from "@/components/listing-share-button";
 import { ListingComments } from "@/components/listing-comments";
 import { ShippingEstimate } from "@/components/shipping-estimate";
+import { ReturnPolicyBadge } from "@/components/return-policy-badge";
 
 export async function generateMetadata({
   params,
@@ -72,7 +73,7 @@ export default async function ListingPage({
   if (!listing) notFound();
 
   const [{ data: seller }, { data: { user } }, { data: invShipping }] = await Promise.all([
-    supabase.from("profiles").select("id, username, avatar_url, stripe_onboarded, shipping_days, shipping_days_max, vacation_mode, vacation_until, offers_enabled").eq("id", listing.seller_id).single(),
+    supabase.from("profiles").select("id, username, avatar_url, stripe_onboarded, shipping_days, shipping_days_max, return_policy_type, return_policy_notes, vacation_mode, vacation_until, offers_enabled").eq("id", listing.seller_id).single(),
     supabase.auth.getUser(),
     listing.inventory_id
       ? supabase.from("inventory").select("free_shipping, shipping_cost_cents, shipping_weight_oz").eq("id", listing.inventory_id).single()
@@ -214,6 +215,12 @@ export default async function ListingPage({
               <p className="text-xs text-muted-foreground">
                 🚚 Ships within {seller.shipping_days}{(seller as { shipping_days_max?: number | null }).shipping_days_max ? `–${(seller as { shipping_days_max?: number | null }).shipping_days_max}` : ""} day{((seller as { shipping_days_max?: number | null }).shipping_days_max ?? seller.shipping_days) !== 1 ? "s" : ""}
               </p>
+            )}
+            {(seller as { return_policy_type?: string | null } | null)?.return_policy_type && (
+              <ReturnPolicyBadge
+                type={(seller as { return_policy_type: string }).return_policy_type}
+                notes={(seller as { return_policy_notes?: string | null }).return_policy_notes}
+              />
             )}
             <ShippingEstimate
               listingId={listing.id}

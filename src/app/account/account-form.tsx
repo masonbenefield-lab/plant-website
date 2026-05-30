@@ -43,6 +43,8 @@ export default function AccountForm({
   const [showFollowerCount, setShowFollowerCount] = useState(profile?.show_follower_count ?? false);
   const [shippingDays, setShippingDays] = useState<number | "">(profile?.shipping_days ?? "");
   const [shippingDaysMax, setShippingDaysMax] = useState<number | "">((profile as { shipping_days_max?: number | null } | null)?.shipping_days_max ?? "");
+  const [returnPolicyType, setReturnPolicyType] = useState<string>((profile as { return_policy_type?: string | null } | null)?.return_policy_type ?? "");
+  const [returnPolicyNotes, setReturnPolicyNotes] = useState<string>((profile as { return_policy_notes?: string | null } | null)?.return_policy_notes ?? "");
   const [vacationMode, setVacationMode] = useState(profile?.vacation_mode ?? false);
   const [vacationUntil, setVacationUntil] = useState(profile?.vacation_until ?? "");
   const [offersEnabled, setOffersEnabled] = useState((profile as { offers_enabled?: boolean } | null)?.offers_enabled !== false);
@@ -156,6 +158,8 @@ export default function AccountForm({
         show_follower_count: showFollowerCount,
         shipping_days: shippingDays === "" ? null : shippingDays,
         shipping_days_max: shippingDaysMax === "" ? null : shippingDaysMax,
+        return_policy_type: returnPolicyType || null,
+        return_policy_notes: returnPolicyNotes.trim() || null,
         vacation_mode: vacationMode,
         vacation_until: vacationUntil || null,
         offers_enabled: offersEnabled,
@@ -544,6 +548,36 @@ export default function AccountForm({
                   {shippingDays !== "" && Number(shippingDays) < 30 && <option value="30">1 month</option>}
                 </select>
               </div>
+              <p className="text-xs text-muted-foreground">Shown to buyers on your listings and storefront.</p>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="return-policy">Return policy</Label>
+              <select
+                id="return-policy"
+                value={returnPolicyType}
+                onChange={(e) => { setReturnPolicyType(e.target.value); if (!e.target.value) setReturnPolicyNotes(""); }}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <option value="">Not specified</option>
+                <option value="all_sales_final">🚫 All sales final</option>
+                <option value="doa_guarantee">🌱 DOA guarantee</option>
+                <option value="case_by_case">💬 Contact me first</option>
+              </select>
+              {returnPolicyType && (
+                <Textarea
+                  value={returnPolicyNotes}
+                  onChange={(e) => setReturnPolicyNotes(e.target.value)}
+                  placeholder={
+                    returnPolicyType === "all_sales_final" ? "e.g. All sales are final. Please ask questions before purchasing." :
+                    returnPolicyType === "doa_guarantee"   ? "e.g. Contact me within 3 days of delivery with photos and I'll make it right." :
+                    "e.g. Message me before opening a dispute and I'll do my best to help."
+                  }
+                  rows={2}
+                  maxLength={300}
+                  className="resize-none text-sm"
+                />
+              )}
               <p className="text-xs text-muted-foreground">Shown to buyers on your listings and storefront.</p>
             </div>
 

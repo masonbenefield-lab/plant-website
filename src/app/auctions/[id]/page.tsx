@@ -11,6 +11,7 @@ import ReportButton from "@/components/report-button";
 import ImageGallery from "@/components/image-gallery";
 import ListingShareButton from "@/components/listing-share-button";
 import { ShippingEstimate } from "@/components/shipping-estimate";
+import { ReturnPolicyBadge } from "@/components/return-policy-badge";
 
 export async function generateMetadata({
   params,
@@ -63,7 +64,7 @@ export default async function AuctionPage({
   if (!auction) notFound();
 
   const [{ data: seller }, { data: bids }, { data: { user } }, { data: invShipping }] = await Promise.all([
-    supabase.from("profiles").select("id, username, avatar_url").eq("id", auction.seller_id).single(),
+    supabase.from("profiles").select("id, username, avatar_url, shipping_days, shipping_days_max, return_policy_type, return_policy_notes").eq("id", auction.seller_id).single(),
     supabase.from("bids").select("id, amount_cents, created_at, bidder_id").eq("auction_id", id).order("created_at", { ascending: false }).limit(10),
     supabase.auth.getUser(),
     auction.inventory_id
@@ -135,12 +136,23 @@ export default async function AuctionPage({
             </p>
           )}
 
-          <div className="mb-4">
+          <div className="mb-4 space-y-2">
             <ShippingEstimate
               auctionId={auction.id}
               freeShipping={shippingFree}
               shippingCostCents={shippingCostCents}
             />
+            {seller?.shipping_days && (
+              <p className="text-xs text-muted-foreground">
+                🚚 Ships within {seller.shipping_days}{(seller as { shipping_days_max?: number | null }).shipping_days_max ? `–${(seller as { shipping_days_max?: number | null }).shipping_days_max}` : ""} day{((seller as { shipping_days_max?: number | null }).shipping_days_max ?? seller.shipping_days) !== 1 ? "s" : ""}
+              </p>
+            )}
+            {(seller as { return_policy_type?: string | null } | null)?.return_policy_type && (
+              <ReturnPolicyBadge
+                type={(seller as { return_policy_type: string }).return_policy_type}
+                notes={(seller as { return_policy_notes?: string | null }).return_policy_notes}
+              />
+            )}
           </div>
 
           {auction.status === "scheduled" && auction.starts_at && (

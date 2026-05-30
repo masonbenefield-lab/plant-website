@@ -14,6 +14,7 @@ import ShareButton from "@/components/share-button";
 import { MessageButton } from "@/components/message-button";
 import RateSellerForm from "@/app/orders/rate-seller-form";
 import { StorefrontListings, StorefrontAuctions } from "./storefront-listings";
+import { ReturnPolicyBadge } from "@/components/return-policy-badge";
 import type { GardenPlantStatus, Database } from "@/lib/supabase/types";
 
 const GARDEN_STATUS_LABEL: Record<GardenPlantStatus, string> = {
@@ -223,6 +224,12 @@ export default async function SellerStorefront({
               <span className="text-xs text-muted-foreground">
                 🚚 Ships within {profile.shipping_days}{(profile as { shipping_days_max?: number | null }).shipping_days_max ? `–${(profile as { shipping_days_max?: number | null }).shipping_days_max}` : ""} day{((profile as { shipping_days_max?: number | null }).shipping_days_max ?? profile.shipping_days) !== 1 ? "s" : ""}
               </span>
+            )}
+            {(profile as { return_policy_type?: string | null }).return_policy_type && (
+              <ReturnPolicyBadge
+                type={(profile as { return_policy_type?: string | null }).return_policy_type!}
+                notes={(profile as { return_policy_notes?: string | null }).return_policy_notes}
+              />
             )}
           </div>
           {avgScore !== null && (

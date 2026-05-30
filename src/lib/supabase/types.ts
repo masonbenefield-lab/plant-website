@@ -33,6 +33,8 @@ export interface Database {
           trades_disclaimer_accepted: boolean;
           shipping_days: number | null;
           shipping_days_max: number | null;
+          return_policy_type: string | null;
+          return_policy_notes: string | null;
           vacation_mode: boolean;
           vacation_until: string | null;
           offers_enabled: boolean;
@@ -75,6 +77,8 @@ export interface Database {
           trades_disclaimer_accepted?: boolean;
           shipping_days?: number | null;
           shipping_days_max?: number | null;
+          return_policy_type?: string | null;
+          return_policy_notes?: string | null;
           vacation_mode?: boolean;
           vacation_until?: string | null;
           offers_enabled?: boolean;
@@ -118,6 +122,8 @@ export interface Database {
           trades_disclaimer_accepted?: boolean;
           shipping_days?: number | null;
           shipping_days_max?: number | null;
+          return_policy_type?: string | null;
+          return_policy_notes?: string | null;
           vacation_mode?: boolean;
           vacation_until?: string | null;
           offers_enabled?: boolean;
