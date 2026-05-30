@@ -158,153 +158,179 @@ export default async function CommunityPage({
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-10">
+    <div className={cn("mx-auto px-4 py-10", isGardensView ? "max-w-5xl" : "max-w-3xl")}>
+      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold">Community</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Ask questions, share plants, and connect with other growers</p>
         </div>
-        <Link href="/community/new" className={cn(buttonVariants(), "bg-green-700 hover:bg-green-800")}>
-          + New Post
-        </Link>
-      </div>
-
-      {/* Search (hidden in saved/gardens view) */}
-      {!isSavedView && !isGardensView && (
-        <Suspense>
-          <CommunitySearchBar />
-        </Suspense>
-      )}
-
-      {/* Top-level tabs: All / Saved / Gardens */}
-      <div className="flex flex-wrap gap-2 mb-3">
-        <FilterChip href="/community" label="All Posts" active={!isSavedView && !isGardensView} />
-        <FilterChip href="/community?view=saved" label="Saved" active={isSavedView} icon={<Bookmark size={12} />} />
-        <FilterChip href="/community?view=gardens" label="Gardens" active={isGardensView} />
-        {!isSavedView && !isGardensView && (
-          <>
-            <FilterChip href={buildHref({ sort: validSort, q: searchQuery })} label="All" active={!validType} />
-            <FilterChip href={buildHref({ type: "help", sort: validSort, q: searchQuery })} label="Help Requests" active={validType === "help"} title="Ask for advice, plant ID, or troubleshooting help" />
-            <FilterChip href={buildHref({ type: "show_and_tell", sort: validSort, q: searchQuery })} label="Show & Tell" active={validType === "show_and_tell"} title="Share a plant, growth update, or proud moment" />
-            <FilterChip href={buildHref({ type: "discussion", sort: validSort, q: searchQuery })} label="Discussions" active={validType === "discussion"} title="Open-ended conversations about care, species, or anything plant-related" />
-          </>
+        {!isGardensView && (
+          <Link href="/community/new" className={cn(buttonVariants(), "bg-green-700 hover:bg-green-800")}>
+            + New Post
+          </Link>
         )}
       </div>
 
-      {/* Sort chips (hidden in saved/gardens view) */}
-      {!isSavedView && !isGardensView && (
-        <div className="flex flex-wrap gap-2 mb-6">
-          <FilterChip href={buildHref({ type: validType, q: searchQuery })} label="Newest" active={validSort === "newest"} small />
-          <FilterChip href={buildHref({ type: validType, sort: "most_replies", q: searchQuery })} label="Most Replies" active={validSort === "most_replies"} small />
-          <FilterChip href={buildHref({ type: validType, sort: "unanswered", q: searchQuery })} label="Unanswered" active={validSort === "unanswered"} small />
-        </div>
-      )}
+      {/* Top-level section tabs: Posts | Gardens */}
+      <div className="flex gap-1 border-b mb-6">
+        <SectionTab href="/community" active={!isGardensView}>Posts</SectionTab>
+        <SectionTab href="/community?view=gardens" active={isGardensView}>Gardens</SectionTab>
+      </div>
 
-      {isSavedView && <div className="mb-6" />}
-
-      {/* Gardens view */}
-      {isGardensView && (
-        <div className="mt-2">
-          <CommunityGardensGrid
-            gardens={gardens}
-            gardenMap={gardenMap}
-            currentUserId={user?.id ?? null}
-          />
-        </div>
-      )}
-
-      {/* Posts view */}
-      {!isGardensView && posts.length === 0 ? (
-        <div className="text-center py-20 border rounded-xl bg-muted/30">
-          <p className="text-4xl mb-4">{isSavedView ? "🔖" : "🌿"}</p>
-          {isSavedView && !user ? (
-            <>
-              <p className="font-semibold mb-1">Sign in to save posts</p>
-              <p className="text-sm text-muted-foreground mb-4">Bookmark posts to find them again later.</p>
-              <Link href="/login" className={cn(buttonVariants(), "bg-green-700 hover:bg-green-800")}>Sign in</Link>
-            </>
-          ) : isSavedView ? (
-            <>
-              <p className="font-semibold mb-1">No saved posts yet</p>
-              <p className="text-sm text-muted-foreground mb-4">Hit the bookmark icon on any post to save it here.</p>
-              <Link href="/community" className={cn(buttonVariants({ variant: "outline" }))}>Browse posts</Link>
-            </>
-          ) : searchQuery ? (
-            <>
-              <p className="font-semibold mb-1">No posts match &ldquo;{searchQuery}&rdquo;</p>
-              <p className="text-sm text-muted-foreground mb-4">Try a different search term or clear the search.</p>
-              <Link href={buildHref({ type: validType, sort: validSort })} className="text-sm text-green-700 hover:underline">Clear search</Link>
-            </>
-          ) : (
-            <>
-              <p className="font-semibold mb-1">Nothing here yet</p>
-              <p className="text-sm text-muted-foreground mb-6">Be the first to post in the community.</p>
-              <Link href="/community/new" className={cn(buttonVariants(), "bg-green-700 hover:bg-green-800")}>
-                Post something
-              </Link>
-            </>
+      {/* ── POSTS TAB ── */}
+      {!isGardensView && (
+        <>
+          {/* Search */}
+          {!isSavedView && (
+            <Suspense>
+              <CommunitySearchBar />
+            </Suspense>
           )}
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {posts.map((post) => {
-            const author = authorMap[post.user_id];
-            const replyCount = replyCountMap[post.id] ?? 0;
-            const isFollowed = followedPostIds.has(post.id);
-            return (
-              <div key={post.id} className="relative">
-                <Link
-                  href={`/community/${post.id}`}
-                  className="block rounded-xl border bg-card p-4 hover:shadow-md transition-shadow"
-                >
-                  <div className="flex items-start gap-3">
-                    <Avatar className="h-8 w-8 shrink-0 mt-0.5">
-                      <AvatarImage src={author?.avatar_url ?? undefined} />
-                      <AvatarFallback className="bg-green-100 text-green-700 text-xs font-semibold">
-                        {author?.username?.slice(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap mb-1">
-                        <Badge className={cn("text-xs px-1.5 py-0 border-0", TYPE_COLOR[post.post_type as PostType])}>
-                          {TYPE_LABEL[post.post_type as PostType]}
-                        </Badge>
-                        {post.solved && (
-                          <span className="flex items-center gap-0.5 text-xs text-green-700 font-medium">
-                            <CheckCircle2 size={12} /> Solved
-                          </span>
+
+          {/* Filter chips */}
+          <div className="flex flex-wrap gap-2 mb-3">
+            <FilterChip href="/community" label="All Posts" active={!isSavedView} />
+            <FilterChip href="/community?view=saved" label="Saved" active={isSavedView} icon={<Bookmark size={12} />} />
+            {!isSavedView && (
+              <>
+                <FilterChip href={buildHref({ sort: validSort, q: searchQuery })} label="All" active={!validType} />
+                <FilterChip href={buildHref({ type: "help", sort: validSort, q: searchQuery })} label="Help Requests" active={validType === "help"} title="Ask for advice, plant ID, or troubleshooting help" />
+                <FilterChip href={buildHref({ type: "show_and_tell", sort: validSort, q: searchQuery })} label="Show & Tell" active={validType === "show_and_tell"} title="Share a plant, growth update, or proud moment" />
+                <FilterChip href={buildHref({ type: "discussion", sort: validSort, q: searchQuery })} label="Discussions" active={validType === "discussion"} title="Open-ended conversations about care, species, or anything plant-related" />
+              </>
+            )}
+          </div>
+
+          {/* Sort chips */}
+          {!isSavedView && (
+            <div className="flex flex-wrap gap-2 mb-6">
+              <FilterChip href={buildHref({ type: validType, q: searchQuery })} label="Newest" active={validSort === "newest"} small />
+              <FilterChip href={buildHref({ type: validType, sort: "most_replies", q: searchQuery })} label="Most Replies" active={validSort === "most_replies"} small />
+              <FilterChip href={buildHref({ type: validType, sort: "unanswered", q: searchQuery })} label="Unanswered" active={validSort === "unanswered"} small />
+            </div>
+          )}
+
+          {isSavedView && <div className="mb-6" />}
+
+          {/* Posts list / empty states */}
+          {posts.length === 0 ? (
+            <div className="text-center py-20 border rounded-xl bg-muted/30">
+              <p className="text-4xl mb-4">{isSavedView ? "🔖" : "🌿"}</p>
+              {isSavedView && !user ? (
+                <>
+                  <p className="font-semibold mb-1">Sign in to save posts</p>
+                  <p className="text-sm text-muted-foreground mb-4">Bookmark posts to find them again later.</p>
+                  <Link href="/login" className={cn(buttonVariants(), "bg-green-700 hover:bg-green-800")}>Sign in</Link>
+                </>
+              ) : isSavedView ? (
+                <>
+                  <p className="font-semibold mb-1">No saved posts yet</p>
+                  <p className="text-sm text-muted-foreground mb-4">Hit the bookmark icon on any post to save it here.</p>
+                  <Link href="/community" className={cn(buttonVariants({ variant: "outline" }))}>Browse posts</Link>
+                </>
+              ) : searchQuery ? (
+                <>
+                  <p className="font-semibold mb-1">No posts match &ldquo;{searchQuery}&rdquo;</p>
+                  <p className="text-sm text-muted-foreground mb-4">Try a different search term or clear the search.</p>
+                  <Link href={buildHref({ type: validType, sort: validSort })} className="text-sm text-green-700 hover:underline">Clear search</Link>
+                </>
+              ) : (
+                <>
+                  <p className="font-semibold mb-1">Nothing here yet</p>
+                  <p className="text-sm text-muted-foreground mb-6">Be the first to post in the community.</p>
+                  <Link href="/community/new" className={cn(buttonVariants(), "bg-green-700 hover:bg-green-800")}>
+                    Post something
+                  </Link>
+                </>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {posts.map((post) => {
+                const author = authorMap[post.user_id];
+                const replyCount = replyCountMap[post.id] ?? 0;
+                const isFollowed = followedPostIds.has(post.id);
+                return (
+                  <div key={post.id} className="relative">
+                    <Link
+                      href={`/community/${post.id}`}
+                      className="block rounded-xl border bg-card p-4 hover:shadow-md transition-shadow"
+                    >
+                      <div className="flex items-start gap-3">
+                        <Avatar className="h-8 w-8 shrink-0 mt-0.5">
+                          <AvatarImage src={author?.avatar_url ?? undefined} />
+                          <AvatarFallback className="bg-green-100 text-green-700 text-xs font-semibold">
+                            {author?.username?.slice(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap mb-1">
+                            <Badge className={cn("text-xs px-1.5 py-0 border-0", TYPE_COLOR[post.post_type as PostType])}>
+                              {TYPE_LABEL[post.post_type as PostType]}
+                            </Badge>
+                            {post.solved && (
+                              <span className="flex items-center gap-0.5 text-xs text-green-700 font-medium">
+                                <CheckCircle2 size={12} /> Solved
+                              </span>
+                            )}
+                          </div>
+                          <p className="font-semibold text-sm leading-snug line-clamp-2 pr-8">{post.title}</p>
+                          {post.body && (
+                            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">{post.body}</p>
+                          )}
+                          <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                            <span>{author?.username}</span>
+                            <span>{new Date(post.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                            <span className="flex items-center gap-1">
+                              <MessageCircle size={11} /> {replyCount} {replyCount === 1 ? "reply" : "replies"}
+                            </span>
+                          </div>
+                        </div>
+                        {(post.photos as string[]).length > 0 && (
+                          <div className="relative w-14 h-14 rounded-lg overflow-hidden border shrink-0 bg-muted">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={(post.photos as string[])[0]} alt="Post photo" className="w-full h-full object-cover" />
+                          </div>
                         )}
                       </div>
-                      <p className="font-semibold text-sm leading-snug line-clamp-2 pr-8">{post.title}</p>
-                      {post.body && (
-                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">{post.body}</p>
-                      )}
-                      <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                        <span>{author?.username}</span>
-                        <span>{new Date(post.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
-                        <span className="flex items-center gap-1">
-                          <MessageCircle size={11} /> {replyCount} {replyCount === 1 ? "reply" : "replies"}
-                        </span>
-                      </div>
+                    </Link>
+                    <div className="absolute top-3 right-3">
+                      <PostFollowButton postId={post.id} initialFollowing={isFollowed} size="sm" />
                     </div>
-                    {(post.photos as string[]).length > 0 && (
-                      <div className="relative w-14 h-14 rounded-lg overflow-hidden border shrink-0 bg-muted">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={(post.photos as string[])[0]} alt="Post photo" className="w-full h-full object-cover" />
-                      </div>
-                    )}
                   </div>
-                </Link>
-                {/* Bookmark button sits outside the Link to avoid nested interactive elements */}
-                <div className="absolute top-3 right-3">
-                  <PostFollowButton postId={post.id} initialFollowing={isFollowed} size="sm" />
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                );
+              })}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ── GARDENS TAB ── */}
+      {isGardensView && (
+        <CommunityGardensGrid
+          gardens={gardens}
+          gardenMap={gardenMap}
+          currentUserId={user?.id ?? null}
+        />
       )}
     </div>
+  );
+}
+
+function SectionTab({ href, active, children }: { href: string; active: boolean; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className={cn(
+        "px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap",
+        active
+          ? "border-green-700 text-green-700"
+          : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground"
+      )}
+    >
+      {children}
+    </Link>
   );
 }
 
