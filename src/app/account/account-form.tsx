@@ -551,10 +551,10 @@ export default function AccountForm({
               <p className="text-xs text-muted-foreground">Shown to buyers on your listings and storefront.</p>
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="return-policy">Return policy</Label>
+            <div id="return-policy" className="space-y-1.5">
+              <Label htmlFor="return-policy-select">Return policy</Label>
               <select
-                id="return-policy"
+                id="return-policy-select"
                 value={returnPolicyType}
                 onChange={(e) => { setReturnPolicyType(e.target.value); if (!e.target.value) setReturnPolicyNotes(""); }}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"

@@ -21,7 +21,7 @@ export default async function InventoryPage({
     { data: activeInventory },
     { data: archivedInventory },
   ] = await Promise.all([
-    supabase.from("profiles").select("seller_terms_accepted_at, is_admin, stripe_onboarded, plan").eq("id", user.id).single(),
+    supabase.from("profiles").select("seller_terms_accepted_at, is_admin, stripe_onboarded, plan, return_policy_type").eq("id", user.id).single(),
     supabase.from("inventory").select("*").eq("seller_id", user.id).is("archived_at", null).order("created_at", { ascending: false }),
     supabase.from("inventory").select("*").eq("seller_id", user.id).not("archived_at", "is", null).gte("archived_at", thirtyDaysAgo).order("archived_at", { ascending: false }),
   ]);
@@ -153,6 +153,7 @@ export default async function InventoryPage({
   const termsAccepted = !!profile?.seller_terms_accepted_at;
   const isAdmin = !!(profile as { is_admin?: boolean } | null)?.is_admin;
   const stripeOnboarded = !!(profile as { stripe_onboarded?: boolean } | null)?.stripe_onboarded;
+  const hasReturnPolicy = !!(profile as { return_policy_type?: string | null } | null)?.return_policy_type;
 
   const { getPlanLimits } = await import("@/lib/plan-limits");
   const planLimits = getPlanLimits((profile as { plan?: string } | null)?.plan as "seedling" | "grower" | "nursery" | null, isAdmin);
@@ -166,6 +167,7 @@ export default async function InventoryPage({
       termsAccepted={termsAccepted}
       showWelcome={activeRows.length === 0}
       stripeOnboarded={stripeOnboarded}
+      hasReturnPolicy={hasReturnPolicy}
       unlinkedListings={(unlinkedListings ?? []).map(l => ({
         id: l.id,
         plant_name: l.plant_name,
