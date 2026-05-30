@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     const resend = new Resend(process.env.RESEND_API_KEY!);
     await resend.emails.send({
       from: "Plantet <noreply@plantet.shop>",
-      to: "masonbenefield@gmail.com",
+      to: "support@plantet.shop",
       replyTo: email,
       subject: `New contact message from ${name}`,
       html: `
