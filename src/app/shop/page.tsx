@@ -17,9 +17,9 @@ const PAGE_SIZE = 24;
 export default async function ShopPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; sort?: string; min?: string; max?: string; category?: string; in_stock?: string; on_sale?: string; location?: string; pot_size?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; sort?: string; min?: string; max?: string; category?: string; on_sale?: string; location?: string; pot_size?: string; page?: string }>;
 }) {
-  const { q, sort, min, max, category, in_stock, on_sale, location, pot_size, page: pageParam } = await searchParams;
+  const { q, sort, min, max, category, on_sale, location, pot_size, page: pageParam } = await searchParams;
   const page = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
   const from = (page - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
@@ -56,7 +56,7 @@ export default async function ShopPage({
   if (category) query = query.eq("category", category);
   if (min) query = query.gte("price_cents", Math.round(Number(min) * 100));
   if (max) query = query.lte("price_cents", Math.round(Number(max) * 100));
-  if (in_stock === "1") query = query.gt("quantity", 0);
+
   if (on_sale === "1") query = query.not("sale_price_cents", "is", null).gt("sale_ends_at", new Date().toISOString());
   if (pot_size) query = query.eq("pot_size", pot_size);
   if (locationSellerIds !== null) {
@@ -84,8 +84,7 @@ export default async function ShopPage({
     if (min) params.set("min", min);
     if (max) params.set("max", max);
     if (category) params.set("category", category);
-    if (in_stock === "1") params.set("in_stock", "1");
-    if (on_sale === "1") params.set("on_sale", "1");
+if (on_sale === "1") params.set("on_sale", "1");
     if (location) params.set("location", location);
     if (pot_size) params.set("pot_size", pot_size);
     if (p > 1) params.set("page", String(p));
@@ -141,7 +140,7 @@ export default async function ShopPage({
     (wRows ?? []).forEach((r) => { if (r.listing_id) wishlistedSet.add(r.listing_id); });
   }
 
-  const hasFilters = q || (sort && sort !== "newest") || min || max || category || in_stock === "1" || on_sale === "1" || location;
+  const hasFilters = q || (sort && sort !== "newest") || min || max || category || on_sale === "1" || location;
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-10">

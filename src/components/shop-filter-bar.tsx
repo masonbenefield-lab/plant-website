@@ -62,12 +62,11 @@ export default function ShopFilterBar() {
   const max      = params.get("max") ?? "";
   const category = params.get("category") ?? "";
   const location = params.get("location") ?? "";
-  const inStock  = params.get("in_stock") === "1";
   const onSale   = params.get("on_sale") === "1";
   const potSize  = params.get("pot_size") ?? "";
 
   const hasMoreActive = !!(location || potSize);
-  const hasFilters = q || sort !== "newest" || min || max || category || location || inStock || onSale || potSize;
+  const hasFilters = q || sort !== "newest" || min || max || category || location || onSale || potSize;
 
   const update = useCallback(
     (patch: Record<string, string>) => {
@@ -199,31 +198,18 @@ export default function ShopFilterBar() {
           />
         </fieldset>
 
-        {/* Toggle group: In Stock + On Sale */}
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => update({ in_stock: inStock ? "" : "1" })}
-            className={cn(
-              "h-10 px-3 rounded-l-md border text-sm font-medium transition-colors whitespace-nowrap",
-              inStock
-                ? "bg-green-700 text-white border-green-700"
-                : "border-input bg-background text-muted-foreground hover:text-foreground hover:border-foreground"
-            )}
-          >
-            In Stock
-          </button>
-          <button
-            onClick={() => update({ on_sale: onSale ? "" : "1" })}
-            className={cn(
-              "h-10 px-3 rounded-r-md border-t border-b border-r text-sm font-medium transition-colors whitespace-nowrap",
-              onSale
-                ? "bg-green-700 text-white border-green-700"
-                : "border-input bg-background text-muted-foreground hover:text-foreground hover:border-foreground"
-            )}
-          >
-            On Sale
-          </button>
-        </div>
+        {/* On Sale toggle */}
+        <button
+          onClick={() => update({ on_sale: onSale ? "" : "1" })}
+          className={cn(
+            "h-10 px-3 rounded-md border text-sm font-medium transition-colors whitespace-nowrap",
+            onSale
+              ? "bg-green-700 text-white border-green-700"
+              : "border-input bg-background text-muted-foreground hover:text-foreground hover:border-foreground"
+          )}
+        >
+          On Sale
+        </button>
 
         {/* More Filters toggle */}
         <button
@@ -329,9 +315,6 @@ export default function ShopFilterBar() {
           )}
           {location && (
             <Chip label={`📍 ${location}`} onRemove={() => update({ location: "" })} />
-          )}
-          {inStock && (
-            <Chip label="In Stock" onRemove={() => update({ in_stock: "" })} />
           )}
           {onSale && (
             <Chip label="On Sale" onRemove={() => update({ on_sale: "" })} />
