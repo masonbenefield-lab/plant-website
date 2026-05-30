@@ -509,7 +509,7 @@ export default function AccountForm({
               </button>
             </div>
 
-            <div id="shipping-days" className="space-y-1">
+            <div id="shipping-days" className="space-y-1 scroll-mt-24">
               <Label>Shipping timeline</Label>
               <div className="flex items-center gap-2">
                 <select
@@ -551,7 +551,7 @@ export default function AccountForm({
               <p className="text-xs text-muted-foreground">Shown to buyers on your listings and storefront.</p>
             </div>
 
-            <div id="return-policy" className="space-y-1.5">
+            <div id="return-policy" className="space-y-1.5 scroll-mt-24">
               <Label htmlFor="return-policy-select">Return policy</Label>
               <select
                 id="return-policy-select"
