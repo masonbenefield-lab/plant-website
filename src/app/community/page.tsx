@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -8,6 +9,8 @@ import { cn } from "@/lib/utils";
 import { MessageCircle, CheckCircle2, Bookmark } from "lucide-react";
 import { CommunitySearchBar } from "@/components/community-search-bar";
 import { PostFollowButton } from "@/components/community/post-follow-button";
+import CommunityGardensGrid from "@/components/garden/community-gardens-grid";
+import type { Database } from "@/lib/supabase/types";
 
 export const dynamic = "force-dynamic";
 
@@ -42,9 +45,46 @@ export default async function CommunityPage({
   const { data: { user } } = await supabase.auth.getUser();
 
   const isSavedView = view === "saved";
+  const isGardensView = view === "gardens";
   const validType = (["help", "show_and_tell", "discussion"] as const).find((t) => t === type);
   const validSort = (["newest", "most_replies", "unanswered"] as const).find((s) => s === sort) ?? "newest";
   const searchQuery = q?.trim() ?? "";
+
+  // Gardens view data
+  type GardenProfile = { id: string; username: string; display_name: string | null; avatar_url: string | null; garden_bio: string | null; open_to_trades: boolean };
+  type GardenSummary = { count: number; photos: string[] };
+  let gardens: GardenProfile[] = [];
+  let gardenMap: Record<string, GardenSummary> = {};
+
+  if (isGardensView) {
+    const admin = createAdminClient<Database>(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+    const { data: profiles } = await admin
+      .from("profiles")
+      .select("id, username, display_name, avatar_url, garden_bio, open_to_trades")
+      .eq("garden_public", true)
+      .is("deleted_at", null)
+      .order("username");
+    const profileIds = profiles?.map((p) => p.id) ?? [];
+    const { data: plants } = profileIds.length
+      ? await admin
+          .from("garden_plants")
+          .select("user_id, images, pin_order, name")
+          .in("user_id", profileIds)
+          .or("is_public.eq.true,is_public.is.null")
+          .order("pin_order", { ascending: true, nullsFirst: false })
+      : { data: [] };
+    for (const plant of plants ?? []) {
+      if (!gardenMap[plant.user_id]) gardenMap[plant.user_id] = { count: 0, photos: [] };
+      gardenMap[plant.user_id].count++;
+      if (gardenMap[plant.user_id].photos.length < 4 && plant.images?.[0]) {
+        gardenMap[plant.user_id].photos.push(plant.images[0]);
+      }
+    }
+    gardens = (profiles ?? []).filter((p) => (gardenMap[p.id]?.count ?? 0) > 0);
+  }
 
   let posts: { id: string; user_id: string; post_type: string; title: string; body: string | null; photos: unknown; solved: boolean; created_at: string }[] = [];
 
@@ -129,18 +169,19 @@ export default async function CommunityPage({
         </Link>
       </div>
 
-      {/* Search (hidden in saved view) */}
-      {!isSavedView && (
+      {/* Search (hidden in saved/gardens view) */}
+      {!isSavedView && !isGardensView && (
         <Suspense>
           <CommunitySearchBar />
         </Suspense>
       )}
 
-      {/* Top-level tabs: All / Saved */}
+      {/* Top-level tabs: All / Saved / Gardens */}
       <div className="flex flex-wrap gap-2 mb-3">
-        <FilterChip href="/community" label="All Posts" active={!isSavedView} />
+        <FilterChip href="/community" label="All Posts" active={!isSavedView && !isGardensView} />
         <FilterChip href="/community?view=saved" label="Saved" active={isSavedView} icon={<Bookmark size={12} />} />
-        {!isSavedView && (
+        <FilterChip href="/community?view=gardens" label="Gardens" active={isGardensView} />
+        {!isSavedView && !isGardensView && (
           <>
             <FilterChip href={buildHref({ sort: validSort, q: searchQuery })} label="All" active={!validType} />
             <FilterChip href={buildHref({ type: "help", sort: validSort, q: searchQuery })} label="Help Requests" active={validType === "help"} title="Ask for advice, plant ID, or troubleshooting help" />
@@ -150,8 +191,8 @@ export default async function CommunityPage({
         )}
       </div>
 
-      {/* Sort chips (hidden in saved view) */}
-      {!isSavedView && (
+      {/* Sort chips (hidden in saved/gardens view) */}
+      {!isSavedView && !isGardensView && (
         <div className="flex flex-wrap gap-2 mb-6">
           <FilterChip href={buildHref({ type: validType, q: searchQuery })} label="Newest" active={validSort === "newest"} small />
           <FilterChip href={buildHref({ type: validType, sort: "most_replies", q: searchQuery })} label="Most Replies" active={validSort === "most_replies"} small />
@@ -161,8 +202,19 @@ export default async function CommunityPage({
 
       {isSavedView && <div className="mb-6" />}
 
-      {/* Empty states */}
-      {posts.length === 0 ? (
+      {/* Gardens view */}
+      {isGardensView && (
+        <div className="mt-2">
+          <CommunityGardensGrid
+            gardens={gardens}
+            gardenMap={gardenMap}
+            currentUserId={user?.id ?? null}
+          />
+        </div>
+      )}
+
+      {/* Posts view */}
+      {!isGardensView && posts.length === 0 ? (
         <div className="text-center py-20 border rounded-xl bg-muted/30">
           <p className="text-4xl mb-4">{isSavedView ? "🔖" : "🌿"}</p>
           {isSavedView && !user ? (
