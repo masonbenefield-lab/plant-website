@@ -271,6 +271,17 @@ export default function InventoryClient({
   const [variantQty, setVariantQty] = useState("1");
   const [variantNotes, setVariantNotes] = useState("");
 
+  // Inline listing management panel
+  const [managingListingId, setManagingListingId] = useState<string | null>(null);
+  const [inlinePrice, setInlinePrice] = useState("");
+  const [inlineSavingPrice, setInlineSavingPrice] = useState(false);
+  const [inlineSalePrice, setInlineSalePrice] = useState("");
+  const [inlineSaleEndsAt, setInlineSaleEndsAt] = useState("");
+  const [inlineSavingSale, setInlineSavingSale] = useState(false);
+  const [inlineShowSale, setInlineShowSale] = useState(false);
+  const [inlineDeleteConfirm, setInlineDeleteConfirm] = useState<string | null>(null);
+  const [inlineDeleting, setInlineDeleting] = useState(false);
+
   const [importingId, setImportingId] = useState<string | null>(null);
   const [importingAll, setImportingAll] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
@@ -874,6 +885,199 @@ export default function InventoryClient({
     router.refresh();
   }
 
+  function openManageListing(row: Row) {
+    if (managingListingId === row.id) {
+      setManagingListingId(null);
+      return;
+    }
+    setManagingListingId(row.id);
+    setInlinePrice(row.listing_price_cents ? String(row.listing_price_cents / 100) : "");
+    const saleActive = !!(row.listing_sale_price_cents && row.listing_sale_ends_at && new Date(row.listing_sale_ends_at) > new Date());
+    setInlineSalePrice(saleActive && row.listing_sale_price_cents ? String(row.listing_sale_price_cents / 100) : "");
+    setInlineSaleEndsAt(saleActive && row.listing_sale_ends_at ? row.listing_sale_ends_at.slice(0, 16) : "");
+    setInlineShowSale(false);
+    setInlineDeleteConfirm(null);
+  }
+
+  async function saveInlinePrice(row: Row) {
+    if (!row.listing_id) return;
+    setInlineSavingPrice(true);
+    const supabase = createClient();
+    const { error } = await supabase.from("listings").update({ price_cents: dollarsToCents(inlinePrice) }).eq("id", row.listing_id);
+    setInlineSavingPrice(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Price updated");
+    router.refresh();
+  }
+
+  async function saveInlineSale(row: Row) {
+    if (!row.listing_id) return;
+    setInlineSavingSale(true);
+    const res = await fetch("/api/listings/sale", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ listingId: row.listing_id, salePrice: inlineSalePrice, saleEndsAt: inlineSaleEndsAt }),
+    });
+    const data = await res.json();
+    setInlineSavingSale(false);
+    if (data.error) { toast.error(data.error); return; }
+    toast.success("Sale scheduled!");
+    setInlineShowSale(false);
+    router.refresh();
+  }
+
+  async function clearInlineSale(row: Row) {
+    if (!row.listing_id) return;
+    setInlineSavingSale(true);
+    const res = await fetch("/api/listings/sale", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ listingId: row.listing_id, clear: true }),
+    });
+    const data = await res.json();
+    setInlineSavingSale(false);
+    if (data.error) { toast.error(data.error); return; }
+    toast.success("Sale ended");
+    router.refresh();
+  }
+
+  async function deleteInlineListing(row: Row) {
+    if (!row.listing_id) return;
+    setInlineDeleting(true);
+    const res = await fetch("/api/listings/delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ listingId: row.listing_id }),
+    });
+    const data = await res.json();
+    setInlineDeleting(false);
+    if (!res.ok) { toast.error(data.error ?? "Failed to remove listing"); return; }
+    toast.success("Removed from shop");
+    setManagingListingId(null);
+    setInlineDeleteConfirm(null);
+    router.refresh();
+  }
+
+  function renderInlineManagePanel(row: Row) {
+    const saleActive = !!(row.listing_sale_price_cents && row.listing_sale_ends_at && new Date(row.listing_sale_ends_at) > new Date());
+    return (
+      <div className="bg-muted/20 border-t border-border/40 px-4 py-3 space-y-3">
+        {/* Price + status row */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs font-medium text-muted-foreground w-10 shrink-0">Price</span>
+          <div className="flex items-center gap-1">
+            <span className="text-xs text-muted-foreground">$</span>
+            <input
+              type="number" min={0.01} step={0.01} value={inlinePrice}
+              onChange={e => setInlinePrice(e.target.value)}
+              className="w-24 h-7 px-2 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-green-600 bg-background"
+            />
+          </div>
+          <button
+            onClick={() => saveInlinePrice(row)}
+            disabled={inlineSavingPrice || !inlinePrice}
+            className="h-7 px-2.5 text-xs bg-green-700 hover:bg-green-800 text-white rounded disabled:opacity-50 transition-colors"
+          >
+            {inlineSavingPrice ? "Saving…" : "Save"}
+          </button>
+          <button
+            onClick={() => toggleListingPause(row)}
+            className={cn(
+              "h-7 px-2.5 text-xs rounded border font-medium transition-colors",
+              row.listing_status === "active"
+                ? "border-yellow-400 text-yellow-700 hover:bg-yellow-50 dark:hover:bg-yellow-900/20"
+                : "border-green-600 text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20"
+            )}
+          >
+            {row.listing_status === "active" ? "Pause" : "Resume"}
+          </button>
+          <button
+            onClick={() => setInlineShowSale(v => !v)}
+            className={cn(
+              "h-7 px-2.5 text-xs rounded border font-medium transition-colors",
+              saleActive
+                ? "border-orange-400 text-orange-600 bg-orange-50 dark:bg-orange-900/20"
+                : "border-input text-muted-foreground hover:text-foreground hover:border-foreground"
+            )}
+          >
+            {saleActive ? "✦ Sale" : "Run a Special"}
+          </button>
+          <button
+            onClick={() => setInlineDeleteConfirm(inlineDeleteConfirm === row.listing_id ? null : (row.listing_id ?? null))}
+            className="h-7 px-2.5 text-xs rounded border border-destructive/40 text-destructive hover:bg-destructive/10 transition-colors ml-auto"
+          >
+            Remove
+          </button>
+        </div>
+
+        {/* Sale section */}
+        {inlineShowSale && (
+          <div className="flex items-end gap-2 flex-wrap pt-2 border-t border-border/40">
+            {saleActive && (
+              <p className="text-xs text-orange-600 w-full">
+                Active: <strong>{centsToDisplay(row.listing_sale_price_cents!)}</strong> — ends {new Date(row.listing_sale_ends_at!).toLocaleString()}
+              </p>
+            )}
+            <div className="flex items-center gap-1.5">
+              <label className="text-xs text-muted-foreground">Sale $</label>
+              <input
+                type="number" min={0.01} step={0.01} value={inlineSalePrice}
+                onChange={e => setInlineSalePrice(e.target.value)}
+                placeholder="0.00"
+                className="w-24 h-7 px-2 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-orange-500 bg-background"
+              />
+            </div>
+            <div className="flex items-center gap-1.5">
+              <label className="text-xs text-muted-foreground">Ends</label>
+              <input
+                type="datetime-local" value={inlineSaleEndsAt}
+                min={new Date().toISOString().slice(0, 16)}
+                onChange={e => setInlineSaleEndsAt(e.target.value)}
+                className="h-7 px-2 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-orange-500 bg-background"
+              />
+            </div>
+            <button
+              onClick={() => saveInlineSale(row)}
+              disabled={inlineSavingSale || !inlineSalePrice || !inlineSaleEndsAt}
+              className="h-7 px-2.5 text-xs bg-orange-600 hover:bg-orange-700 text-white rounded disabled:opacity-50 transition-colors"
+            >
+              {inlineSavingSale ? "Saving…" : saleActive ? "Update" : "Start Sale"}
+            </button>
+            {saleActive && (
+              <button
+                onClick={() => clearInlineSale(row)}
+                disabled={inlineSavingSale}
+                className="h-7 px-2.5 text-xs border border-destructive/40 text-destructive hover:bg-destructive/10 rounded disabled:opacity-50 transition-colors"
+              >
+                End Sale
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Delete confirm */}
+        {inlineDeleteConfirm === row.listing_id && (
+          <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-border/40">
+            <span className="text-xs text-muted-foreground">Remove this listing from your shop?</span>
+            <button
+              onClick={() => deleteInlineListing(row)}
+              disabled={inlineDeleting}
+              className="h-7 px-2.5 text-xs bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded disabled:opacity-50 transition-colors"
+            >
+              {inlineDeleting ? "Removing…" : "Yes, Remove"}
+            </button>
+            <button
+              onClick={() => setInlineDeleteConfirm(null)}
+              className="h-7 px-2.5 text-xs border rounded text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   function exportExcel() {
     const data = activeRows.map(r => ({
       "Plant Name": r.plant_name, "Variety": r.variety, "Pot Size": r.pot_size ?? "",
@@ -1055,13 +1259,20 @@ export default function InventoryClient({
             {row.listing_sale_price_cents && row.listing_sale_ends_at && new Date(row.listing_sale_ends_at) > new Date() && (
               <span className="text-xs text-orange-600 font-medium">✦ Sale</span>
             )}
-            <Link href={`/dashboard/listings?q=${encodeURIComponent(row.plant_name)}`} className="text-xs text-blue-600 hover:underline">Manage →</Link>
+            <button
+              onClick={() => openManageListing(row)}
+              className={cn("text-xs hover:underline", managingListingId === row.id ? "text-foreground font-medium" : "text-blue-600")}
+            >
+              {managingListingId === row.id ? "Hide ↑" : "Manage ↓"}
+            </button>
           </div>
         ) : a > 0 ? (
           <button onClick={() => openModal({ type: "listing", row })} className="inline-flex items-center gap-1.5 text-sm text-green-700 hover:underline font-medium">
             <Store size={13} /> List in Shop
           </button>
         ) : null}
+
+        {managingListingId === row.id && renderInlineManagePanel(row)}
 
         {/* Auctions */}
         <div className="space-y-1.5">
@@ -1101,6 +1312,7 @@ export default function InventoryClient({
     const totalAuctionQty = activeAuctions.reduce((sum, au) => sum + au.quantity, 0);
 
     return (
+      <>
       <tr key={row.id} className="border-t border-border/40 hover:bg-muted/20 transition-colors">
         {/* Size */}
         <td className="py-3 pl-12 pr-3 w-28">
@@ -1180,9 +1392,12 @@ export default function InventoryClient({
                   <span className="text-xs text-orange-600 font-medium">✦ Sale</span>
                 )}
               </div>
-              <Link href={`/dashboard/listings?q=${encodeURIComponent(row.plant_name)}`} className="text-xs text-blue-600 hover:underline">
-                Manage listing →
-              </Link>
+              <button
+                onClick={() => openManageListing(row)}
+                className={cn("text-xs hover:underline", managingListingId === row.id ? "text-foreground font-medium" : "text-blue-600")}
+              >
+                {managingListingId === row.id ? "Hide ↑" : "Manage listing ↓"}
+              </button>
             </div>
           ) : a > 0 ? (
             <button
@@ -1253,11 +1468,6 @@ export default function InventoryClient({
                   <Gavel size={13} className="mr-1.5" /> {activeAuctions.length > 0 ? "Add Auction" : "Auction"}
                 </DropdownMenuItem>
               )}
-              {hasListing && (
-                <DropdownMenuItem onClick={() => { setModal(null); toggleListingPause(row); }}>
-                  {row.listing_status === "active" ? "Pause listing" : "Resume listing"}
-                </DropdownMenuItem>
-              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={() => archiveItem(row.id)}
@@ -1270,6 +1480,14 @@ export default function InventoryClient({
           </DropdownMenu>
         </td>
       </tr>
+      {managingListingId === row.id && (
+        <tr key={`${row.id}-manage`}>
+          <td colSpan={5} className="p-0">
+            {renderInlineManagePanel(row)}
+          </td>
+        </tr>
+      )}
+      </>
     );
   }
 
@@ -1430,7 +1648,7 @@ export default function InventoryClient({
             </button>
           </div>
           <p className="text-sm text-muted-foreground mt-1">
-            {activeRows.length} item{activeRows.length !== 1 ? "s" : ""} · {activeGroups.length} plant{activeGroups.length !== 1 ? "s" : ""} · <a href="/dashboard/listings" className="underline hover:text-foreground">My Shop →</a>
+            {activeRows.length} item{activeRows.length !== 1 ? "s" : ""} · {activeGroups.length} plant{activeGroups.length !== 1 ? "s" : ""}
           </p>
         </div>
         <div className="flex items-center gap-2">
