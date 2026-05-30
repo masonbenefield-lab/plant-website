@@ -199,8 +199,8 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
                   <DropdownMenuItem><Link href="/dashboard" className="block w-full">Dashboard</Link></DropdownMenuItem>
-                  <DropdownMenuItem><Link href="/dashboard/inventory" className="block w-full">Inventory</Link></DropdownMenuItem>
-                  <DropdownMenuItem><Link href="/dashboard/listings" className="block w-full">Listings</Link></DropdownMenuItem>
+                  <DropdownMenuItem><Link href="/dashboard/inventory" className="block w-full">My Stock</Link></DropdownMenuItem>
+                  <DropdownMenuItem><Link href="/dashboard/listings" className="block w-full">My Shop</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href="/dashboard/offers" className="block w-full">Offers</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href="/dashboard/auctions" className="block w-full">Auctions</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href="/wishlist" className="block w-full">Wishlist</Link></DropdownMenuItem>
@@ -288,8 +288,8 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
               <div className="border-t my-2" />
               <p className="px-3 pt-1 pb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Selling</p>
               <MobileLink href="/dashboard" onClick={closeMenu}>Dashboard</MobileLink>
-              <MobileLink href="/dashboard/inventory" onClick={closeMenu}>Inventory</MobileLink>
-              <MobileLink href="/dashboard/listings" onClick={closeMenu}>Listings</MobileLink>
+              <MobileLink href="/dashboard/inventory" onClick={closeMenu}>My Stock</MobileLink>
+              <MobileLink href="/dashboard/listings" onClick={closeMenu}>My Shop</MobileLink>
               <MobileLink href="/dashboard/announcements" onClick={closeMenu}>Announcements</MobileLink>
               <MobileLink href={`/sellers/${username}`} onClick={closeMenu}>My Storefront</MobileLink>
               <MobileLink href="/account" onClick={closeMenu}>Account Settings</MobileLink>

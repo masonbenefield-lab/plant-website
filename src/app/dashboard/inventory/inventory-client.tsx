@@ -1420,7 +1420,7 @@ export default function InventoryClient({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold">Inventory</h1>
+            <h1 className="text-2xl font-bold">My Stock</h1>
             <button
               onClick={() => setShowHelp(true)}
               className="text-muted-foreground hover:text-foreground transition-colors"
@@ -1430,7 +1430,7 @@ export default function InventoryClient({
             </button>
           </div>
           <p className="text-sm text-muted-foreground mt-1">
-            {activeRows.length} item{activeRows.length !== 1 ? "s" : ""} · {activeGroups.length} plant{activeGroups.length !== 1 ? "s" : ""}
+            {activeRows.length} item{activeRows.length !== 1 ? "s" : ""} · {activeGroups.length} plant{activeGroups.length !== 1 ? "s" : ""} · <a href="/dashboard/listings" className="underline hover:text-foreground">My Shop →</a>
           </p>
         </div>
         <div className="flex items-center gap-2">

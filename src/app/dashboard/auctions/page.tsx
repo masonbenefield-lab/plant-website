@@ -143,7 +143,7 @@ export default async function DashboardAuctionsPage({
             href="/dashboard/inventory"
             className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors"
           >
-            Create from Inventory →
+            Create from My Stock →
           </Link>
         )}
       </div>
@@ -169,20 +169,20 @@ export default async function DashboardAuctionsPage({
               <a href="/account#seller-payments" className="underline font-medium hover:opacity-80">connect your Stripe account</a>.
             </div>
           )}
-          <p className="text-sm text-muted-foreground mb-6">To create a new auction, open an inventory item and click &quot;Auction&quot;.</p>
+          <p className="text-sm text-muted-foreground mb-6">To create a new auction, open a stock item in <a href="/dashboard/inventory" className="underline hover:opacity-80">My Stock</a> and click &quot;Auction&quot;.</p>
 
           {sellingAuctions.length === 0 ? (
             <div className="flex flex-col items-center justify-center text-center py-16 px-4 rounded-lg border border-dashed">
               <div className="text-4xl mb-3">🔨</div>
               <h2 className="text-lg font-semibold mb-1">No auctions yet</h2>
               <p className="text-sm text-muted-foreground max-w-sm mb-5">
-                Auctions are created from your Inventory page. Open any inventory item and click <strong>Auction</strong> to set a starting bid, optional Buy Now price, and an end time.
+                Auctions are created from My Stock. Open any stock item and click <strong>Auction</strong> to set a starting bid, optional Buy Now price, and an end time.
               </p>
               <Link
                 href="/dashboard/inventory"
                 className="inline-flex items-center justify-center rounded-md bg-green-700 hover:bg-green-800 text-white px-4 py-2 text-sm font-medium transition-colors"
               >
-                Go to Inventory →
+                Go to My Stock →
               </Link>
             </div>
           ) : (

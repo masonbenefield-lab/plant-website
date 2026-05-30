@@ -13,7 +13,7 @@ import DashboardSearch from "@/components/dashboard-search";
 import PauseAllButton from "./pause-all-button";
 import ListingActions from "./listing-actions";
 
-export const metadata: Metadata = { title: "My Listings — Plantet Dashboard" };
+export const metadata: Metadata = { title: "My Shop — Plantet Dashboard" };
 
 const PAGE_SIZE = 25;
 
@@ -72,7 +72,7 @@ export default async function DashboardListingsPage({
     <div className="max-w-5xl mx-auto px-4 py-10">
       <div className="flex items-center justify-between gap-4 mb-2">
         <div>
-          <h1 className="text-2xl font-bold">My Listings</h1>
+          <h1 className="text-2xl font-bold">My Shop</h1>
           {total > 0 && (
             <p className="text-sm text-muted-foreground mt-0.5">
               {activeCount} active{pausedCount > 0 ? ` · ${pausedCount} paused` : ""}{soldOutCount > 0 ? ` · ${soldOutCount} sold out` : ""}
@@ -85,7 +85,7 @@ export default async function DashboardListingsPage({
             href="/dashboard/inventory"
             className="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors whitespace-nowrap"
           >
-            + Add from Inventory
+            + Add from My Stock
           </Link>
         </div>
       </div>
@@ -106,13 +106,13 @@ export default async function DashboardListingsPage({
           <div className="text-4xl mb-3">🌿</div>
           <h2 className="text-lg font-semibold mb-1">No listings yet</h2>
           <p className="text-sm text-muted-foreground max-w-sm mb-5">
-            Listings are created from your Inventory page. Open any inventory item and click <strong>List in Shop</strong> to set a price and make it visible to buyers.
+            Listings are created from My Stock. Open any stock item and click <strong>List in Shop</strong> to set a price and make it visible to buyers.
           </p>
           <Link
             href="/dashboard/inventory"
             className="inline-flex items-center justify-center rounded-md bg-green-700 hover:bg-green-800 text-white px-4 py-2 text-sm font-medium transition-colors"
           >
-            Go to Inventory →
+            Go to My Stock →
           </Link>
         </div>
       ) : (

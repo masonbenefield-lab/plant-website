@@ -7,7 +7,6 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -47,20 +46,11 @@ export default function ListingActions({ listing }: { listing: Listing }) {
   const [salePrice, setSalePrice] = useState("");
   const [saleEndsAt, setSaleEndsAt] = useState("");
 
-  // Edit form state — pre-filled from listing
-  const [plantName, setPlantName] = useState(listing.plant_name);
-  const [variety, setVariety] = useState(listing.variety ?? "");
-  const [quantity, setQuantity] = useState(String(listing.quantity));
+  // Price is the only listing-owned field — all other fields belong to inventory
   const [price, setPrice] = useState(String(listing.price_cents / 100));
-  const [description, setDescription] = useState(listing.description ?? "");
 
   function openEdit() {
-    // Reset to current values each time dialog opens
-    setPlantName(listing.plant_name);
-    setVariety(listing.variety ?? "");
-    setQuantity(String(listing.quantity));
     setPrice(String(listing.price_cents / 100));
-    setDescription(listing.description ?? "");
     setEditOpen(true);
   }
 
@@ -69,17 +59,11 @@ export default function ListingActions({ listing }: { listing: Listing }) {
     const supabase = createClient();
     const { error } = await supabase
       .from("listings")
-      .update({
-        plant_name: plantName.trim(),
-        variety: variety.trim() || null,
-        quantity: Number(quantity),
-        price_cents: dollarsToCents(price),
-        description: description.trim() || null,
-      })
+      .update({ price_cents: dollarsToCents(price) })
       .eq("id", listing.id);
     setSaving(false);
     if (error) { toast.error(error.message); return; }
-    toast.success("Listing updated");
+    toast.success("Price updated");
     setEditOpen(false);
     router.refresh();
   }
@@ -228,7 +212,7 @@ export default function ListingActions({ listing }: { listing: Listing }) {
           {uploading ? "Uploading…" : "Actions"}
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={openEdit}>Edit</DropdownMenuItem>
+          <DropdownMenuItem onClick={openEdit}>Edit Price</DropdownMenuItem>
           <DropdownMenuItem onClick={() => fileRef.current?.click()}>Add Photo</DropdownMenuItem>
           <DropdownMenuItem onClick={openSale}>
             {isSaleActive(listing) ? "✦ Edit Sale" : "Run a Special"}
@@ -336,48 +320,37 @@ export default function ListingActions({ listing }: { listing: Listing }) {
         </DialogContent>
       </Dialog>
 
-      {/* Edit dialog */}
+      {/* Edit Price dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-xs">
           <DialogHeader>
-            <DialogTitle>Edit Listing</DialogTitle>
+            <DialogTitle>Edit Price</DialogTitle>
+            <DialogDescription>
+              To change the plant name, description, or images, edit the item in{" "}
+              <a href="/dashboard/inventory" className="underline hover:opacity-80">My Stock</a>.
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 mt-2">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <Label htmlFor="edit-plant-name">Plant Name *</Label>
-                <Input id="edit-plant-name" value={plantName} onChange={(e) => setPlantName(e.target.value)} />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="edit-variety">Variety</Label>
-                <Input id="edit-variety" value={variety} onChange={(e) => setVariety(e.target.value)} placeholder="Optional" />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <Label htmlFor="edit-quantity">Quantity</Label>
-                <Input id="edit-quantity" type="number" min={0} value={quantity} onChange={(e) => setQuantity(e.target.value)} />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="edit-price">Price ($)</Label>
-                <Input id="edit-price" type="number" min={0.01} step={0.01} value={price} onChange={(e) => setPrice(e.target.value)} />
-              </div>
-            </div>
+          <div className="space-y-4 mt-1">
             <div className="space-y-1">
-              <div className="flex justify-between">
-                <Label htmlFor="edit-description">Description</Label>
-                <span className="text-xs text-muted-foreground">{description.length}/1000</span>
-              </div>
-              <Textarea id="edit-description" value={description} onChange={(e) => setDescription(e.target.value)} rows={3} maxLength={1000} />
+              <Label htmlFor="edit-price">Price ($)</Label>
+              <Input
+                id="edit-price"
+                type="number"
+                min={0.01}
+                step={0.01}
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                autoFocus
+              />
             </div>
-            <div className="flex justify-end gap-2 pt-1">
+            <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
               <Button
                 onClick={saveEdit}
-                disabled={saving || !plantName.trim()}
+                disabled={saving || !price}
                 className="bg-green-700 hover:bg-green-800"
               >
-                {saving ? "Saving…" : "Save Changes"}
+                {saving ? "Saving…" : "Save"}
               </Button>
             </div>
           </div>
