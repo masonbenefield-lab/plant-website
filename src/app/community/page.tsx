@@ -11,6 +11,7 @@ import { CommunitySearchBar } from "@/components/community-search-bar";
 import { PostFollowButton } from "@/components/community/post-follow-button";
 import CommunityGardensGrid from "@/components/garden/community-gardens-grid";
 import ReportButton from "@/components/report-button";
+import { DeletePostButton } from "@/components/community/delete-post-button";
 import type { Database } from "@/lib/supabase/types";
 
 export const dynamic = "force-dynamic";
@@ -331,6 +332,11 @@ export default async function CommunityPage({
                           targetName={post.title}
                           initialReported={reportedPostIds.has(post.id)}
                         />
+                      </div>
+                    )}
+                    {user && post.user_id === user.id && (
+                      <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                        <DeletePostButton postId={post.id} />
                       </div>
                     )}
                   </div>
