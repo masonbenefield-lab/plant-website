@@ -744,6 +744,7 @@ export default function InventoryClient({
     const newQty = modal.row.quantity - qty;
     if (newQty <= 0) {
       await supabase.from("inventory").update({ quantity: 0, archived_at: new Date().toISOString() }).eq("id", modal.row.id);
+      if (modal.row.listing_id) await supabase.from("listings").update({ status: "paused" }).eq("id", modal.row.listing_id);
     } else {
       await supabase.from("inventory").update({ quantity: newQty }).eq("id", modal.row.id);
     }
@@ -776,10 +777,13 @@ export default function InventoryClient({
     router.refresh();
   }
 
-  async function archiveItem(id: string) {
+  async function archiveItem(id: string, listingId: string | null) {
     setLoadingId(id);
     const supabase = createClient();
     const { error } = await supabase.from("inventory").update({ archived_at: new Date().toISOString() }).eq("id", id);
+    if (!error && listingId) {
+      await supabase.from("listings").update({ status: "paused" }).eq("id", listingId);
+    }
     setLoadingId(null);
     if (error) { toast.error(error.message); return; }
     router.refresh();
@@ -787,7 +791,9 @@ export default function InventoryClient({
       action: {
         label: "Undo",
         onClick: async () => {
-          await createClient().from("inventory").update({ archived_at: null }).eq("id", id);
+          const db = createClient();
+          await db.from("inventory").update({ archived_at: null }).eq("id", id);
+          if (listingId) await db.from("listings").update({ status: "active" }).eq("id", listingId);
           router.refresh();
           toast.success("Restored!");
         },
@@ -795,10 +801,13 @@ export default function InventoryClient({
     });
   }
 
-  async function restoreItem(id: string) {
+  async function restoreItem(id: string, listingId: string | null) {
     setLoadingId(id);
     const supabase = createClient();
     const { error } = await supabase.from("inventory").update({ archived_at: null }).eq("id", id);
+    if (!error && listingId) {
+      await supabase.from("listings").update({ status: "active" }).eq("id", listingId);
+    }
     setLoadingId(null);
     if (error) { toast.error(error.message); return; }
     toast.success("Item restored.");
@@ -1164,7 +1173,7 @@ export default function InventoryClient({
                 <DropdownMenuItem onClick={() => openModal({ type: "auction", row })}><Gavel size={13} className="mr-1.5" /> {activeAuctions.length > 0 ? "Add Auction" : "Auction"}</DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => archiveItem(row.id)} disabled={loadingId === row.id} className="text-destructive focus:text-destructive">Archive</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => archiveItem(row.id, row.listing_id)} disabled={loadingId === row.id} className="text-destructive focus:text-destructive">Archive</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </td>
@@ -1196,7 +1205,7 @@ export default function InventoryClient({
             </DropdownMenuItem>
           )}
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => archiveItem(row.id)} disabled={loadingId === row.id} className="text-destructive focus:text-destructive">
+          <DropdownMenuItem onClick={() => archiveItem(row.id, row.listing_id)} disabled={loadingId === row.id} className="text-destructive focus:text-destructive">
             Archive
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -1484,7 +1493,7 @@ export default function InventoryClient({
               )}
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                onClick={() => archiveItem(row.id)}
+                onClick={() => archiveItem(row.id, row.listing_id)}
                 disabled={loadingId === row.id}
                 className="text-destructive focus:text-destructive"
               >
@@ -1902,7 +1911,7 @@ export default function InventoryClient({
                           <span className="text-xs text-orange-600">{daysUntilPurge(row.archived_at)}d left</span>
                         )}
                         <button
-                          onClick={() => restoreItem(row.id)}
+                          onClick={() => restoreItem(row.id, row.listing_id)}
                           disabled={loadingId === row.id}
                           className="ml-auto text-xs text-leaf hover:underline disabled:opacity-50"
                         >
