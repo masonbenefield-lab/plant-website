@@ -4,24 +4,10 @@ import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { Card, CardContent } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
 import { Sprout } from "lucide-react";
 import type { Metadata } from "next";
 import type { Database } from "@/lib/supabase/types";
-
-type Priority = "nice" | "want" | "must";
-
-const PRIORITY_LABEL: Record<Priority, string> = {
-  nice: "Nice to have",
-  want: "Want it",
-  must: "Must have",
-};
-
-const PRIORITY_COLOR: Record<Priority, string> = {
-  nice: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400",
-  want: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400",
-  must: "bg-[#DFE7D4] text-leaf dark:bg-forest/40 dark:text-sage",
-};
+import { PublicWishlistItems } from "@/components/garden/public-wishlist-items";
 
 export async function generateMetadata({
   params,
@@ -84,11 +70,14 @@ export default async function PublicWishlistPage({
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  const { data: items } = await admin
-    .from("wishlist_items")
-    .select("id, name, variety, notes, priority")
-    .eq("user_id", profile.id)
-    .order("created_at", { ascending: false });
+  const [{ data: items }, { data: { user } }] = await Promise.all([
+    admin
+      .from("wishlist_items")
+      .select("id, name, variety, notes, priority")
+      .eq("user_id", profile.id)
+      .order("created_at", { ascending: false }),
+    supabase.auth.getUser(),
+  ]);
 
   const rawName = profile.display_name || profile.username;
   const displayName = rawName?.endsWith("s") ? `${rawName}'` : `${rawName}'s`;
@@ -97,6 +86,7 @@ export default async function PublicWishlistPage({
   const want = (items ?? []).filter((i) => i.priority === "want");
   const nice = (items ?? []).filter((i) => i.priority === "nice");
   const ordered = [...mustHave, ...want, ...nice];
+  const showSave = !!(user && user.id !== profile.id);
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-12 space-y-10">
@@ -151,30 +141,7 @@ export default async function PublicWishlistPage({
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-2">
-          {ordered.map((item) => (
-            <Card key={item.id}>
-              <CardContent className="p-4 flex items-start gap-3">
-                <div className="flex-1 min-w-0 space-y-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-semibold text-sm leading-tight">
-                      {item.variety || item.name}
-                    </p>
-                    {item.variety && (
-                      <p className="text-xs text-muted-foreground">{item.name}</p>
-                    )}
-                    <span className={cn("text-xs px-2 py-0.5 rounded-full font-medium", PRIORITY_COLOR[item.priority as Priority])}>
-                      {PRIORITY_LABEL[item.priority as Priority]}
-                    </span>
-                  </div>
-                  {item.notes && (
-                    <p className="text-sm text-muted-foreground leading-relaxed">{item.notes}</p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <PublicWishlistItems items={ordered} showSave={showSave} />
       )}
 
       <p className="text-center text-xs text-muted-foreground pt-4">

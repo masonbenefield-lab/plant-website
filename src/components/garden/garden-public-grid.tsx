@@ -6,6 +6,7 @@ import Image from "next/image";
 import { Search, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { SaveToWishlistButton } from "@/components/garden/save-to-wishlist-button";
 
 const STATUS_LABEL: Record<string, string> = {
   thriving: "Thriving",
@@ -35,7 +36,18 @@ type Plant = {
   pin_order?: number | null;
 };
 
-export function GardenPublicGrid({ plants, username }: { plants: Plant[]; username: string }) {
+export function GardenPublicGrid({
+  plants,
+  username,
+  currentUserId,
+  ownerId,
+}: {
+  plants: Plant[];
+  username: string;
+  currentUserId?: string | null;
+  ownerId?: string | null;
+}) {
+  const showSave = !!(currentUserId && ownerId && currentUserId !== ownerId);
   const [q, setQ] = useState("");
 
   const filtered = q.trim()
@@ -84,7 +96,8 @@ export function GardenPublicGrid({ plants, username }: { plants: Plant[]; userna
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {filtered.map((plant) => (
-            <Link key={plant.id} href={`/gardens/${username}/${plant.id}`}>
+            <div key={plant.id} className="relative">
+              <Link href={`/gardens/${username}/${plant.id}`}>
               <Card className="overflow-hidden h-full hover:shadow-md transition-shadow group">
                 <div className="aspect-[4/3] relative bg-muted">
                   {plant.images?.[0] ? (
@@ -123,7 +136,17 @@ export function GardenPublicGrid({ plants, username }: { plants: Plant[]; userna
                   )}
                 </CardContent>
               </Card>
-            </Link>
+              </Link>
+              {showSave && (
+                <div className="absolute top-2 right-2 z-10">
+                  <SaveToWishlistButton
+                    plantName={plant.name}
+                    variety={plant.variety}
+                    overlay
+                  />
+                </div>
+              )}
+            </div>
           ))}
         </div>
       )}
