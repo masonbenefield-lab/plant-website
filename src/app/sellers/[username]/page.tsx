@@ -8,10 +8,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Star, MapPin, ArrowLeftRight } from "lucide-react";
 import FollowButton from "@/components/follow-button";
-import ReportButton from "@/components/report-button";
-import BlockButton from "@/components/block-button";
 import ShareButton from "@/components/share-button";
 import { MessageButton } from "@/components/message-button";
+import { StorefrontMoreMenu } from "@/components/storefront-more-menu";
 import RateSellerForm from "@/app/orders/rate-seller-form";
 import { StorefrontListings, StorefrontAuctions, StorefrontGarden, StorefrontWishlist } from "./storefront-listings";
 import { ReturnPolicyBadge } from "@/components/return-policy-badge";
@@ -184,17 +183,11 @@ export default async function SellerStorefront({
                 <MessageButton recipientId={profile.id} />
               )}
               {user && user.id !== profile.id && (
-                <ReportButton
+                <StorefrontMoreMenu
                   userId={user.id}
                   reportedUserId={profile.id}
                   targetName={profile.username}
                   initialReported={isReportedUser}
-                />
-              )}
-              {user && user.id !== profile.id && (
-                <BlockButton
-                  userId={user.id}
-                  blockedId={profile.id}
                   initialBlocked={isBlockedUser}
                 />
               )}
@@ -203,42 +196,47 @@ export default async function SellerStorefront({
           {profile.bio && (
             <p className="text-muted-foreground mt-2 max-w-lg">{profile.bio}</p>
           )}
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5">
+          {/* Primary metadata: location, tenure, followers */}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-muted-foreground">
             {(profile as { groundbreaker?: boolean; groundbreaker_number?: number | null }).groundbreaker && (
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full border bg-amber-50 border-amber-300 text-amber-800 dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-300">
+              <span className="font-semibold px-2 py-0.5 rounded-full border bg-amber-50 border-amber-300 text-amber-800 dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-300">
                 ⛏️ Groundbreaker {(profile as { groundbreaker_number?: number | null }).groundbreaker_number ? `#${(profile as { groundbreaker_number?: number | null }).groundbreaker_number}` : ""}
               </span>
             )}
             {profile.location && (
-              <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                <MapPin size={12} />
+              <span className="flex items-center gap-1">
+                <MapPin size={11} />
                 {profile.location}
               </span>
             )}
-            <span className="text-xs text-muted-foreground">Member since {memberSince}</span>
+            <span>Member since {memberSince}</span>
             {profile.show_follower_count && (followerCount ?? 0) > 0 && (
-              <span className="text-xs text-muted-foreground">
-                {followerCount} follower{followerCount !== 1 ? "s" : ""}
-              </span>
-            )}
-            {profile.shipping_days && (
-              <span className="text-xs text-muted-foreground">
-                🚚 Ships within {profile.shipping_days}{(profile as { shipping_days_max?: number | null }).shipping_days_max ? `–${(profile as { shipping_days_max?: number | null }).shipping_days_max}` : ""} day{((profile as { shipping_days_max?: number | null }).shipping_days_max ?? profile.shipping_days) !== 1 ? "s" : ""}
-              </span>
-            )}
-            {(profile as { return_policy_type?: string | null }).return_policy_type && (
-              <ReturnPolicyBadge
-                type={(profile as { return_policy_type?: string | null }).return_policy_type!}
-                notes={(profile as { return_policy_notes?: string | null }).return_policy_notes}
-              />
-            )}
-            {(profile as { open_to_trades?: boolean }).open_to_trades && (
-              <span className="flex items-center gap-1 text-xs font-medium text-leaf bg-[#DFE7D4] dark:bg-forest/40 dark:text-sage px-2.5 py-1 rounded-full">
-                <ArrowLeftRight size={11} />
-                Open to trades
-              </span>
+              <span>{followerCount} follower{followerCount !== 1 ? "s" : ""}</span>
             )}
           </div>
+
+          {/* Secondary metadata: shipping policy, returns, trades */}
+          {(profile.shipping_days || (profile as { return_policy_type?: string | null }).return_policy_type || (profile as { open_to_trades?: boolean }).open_to_trades) && (
+            <div className="flex flex-wrap items-center gap-2 mt-2">
+              {profile.shipping_days && (
+                <span className="text-xs text-muted-foreground bg-muted px-2.5 py-1 rounded-full">
+                  🚚 Ships within {profile.shipping_days}{(profile as { shipping_days_max?: number | null }).shipping_days_max ? `–${(profile as { shipping_days_max?: number | null }).shipping_days_max}` : ""} day{((profile as { shipping_days_max?: number | null }).shipping_days_max ?? profile.shipping_days) !== 1 ? "s" : ""}
+                </span>
+              )}
+              {(profile as { return_policy_type?: string | null }).return_policy_type && (
+                <ReturnPolicyBadge
+                  type={(profile as { return_policy_type?: string | null }).return_policy_type!}
+                  notes={(profile as { return_policy_notes?: string | null }).return_policy_notes}
+                />
+              )}
+              {(profile as { open_to_trades?: boolean }).open_to_trades && (
+                <span className="flex items-center gap-1 text-xs font-medium text-leaf bg-[#DFE7D4] dark:bg-forest/40 dark:text-sage px-2.5 py-1 rounded-full">
+                  <ArrowLeftRight size={11} />
+                  Open to trades
+                </span>
+              )}
+            </div>
+          )}
           {avgScore !== null && (
             <div className="flex items-center gap-1 mt-2">
               {[1, 2, 3, 4, 5].map((n) => (
