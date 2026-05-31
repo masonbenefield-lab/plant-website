@@ -102,8 +102,10 @@ export async function POST(request: Request) {
 
   const feePercent = planFeePercent(sellerPlan?.plan, !!sellerPlan?.is_admin);
   const shippingCents = Math.max(0, Math.round(shippingCostCents ?? 0));
-  const feeCents = Math.round(totalCents * (feePercent / 100));
   const grandTotalCents = totalCents + shippingCents;
+  const feeCents = Math.round(totalCents * (feePercent / 100));
+  const stripeFeeCents = Math.round(grandTotalCents * 0.029) + 30;
+  const applicationFeeCents = feeCents + stripeFeeCents;
 
   // Atomically decrement stock for each item before creating PaymentIntent — prevents overselling
   const admin = adminClient();
@@ -140,7 +142,7 @@ export async function POST(request: Request) {
   const paymentIntent = await getStripe().paymentIntents.create({
     amount: grandTotalCents,
     currency: "usd",
-    application_fee_amount: feeCents,
+    application_fee_amount: applicationFeeCents,
     on_behalf_of: sellerProfile.stripe_account_id,
     transfer_data: { destination: sellerProfile.stripe_account_id },
     metadata: { cart_checkout: "true" },

@@ -112,8 +112,12 @@ export async function POST(request: Request) {
     const shippingCents = Math.max(0, Math.round(shippingCostCents ?? 0));
     const amountCents = itemAmountCents + shippingCents;
     const feeCents = Math.round(itemAmountCents * (feePercent / 100));
+    // Stripe processing fee estimate (2.9% + $0.30) — passed through to seller via application fee
+    const stripeFeeCents = Math.round(amountCents * 0.029) + 30;
     // Hold shipping in platform account when buyer paid a Shippo-calculated rate — used to cover label purchase
-    const applicationFeeCents = shippoRateId ? feeCents + shippingCents : feeCents;
+    const applicationFeeCents = shippoRateId
+      ? feeCents + shippingCents + stripeFeeCents
+      : feeCents + stripeFeeCents;
 
     const admin = adminClient();
     const newListingQty = listing.quantity - quantity;
@@ -245,7 +249,10 @@ export async function POST(request: Request) {
     const auctionShippingCents = Math.max(0, Math.round(shippingCostCents ?? 0));
     const amountCents = auction.current_bid_cents + auctionShippingCents;
     const feeCents = Math.round(auction.current_bid_cents * (feePercent / 100));
-    const auctionApplicationFeeCents = shippoRateId ? feeCents + auctionShippingCents : feeCents;
+    const stripeFeeCents = Math.round(amountCents * 0.029) + 30;
+    const auctionApplicationFeeCents = shippoRateId
+      ? feeCents + auctionShippingCents + stripeFeeCents
+      : feeCents + stripeFeeCents;
 
     const paymentIntent = await getStripe().paymentIntents.create({
       amount: amountCents,
