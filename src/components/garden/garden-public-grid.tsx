@@ -32,6 +32,7 @@ type Plant = {
   planted_at: string | null;
   images: string[] | null;
   public_notes?: string | null;
+  pin_order?: number | null;
 };
 
 export function GardenPublicGrid({ plants, username }: { plants: Plant[]; username: string }) {
@@ -81,7 +82,7 @@ export function GardenPublicGrid({ plants, username }: { plants: Plant[]; userna
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {filtered.map((plant) => (
             <Link key={plant.id} href={`/gardens/${username}/${plant.id}`}>
               <Card className="overflow-hidden h-full hover:shadow-md transition-shadow group">

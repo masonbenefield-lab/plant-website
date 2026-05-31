@@ -74,9 +74,10 @@ export default async function PublicGardenPage({
 
   const { data: plants } = await admin
     .from("garden_plants")
-    .select("id, name, variety, status, location, planted_at, images, public_notes")
+    .select("id, name, variety, status, location, planted_at, images, public_notes, pin_order")
     .eq("user_id", profile.id)
     .or("is_public.eq.true,is_public.is.null")
+    .order("pin_order", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: false });
 
   const total = plants?.length ?? 0;
@@ -140,7 +141,7 @@ export default async function PublicGardenPage({
         </div>
       </div>
 
-      <GardenPublicGrid plants={(plants ?? []).map((p) => ({ ...p, images: p.images as string[] | null }))} username={username} />
+      <GardenPublicGrid plants={(plants ?? []).map((p) => ({ ...p, images: p.images as string[] | null, pin_order: (p as { pin_order?: number | null }).pin_order ?? null }))} username={username} />
 
       <p className="text-center text-xs text-muted-foreground pt-4">
         Shared on{" "}
