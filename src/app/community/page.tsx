@@ -180,9 +180,18 @@ export default async function CommunityPage({
           <p className="text-sm text-muted-foreground mt-0.5">Ask questions, share plants, and connect with other growers</p>
         </div>
         {!isGardensView && (
-          <Link href="/community/new" className={cn(buttonVariants(), "bg-green-700 hover:bg-green-800")}>
-            + New Post
-          </Link>
+          user ? (
+            <Link href="/community/new" className={cn(buttonVariants(), "bg-green-700 hover:bg-green-800")}>
+              + New Post
+            </Link>
+          ) : (
+            <Link
+              href="/login?redirectTo=/community/new&message=Sign+in+to+create+a+post"
+              className={cn(buttonVariants(), "bg-green-700 hover:bg-green-800")}
+            >
+              + New Post
+            </Link>
+          )
         )}
       </div>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useTransition } from "react";
+import { useState, useRef, useTransition, useEffect } from "react";
 import { compressImage } from "@/lib/compress-image";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -47,6 +47,15 @@ export default function NewCommunityPost() {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [postType, setPostType] = useState<"help" | "show_and_tell" | "discussion">("help");
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) {
+        router.replace("/login?redirectTo=/community/new");
+      }
+    });
+  }, [router]);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [photos, setPhotos] = useState<string[]>([]);
