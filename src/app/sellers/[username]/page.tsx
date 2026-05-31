@@ -14,7 +14,6 @@ import { StorefrontMoreMenu } from "@/components/storefront-more-menu";
 import { StorefrontBannerEditor, StorefrontAvatarEditor } from "@/components/storefront-photo-editor";
 import RateSellerForm from "@/app/orders/rate-seller-form";
 import { StorefrontListings, StorefrontAuctions, StorefrontGarden, StorefrontWishlist } from "./storefront-listings";
-import { ReturnPolicyBadge } from "@/components/return-policy-badge";
 import SocialLinks from "@/components/social-links";
 import type { Database } from "@/lib/supabase/types";
 
@@ -227,26 +226,13 @@ export default async function SellerStorefront({
             )}
           </div>
 
-          {/* Secondary metadata: shipping policy, returns, trades */}
-          {(profile.shipping_days || (profile as { return_policy_type?: string | null }).return_policy_type || (profile as { open_to_trades?: boolean }).open_to_trades) && (
+          {/* Secondary metadata: trades */}
+          {(profile as { open_to_trades?: boolean }).open_to_trades && (
             <div className="flex flex-wrap items-center gap-2 mt-2">
-              {profile.shipping_days && (
-                <span className="text-xs text-muted-foreground bg-muted px-2.5 py-1 rounded-full">
-                  🚚 Ships within {profile.shipping_days}{(profile as { shipping_days_max?: number | null }).shipping_days_max ? `–${(profile as { shipping_days_max?: number | null }).shipping_days_max}` : ""} day{((profile as { shipping_days_max?: number | null }).shipping_days_max ?? profile.shipping_days) !== 1 ? "s" : ""}
-                </span>
-              )}
-              {(profile as { return_policy_type?: string | null }).return_policy_type && (
-                <ReturnPolicyBadge
-                  type={(profile as { return_policy_type?: string | null }).return_policy_type!}
-                  notes={(profile as { return_policy_notes?: string | null }).return_policy_notes}
-                />
-              )}
-              {(profile as { open_to_trades?: boolean }).open_to_trades && (
-                <span className="flex items-center gap-1 text-xs font-medium text-leaf bg-[#DFE7D4] dark:bg-forest/40 dark:text-sage px-2.5 py-1 rounded-full">
-                  <ArrowLeftRight size={11} />
-                  Open to trades
-                </span>
-              )}
+              <span className="flex items-center gap-1 text-xs font-medium text-leaf bg-[#DFE7D4] dark:bg-forest/40 dark:text-sage px-2.5 py-1 rounded-full">
+                <ArrowLeftRight size={11} />
+                Open to trades
+              </span>
             </div>
           )}
           {avgScore !== null && (
