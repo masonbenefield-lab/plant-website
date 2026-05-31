@@ -32,9 +32,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid status" }, { status: 400 });
   }
 
+  const updatePayload: Record<string, unknown> = { status };
+  if (status === "delivered") updatePayload.delivered_at = new Date().toISOString();
+
   const { error } = await supabase
     .from("orders")
-    .update({ status })
+    .update(updatePayload)
     .in("id", orderIds)
     .eq("seller_id", user.id);
 

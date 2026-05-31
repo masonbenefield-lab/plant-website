@@ -32,7 +32,7 @@ export async function POST(request: Request) {
 
   const { data: order, error: orderError } = await supabase
     .from("orders")
-    .select("seller_id, buyer_id, status")
+    .select("seller_id, buyer_id, status, delivered_at")
     .eq("id", orderId)
     .eq("buyer_id", user.id)
     .eq("status", "delivered")
@@ -43,6 +43,17 @@ export async function POST(request: Request) {
       { error: "Order not found or not yet delivered" },
       { status: 400 }
     );
+  }
+
+  if (order.delivered_at) {
+    const deadline = new Date(order.delivered_at);
+    deadline.setDate(deadline.getDate() + 14);
+    if (new Date() > deadline) {
+      return NextResponse.json(
+        { error: "The 14-day review window for this order has closed" },
+        { status: 400 }
+      );
+    }
   }
 
   const { error } = await supabase.from("ratings").insert({

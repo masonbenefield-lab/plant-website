@@ -272,14 +272,27 @@ export default async function OrdersPage({
                     </div>
                   )}
 
-                  {order.status === "delivered" && !ratedOrderIds.has(order.id) && (
-                    <div className="mt-4 pt-4 border-t">
-                      <RateSellerForm orderId={order.id} sellerUsername={seller?.username ?? ""} />
-                    </div>
-                  )}
-                  {order.status === "delivered" && ratedOrderIds.has(order.id) && (
-                    <p className="mt-3 text-sm text-leaf">✓ You left a review for this order</p>
-                  )}
+                  {order.status === "delivered" && (() => {
+                    const deliveredAt = (order as { delivered_at?: string | null }).delivered_at;
+                    const deadline = deliveredAt ? new Date(new Date(deliveredAt).getTime() + 14 * 24 * 60 * 60 * 1000) : null;
+                    const windowOpen = !deadline || new Date() <= deadline;
+                    if (ratedOrderIds.has(order.id)) {
+                      return <p className="mt-3 text-sm text-leaf">✓ You left a review for this order</p>;
+                    }
+                    if (!windowOpen) {
+                      return <p className="mt-3 text-sm text-muted-foreground">Review window closed — reviews must be submitted within 14 days of delivery</p>;
+                    }
+                    return (
+                      <div className="mt-4 pt-4 border-t">
+                        {deadline && (
+                          <p className="text-xs text-muted-foreground mb-2">
+                            Review by {deadline.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                          </p>
+                        )}
+                        <RateSellerForm orderId={order.id} sellerUsername={seller?.username ?? ""} />
+                      </div>
+                    );
+                  })()}
 
                   {order.status === "delivered" && (() => {
                     if (isCartOrder) {
