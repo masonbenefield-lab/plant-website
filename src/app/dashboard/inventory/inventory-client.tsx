@@ -401,7 +401,7 @@ export default function InventoryClient({
         });
         return;
       }
-      setPrice("");
+      setPrice(m.row.listing_price_cents ? String(m.row.listing_price_cents / 100) : "");
       setListQty(String(Math.max(1, avail(m.row))));
       if (m.row.free_shipping) {
         setListingShippingMode("free");
