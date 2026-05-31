@@ -832,7 +832,7 @@ export default function AccountForm({
               <div className="flex items-center justify-between rounded-lg border p-4">
                 <div>
                   <p className="text-sm font-medium">Calculated shipping rates</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Show real-time Shippo rates to buyers at checkout. Turn off to hide shipping cost until you invoice manually.</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Show real-time Shippo rates to buyers at checkout. Turn off if you prefer to set a flat shipping price or free shipping on each item individually.</p>
                 </div>
                 <button
                   type="button"
