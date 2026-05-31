@@ -805,9 +805,14 @@ export default function AccountForm({
         </CardHeader>
         <CardContent className="space-y-3">
           {profile?.stripe_onboarded ? (
-            <p className="text-sm text-leaf font-medium">
-              ✓ Stripe account connected — you can receive payments
-            </p>
+            <div className="space-y-3">
+              <p className="text-sm text-leaf font-medium">
+                ✓ Stripe account connected — you can receive payments
+              </p>
+              <Button variant="outline" size="sm" onClick={startStripeConnect} disabled={connectingStripe}>
+                {connectingStripe ? "Redirecting to Stripe..." : "Reconnect Stripe Account"}
+              </Button>
+            </div>
           ) : (
             <>
               <p className="text-sm text-muted-foreground">
