@@ -42,5 +42,13 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Block confirmed-email-required paths if email not yet verified
+  if (user && !user.email_confirmed_at && isProtected) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/verify-email";
+    if (user.email) url.searchParams.set("email", user.email);
+    return NextResponse.redirect(url);
+  }
+
   return supabaseResponse;
 }

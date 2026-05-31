@@ -32,7 +32,6 @@ export default function SignupPage() {
   const [emailOptIn, setEmailOptIn] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -62,33 +61,10 @@ export default function SignupPage() {
     }
 
     if (data.user) {
-      if (data.session) {
-        // Email confirmation is disabled — callback never fires, so assign Groundbreaker here
-        await fetch("/api/auth/claim-groundbreaker", { method: "POST" });
-        fetch("/api/auth/welcome", { method: "POST" }).catch(() => {});
-        router.push("/dashboard");
-        router.refresh();
-      } else {
-        setSuccess(true);
-      }
+      router.push(`/verify-email?email=${encodeURIComponent(email)}`);
     }
 
     setLoading(false);
-  }
-
-  if (success) {
-    return (
-      <div className="min-h-screen flex items-center justify-center px-4">
-        <Card className="w-full max-w-sm text-center">
-          <CardHeader>
-            <CardTitle>Check your email</CardTitle>
-            <CardDescription>
-              We sent a confirmation link to <strong>{email}</strong>. Click it to activate your account.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
-    );
   }
 
   return (
