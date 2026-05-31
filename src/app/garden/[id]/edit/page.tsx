@@ -34,6 +34,7 @@ export default async function EditGardenPlantPage({
       <div>
         <Link
           href={returnTo ?? `/garden/${plant.id}`}
+          scroll={!returnTo}
           className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4"
         >
           <ChevronLeft size={16} />

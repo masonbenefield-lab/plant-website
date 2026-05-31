@@ -10,6 +10,7 @@ import { GardenSearch } from "@/components/garden/garden-search";
 import GardenTabs from "@/components/garden/garden-tabs";
 import GardenSettings from "@/components/garden/garden-settings";
 import GardenPlantCard from "@/components/garden/garden-plant-card";
+import { GardenScrollRestore } from "@/components/garden/garden-scroll-restore";
 import type { GardenPlantStatus } from "@/lib/supabase/types";
 
 const STATUS_LABEL: Record<GardenPlantStatus, string> = {
@@ -65,6 +66,7 @@ export default async function GardenPage({
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-10 space-y-8">
+      <GardenScrollRestore />
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">My Garden</h1>

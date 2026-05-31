@@ -250,7 +250,7 @@ export function GardenForm({ mode, plant, initialValues, returnTo }: GardenFormP
         }
 
         toast.success("Changes saved");
-        router.push(returnTo ?? `/garden/${plant!.id}`);
+        router.push(returnTo ?? `/garden/${plant!.id}`, { scroll: !returnTo });
         router.refresh();
       }
     });
