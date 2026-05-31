@@ -102,6 +102,7 @@ export default function AccountForm({
   const [changingEmail, setChangingEmail] = useState(false);
   const [sendingReset, setSendingReset] = useState(false);
   const [connectingStripe, setConnectingStripe] = useState(false);
+  const [openingStripeDashboard, setOpeningStripeDashboard] = useState(false);
   const [subscribing, setSubscribing] = useState(false);
   const [openingPortal, setOpeningPortal] = useState(false);
 
@@ -223,6 +224,18 @@ export default function AccountForm({
     setChangingEmail(false);
     if (error) toast.error(error.message);
     else { toast.success("Confirmation sent to your new email address"); setNewEmail(""); }
+  }
+
+  async function openStripeDashboard() {
+    setOpeningStripeDashboard(true);
+    try {
+      const res = await fetch("/api/stripe/connect/dashboard", { method: "POST" });
+      const { url, error } = await res.json();
+      if (error) { toast.error(error); return; }
+      window.open(url, "_blank");
+    } finally {
+      setOpeningStripeDashboard(false);
+    }
   }
 
   async function startStripeConnect() {
@@ -809,9 +822,14 @@ export default function AccountForm({
               <p className="text-sm text-leaf font-medium">
                 ✓ Stripe account connected — you can receive payments
               </p>
-              <Button variant="outline" size="sm" onClick={startStripeConnect} disabled={connectingStripe}>
-                {connectingStripe ? "Redirecting to Stripe..." : "Reconnect Stripe Account"}
-              </Button>
+              <div className="flex gap-2 flex-wrap">
+                <Button variant="outline" size="sm" onClick={openStripeDashboard} disabled={openingStripeDashboard}>
+                  {openingStripeDashboard ? "Opening..." : "View Stripe Dashboard"}
+                </Button>
+                <Button variant="outline" size="sm" onClick={startStripeConnect} disabled={connectingStripe}>
+                  {connectingStripe ? "Redirecting..." : "Reconnect Stripe Account"}
+                </Button>
+              </div>
             </div>
           ) : (
             <>
