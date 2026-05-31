@@ -50,6 +50,9 @@ export default function AccountForm({
   const [offersEnabled, setOffersEnabled] = useState((profile as { offers_enabled?: boolean } | null)?.offers_enabled !== false);
   const [announcement, setAnnouncement] = useState((profile as { announcement?: string | null } | null)?.announcement ?? "");
   const [emailOptIn, setEmailOptIn] = useState(profile?.email_marketing_opt_in ?? false);
+  const [socialLinks, setSocialLinks] = useState<Record<string, string>>(
+    (profile?.social_links as Record<string, string> | null) ?? {}
+  );
 
   useEffect(() => {
     const hash = window.location.hash.slice(1);
@@ -182,6 +185,9 @@ export default function AccountForm({
         offers_enabled: offersEnabled,
         announcement: announcement.trim() || null,
         email_marketing_opt_in: emailOptIn,
+        social_links: Object.fromEntries(
+          Object.entries(socialLinks).filter(([, v]) => v.trim().length > 0)
+        ),
       }),
     });
     const data = await res.json();
@@ -662,6 +668,37 @@ export default function AccountForm({
                 maxLength={200}
               />
               <p className="text-xs text-muted-foreground">Shown as a banner at the top of your storefront. Max 200 characters. Clear to remove.</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Social links</Label>
+              <p className="text-xs text-muted-foreground">Enter your handle for each platform you want shown on your storefront.</p>
+              <div className="space-y-2">
+                {([
+                  { key: "instagram", label: "Instagram", prefix: "instagram.com/" },
+                  { key: "tiktok",    label: "TikTok",    prefix: "tiktok.com/@" },
+                  { key: "youtube",   label: "YouTube",   prefix: "youtube.com/@" },
+                  { key: "facebook",  label: "Facebook",  prefix: "facebook.com/" },
+                  { key: "x",         label: "X",         prefix: "x.com/" },
+                  { key: "pinterest", label: "Pinterest", prefix: "pinterest.com/" },
+                  { key: "etsy",      label: "Etsy",      prefix: "etsy.com/shop/" },
+                ] as const).map(({ key, label, prefix }) => (
+                  <div key={key} className="flex items-center">
+                    <span className="text-xs text-muted-foreground bg-muted border border-input border-r-0 rounded-l-md px-2.5 h-10 flex items-center shrink-0 whitespace-nowrap">
+                      {prefix}
+                    </span>
+                    <Input
+                      value={socialLinks[key] ?? ""}
+                      onChange={(e) =>
+                        setSocialLinks({ ...socialLinks, [key]: e.target.value.replace(/^@/, "").trim() })
+                      }
+                      placeholder={label === "Etsy" ? "yourshopname" : "yourhandle"}
+                      className="rounded-l-none"
+                      maxLength={100}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
 
             <Button type="submit" disabled={saving} className="bg-leaf hover:bg-forest">

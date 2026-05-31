@@ -15,6 +15,7 @@ import { StorefrontBannerEditor, StorefrontAvatarEditor } from "@/components/sto
 import RateSellerForm from "@/app/orders/rate-seller-form";
 import { StorefrontListings, StorefrontAuctions, StorefrontGarden, StorefrontWishlist } from "./storefront-listings";
 import { ReturnPolicyBadge } from "@/components/return-policy-badge";
+import SocialLinks from "@/components/social-links";
 import type { Database } from "@/lib/supabase/types";
 
 export async function generateMetadata({
@@ -261,6 +262,7 @@ export default async function SellerStorefront({
               </span>
             </div>
           )}
+          <SocialLinks links={profile.social_links as Record<string, string> | null} />
         </div>
       </div>
 
