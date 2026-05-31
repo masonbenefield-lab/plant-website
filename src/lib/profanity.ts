@@ -37,7 +37,9 @@ const SLURS: string[] = [
   "cumshot", "cum shot",
   "jizz",
   "dickhead", "asshole", "arsehole",
-  "shithead", "bullshit",
+  "shit", "shits", "shitty", "shitting", "shithead", "bullshit", "dipshit",
+  "piss", "pissed", "pissing",
+  "dumbass",
 ].filter(Boolean).map((s) => s.toLowerCase());
 
 function normalize(text: string): string {
