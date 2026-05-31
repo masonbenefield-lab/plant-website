@@ -158,7 +158,7 @@ export async function POST(request: Request) {
         stripe_payment_intent_id: paymentIntent.id,
         shipping_address: shippingAddress,
         amount_cents: amountCents,
-        shipping_cost_cents: shippingCents || null,
+        shipping_cost_cents: shippingCents,
         shipping_service: shippingService ?? null,
         shippo_rate_id: shippoRateId ?? null,
       })
@@ -261,7 +261,7 @@ export async function POST(request: Request) {
         stripe_payment_intent_id: paymentIntent.id,
         shipping_address: shippingAddress,
         amount_cents: amountCents,
-        shipping_cost_cents: auctionShippingCents || null,
+        shipping_cost_cents: auctionShippingCents,
         shipping_service: shippingService ?? null,
         shippo_rate_id: shippoRateId ?? null,
       })

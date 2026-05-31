@@ -162,7 +162,7 @@ export async function POST(request: Request) {
       shipping_address: shippingAddress,
       amount_cents: grandTotalCents,
       cart_items: cartItemsForOrder,
-      shipping_cost_cents: shippingCents || null,
+      shipping_cost_cents: shippingCents,
       shipping_service: shippingService ?? null,
       shippo_rate_id: shippoRateId ?? null,
     })
