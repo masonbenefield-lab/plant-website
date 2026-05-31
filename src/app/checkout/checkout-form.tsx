@@ -59,15 +59,20 @@ interface CheckoutFormProps {
 function PaymentStep({
   clientSecret,
   totalCents,
+  orderId,
   onSuccess,
+  onCancel,
 }: {
   clientSecret: string;
   totalCents: number;
+  orderId: string;
   onSuccess: () => void;
+  onCancel: () => void;
 }) {
   const stripe = useStripe();
   const elements = useElements();
   const [loading, setLoading] = useState(false);
+  const [canceling, setCanceling] = useState(false);
 
   async function handlePay(e: React.FormEvent) {
     e.preventDefault();
@@ -88,6 +93,16 @@ function PaymentStep({
     }
   }
 
+  async function handleCancel() {
+    setCanceling(true);
+    await fetch("/api/stripe/cancel", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderId }),
+    }).catch(() => {});
+    onCancel();
+  }
+
   return (
     <form onSubmit={handlePay} className="space-y-4">
       <PaymentElement />
@@ -98,6 +113,15 @@ function PaymentStep({
         size="lg"
       >
         {loading ? "Processing…" : `Pay ${centsToDisplay(totalCents)}`}
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        className="w-full"
+        disabled={loading || canceling}
+        onClick={handleCancel}
+      >
+        {canceling ? "Canceling…" : "Back"}
       </Button>
     </form>
   );
@@ -269,7 +293,9 @@ export default function CheckoutForm({ listingId, auctionId, offerId, priceCents
             <PaymentStep
               clientSecret={clientSecret}
               totalCents={totalCents}
+              orderId={orderId}
               onSuccess={onPaymentSuccess}
+              onCancel={() => { setStep("address"); setClientSecret(""); setOrderId(""); submittingRef.current = false; }}
             />
           </Elements>
         </CardContent>

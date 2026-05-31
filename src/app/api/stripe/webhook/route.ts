@@ -117,7 +117,7 @@ export async function POST(request: Request) {
     }
   }
 
-  if (event.type === "payment_intent.payment_failed") {
+  if (event.type === "payment_intent.payment_failed" || event.type === "payment_intent.canceled") {
     const pi = event.data.object;
     const { data: order } = await supabase
       .from("orders")
