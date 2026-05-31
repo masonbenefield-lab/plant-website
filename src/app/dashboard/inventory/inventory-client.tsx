@@ -401,7 +401,7 @@ export default function InventoryClient({
         });
         return;
       }
-      setPrice(m.row.listing_price_cents ? String(m.row.listing_price_cents / 100) : "");
+      setPrice(m.row.listing_price_cents ? (m.row.listing_price_cents / 100).toFixed(2) : "");
       setListQty(String(Math.max(1, avail(m.row))));
       if (m.row.free_shipping) {
         setListingShippingMode("free");
@@ -409,7 +409,7 @@ export default function InventoryClient({
         setListingShippingWeightOz("");
       } else if (m.row.shipping_cost_cents) {
         setListingShippingMode("flat");
-        setListingShippingCost(String(m.row.shipping_cost_cents / 100));
+        setListingShippingCost((m.row.shipping_cost_cents / 100).toFixed(2));
         setListingShippingWeightOz("");
       } else if (m.row.shipping_weight_oz) {
         setListingShippingMode("weight");
@@ -2107,7 +2107,7 @@ export default function InventoryClient({
                   <Label htmlFor="modal-price">Price per item *</Label>
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">$</span>
-                    <Input id="modal-price" type="number" min={0.01} step={0.01} value={price} onChange={e => setPrice(e.target.value)} placeholder="0.00" autoFocus className="max-w-[140px]" />
+                    <Input id="modal-price" type="text" inputMode="decimal" value={price} onChange={e => setPrice(e.target.value)} placeholder="0.00" autoFocus className="max-w-[140px]" />
                   </div>
                   <PriceSuggestion plantName={modal.row.plant_name} variety={modal.row.variety} label="price" />
                 </div>
@@ -2141,9 +2141,8 @@ export default function InventoryClient({
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-muted-foreground">$</span>
                       <Input
-                        type="number"
-                        min={0.01}
-                        step={0.01}
+                        type="text"
+                        inputMode="decimal"
                         placeholder="e.g. 6.99"
                         value={listingShippingCost}
                         onChange={e => setListingShippingCost(e.target.value)}
