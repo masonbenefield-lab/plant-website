@@ -51,7 +51,7 @@ export default async function OrdersDashboardPage({
   const auctionIds = orders.filter((o) => o.auction_id).map((o) => o.auction_id!);
   const buyerIds = [...new Set(orders.map((o) => o.buyer_id))];
 
-  const [{ data: listings }, { data: auctionItems }, { data: buyers }] = await Promise.all([
+  const [{ data: listings }, { data: auctionItems }, { data: buyers }, { data: sellerProfile }] = await Promise.all([
     listingIds.length
       ? supabase.from("listings").select("id, plant_name, variety").in("id", listingIds)
       : { data: [] },
@@ -59,11 +59,13 @@ export default async function OrdersDashboardPage({
       ? supabase.from("auctions").select("id, plant_name, variety").in("id", auctionIds)
       : { data: [] },
     supabase.from("profiles").select("id, username").in("id", buyerIds),
+    supabase.from("profiles").select("auto_labels_enabled").eq("id", user.id).single(),
   ]);
 
   const listingMap = Object.fromEntries((listings ?? []).map((l) => [l.id, l]));
   const auctionMap = Object.fromEntries((auctionItems ?? []).map((a) => [a.id, a]));
   const buyerMap = Object.fromEntries((buyers ?? []).map((b) => [b.id, b]));
+  const autoLabelsEnabled = (sellerProfile as { auto_labels_enabled?: boolean } | null)?.auto_labels_enabled !== false;
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-10">
@@ -77,6 +79,7 @@ export default async function OrdersDashboardPage({
         totalPages={totalPages}
         total={total}
         pageSize={PAGE_SIZE}
+        autoLabelsEnabled={autoLabelsEnabled}
       />
     </div>
   );

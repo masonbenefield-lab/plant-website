@@ -64,7 +64,7 @@ export default async function AuctionPage({
   if (!auction) notFound();
 
   const [{ data: seller }, { data: bids }, { data: { user } }, { data: invShipping }] = await Promise.all([
-    supabase.from("profiles").select("id, username, avatar_url, shipping_days, shipping_days_max, return_policy_type, return_policy_notes").eq("id", auction.seller_id).single(),
+    supabase.from("profiles").select("id, username, avatar_url, shipping_days, shipping_days_max, return_policy_type, return_policy_notes, calculated_shipping_enabled").eq("id", auction.seller_id).single(),
     supabase.from("bids").select("id, amount_cents, created_at, bidder_id").eq("auction_id", id).order("created_at", { ascending: false }).limit(10),
     supabase.auth.getUser(),
     auction.inventory_id
@@ -137,11 +137,13 @@ export default async function AuctionPage({
           )}
 
           <div className="mb-4 space-y-2">
-            <ShippingEstimate
-              auctionId={auction.id}
-              freeShipping={shippingFree}
-              shippingCostCents={shippingCostCents}
-            />
+            {(seller as { calculated_shipping_enabled?: boolean } | null)?.calculated_shipping_enabled !== false && (
+              <ShippingEstimate
+                auctionId={auction.id}
+                freeShipping={shippingFree}
+                shippingCostCents={shippingCostCents}
+              />
+            )}
             {seller?.shipping_days && (
               <p className="text-xs text-muted-foreground">
                 🚚 Ships within {seller.shipping_days}{(seller as { shipping_days_max?: number | null }).shipping_days_max ? `–${(seller as { shipping_days_max?: number | null }).shipping_days_max}` : ""} day{((seller as { shipping_days_max?: number | null }).shipping_days_max ?? seller.shipping_days) !== 1 ? "s" : ""}

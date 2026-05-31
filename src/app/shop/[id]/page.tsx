@@ -73,7 +73,7 @@ export default async function ListingPage({
   if (!listing) notFound();
 
   const [{ data: seller }, { data: { user } }, { data: invShipping }] = await Promise.all([
-    supabase.from("profiles").select("id, username, avatar_url, stripe_onboarded, shipping_days, shipping_days_max, return_policy_type, return_policy_notes, vacation_mode, vacation_until, offers_enabled").eq("id", listing.seller_id).single(),
+    supabase.from("profiles").select("id, username, avatar_url, stripe_onboarded, shipping_days, shipping_days_max, return_policy_type, return_policy_notes, vacation_mode, vacation_until, offers_enabled, calculated_shipping_enabled").eq("id", listing.seller_id).single(),
     supabase.auth.getUser(),
     listing.inventory_id
       ? supabase.from("inventory").select("free_shipping, shipping_cost_cents, shipping_weight_oz").eq("id", listing.inventory_id).single()
@@ -222,11 +222,13 @@ export default async function ListingPage({
                 notes={(seller as { return_policy_notes?: string | null }).return_policy_notes}
               />
             )}
-            <ShippingEstimate
-              listingId={listing.id}
-              freeShipping={shippingFree}
-              shippingCostCents={shippingCostCents}
-            />
+            {(seller as { calculated_shipping_enabled?: boolean } | null)?.calculated_shipping_enabled !== false && (
+              <ShippingEstimate
+                listingId={listing.id}
+                freeShipping={shippingFree}
+                shippingCostCents={shippingCostCents}
+              />
+            )}
           </div>
 
           {seller?.vacation_mode && (

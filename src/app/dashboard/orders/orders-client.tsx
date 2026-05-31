@@ -122,6 +122,7 @@ export default function OrdersClient({
   totalPages,
   total,
   pageSize,
+  autoLabelsEnabled = true,
 }: {
   orders: OrderRow[];
   listingMap: Record<string, ItemRow>;
@@ -131,6 +132,7 @@ export default function OrdersClient({
   totalPages: number;
   total: number;
   pageSize: number;
+  autoLabelsEnabled?: boolean;
 }) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
@@ -242,7 +244,7 @@ export default function OrdersClient({
                   )}
                   <div className="flex items-center gap-3 flex-wrap">
                     <TrackingInput orderId={order.id} initialValue={order.tracking_number ?? null} />
-                    {order.shippo_rate_id && (
+                    {autoLabelsEnabled && order.shippo_rate_id && (
                       <BuyLabelButton orderId={order.id} labelUrl={order.label_url} createdAt={order.created_at} />
                     )}
                   </div>

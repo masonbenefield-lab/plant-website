@@ -75,6 +75,12 @@ export default function AccountForm({
   const [shippingServices, setShippingServices] = useState<string[]>(
     (profile?.shipping_services as string[] | null) ?? ["usps_ground_advantage", "usps_priority", "usps_priority_express"]
   );
+  const [calculatedShippingEnabled, setCalculatedShippingEnabled] = useState(
+    (profile as { calculated_shipping_enabled?: boolean } | null)?.calculated_shipping_enabled !== false
+  );
+  const [autoLabelsEnabled, setAutoLabelsEnabled] = useState(
+    (profile as { auto_labels_enabled?: boolean } | null)?.auto_labels_enabled !== false
+  );
   const [savingShipping, setSavingShipping] = useState(false);
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -335,6 +341,8 @@ export default function AccountForm({
       body: JSON.stringify({
         ship_from_address: shipFrom.street1.trim() ? shipFrom : null,
         shipping_services: shippingServices.length ? shippingServices : null,
+        calculated_shipping_enabled: calculatedShippingEnabled,
+        auto_labels_enabled: autoLabelsEnabled,
       }),
     });
     const data = await res.json();
@@ -818,6 +826,40 @@ export default function AccountForm({
                 ))}
               </div>
               <p className="text-xs text-muted-foreground mt-2">Select at least one service.</p>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div>
+                  <p className="text-sm font-medium">Calculated shipping rates</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Show real-time Shippo rates to buyers at checkout. Turn off to hide shipping cost until you invoice manually.</p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={calculatedShippingEnabled}
+                  onClick={() => setCalculatedShippingEnabled((v) => !v)}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ml-4 ${calculatedShippingEnabled ? "bg-green-700" : "bg-input"}`}
+                >
+                  <span className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition-transform ${calculatedShippingEnabled ? "translate-x-5" : "translate-x-0"}`} />
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div>
+                  <p className="text-sm font-medium">Automatic shipping labels</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Show a "Buy Label" button in your orders dashboard to purchase Shippo labels automatically. Requires a ship-from address above.</p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={autoLabelsEnabled}
+                  onClick={() => setAutoLabelsEnabled((v) => !v)}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ml-4 ${autoLabelsEnabled ? "bg-green-700" : "bg-input"}`}
+                >
+                  <span className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition-transform ${autoLabelsEnabled ? "translate-x-5" : "translate-x-0"}`} />
+                </button>
+              </div>
             </div>
 
             <Button type="submit" disabled={savingShipping || shippingServices.length === 0} className="bg-green-700 hover:bg-green-800">

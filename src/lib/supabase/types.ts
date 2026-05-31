@@ -47,6 +47,8 @@ export interface Database {
           groundbreaker_number: number | null;
           ship_from_address: Json | null;
           shipping_services: string[] | null;
+          calculated_shipping_enabled: boolean;
+          auto_labels_enabled: boolean;
           deleted_at: string | null;
           feed_last_seen_at: string | null;
           referral_code: string | null;
@@ -91,6 +93,8 @@ export interface Database {
           groundbreaker_number?: number | null;
           ship_from_address?: Json | null;
           shipping_services?: string[] | null;
+          calculated_shipping_enabled?: boolean;
+          auto_labels_enabled?: boolean;
           deleted_at?: string | null;
           feed_last_seen_at?: string | null;
           referral_code?: string | null;
@@ -134,6 +138,8 @@ export interface Database {
           last_reengagement_sent?: string | null;
           ship_from_address?: Json | null;
           shipping_services?: string[] | null;
+          calculated_shipping_enabled?: boolean;
+          auto_labels_enabled?: boolean;
           groundbreaker?: boolean;
           groundbreaker_number?: number | null;
           deleted_at?: string | null;
