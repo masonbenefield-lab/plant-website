@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { findProhibitedWord, censorWord } from "@/lib/profanity";
 import { cn } from "@/lib/utils";
-import { Send, Loader2 } from "lucide-react";
+import { Send, Loader2, Trash2 } from "lucide-react";
 
 interface Message {
   id: string;
@@ -120,6 +120,20 @@ export function MessageThread({
     });
   }
 
+  async function handleDeleteMessage(messageId: string) {
+    setMessages((prev) => prev.filter((m) => m.id !== messageId));
+    const res = await fetch("/api/messages/delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messageId }),
+    });
+    if (!res.ok) {
+      // Restore on failure
+      setMessages(initialMessages);
+      toast.error("Failed to delete message");
+    }
+  }
+
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -149,7 +163,7 @@ export function MessageThread({
             {msgs.map((msg) => {
               const isMe = msg.sender_id === currentUserId;
               return (
-                <div key={msg.id} className={cn("flex items-end gap-2", isMe ? "justify-end" : "justify-start")}>
+                <div key={msg.id} className={cn("flex items-end gap-2 group", isMe ? "justify-end" : "justify-start")}>
                   {!isMe && (
                     <div className="w-7 h-7 rounded-full bg-muted overflow-hidden shrink-0">
                       {otherUser.avatar_url ? (
@@ -174,6 +188,15 @@ export function MessageThread({
                       {new Date(msg.created_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
                     </p>
                   </div>
+                  {isMe && (
+                    <button
+                      onClick={() => handleDeleteMessage(msg.id)}
+                      className="opacity-0 group-hover:opacity-100 p-1 text-muted-foreground hover:text-destructive transition-all shrink-0"
+                      aria-label="Delete message"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  )}
                 </div>
               );
             })}

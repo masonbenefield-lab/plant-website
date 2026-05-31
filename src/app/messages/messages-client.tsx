@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { MessageSquare, Search, X, SquarePen, Loader2 } from "lucide-react";
+import { MessageSquare, Search, X, SquarePen, Loader2, Trash2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -58,6 +58,9 @@ function formatTime(iso: string) {
 export function MessagesClient({ conversations, profileMap, unreadMap, currentUserId }: Props) {
   const router = useRouter();
 
+  const [localConversations, setLocalConversations] = useState(conversations);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [newMsgOpen, setNewMsgOpen] = useState(false);
   const [newMsgQuery, setNewMsgQuery] = useState("");
@@ -67,11 +70,27 @@ export function MessagesClient({ conversations, profileMap, unreadMap, currentUs
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const filtered = q.trim()
-    ? conversations.filter((c) => {
+    ? localConversations.filter((c) => {
         const otherId = c.participant_a === currentUserId ? c.participant_b : c.participant_a;
         return profileMap[otherId]?.username.toLowerCase().includes(q.toLowerCase());
       })
-    : conversations;
+    : localConversations;
+
+  async function deleteConversation(convId: string) {
+    setDeletingId(convId);
+    setConfirmDeleteId(null);
+    try {
+      const res = await fetch("/api/messages/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversationId: convId }),
+      });
+      if (!res.ok) { toast.error("Failed to delete conversation"); return; }
+      setLocalConversations((prev) => prev.filter((c) => c.id !== convId));
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   function handleQueryChange(val: string) {
     setNewMsgQuery(val);
@@ -132,7 +151,7 @@ export function MessagesClient({ conversations, profileMap, unreadMap, currentUs
       </div>
 
       {/* Search existing conversations */}
-      {conversations.length > 0 && (
+      {localConversations.length > 0 && (
         <div className="relative">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
           <input
@@ -150,7 +169,7 @@ export function MessagesClient({ conversations, profileMap, unreadMap, currentUs
       )}
 
       {/* Conversation list */}
-      {!conversations.length ? (
+      {!localConversations.length ? (
         <Card>
           <CardContent className="py-16 text-center space-y-3">
             <MessageSquare className="mx-auto text-muted-foreground" size={36} />
@@ -168,47 +187,81 @@ export function MessagesClient({ conversations, profileMap, unreadMap, currentUs
             const otherId = conv.participant_a === currentUserId ? conv.participant_b : conv.participant_a;
             const other = profileMap[otherId];
             const unread = unreadMap[conv.id] ?? 0;
+            const isConfirming = confirmDeleteId === conv.id;
+            const isDeleting = deletingId === conv.id;
 
             return (
-              <Link key={conv.id} href={`/messages/${conv.id}`}>
-                <Card className={cn("hover:bg-muted/40 transition-colors", unread > 0 && "border-[#A8BF9A] bg-[#EBF0E6]/50 dark:bg-forest/20")}>
-                  <CardContent className="p-4 flex items-center gap-3">
-                    <div className="relative shrink-0">
-                      <div className="w-10 h-10 rounded-full bg-muted overflow-hidden">
-                        {other?.avatar_url ? (
-                          <Image src={other.avatar_url} alt={other.username ?? ""} width={40} height={40} className="object-cover w-full h-full" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-sm font-bold text-muted-foreground">
-                            {other?.username?.slice(0, 2).toUpperCase() ?? "?"}
-                          </div>
-                        )}
-                      </div>
-                      {unread > 0 && (
-                        <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-leaf text-white text-[10px] font-bold flex items-center justify-center">
-                          {unread > 9 ? "9+" : unread}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className={cn("text-sm font-medium", unread > 0 && "font-semibold")}>
-                          {other?.username ?? "Unknown user"}
-                        </span>
-                        {conv.last_message_at && (
-                          <span className="text-xs text-muted-foreground shrink-0">
-                            {formatTime(conv.last_message_at)}
+              <div key={conv.id} className="relative group">
+                <Link href={`/messages/${conv.id}`}>
+                  <Card className={cn("hover:bg-muted/40 transition-colors pr-10", unread > 0 && "border-[#A8BF9A] bg-[#EBF0E6]/50 dark:bg-forest/20")}>
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <div className="relative shrink-0">
+                        <div className="w-10 h-10 rounded-full bg-muted overflow-hidden">
+                          {other?.avatar_url ? (
+                            <Image src={other.avatar_url} alt={other.username ?? ""} width={40} height={40} className="object-cover w-full h-full" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-sm font-bold text-muted-foreground">
+                              {other?.username?.slice(0, 2).toUpperCase() ?? "?"}
+                            </div>
+                          )}
+                        </div>
+                        {unread > 0 && (
+                          <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-leaf text-white text-[10px] font-bold flex items-center justify-center">
+                            {unread > 9 ? "9+" : unread}
                           </span>
                         )}
                       </div>
-                      {conv.last_message_preview && (
-                        <p className={cn("text-sm truncate mt-0.5", unread > 0 ? "text-foreground" : "text-muted-foreground")}>
-                          {conv.last_message_preview}
-                        </p>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className={cn("text-sm font-medium", unread > 0 && "font-semibold")}>
+                            {other?.username ?? "Unknown user"}
+                          </span>
+                          {conv.last_message_at && (
+                            <span className="text-xs text-muted-foreground shrink-0">
+                              {formatTime(conv.last_message_at)}
+                            </span>
+                          )}
+                        </div>
+                        {conv.last_message_preview && (
+                          <p className={cn("text-sm truncate mt-0.5", unread > 0 ? "text-foreground" : "text-muted-foreground")}>
+                            {conv.last_message_preview}
+                          </p>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+
+                {/* Delete button — appears on hover */}
+                {!isConfirming && (
+                  <button
+                    onClick={(e) => { e.preventDefault(); setConfirmDeleteId(conv.id); }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-muted transition-colors opacity-0 group-hover:opacity-100 z-10"
+                    aria-label="Delete conversation"
+                  >
+                    {isDeleting ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
+                  </button>
+                )}
+
+                {/* Inline confirm */}
+                {isConfirming && (
+                  <div className="absolute inset-0 flex items-center justify-center gap-2 bg-background/95 rounded-lg border border-destructive/30 z-10 px-4">
+                    <span className="text-sm font-medium text-foreground mr-1">Delete this conversation?</span>
+                    <button
+                      onClick={() => deleteConversation(conv.id)}
+                      className="px-3 py-1 text-xs font-medium rounded-md bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors"
+                    >
+                      Delete
+                    </button>
+                    <button
+                      onClick={() => setConfirmDeleteId(null)}
+                      className="px-3 py-1 text-xs font-medium rounded-md border hover:bg-muted transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>
