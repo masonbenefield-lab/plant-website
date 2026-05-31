@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { ScrollText } from "lucide-react";
 
-const LAST_UPDATED = "April 29, 2026";
+const LAST_UPDATED = "May 31, 2026";
 
 function AgreementContent() {
   const router = useRouter();
@@ -162,7 +162,14 @@ function AgreementContent() {
         </section>
 
         <section>
-          <h2 className="text-base font-semibold mb-2">13. Governing Law</h2>
+          <h2 className="text-base font-semibold mb-2">13. Shipping Accuracy & Liability</h2>
+          <p>
+            You are solely responsible for the accuracy of all shipping information you provide, including package weight, dimensions, ship-from address, and handling time. Shipping rates displayed to buyers are <strong>estimates only</strong> based on the information you provide. Any carrier surcharges, postage adjustments, address correction fees, return shipping costs, or additional charges resulting from inaccurate or incomplete shipping information are your sole responsibility. Plantet does not guarantee the accuracy of any shipping estimate and will not absorb costs arising from seller-provided errors. By listing an item with shipping, you acknowledge that you have provided accurate weight and address information and accept full financial responsibility for any discrepancies identified by the carrier.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="text-base font-semibold mb-2">14. Governing Law</h2>
           <p>
             This Agreement is governed by the laws of the United States. Any disputes arising from this Agreement shall be resolved through binding arbitration in accordance with the rules of the American Arbitration Association.
           </p>
