@@ -272,6 +272,12 @@ export default function InventoryClient({
     try { localStorage.setItem("plantet:dismissed-soldout-ids", JSON.stringify([...next])); } catch { /* ignore */ }
   }
 
+  function dismissSoldOutItem(id: string) {
+    const next = new Set([...dismissedSoldOutIds, id]);
+    setDismissedSoldOutIds(next);
+    try { localStorage.setItem("plantet:dismissed-soldout-ids", JSON.stringify([...next])); } catch { /* ignore */ }
+  }
+
   // Listing modal
   const [price, setPrice] = useState("");
   const [listQty, setListQty] = useState("");
@@ -1464,6 +1470,15 @@ export default function InventoryClient({
                 row.listing_status === "paused" ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400" :
                 "bg-red-100 text-red-600"
               )}>{row.listing_status}</span>
+              {row.listing_status === "sold_out" && !dismissedSoldOutIds.has(row.id) && (
+                <button
+                  onClick={() => dismissSoldOutItem(row.id)}
+                  className="text-xs text-amber-600 dark:text-amber-400 hover:underline"
+                  title="Hide the sold-out warning for this item"
+                >
+                  Dismiss alert
+                </button>
+              )}
               {row.listing_sale_price_cents && row.listing_sale_ends_at && new Date(row.listing_sale_ends_at) > new Date() && (
                 <span className="text-xs text-orange-600 font-medium">✦ Sale</span>
               )}
@@ -1655,6 +1670,15 @@ export default function InventoryClient({
                 )}>
                   {row.listing_status}
                 </span>
+                {row.listing_status === "sold_out" && !dismissedSoldOutIds.has(row.id) && (
+                  <button
+                    onClick={() => dismissSoldOutItem(row.id)}
+                    className="text-xs text-amber-600 dark:text-amber-400 hover:underline"
+                    title="Hide the sold-out warning for this item"
+                  >
+                    Dismiss alert
+                  </button>
+                )}
                 {row.listing_sale_price_cents && row.listing_sale_ends_at && new Date(row.listing_sale_ends_at) > new Date() && (
                   <span className="text-xs text-orange-600 font-medium">✦ Sale</span>
                 )}
