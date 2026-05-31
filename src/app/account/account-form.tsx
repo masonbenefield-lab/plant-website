@@ -372,6 +372,9 @@ export default function AccountForm({
       if (missingKeys.length) {
         setMissingAddressFields(new Set(missingKeys));
         toast.error(`Complete your ship-from address: ${missingLabels.join(", ")}`);
+        const fieldIdMap: Record<string, string> = { street1: "sf-street1", city: "sf-city", state: "sf-state", zip: "sf-zip" };
+        const el = document.getElementById(fieldIdMap[missingKeys[0]]);
+        if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); el.focus(); }
         return;
       }
     }
