@@ -7,14 +7,18 @@ import type { GardenPlantStatus } from "@/lib/supabase/types";
 
 export default async function EditGardenPlantPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ from?: string }>;
 }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
   const { id } = await params;
+  const { from } = await searchParams;
+  const returnTo = from === "garden" ? "/garden" : null;
 
   const { data: plant } = await supabase
     .from("garden_plants")
@@ -29,16 +33,17 @@ export default async function EditGardenPlantPage({
     <div className="max-w-2xl mx-auto px-4 py-10 space-y-6">
       <div>
         <Link
-          href={`/garden/${plant.id}`}
+          href={returnTo ?? `/garden/${plant.id}`}
           className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4"
         >
           <ChevronLeft size={16} />
-          {plant.name}
+          {returnTo ? "My Garden" : plant.name}
         </Link>
         <h1 className="text-2xl font-bold">Edit plant</h1>
       </div>
       <GardenForm
         mode="edit"
+        returnTo={returnTo ?? undefined}
         plant={{
           id: plant.id,
           name: plant.name,

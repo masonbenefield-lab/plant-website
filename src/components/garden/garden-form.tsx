@@ -38,6 +38,7 @@ const SOURCE_TYPE_OPTIONS = [
 
 interface GardenFormProps {
   mode: "add" | "edit";
+  returnTo?: string;
   plant?: {
     id: string;
     name: string;
@@ -69,7 +70,7 @@ interface GardenFormProps {
 
 const MAX_PHOTOS = 10;
 
-export function GardenForm({ mode, plant, initialValues }: GardenFormProps) {
+export function GardenForm({ mode, plant, initialValues, returnTo }: GardenFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -249,7 +250,7 @@ export function GardenForm({ mode, plant, initialValues }: GardenFormProps) {
         }
 
         toast.success("Changes saved");
-        router.push(`/garden/${plant!.id}`);
+        router.push(returnTo ?? `/garden/${plant!.id}`);
         router.refresh();
       }
     });

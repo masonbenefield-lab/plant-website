@@ -84,7 +84,7 @@ export default function GardenPlantCard({
           </Link>
           <div className="pt-1.5 border-t border-border/60 mt-1">
             <Link
-              href={`/garden/${plant.id}/edit`}
+              href={`/garden/${plant.id}/edit?from=garden`}
               className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground font-medium transition-colors w-fit"
             >
               <Pencil size={11} />
