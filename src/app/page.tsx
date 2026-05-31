@@ -102,15 +102,15 @@ export default async function LandingPage() {
     .order("created_at", { ascending: false })
     .limit(24);
 
-  let gardenShowcase: { id: string; name: string; variety: string | null; image: string; username: string }[] = [];
+  let gardenShowcase: { id: string; name: string; variety: string | null; image: string; username: string; displayName: string }[] = [];
   if (gardenShowcasePlants?.length) {
     const userIds = [...new Set(gardenShowcasePlants.map((p) => p.user_id))];
     const { data: gardenProfiles } = await admin
       .from("profiles")
-      .select("id, username, garden_public")
+      .select("id, username, display_name, garden_public")
       .in("id", userIds)
       .eq("garden_public", true);
-    const publicUserMap = Object.fromEntries((gardenProfiles ?? []).map((p) => [p.id, p.username]));
+    const publicUserMap = Object.fromEntries((gardenProfiles ?? []).map((p) => [p.id, p]));
     gardenShowcase = gardenShowcasePlants
       .filter((p) => publicUserMap[p.user_id] && (p.images as string[]).length > 0)
       .slice(0, 8)
@@ -119,7 +119,8 @@ export default async function LandingPage() {
         name: p.name,
         variety: p.variety ?? null,
         image: (p.images as string[])[0],
-        username: publicUserMap[p.user_id],
+        username: publicUserMap[p.user_id].username,
+        displayName: publicUserMap[p.user_id].display_name ?? publicUserMap[p.user_id].username,
       }));
   }
 
@@ -344,7 +345,7 @@ export default async function LandingPage() {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                   <div className="absolute bottom-0 left-0 right-0 p-3">
                     <p className="text-white text-sm font-semibold leading-tight truncate">{plant.name}</p>
-                    <p className="text-white/70 text-xs truncate">by {plant.username}</p>
+                    <p className="text-white/70 text-xs truncate">by {plant.displayName}</p>
                   </div>
                 </Link>
               ))}
