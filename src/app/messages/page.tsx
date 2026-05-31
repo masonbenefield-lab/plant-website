@@ -18,7 +18,7 @@ export default async function MessagesPage() {
   );
 
   const { data: profiles } = otherIds.length
-    ? await supabase.from("profiles").select("id, username, avatar_url").in("id", otherIds)
+    ? await supabase.from("profiles").select("id, username, display_name, avatar_url").in("id", otherIds)
     : { data: [] };
 
   const profileMap = Object.fromEntries((profiles ?? []).map((p) => [p.id, p]));
@@ -38,7 +38,7 @@ export default async function MessagesPage() {
   return (
     <MessagesClient
       conversations={conversations ?? []}
-      profileMap={profileMap as Record<string, { id: string; username: string; avatar_url: string | null }>}
+      profileMap={profileMap as Record<string, { id: string; username: string; display_name: string | null; avatar_url: string | null }>}
       unreadMap={unreadMap}
       currentUserId={user.id}
     />

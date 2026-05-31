@@ -27,6 +27,7 @@ type Conversation = {
 type Profile = {
   id: string;
   username: string;
+  display_name: string | null;
   avatar_url: string | null;
 };
 
@@ -72,7 +73,8 @@ export function MessagesClient({ conversations, profileMap, unreadMap, currentUs
   const filtered = q.trim()
     ? localConversations.filter((c) => {
         const otherId = c.participant_a === currentUserId ? c.participant_b : c.participant_a;
-        return profileMap[otherId]?.username.toLowerCase().includes(q.toLowerCase());
+        const p = profileMap[otherId];
+        return `${p?.display_name ?? ""} ${p?.username ?? ""}`.toLowerCase().includes(q.toLowerCase());
       })
     : localConversations;
 
@@ -201,7 +203,7 @@ export function MessagesClient({ conversations, profileMap, unreadMap, currentUs
                             <Image src={other.avatar_url} alt={other.username ?? ""} width={40} height={40} className="object-cover w-full h-full" />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-sm font-bold text-muted-foreground">
-                              {other?.username?.slice(0, 2).toUpperCase() ?? "?"}
+                              {(other?.display_name || other?.username)?.slice(0, 2).toUpperCase() ?? "?"}
                             </div>
                           )}
                         </div>
@@ -214,7 +216,7 @@ export function MessagesClient({ conversations, profileMap, unreadMap, currentUs
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2">
                           <span className={cn("text-sm font-medium", unread > 0 && "font-semibold")}>
-                            {other?.username ?? "Unknown user"}
+                            {other?.display_name || other?.username || "Unknown user"}
                           </span>
                           {conv.last_message_at && (
                             <span className="text-xs text-muted-foreground shrink-0">
