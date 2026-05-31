@@ -165,7 +165,7 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
             {user && (
               <div className="flex items-center gap-0.5 mr-1">
                 <NavIcon href="/search" label="Search"><Search size={15} /></NavIcon>
-                <NavIcon href="/wishlist" label="Wishlist"><Heart size={15} /></NavIcon>
+                <NavIcon href="/wishlist" label="Saved"><Heart size={15} /></NavIcon>
                 <NavIcon href="/orders" label="Orders"><Package size={15} /></NavIcon>
                 <Link href="/feed" className="relative flex flex-col items-center gap-0.5 px-1.5 py-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
                   <Rss size={15} />
@@ -208,7 +208,7 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
                   <DropdownMenuItem><Link href="/dashboard/inventory" className="block w-full">My Stock</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href="/dashboard/offers" className="block w-full">Offers</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href="/dashboard/auctions" className="block w-full">Auctions</Link></DropdownMenuItem>
-                  <DropdownMenuItem><Link href="/wishlist" className="block w-full">Wishlist</Link></DropdownMenuItem>
+                  <DropdownMenuItem><Link href="/wishlist" className="block w-full">Saved</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href="/orders" className="block w-full">My Purchases</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href="/feed" className="block w-full">Feed</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href="/messages" className="block w-full">Messages{liveUnread > 0 ? ` (${liveUnread})` : ""}</Link></DropdownMenuItem>
@@ -295,7 +295,7 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
               </div>
               <p className="px-3 pt-2 pb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Shopping</p>
               <MobileLink href="/dashboard/auctions" onClick={closeMenu}>Auctions</MobileLink>
-              <MobileLink href="/wishlist" onClick={closeMenu}>Wishlist</MobileLink>
+              <MobileLink href="/wishlist" onClick={closeMenu}>Saved</MobileLink>
               <MobileLink href="/orders" onClick={closeMenu}>My Purchases</MobileLink>
               <MobileLink href="/messages" onClick={closeMenu}>Messages{liveUnread > 0 ? ` (${liveUnread})` : ""}</MobileLink>
 

@@ -90,7 +90,7 @@ export default async function WishlistPage({
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-10">
-      <h1 className="text-2xl font-bold mb-2">My Wishlist</h1>
+      <h1 className="text-2xl font-bold mb-2">Saved</h1>
       <p className="text-muted-foreground text-sm mb-5">{totalAll} saved item{totalAll !== 1 ? "s" : ""}</p>
 
       <div className="flex flex-wrap items-center gap-3 mb-6">

@@ -388,7 +388,7 @@ export function buildRestockNotificationHtml({
       <p style="margin:0 0 20px;">Good news — <strong>${plantName}</strong> is back in stock on Plantet. Stock is limited, so grab it before it's gone.</p>
       ${ctaBtn("Shop Now", listingUrl)}
     `,
-    footerNote: "You're receiving this because you wishlisted this item on Plantet.",
+    footerNote: "You're receiving this because you saved this item on Plantet.",
   });
 }
 
@@ -431,7 +431,7 @@ export function buildPriceDropAlertHtml({
   return emailBase({
     title: `Price drop on ${plantName}!`,
     heading: "Price drop alert!",
-    subheading: `${plantName} from your wishlist just went on sale`,
+    subheading: `${plantName} you saved just went on sale`,
     body: `
       <p style="margin:0 0 16px;"><strong>${plantName}</strong> dropped in price. Don't miss it — sales are for a limited time.</p>
       <table width="100%" cellpadding="0" cellspacing="0" style="background:#EFE7D6;border:1px solid #DED6C4;border-radius:10px;margin:0 0 24px;">
@@ -439,7 +439,7 @@ export function buildPriceDropAlertHtml({
       </table>
       ${ctaBtn("Shop Now", listingUrl)}
     `,
-    footerNote: "You're receiving this because you wishlisted this item on Plantet.",
+    footerNote: "You're receiving this because you saved this item on Plantet.",
   });
 }
 
@@ -460,7 +460,7 @@ export async function sendPriceDropAlert({
   await resend.emails.send({
     from: FROM,
     to: email,
-    subject: `Price drop on ${plantName} you wishlisted!`,
+    subject: `Price drop on ${plantName} you saved!`,
     html: buildPriceDropAlertHtml({ plantName, regularCents, saleCents, listingUrl }),
   });
 }
@@ -491,7 +491,7 @@ export function buildAuctionEndingSoonHtml({
       ${infoCard([{ label: "Auction closes", value: timeLeft }])}
       ${ctaBtn("Place Your Bid", auctionUrl)}
     `,
-    footerNote: "You're receiving this because you bid on or wishlisted this auction.",
+    footerNote: "You're receiving this because you bid on or saved this auction.",
   });
 }
 
@@ -860,8 +860,8 @@ export function buildWelcomeHtml({ username }: { username: string }): string {
                     <table width="100%" cellpadding="0" cellspacing="0" style="background:#EFE7D6;border:1px solid #DED6C4;border-radius:10px;">
                       <tr><td style="padding:14px 16px;">
                         <p style="margin:0 0 4px;font-size:18px;">&#128154;</p>
-                        <p style="margin:0 0 4px;font-size:13px;font-weight:700;color:#1F4736;">Wishlist</p>
-                        <p style="margin:0;font-size:12px;color:#6B7E72;line-height:1.5;">Save listings and auctions you love, and build a wishlist of plants you're hunting for.</p>
+                        <p style="margin:0 0 4px;font-size:13px;font-weight:700;color:#1F4736;">Saved &amp; Wishlist</p>
+                        <p style="margin:0;font-size:12px;color:#6B7E72;line-height:1.5;">Save listings and auctions you love. Build a plant wishlist of species you&apos;re hunting for.</p>
                       </td></tr>
                     </table>
                   </td>

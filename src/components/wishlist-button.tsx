@@ -36,7 +36,7 @@ export default function WishlistButton({ userId, listingId, auctionId, initialWi
         : await query.eq("auction_id", auctionId!);
       if (error) { toast.error(error.message); setLoading(false); return; }
       setWishlisted(false);
-      toast.success("Removed from wishlist");
+      toast.success("Removed from saved");
     } else {
       const { error } = await supabase.from("wishlists").insert({
         user_id: userId,
@@ -45,7 +45,7 @@ export default function WishlistButton({ userId, listingId, auctionId, initialWi
       });
       if (error) { toast.error(error.message); setLoading(false); return; }
       setWishlisted(true);
-      toast.success("Saved to wishlist");
+      toast.success("Saved!");
     }
     setLoading(false);
   }
@@ -55,7 +55,7 @@ export default function WishlistButton({ userId, listingId, auctionId, initialWi
       <button
         onClick={toggle}
         disabled={loading}
-        aria-label={wishlisted ? "Remove from wishlist" : "Save to wishlist"}
+        aria-label={wishlisted ? "Remove from saved" : "Save"}
         className={cn(
           "h-8 w-8 rounded-full flex items-center justify-center transition-colors shadow border",
           wishlisted
