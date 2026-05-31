@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { Pencil } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { PlantVisibilityToggle } from "@/components/garden/plant-visibility-toggle";
@@ -48,11 +49,11 @@ export default function GardenPlantCard({
 
   return (
     <div className="relative">
-      <Link href={`/garden/${plant.id}`}>
-        <Card className={cn(
-          "overflow-hidden hover:shadow-md transition-shadow h-full",
-          pinOrder !== null && "ring-2 ring-leaf"
-        )}>
+      <Card className={cn(
+        "overflow-hidden hover:shadow-md transition-shadow h-full",
+        pinOrder !== null && "ring-2 ring-leaf"
+      )}>
+        <Link href={`/garden/${plant.id}`} className="block">
           <div className="aspect-square relative bg-muted">
             {plant.images?.[0] ? (
               <Image src={plant.images[0]} alt={plant.name} fill className="object-cover" />
@@ -60,7 +61,9 @@ export default function GardenPlantCard({
               <div className="flex items-center justify-center h-full text-4xl">🪴</div>
             )}
           </div>
-          <CardContent className="p-3 space-y-1">
+        </Link>
+        <CardContent className="p-3 space-y-1">
+          <Link href={`/garden/${plant.id}`} className="block">
             <p className="font-semibold text-sm leading-tight">{plant.variety || plant.name}</p>
             {plant.variety && (
               <p className="text-xs text-muted-foreground leading-tight">{plant.name}</p>
@@ -78,9 +81,18 @@ export default function GardenPlantCard({
                 Planted {new Date(plant.planted_at).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
               </p>
             )}
-          </CardContent>
-        </Card>
-      </Link>
+          </Link>
+          <div className="pt-1.5 border-t border-border/60 mt-1">
+            <Link
+              href={`/garden/${plant.id}/edit`}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground font-medium transition-colors w-fit"
+            >
+              <Pencil size={11} />
+              Edit
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
       <div className="absolute top-2 right-2 z-10">
         <PlantVisibilityToggle
           plantId={plant.id}
