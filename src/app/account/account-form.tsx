@@ -865,8 +865,8 @@ export default function AccountForm({
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="sf-phone">Phone (optional)</Label>
-                  <Input id="sf-phone" type="tel" value={shipFrom.phone} onChange={(e) => setShipFrom({ ...shipFrom, phone: e.target.value })} placeholder="For carrier notifications" />
+                  <Label htmlFor="sf-phone">Phone <span className="text-destructive">*</span> <span className="text-xs font-normal text-muted-foreground">(required for shipping labels)</span></Label>
+                  <Input id="sf-phone" type="tel" value={shipFrom.phone} onChange={(e) => setShipFrom({ ...shipFrom, phone: e.target.value })} placeholder="e.g. 555-123-4567" />
                 </div>
               </div>
             </div>

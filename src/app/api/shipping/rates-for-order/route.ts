@@ -72,6 +72,10 @@ export async function POST(request: Request) {
     email: user.email ?? "",
   };
 
+  if (!from.phone?.trim()) {
+    return NextResponse.json({ error: "Add a phone number to your ship-from address in Account Settings — required for USPS labels." }, { status: 400 });
+  }
+
   const toAddress = {
     name: addr.name,
     street1: addr.line1,
