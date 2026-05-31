@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useTransition, useEffect, useCallback } from "react";
+import { useState, useRef, useTransition, useEffect } from "react";
 import { compressImage } from "@/lib/compress-image";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -35,6 +35,8 @@ const SOURCE_TYPE_OPTIONS = [
   { value: "propagation", label: "Propagation (from cuttings)" },
   { value: "gift", label: "Gift" },
 ];
+
+type PlantetUser = { id: string; username: string; display_name: string | null; avatar_url: string | null };
 
 interface GardenFormProps {
   mode: "add" | "edit";
@@ -87,13 +89,15 @@ export function GardenForm({ mode, plant, initialValues, returnTo }: GardenFormP
   const [images, setImages] = useState<string[]>(plant?.images ?? []);
   const [uploading, setUploading] = useState(false);
   const [shareToFeed, setShareToFeed] = useState(false);
-  const [resolvedUserId, setResolvedUserId] = useState<string | null>(plant?.from_user_id ?? null);
-  const [resolvedUsername, setResolvedUsername] = useState<string | null>(null);
-  const [checkingUser, setCheckingUser] = useState(false);
-  const [sourceNameTouched, setSourceNameTouched] = useState(false);
-  const [suggestions, setSuggestions] = useState<{ id: string; username: string; display_name: string | null; avatar_url: string | null }[]>([]);
-  const userCheckRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const suggestionsRef = useRef<HTMLDivElement>(null);
+
+  // Plantet member section
+  const [selectedPlantetUser, setSelectedPlantetUser] = useState<PlantetUser | null>(null);
+  const [plantetQuery, setPlantetQuery] = useState("");
+  const [plantetUserChanged, setPlantetUserChanged] = useState(false);
+  const [plantetChecking, setPlantetChecking] = useState(false);
+  const [plantetSuggestions, setPlantetSuggestions] = useState<PlantetUser[]>([]);
+  const plantetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const plantetRef = useRef<HTMLDivElement>(null);
 
   async function handlePhotoUpload(files: FileList) {
     if (images.length >= MAX_PHOTOS) {
@@ -123,18 +127,33 @@ export function GardenForm({ mode, plant, initialValues, returnTo }: GardenFormP
     setImages((prev) => prev.filter((u) => u !== url));
   }
 
-  // Close suggestions on outside click
+  // Close Plantet dropdown on outside click
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (suggestionsRef.current && !suggestionsRef.current.contains(e.target as Node)) {
-        setSuggestions([]);
+      if (plantetRef.current && !plantetRef.current.contains(e.target as Node)) {
+        setPlantetSuggestions([]);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Auto-create origin request for existing plants that have from_user_id but no confirmed verification
+  // Load linked user profile in edit mode
+  useEffect(() => {
+    if (mode !== "edit" || !plant?.from_user_id) return;
+    const supabase = createClient();
+    supabase
+      .from("profiles")
+      .select("id, username, display_name, avatar_url")
+      .eq("id", plant.from_user_id)
+      .single()
+      .then(({ data }) => {
+        if (data) setSelectedPlantetUser(data as PlantetUser);
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Auto-resend pending origin request for existing unverified plants
   useEffect(() => {
     if (mode === "edit" && plant?.from_user_id && !plant?.origin_verified) {
       fetch("/api/garden/origin-request", {
@@ -146,41 +165,39 @@ export function GardenForm({ mode, plant, initialValues, returnTo }: GardenFormP
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function handleSourceNameChange(val: string) {
-    setSourceName(val);
-    setSourceNameTouched(true);
-    setResolvedUserId(null);
-    setResolvedUsername(null);
-    setSuggestions([]);
-    if (userCheckRef.current) clearTimeout(userCheckRef.current);
-    if (!val.trim() || val.trim().length < 2) return;
-    userCheckRef.current = setTimeout(async () => {
-      setCheckingUser(true);
+  function handlePlantetQueryChange(val: string) {
+    setPlantetQuery(val);
+    setPlantetSuggestions([]);
+    if (plantetTimerRef.current) clearTimeout(plantetTimerRef.current);
+    if (!val.trim() || val.trim().length < 2) { setPlantetChecking(false); return; }
+    setPlantetChecking(true);
+    plantetTimerRef.current = setTimeout(async () => {
       try {
         const res = await fetch(`/api/users/search?q=${encodeURIComponent(val.trim())}`);
         const data = await res.json();
-        const users: { id: string; username: string; display_name: string | null; avatar_url: string | null }[] = data.users ?? [];
-        setSuggestions(users.slice(0, 5));
-        const exact = users.find((u) => u.username.toLowerCase() === val.trim().toLowerCase());
-        if (exact) {
-          setResolvedUserId(exact.id);
-          setResolvedUsername(exact.username);
-        }
+        setPlantetSuggestions((data.users ?? []).slice(0, 5));
       } finally {
-        setCheckingUser(false);
+        setPlantetChecking(false);
       }
     }, 400);
   }
 
-  const selectSuggestion = useCallback((u: { id: string; username: string; display_name: string | null }) => {
-    setSourceName(u.display_name || u.username);
-    setResolvedUserId(u.id);
-    setResolvedUsername(u.username);
-    setSourceNameTouched(true);
-    setSuggestions([]);
-    if (userCheckRef.current) clearTimeout(userCheckRef.current);
-    setCheckingUser(false);
-  }, []);
+  function selectPlantetUser(u: PlantetUser) {
+    setSelectedPlantetUser(u);
+    setPlantetUserChanged(true);
+    setPlantetQuery("");
+    setPlantetSuggestions([]);
+    if (plantetTimerRef.current) clearTimeout(plantetTimerRef.current);
+    setPlantetChecking(false);
+    if (!sourceName.trim()) setSourceName(u.display_name || u.username);
+  }
+
+  function clearPlantetUser() {
+    setSelectedPlantetUser(null);
+    setPlantetUserChanged(true);
+    setPlantetQuery("");
+    setPlantetSuggestions([]);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -192,9 +209,8 @@ export function GardenForm({ mode, plant, initialValues, returnTo }: GardenFormP
     startTransition(async () => {
       const supabase = createClient();
 
-      // from_user_id: include if user touched the field (to allow clearing too)
-      const fromUserIdPayload = sourceNameTouched
-        ? { from_user_id: resolvedUserId, ...(resolvedUserId ? { origin_verified: false } : {}) }
+      const fromUserIdPayload = plantetUserChanged
+        ? { from_user_id: selectedPlantetUser?.id ?? null, ...(selectedPlantetUser ? { origin_verified: false } : {}) }
         : {};
 
       const payload = {
@@ -226,7 +242,7 @@ export function GardenForm({ mode, plant, initialValues, returnTo }: GardenFormP
 
         const { data, error } = await supabase
           .from("garden_plants")
-          .insert({ ...payload, user_id: user.id, from_user_id: resolvedUserId })
+          .insert({ ...payload, user_id: user.id })
           .select("id")
           .single();
         if (error) { toast.error("Failed to add plant"); return; }
@@ -236,12 +252,11 @@ export function GardenForm({ mode, plant, initialValues, returnTo }: GardenFormP
           fetch("/api/garden/activate-referral", { method: "POST" }).catch(() => {});
         }
 
-        // Send origin verification request if a Plantet user was matched
-        if (resolvedUserId) {
+        if (selectedPlantetUser) {
           fetch("/api/garden/origin-request", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ plant_id: data.id, verifier_user_id: resolvedUserId }),
+            body: JSON.stringify({ plant_id: data.id, verifier_user_id: selectedPlantetUser.id }),
           }).catch(() => {});
         }
 
@@ -255,12 +270,11 @@ export function GardenForm({ mode, plant, initialValues, returnTo }: GardenFormP
           .eq("id", plant!.id);
         if (error) { toast.error("Failed to save changes"); return; }
 
-        // Send/reset origin verification request if source was changed and matched
-        if (sourceNameTouched && resolvedUserId) {
+        if (plantetUserChanged && selectedPlantetUser) {
           fetch("/api/garden/origin-request", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ plant_id: plant!.id, verifier_user_id: resolvedUserId }),
+            body: JSON.stringify({ plant_id: plant!.id, verifier_user_id: selectedPlantetUser.id }),
           }).catch(() => {});
         }
 
@@ -389,65 +403,94 @@ export function GardenForm({ mode, plant, initialValues, returnTo }: GardenFormP
               ))}
             </SelectContent>
           </Select>
-          <div className="relative" ref={suggestionsRef}>
-            <Input
-              value={sourceName}
-              onChange={(e) => handleSourceNameChange(e.target.value)}
-              placeholder="Name / seller / friend"
-              autoComplete="off"
-            />
-            {/* Suggestion dropdown */}
-            {suggestions.length > 0 && (
-              <div className="absolute z-50 w-full top-full mt-1 rounded-lg border bg-card shadow-lg overflow-hidden">
-                {suggestions.map((u) => (
-                  <button
-                    key={u.id}
-                    type="button"
-                    onMouseDown={(e) => { e.preventDefault(); selectSuggestion(u); }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-muted/60 transition-colors"
-                  >
-                    {u.avatar_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={u.avatar_url} alt={u.username} className="h-7 w-7 rounded-full object-cover shrink-0" />
-                    ) : (
-                      <div className="h-7 w-7 rounded-full bg-[#DFE7D4] flex items-center justify-center text-leaf text-xs font-bold shrink-0">
-                        {u.username.slice(0, 1).toUpperCase()}
-                      </div>
-                    )}
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium leading-tight truncate">{u.display_name || u.username}</p>
-                      {u.display_name && (
-                        <p className="text-xs text-muted-foreground leading-tight">@{u.username}</p>
-                      )}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-            {/* Status messages */}
-            {checkingUser && !suggestions.length && (
-              <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                <Loader2 size={11} className="animate-spin" /> Searching...
-              </p>
-            )}
-            {resolvedUsername && !checkingUser && !suggestions.length && (
-              <p className="text-xs text-leaf flex items-center gap-1 mt-1">
-                <CheckCircle2 size={11} />
-                {resolvedUsername} is on Plantet — they&apos;ll be asked to confirm
-              </p>
-            )}
-            {mode === "edit" && !sourceNameTouched && plant?.from_user_id && !plant?.origin_verified && (
-              <p className="text-xs text-amber-600 flex items-center gap-1 mt-1">
-                Waiting for confirmation from the seller
-              </p>
-            )}
-            {mode === "edit" && !sourceNameTouched && plant?.origin_verified && (
-              <p className="text-xs text-leaf flex items-center gap-1 mt-1">
-                <CheckCircle2 size={11} /> Verified
-              </p>
-            )}
-          </div>
+          <Input
+            value={sourceName}
+            onChange={(e) => setSourceName(e.target.value)}
+            placeholder="Nursery, friend, seller name…"
+          />
         </div>
+      </div>
+
+      {/* Plantet member */}
+      <div className="space-y-2">
+        <Label>Got this from a Plantet member?</Label>
+        <div className="relative" ref={plantetRef}>
+          {selectedPlantetUser ? (
+            <div className="flex items-center gap-2.5 p-2.5 rounded-lg border bg-muted/40">
+              {selectedPlantetUser.avatar_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={selectedPlantetUser.avatar_url} alt={selectedPlantetUser.username} className="h-8 w-8 rounded-full object-cover shrink-0" />
+              ) : (
+                <div className="h-8 w-8 rounded-full bg-[#DFE7D4] flex items-center justify-center text-leaf text-xs font-bold shrink-0">
+                  {selectedPlantetUser.username.slice(0, 1).toUpperCase()}
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium leading-tight truncate">{selectedPlantetUser.display_name || selectedPlantetUser.username}</p>
+                <p className="text-xs text-muted-foreground leading-tight">@{selectedPlantetUser.username}</p>
+              </div>
+              {!plantetUserChanged && plant?.origin_verified ? (
+                <span className="text-xs text-leaf flex items-center gap-1 shrink-0"><CheckCircle2 size={11} /> Verified</span>
+              ) : !plantetUserChanged && plant?.from_user_id && !plant?.origin_verified ? (
+                <span className="text-xs text-amber-600 shrink-0">Pending confirmation</span>
+              ) : (
+                <span className="text-xs text-muted-foreground shrink-0">Will be notified</span>
+              )}
+              <button
+                type="button"
+                onClick={clearPlantetUser}
+                className="shrink-0 p-1 rounded hover:bg-muted transition-colors"
+                aria-label="Remove"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          ) : (
+            <>
+              <Input
+                value={plantetQuery}
+                onChange={(e) => handlePlantetQueryChange(e.target.value)}
+                placeholder="Search by username or name…"
+                autoComplete="off"
+              />
+              {plantetChecking && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                  <Loader2 size={11} className="animate-spin" /> Searching...
+                </p>
+              )}
+              {plantetSuggestions.length > 0 && (
+                <div className="absolute z-50 w-full top-full mt-1 rounded-lg border bg-card shadow-lg overflow-hidden">
+                  {plantetSuggestions.map((u) => (
+                    <button
+                      key={u.id}
+                      type="button"
+                      onMouseDown={(e) => { e.preventDefault(); selectPlantetUser(u); }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-muted/60 transition-colors"
+                    >
+                      {u.avatar_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={u.avatar_url} alt={u.username} className="h-7 w-7 rounded-full object-cover shrink-0" />
+                      ) : (
+                        <div className="h-7 w-7 rounded-full bg-[#DFE7D4] flex items-center justify-center text-leaf text-xs font-bold shrink-0">
+                          {u.username.slice(0, 1).toUpperCase()}
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium leading-tight truncate">{u.display_name || u.username}</p>
+                        {u.display_name && (
+                          <p className="text-xs text-muted-foreground leading-tight">@{u.username}</p>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Select a member and they&apos;ll be asked to confirm — shows as &quot;Verified&quot; once they do.
+        </p>
       </div>
 
       {/* Notes */}
@@ -514,4 +557,3 @@ export function GardenForm({ mode, plant, initialValues, returnTo }: GardenFormP
     </form>
   );
 }
-
