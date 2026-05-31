@@ -50,7 +50,7 @@ export async function POST(request: Request) {
   } else if (listingId) {
     const { data: listing } = await supabase
       .from("listings")
-      .select("seller_id, inventory_id")
+      .select("seller_id, inventory_id, free_shipping, shipping_cost_cents")
       .eq("id", listingId)
       .single();
     if (!listing) return NextResponse.json({ error: "Listing not found" }, { status: 404 });
@@ -62,16 +62,19 @@ export async function POST(request: Request) {
         .select("shipping_weight_oz, free_shipping, shipping_cost_cents")
         .eq("id", listing.inventory_id)
         .single();
-      if (inv?.free_shipping) return NextResponse.json({ rates: [], freeShipping: true });
-      if (inv?.shipping_cost_cents) return NextResponse.json({ rates: [], flatRate: true, flatRateCents: inv.shipping_cost_cents });
+      const flatCents = inv?.shipping_cost_cents ?? listing.shipping_cost_cents;
+      if (inv?.free_shipping || listing.free_shipping) return NextResponse.json({ rates: [], freeShipping: true });
+      if (flatCents) return NextResponse.json({ rates: [], flatRate: true, flatRateCents: flatCents });
       weightOz = inv?.shipping_weight_oz ?? 16;
     } else {
+      if (listing.free_shipping) return NextResponse.json({ rates: [], freeShipping: true });
+      if (listing.shipping_cost_cents) return NextResponse.json({ rates: [], flatRate: true, flatRateCents: listing.shipping_cost_cents });
       weightOz = 16;
     }
   } else {
     const { data: auction } = await supabase
       .from("auctions")
-      .select("seller_id, inventory_id")
+      .select("seller_id, inventory_id, free_shipping, shipping_cost_cents")
       .eq("id", auctionId!)
       .single();
     if (!auction) return NextResponse.json({ error: "Auction not found" }, { status: 404 });
@@ -83,10 +86,13 @@ export async function POST(request: Request) {
         .select("shipping_weight_oz, free_shipping, shipping_cost_cents")
         .eq("id", auction.inventory_id)
         .single();
-      if (inv?.free_shipping) return NextResponse.json({ rates: [], freeShipping: true });
-      if (inv?.shipping_cost_cents) return NextResponse.json({ rates: [], flatRate: true, flatRateCents: inv.shipping_cost_cents });
+      const flatCents = inv?.shipping_cost_cents ?? auction.shipping_cost_cents;
+      if (inv?.free_shipping || auction.free_shipping) return NextResponse.json({ rates: [], freeShipping: true });
+      if (flatCents) return NextResponse.json({ rates: [], flatRate: true, flatRateCents: flatCents });
       weightOz = inv?.shipping_weight_oz ?? 16;
     } else {
+      if (auction.free_shipping) return NextResponse.json({ rates: [], freeShipping: true });
+      if (auction.shipping_cost_cents) return NextResponse.json({ rates: [], flatRate: true, flatRateCents: auction.shipping_cost_cents });
       weightOz = 16;
     }
   }
