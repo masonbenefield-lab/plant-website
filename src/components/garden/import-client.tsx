@@ -118,6 +118,7 @@ export function ImportClient() {
   const [submitting, setSubmitting] = useState(false);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [pasteText, setPasteText] = useState("");
+  const [pasteMode, setPasteMode] = useState<"variety" | "type">("variety");
 
   function handleFile(file: File) {
     if (!file.name.endsWith(".csv")) {
@@ -151,24 +152,24 @@ export function ImportClient() {
   }
 
   function parsePasteList() {
-    const names = pasteText
+    const entries = pasteText
       .split(/[\n,]+/)
       .map((s) => s.trim())
       .filter(Boolean)
       .slice(0, MAX_BATCH);
-    if (!names.length) {
-      setParseError("No plant names found — separate names with commas or new lines.");
+    if (!entries.length) {
+      setParseError("No entries found — separate items with commas or new lines.");
       return;
     }
-    if (names.length === MAX_BATCH && pasteText.split(/[\n,]+/).filter((s) => s.trim()).length > MAX_BATCH) {
+    if (entries.length === MAX_BATCH && pasteText.split(/[\n,]+/).filter((s) => s.trim()).length > MAX_BATCH) {
       toast.warning(`Only the first ${MAX_BATCH} plants were loaded.`);
     }
     setParseError("");
     setDrafts(
-      names.map((name, i) => ({
+      entries.map((entry, i) => ({
         id: `draft-${i}-${Date.now()}`,
-        name,
-        variety: "",
+        name: pasteMode === "type" ? entry : "",
+        variety: pasteMode === "variety" ? entry : "",
         status: "growing" as GardenPlantStatus,
         statusInvalid: false,
         location: "",
@@ -204,7 +205,7 @@ export function ImportClient() {
     if (!drafts?.length) return;
     const invalid = drafts.filter((d) => !d.name.trim());
     if (invalid.length) {
-      toast.error(`${invalid.length} plant${invalid.length > 1 ? "s are" : " is"} missing a name.`);
+      toast.error(`${invalid.length} plant${invalid.length > 1 ? "s are" : " is"} missing a plant type.`);
       return;
     }
 
@@ -298,7 +299,7 @@ export function ImportClient() {
             {invalidCount > 0 && (
               <span className="flex items-center gap-1 text-destructive text-xs">
                 <AlertTriangle size={13} />
-                {invalidCount} plant{invalidCount > 1 ? "s" : ""} missing a name
+                {invalidCount} plant{invalidCount > 1 ? "s" : ""} missing a plant type
               </span>
             )}
           </div>
@@ -397,17 +398,49 @@ export function ImportClient() {
       <div className="space-y-3">
         <div className="flex items-center gap-2">
           <List size={16} className="text-muted-foreground" />
-          <p className="font-medium text-sm">Paste a list of plant names</p>
+          <p className="font-medium text-sm">Paste a list of plants</p>
         </div>
         <Textarea
           value={pasteText}
           onChange={(e) => setPasteText(e.target.value)}
-          placeholder={"Monstera, Pothos, Snake Plant\nor one per line"}
+          placeholder={pasteMode === "variety" ? "BNR, Brown Turkey, LSU Purple\nor one per line" : "Fig, Monstera, Pothos\nor one per line"}
           rows={4}
           className="font-mono text-sm resize-none"
         />
+        {/* Mode toggle */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-muted-foreground">Treat as:</span>
+          <div className="flex rounded-md border overflow-hidden text-xs">
+            <button
+              type="button"
+              onClick={() => setPasteMode("variety")}
+              className={cn(
+                "px-3 py-1.5 font-medium transition-colors",
+                pasteMode === "variety"
+                  ? "bg-leaf text-white"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+              )}
+            >
+              Variety / cultivar
+            </button>
+            <button
+              type="button"
+              onClick={() => setPasteMode("type")}
+              className={cn(
+                "px-3 py-1.5 font-medium transition-colors border-l",
+                pasteMode === "type"
+                  ? "bg-leaf text-white"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+              )}
+            >
+              Plant type
+            </button>
+          </div>
+        </div>
         <p className="text-xs text-muted-foreground">
-          Separate by commas or new lines. Status, variety, and photos can be added on the next step.
+          {pasteMode === "variety"
+            ? "Each entry fills Variety / cultivar (e.g. BNR, Deliciosa). You'll add the plant type (e.g. Fig, Monstera) on the next step."
+            : "Each entry fills Plant type (e.g. Fig, Monstera). You can add varieties on the next step."}
         </p>
         <Button
           onClick={parsePasteList}

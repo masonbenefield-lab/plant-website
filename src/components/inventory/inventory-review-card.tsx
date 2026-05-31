@@ -62,7 +62,7 @@ export function InventoryReviewCard({ draft, onChange, onRemove }: Props) {
         <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
           {missingName ? (
             <span className="text-sm text-destructive flex items-center gap-1">
-              <AlertTriangle size={13} /> Missing plant name
+              <AlertTriangle size={13} /> Missing plant type
             </span>
           ) : (
             <span className="text-sm font-semibold truncate">{draft.plant_name}</span>
@@ -95,17 +95,17 @@ export function InventoryReviewCard({ draft, onChange, onRemove }: Props) {
       {open && (
         <div className="border-t px-4 py-4 space-y-4">
 
-          {/* Plant name + Variety */}
+          {/* Plant type + Variety */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor={`${draft.id}-name`}>
-                Plant name <span className="text-destructive">*</span>
+                Plant type <span className="text-destructive">*</span>
               </Label>
               <Input
                 id={`${draft.id}-name`}
                 value={draft.plant_name}
                 onChange={(e) => onChange({ plant_name: e.target.value })}
-                placeholder="e.g. Monstera"
+                placeholder="e.g. Fig, Monstera, Pothos"
                 className={missingName ? "border-destructive" : ""}
               />
             </div>
@@ -115,7 +115,7 @@ export function InventoryReviewCard({ draft, onChange, onRemove }: Props) {
                 id={`${draft.id}-variety`}
                 value={draft.variety}
                 onChange={(e) => onChange({ variety: e.target.value })}
-                placeholder="e.g. Deliciosa"
+                placeholder="e.g. BNR, Deliciosa"
               />
             </div>
           </div>
