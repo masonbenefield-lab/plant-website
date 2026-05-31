@@ -2104,6 +2104,9 @@ export default function InventoryClient({
                       </button>
                     ))}
                   </div>
+                  {!calculatedShippingEnabled && (
+                    <p className="text-xs text-muted-foreground">Want weight-based rates? <a href="/account#shipping-settings" className="underline hover:text-foreground">Enable calculated shipping →</a></p>
+                  )}
                   {listingShippingMode === "flat" && (
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-muted-foreground">$</span>
@@ -2218,6 +2221,9 @@ export default function InventoryClient({
                       </button>
                     ))}
                   </div>
+                  {!calculatedShippingEnabled && (
+                    <p className="text-xs text-muted-foreground">Want weight-based rates? <a href="/account#shipping-settings" className="underline hover:text-foreground">Enable calculated shipping →</a></p>
+                  )}
                   {auctionShippingMode === "flat" && (
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-muted-foreground">$</span>
@@ -2470,6 +2476,9 @@ export default function InventoryClient({
                           </button>
                         ))}
                       </div>
+                      {!calculatedShippingEnabled && (
+                        <p className="text-xs text-muted-foreground">Want weight-based rates? <a href="/account#shipping-settings" className="underline hover:text-foreground">Enable calculated shipping →</a></p>
+                      )}
                       {editShippingMode === "flat" && (
                         <div className="flex items-center gap-2 pt-1">
                           <span className="text-sm text-muted-foreground">$</span>

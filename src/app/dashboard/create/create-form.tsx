@@ -551,6 +551,9 @@ export default function CreateInventoryPage() {
                         </div>
                           );
                         })()}
+                        {!calculatedShippingEnabled && (
+                          <p className="text-xs text-muted-foreground">Want weight-based rates? <a href="/account#shipping-settings" className="underline hover:text-foreground">Enable calculated shipping →</a></p>
+                        )}
                         {size.shippingMode === "flat" && (
                           <div className="flex items-center gap-2">
                             <span className="text-xs text-muted-foreground">$</span>
