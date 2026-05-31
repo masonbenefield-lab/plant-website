@@ -29,15 +29,15 @@ export function StorefrontBannerEditor({
     const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
     if (error) { toast.error(error.message || "Upload failed"); setUploading(false); return; }
     const { data } = supabase.storage.from("avatars").getPublicUrl(path);
-    const newUrl = data.publicUrl;
+    const cleanUrl = data.publicUrl;
     const res = await fetch("/api/profile/update-photo", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ field: "banner_url", url: newUrl }),
+      body: JSON.stringify({ field: "banner_url", url: cleanUrl }),
     });
     setUploading(false);
     if (!res.ok) { toast.error("Could not save banner"); return; }
-    setUrl(newUrl);
+    setUrl(`${cleanUrl}?t=${Date.now()}`);
     router.refresh();
     toast.success("Banner updated");
   }
@@ -99,15 +99,15 @@ export function StorefrontAvatarEditor({
     const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
     if (error) { toast.error(error.message || "Upload failed"); setUploading(false); return; }
     const { data } = supabase.storage.from("avatars").getPublicUrl(path);
-    const newUrl = data.publicUrl;
+    const cleanUrl = data.publicUrl;
     const res = await fetch("/api/profile/update-photo", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ field: "avatar_url", url: newUrl }),
+      body: JSON.stringify({ field: "avatar_url", url: cleanUrl }),
     });
     setUploading(false);
     if (!res.ok) { toast.error("Could not save photo"); return; }
-    setUrl(newUrl);
+    setUrl(`${cleanUrl}?t=${Date.now()}`);
     router.refresh();
     toast.success("Profile photo updated");
   }
