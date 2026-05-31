@@ -67,7 +67,12 @@ export default async function SellerStorefront({
   const { data: { user } } = await supabase.auth.getUser();
 
   const adminClient = createAdminClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
-  const [{ data: listings }, { data: auctions }, { data: ratings }, { count: followerCount }, { data: gardenPlants }, { data: announcements }, { data: wishlistItems }] =
+
+  // Fetch archived inventory IDs so we can exclude their listings from the storefront
+  const { data: archivedInv } = await adminClient.from("inventory").select("id").eq("seller_id", profile.id).not("archived_at", "is", null);
+  const archivedInvIds = new Set(archivedInv?.map(r => r.id) ?? []);
+
+  const [{ data: rawListings }, { data: auctions }, { data: ratings }, { count: followerCount }, { data: gardenPlants }, { data: announcements }, { data: wishlistItems }] =
     await Promise.all([
       // Admin client bypasses RLS so sold_out listings are visible to all visitors, not just the seller
       adminClient.from("listings").select("*").eq("seller_id", profile.id).in("status", ["active", "sold_out"]).or("category.neq.Hidden,category.is.null").order("created_at", { ascending: false }),
@@ -84,6 +89,12 @@ export default async function SellerStorefront({
         ? createAdminClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!).from("wishlist_items").select("id, name, variety, notes, priority").eq("user_id", profile.id).order("name", { ascending: true }).order("variety", { ascending: true })
         : Promise.resolve({ data: [] }),
     ]);
+
+  // Exclude any listing whose linked inventory row has been archived
+  const listings = (rawListings ?? []).filter(l => {
+    const invId = (l as { inventory_id?: string | null }).inventory_id;
+    return !invId || !archivedInvIds.has(invId);
+  });
 
   const reviewerIds = [...new Set(ratings?.map((r) => r.reviewer_id) ?? [])];
   const { data: reviewers } = reviewerIds.length
@@ -260,7 +271,7 @@ export default async function SellerStorefront({
 
       <Tabs defaultValue={activeTab}>
         <TabsList>
-          <TabsTrigger value="shop">Shop ({listings?.filter(l => l.status === "active").length ?? 0})</TabsTrigger>
+          <TabsTrigger value="shop">Shop ({listings.filter(l => l.status === "active").length})</TabsTrigger>
           {profile.stripe_onboarded && (
             <TabsTrigger value="auctions">Auctions ({auctions?.length ?? 0})</TabsTrigger>
           )}
@@ -279,7 +290,7 @@ export default async function SellerStorefront({
         <TabsContent value="shop" className="mt-6">
           <StorefrontListings
             paymentsEnabled={!!profile.stripe_onboarded}
-            listings={(listings ?? []).map(l => ({
+            listings={listings.map(l => ({
               id: l.id,
               plant_name: l.plant_name,
               variety: l.variety ?? null,
