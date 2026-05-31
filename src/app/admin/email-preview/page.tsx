@@ -19,6 +19,7 @@ import {
   buildDigestHtml,
   buildReengagementHtml,
   buildGardenCareReminderHtml,
+  buildConfirmationEmailHtml,
 } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
@@ -98,6 +99,15 @@ export default async function EmailPreviewPage() {
   if (!(profile as { is_admin?: boolean } | null)?.is_admin) redirect("/");
 
   const emails = [
+    // ── Auth ─────────────────────────────────────────────────────────────────
+    {
+      id: "email-confirmation",
+      label: "Confirm Email",
+      category: "Auth",
+      html: buildConfirmationEmailHtml({
+        confirmUrl: `${PREVIEW_SITE}/auth/callback?code=preview-token`,
+      }),
+    },
     // ── Buyer transactional ──────────────────────────────────────────────────
     {
       id: "order-confirmation",

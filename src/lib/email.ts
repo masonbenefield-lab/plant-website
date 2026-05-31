@@ -114,6 +114,24 @@ function infoCard(rows: { label: string; value: string }[]): string {
   return `<table width="100%" cellpadding="0" cellspacing="0" style="background:#EFE7D6;border:1px solid #DED6C4;border-radius:10px;margin:20px 0 24px;overflow:hidden;">${cells}</table>`;
 }
 
+// ─── Email confirmation (Supabase signup) ────────────────────────────────────
+// confirmUrl: use "{{ .ConfirmationURL }}" when pasting into Supabase Auth → Email Templates
+
+export function buildConfirmationEmailHtml({ confirmUrl }: { confirmUrl: string }): string {
+  const siteUrl = siteBase();
+  return emailBase({
+    title: "Confirm your Plantet account",
+    heading: "Confirm your email",
+    subheading: "One click and you're in",
+    body: `
+      <p style="margin:0 0 20px;">Thanks for signing up! Click the button below to confirm your email address and activate your Plantet account.</p>
+      ${ctaBtn("Confirm my account", confirmUrl)}
+      <p style="margin:24px 0 0;font-size:13px;color:#6B7E72;text-align:center;">This link expires in 24 hours. If you didn't create an account, you can safely ignore this email.</p>
+    `,
+    footerNote: "You're receiving this because someone signed up for Plantet with this email address.",
+  });
+}
+
 // ─── Order confirmation (buyer) ──────────────────────────────────────────────
 
 export function buildOrderConfirmationHtml({
