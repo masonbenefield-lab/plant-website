@@ -45,10 +45,15 @@ export async function generateMetadata({
 
 export default async function SellerStorefront({
   params,
+  searchParams,
 }: {
   params: Promise<{ username: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }) {
   const { username } = await params;
+  const { tab } = await searchParams;
+  const VALID_TABS = ["shop", "auctions", "updates", "reviews", "garden", "wishlist"];
+  const activeTab = VALID_TABS.includes(tab ?? "") ? tab! : "shop";
   const supabase = await createClient();
 
   const { data: profile } = await supabase
@@ -244,7 +249,7 @@ export default async function SellerStorefront({
         </div>
       </div>
 
-      <Tabs defaultValue="shop">
+      <Tabs defaultValue={activeTab}>
         <TabsList>
           <TabsTrigger value="shop">Shop ({listings?.length ?? 0})</TabsTrigger>
           {profile.stripe_onboarded && (

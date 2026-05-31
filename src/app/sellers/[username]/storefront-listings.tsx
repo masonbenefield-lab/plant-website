@@ -264,7 +264,7 @@ export function StorefrontGarden({ plants, username }: { plants: GardenPlant[]; 
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {filtered.map((plant) => (
-            <Link key={plant.id} href={`/gardens/${username}/${plant.id}`}>
+            <Link key={plant.id} href={`/gardens/${username}/${plant.id}?from=storefront`}>
               <Card className="overflow-hidden h-full hover:shadow-md transition-shadow group">
                 <div className="aspect-square relative bg-muted">
                   {plant.images?.[0] ? (

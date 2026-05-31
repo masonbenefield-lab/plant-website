@@ -99,10 +99,14 @@ export async function generateMetadata({
 
 export default async function PublicPlantDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ username: string; id: string }>;
+  searchParams: Promise<{ from?: string }>;
 }) {
   const { username, id } = await params;
+  const { from } = await searchParams;
+  const fromStorefront = from === "storefront";
   const supabase = await createClient();
 
   const { data: profile } = await supabase
@@ -148,11 +152,11 @@ export default async function PublicPlantDetailPage({
 
       {/* Back nav */}
       <Link
-        href={`/gardens/${username}`}
+        href={fromStorefront ? `/sellers/${username}?tab=garden` : `/gardens/${username}`}
         className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
       >
         <ChevronLeft size={16} />
-        {displayName} Garden
+        {fromStorefront ? `${displayName} Storefront` : `${displayName} Garden`}
       </Link>
 
       {/* Header */}
@@ -247,7 +251,7 @@ export default async function PublicPlantDetailPage({
               <div className="flex-1 min-w-0">
                 <p className="text-xs text-muted-foreground">Grown by</p>
                 <Link
-                  href={`/gardens/${username}`}
+                  href={fromStorefront ? `/sellers/${username}?tab=garden` : `/gardens/${username}`}
                   className="text-sm font-medium hover:text-leaf transition-colors truncate block"
                 >
                   {displayName}
