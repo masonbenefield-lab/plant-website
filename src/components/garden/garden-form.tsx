@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useTransition, useEffect } from "react";
+import { useState, useRef, useTransition, useEffect, useCallback } from "react";
 import { compressImage } from "@/lib/compress-image";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -85,17 +85,15 @@ export function GardenForm({ mode, plant, initialValues, returnTo }: GardenFormP
   const [notes, setNotes] = useState(plant?.notes ?? "");
   const [publicNotes, setPublicNotes] = useState(plant?.public_notes ?? "");
   const [images, setImages] = useState<string[]>(plant?.images ?? []);
-  const [waterInterval, setWaterInterval] = useState(plant?.water_interval_days?.toString() ?? "");
-  const [fertilizeInterval, setFertilizeInterval] = useState(plant?.fertilize_interval_days?.toString() ?? "");
-  const [repotInterval, setRepotInterval] = useState(plant?.repot_interval_days?.toString() ?? "");
-  const [pruneInterval, setPruneInterval] = useState(plant?.prune_interval_days?.toString() ?? "");
   const [uploading, setUploading] = useState(false);
   const [shareToFeed, setShareToFeed] = useState(false);
   const [resolvedUserId, setResolvedUserId] = useState<string | null>(plant?.from_user_id ?? null);
   const [resolvedUsername, setResolvedUsername] = useState<string | null>(null);
   const [checkingUser, setCheckingUser] = useState(false);
   const [sourceNameTouched, setSourceNameTouched] = useState(false);
+  const [suggestions, setSuggestions] = useState<{ id: string; username: string; display_name: string | null; avatar_url: string | null }[]>([]);
   const userCheckRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
 
   async function handlePhotoUpload(files: FileList) {
     if (images.length >= MAX_PHOTOS) {
@@ -125,6 +123,17 @@ export function GardenForm({ mode, plant, initialValues, returnTo }: GardenFormP
     setImages((prev) => prev.filter((u) => u !== url));
   }
 
+  // Close suggestions on outside click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (suggestionsRef.current && !suggestionsRef.current.contains(e.target as Node)) {
+        setSuggestions([]);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   // Auto-create origin request for existing plants that have from_user_id but no confirmed verification
   useEffect(() => {
     if (mode === "edit" && plant?.from_user_id && !plant?.origin_verified) {
@@ -142,6 +151,7 @@ export function GardenForm({ mode, plant, initialValues, returnTo }: GardenFormP
     setSourceNameTouched(true);
     setResolvedUserId(null);
     setResolvedUsername(null);
+    setSuggestions([]);
     if (userCheckRef.current) clearTimeout(userCheckRef.current);
     if (!val.trim() || val.trim().length < 2) return;
     userCheckRef.current = setTimeout(async () => {
@@ -149,10 +159,9 @@ export function GardenForm({ mode, plant, initialValues, returnTo }: GardenFormP
       try {
         const res = await fetch(`/api/users/search?q=${encodeURIComponent(val.trim())}`);
         const data = await res.json();
-        const exact = (data.users ?? []).find(
-          (u: { id: string; username: string }) =>
-            u.username.toLowerCase() === val.trim().toLowerCase()
-        );
+        const users: { id: string; username: string; display_name: string | null; avatar_url: string | null }[] = data.users ?? [];
+        setSuggestions(users.slice(0, 5));
+        const exact = users.find((u) => u.username.toLowerCase() === val.trim().toLowerCase());
         if (exact) {
           setResolvedUserId(exact.id);
           setResolvedUsername(exact.username);
@@ -160,8 +169,18 @@ export function GardenForm({ mode, plant, initialValues, returnTo }: GardenFormP
       } finally {
         setCheckingUser(false);
       }
-    }, 600);
+    }, 400);
   }
+
+  const selectSuggestion = useCallback((u: { id: string; username: string; display_name: string | null }) => {
+    setSourceName(u.display_name || u.username);
+    setResolvedUserId(u.id);
+    setResolvedUsername(u.username);
+    setSourceNameTouched(true);
+    setSuggestions([]);
+    if (userCheckRef.current) clearTimeout(userCheckRef.current);
+    setCheckingUser(false);
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -191,10 +210,6 @@ export function GardenForm({ mode, plant, initialValues, returnTo }: GardenFormP
         notes: notes.trim() || null,
         public_notes: publicNotes.trim() || null,
         images,
-        water_interval_days: waterInterval ? parseInt(waterInterval) : null,
-        fertilize_interval_days: fertilizeInterval ? parseInt(fertilizeInterval) : null,
-        repot_interval_days: repotInterval ? parseInt(repotInterval) : null,
-        prune_interval_days: pruneInterval ? parseInt(pruneInterval) : null,
         ...fromUserIdPayload,
       };
 
@@ -374,45 +389,64 @@ export function GardenForm({ mode, plant, initialValues, returnTo }: GardenFormP
               ))}
             </SelectContent>
           </Select>
-          <div className="space-y-1">
+          <div className="relative" ref={suggestionsRef}>
             <Input
               value={sourceName}
               onChange={(e) => handleSourceNameChange(e.target.value)}
               placeholder="Name / seller / friend"
+              autoComplete="off"
             />
-            {checkingUser && (
-              <p className="text-xs text-muted-foreground flex items-center gap-1">
-                <Loader2 size={11} className="animate-spin" /> Checking...
+            {/* Suggestion dropdown */}
+            {suggestions.length > 0 && (
+              <div className="absolute z-50 w-full top-full mt-1 rounded-lg border bg-card shadow-lg overflow-hidden">
+                {suggestions.map((u) => (
+                  <button
+                    key={u.id}
+                    type="button"
+                    onMouseDown={(e) => { e.preventDefault(); selectSuggestion(u); }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-muted/60 transition-colors"
+                  >
+                    {u.avatar_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={u.avatar_url} alt={u.username} className="h-7 w-7 rounded-full object-cover shrink-0" />
+                    ) : (
+                      <div className="h-7 w-7 rounded-full bg-[#DFE7D4] flex items-center justify-center text-leaf text-xs font-bold shrink-0">
+                        {u.username.slice(0, 1).toUpperCase()}
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium leading-tight truncate">{u.display_name || u.username}</p>
+                      {u.display_name && (
+                        <p className="text-xs text-muted-foreground leading-tight">@{u.username}</p>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+            {/* Status messages */}
+            {checkingUser && !suggestions.length && (
+              <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                <Loader2 size={11} className="animate-spin" /> Searching...
               </p>
             )}
-            {resolvedUsername && !checkingUser && (
-              <p className="text-xs text-leaf flex items-center gap-1">
+            {resolvedUsername && !checkingUser && !suggestions.length && (
+              <p className="text-xs text-leaf flex items-center gap-1 mt-1">
                 <CheckCircle2 size={11} />
-                @{resolvedUsername}{" "}is on Plantet — they&apos;ll be asked to confirm
+                {resolvedUsername} is on Plantet — they&apos;ll be asked to confirm
               </p>
             )}
             {mode === "edit" && !sourceNameTouched && plant?.from_user_id && !plant?.origin_verified && (
-              <p className="text-xs text-amber-600 flex items-center gap-1">
+              <p className="text-xs text-amber-600 flex items-center gap-1 mt-1">
                 Waiting for confirmation from the seller
               </p>
             )}
             {mode === "edit" && !sourceNameTouched && plant?.origin_verified && (
-              <p className="text-xs text-leaf flex items-center gap-1">
+              <p className="text-xs text-leaf flex items-center gap-1 mt-1">
                 <CheckCircle2 size={11} /> Verified
               </p>
             )}
           </div>
-        </div>
-      </div>
-
-      {/* Care schedule */}
-      <div className="space-y-2">
-        <Label>Care schedule <span className="text-muted-foreground font-normal text-xs">(optional — track how often you water, fertilize, repot, and prune)</span></Label>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <IntervalInput label="💧 Water every" value={waterInterval} onChange={setWaterInterval} />
-          <IntervalInput label="🌿 Fertilize every" value={fertilizeInterval} onChange={setFertilizeInterval} />
-          <IntervalInput label="🪴 Repot every" value={repotInterval} onChange={setRepotInterval} />
-          <IntervalInput label="✂️ Prune every" value={pruneInterval} onChange={setPruneInterval} />
         </div>
       </div>
 
@@ -481,22 +515,3 @@ export function GardenForm({ mode, plant, initialValues, returnTo }: GardenFormP
   );
 }
 
-function IntervalInput({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
-  return (
-    <div className="space-y-1">
-      <Label className="text-xs text-muted-foreground">{label}</Label>
-      <div className="flex items-center gap-1.5">
-        <Input
-          type="number"
-          min={1}
-          max={365}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder="—"
-          className="w-16 text-center"
-        />
-        <span className="text-xs text-muted-foreground">days</span>
-      </div>
-    </div>
-  );
-}
