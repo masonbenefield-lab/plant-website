@@ -545,7 +545,13 @@ export default function InventoryClient({
       shipping_weight_oz: listingShippingMode === "weight" ? Number(listingShippingWeightOz) : null,
     }).select("id").single();
     if (error) { toast.error(error.message); setSubmitting(false); return; }
-    await supabase.from("inventory").update({ listing_id: newListing.id, listing_quantity: qty }).eq("id", modal.row.id);
+    await supabase.from("inventory").update({
+      listing_id: newListing.id,
+      listing_quantity: qty,
+      free_shipping: listingShippingMode === "free",
+      shipping_cost_cents: listingShippingMode === "flat" ? dollarsToCents(listingShippingCost) : null,
+      shipping_weight_oz: listingShippingMode === "weight" ? Number(listingShippingWeightOz) : null,
+    }).eq("id", modal.row.id);
     setSubmitting(false);
     toast.success(`${modal.row.plant_name} is live in your shop!`);
     setModal(null);

@@ -221,6 +221,9 @@ export default function CreateInventoryPage() {
         const { error: linkErr } = await supabase.from("inventory").update({
           listing_id: listing.id,
           listing_quantity: listedQty,
+          free_shipping: s.shippingMode === "free",
+          shipping_cost_cents: s.shippingMode === "flat" && s.shippingCost ? dollarsToCents(s.shippingCost) : null,
+          shipping_weight_oz: s.shippingMode === "weight" && s.weightOz ? Math.max(1, Math.round(parseFloat(s.weightOz))) : null,
         }).eq("id", inventoryId);
 
         if (linkErr) {
