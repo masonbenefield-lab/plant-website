@@ -140,7 +140,11 @@ export default async function SellerStorefront({
       )}
 
       {/* Storefront announcement */}
-      {(profile as { announcement?: string | null }).announcement && (
+      {(profile as { announcement?: string | null }).announcement &&
+        !(
+          (profile as { announcement_expires_at?: string | null }).announcement_expires_at &&
+          new Date((profile as { announcement_expires_at?: string | null }).announcement_expires_at!) < new Date()
+        ) && (
         <div className="mb-6 rounded-lg border border-[#C5D4BC] bg-[#EBF0E6] dark:bg-forest/30 dark:border-forest px-4 py-3 text-sm text-forest dark:text-[#C5D4BC] font-medium">
           {(profile as { announcement?: string | null }).announcement}
         </div>

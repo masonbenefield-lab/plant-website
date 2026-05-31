@@ -9,7 +9,7 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { username, display_name, bio, avatar_url, location, banner_url, show_follower_count, shipping_days, shipping_days_max, return_policy_type, return_policy_notes, vacation_mode, vacation_until, offers_enabled, announcement, email_marketing_opt_in, social_links } = await request.json() as {
+  const { username, display_name, bio, avatar_url, location, banner_url, show_follower_count, shipping_days, shipping_days_max, return_policy_type, return_policy_notes, vacation_mode, vacation_until, offers_enabled, announcement, announcement_expires_at, email_marketing_opt_in, social_links } = await request.json() as {
     username: string;
     display_name?: string | null;
     bio?: string;
@@ -25,6 +25,7 @@ export async function POST(request: Request) {
     vacation_until?: string | null;
     offers_enabled?: boolean;
     announcement?: string | null;
+    announcement_expires_at?: string | null;
     email_marketing_opt_in?: boolean;
     social_links?: Record<string, string> | null;
   };
@@ -82,6 +83,7 @@ export async function POST(request: Request) {
       vacation_until: vacation_until ?? null,
       offers_enabled: offers_enabled ?? true,
       announcement: announcement ?? null,
+      announcement_expires_at: announcement ? (announcement_expires_at ?? null) : null,
       email_marketing_opt_in: email_marketing_opt_in ?? false,
       social_links: social_links && Object.keys(social_links).length > 0 ? social_links : null,
     })

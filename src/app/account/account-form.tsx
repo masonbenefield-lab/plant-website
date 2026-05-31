@@ -49,6 +49,7 @@ export default function AccountForm({
   const [vacationUntil, setVacationUntil] = useState(profile?.vacation_until ?? "");
   const [offersEnabled, setOffersEnabled] = useState((profile as { offers_enabled?: boolean } | null)?.offers_enabled !== false);
   const [announcement, setAnnouncement] = useState((profile as { announcement?: string | null } | null)?.announcement ?? "");
+  const [announcementExpiresAt, setAnnouncementExpiresAt] = useState((profile as { announcement_expires_at?: string | null } | null)?.announcement_expires_at?.split("T")[0] ?? "");
   const [emailOptIn, setEmailOptIn] = useState(profile?.email_marketing_opt_in ?? false);
   const [socialLinks, setSocialLinks] = useState<Record<string, string>>(
     (profile?.social_links as Record<string, string> | null) ?? {}
@@ -184,6 +185,7 @@ export default function AccountForm({
         vacation_until: vacationUntil || null,
         offers_enabled: offersEnabled,
         announcement: announcement.trim() || null,
+        announcement_expires_at: announcement.trim() && announcementExpiresAt ? announcementExpiresAt : null,
         email_marketing_opt_in: emailOptIn,
         social_links: Object.fromEntries(
           Object.entries(socialLinks).filter(([, v]) => v.trim().length > 0)
@@ -662,11 +664,36 @@ export default function AccountForm({
               <Textarea
                 id="announcement"
                 value={announcement}
-                onChange={(e) => setAnnouncement(e.target.value)}
+                onChange={(e) => {
+                  setAnnouncement(e.target.value);
+                  if (!e.target.value.trim()) setAnnouncementExpiresAt("");
+                }}
                 placeholder="e.g. 🌿 Spring sale! 20% off all tropicals this week"
                 rows={2}
                 maxLength={200}
               />
+              {announcement.trim() && (
+                <div className="flex items-center gap-2 pt-1">
+                  <Label htmlFor="announcement-expires" className="text-xs text-muted-foreground whitespace-nowrap">Expires on (optional)</Label>
+                  <Input
+                    id="announcement-expires"
+                    type="date"
+                    value={announcementExpiresAt}
+                    onChange={(e) => setAnnouncementExpiresAt(e.target.value)}
+                    min={new Date().toISOString().split("T")[0]}
+                    className="w-40 h-8 text-xs"
+                  />
+                  {announcementExpiresAt && (
+                    <button
+                      type="button"
+                      onClick={() => setAnnouncementExpiresAt("")}
+                      className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+              )}
               <p className="text-xs text-muted-foreground">Shown as a banner at the top of your storefront. Max 200 characters. Clear to remove.</p>
             </div>
 
