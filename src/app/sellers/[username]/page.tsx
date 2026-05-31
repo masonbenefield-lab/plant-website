@@ -68,7 +68,7 @@ export default async function SellerStorefront({
 
   const [{ data: listings }, { data: auctions }, { data: ratings }, { count: followerCount }, { data: gardenPlants }, { data: announcements }, { data: wishlistItems }] =
     await Promise.all([
-      supabase.from("listings").select("*").eq("seller_id", profile.id).eq("status", "active").or("category.neq.Hidden,category.is.null").order("created_at", { ascending: false }),
+      supabase.from("listings").select("*").eq("seller_id", profile.id).in("status", ["active", "sold_out"]).or("category.neq.Hidden,category.is.null").order("created_at", { ascending: false }),
       profile.stripe_onboarded
         ? supabase.from("auctions").select("*").eq("seller_id", profile.id).eq("status", "active").or("category.neq.Hidden,category.is.null").order("created_at", { ascending: false })
         : Promise.resolve({ data: [] }),
@@ -258,7 +258,7 @@ export default async function SellerStorefront({
 
       <Tabs defaultValue={activeTab}>
         <TabsList>
-          <TabsTrigger value="shop">Shop ({listings?.length ?? 0})</TabsTrigger>
+          <TabsTrigger value="shop">Shop ({listings?.filter(l => l.status === "active").length ?? 0})</TabsTrigger>
           {profile.stripe_onboarded && (
             <TabsTrigger value="auctions">Auctions ({auctions?.length ?? 0})</TabsTrigger>
           )}
@@ -285,6 +285,7 @@ export default async function SellerStorefront({
               images: l.images as string[],
               quantity: l.quantity,
               category: (l as { category?: string | null }).category ?? null,
+              status: l.status,
             }))}
           />
         </TabsContent>

@@ -17,6 +17,7 @@ type Listing = {
   images: string[];
   quantity: number;
   category: string | null;
+  status: string;
 };
 
 type Auction = {
@@ -129,7 +130,8 @@ function CategoryPills({
 export function StorefrontListings({ listings, paymentsEnabled = true }: { listings: Listing[]; paymentsEnabled?: boolean }) {
   const [cat, setCat] = useState("");
   const [q, setQ] = useState("");
-  const categories = [...new Set(listings.map((l) => l.category).filter(Boolean))] as string[];
+  const activeListings = listings.filter(l => l.status === "active");
+  const categories = [...new Set(activeListings.map((l) => l.category).filter(Boolean))] as string[];
 
   const filtered = listings
     .filter((l) => !cat || l.category === cat)
@@ -137,47 +139,72 @@ export function StorefrontListings({ listings, paymentsEnabled = true }: { listi
       !q.trim() || `${l.plant_name} ${l.variety ?? ""}`.toLowerCase().includes(q.toLowerCase())
     );
 
+  const filteredActive = filtered.filter(l => l.status === "active");
+  const filteredSoldOut = filtered.filter(l => l.status === "sold_out");
+
   if (!listings.length) return <p className="text-muted-foreground">No active listings.</p>;
+
+  const renderCard = (listing: Listing) => {
+    const soldOut = listing.status === "sold_out";
+    const card = (
+      <Card className={cn(
+        "hover:shadow-md transition-shadow cursor-pointer",
+        !paymentsEnabled && "opacity-90",
+        soldOut && "opacity-75"
+      )}>
+        <div className="relative h-48 w-full overflow-hidden rounded-t-lg bg-muted">
+          {(listing.images as string[])[0] ? (
+            <Image src={(listing.images as string[])[0]} alt={listing.plant_name} fill className="object-cover" />
+          ) : null}
+          {soldOut && (
+            <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+              <span className="bg-white/90 text-gray-800 font-semibold text-sm px-3 py-1 rounded-full">Sold out</span>
+            </div>
+          )}
+        </div>
+        <CardContent className="p-4">
+          {listing.category && (
+            <span className="inline-block text-xs font-medium text-leaf dark:text-sage bg-[#DFE7D4] dark:bg-forest/40 px-2 py-0.5 rounded-full mb-1.5">
+              {listing.category}
+            </span>
+          )}
+          <p className="font-semibold">{listing.plant_name}</p>
+          {listing.variety && <p className="text-sm text-muted-foreground">{listing.variety}</p>}
+          <div className="flex items-center justify-between mt-2">
+            <span className={cn("font-bold", soldOut ? "text-muted-foreground" : "text-leaf")}>{centsToDisplay(listing.price_cents)}</span>
+            {soldOut
+              ? <span className="text-xs text-muted-foreground italic">Currently unavailable</span>
+              : paymentsEnabled
+              ? <Badge variant="secondary">{listing.quantity} avail.</Badge>
+              : <span className="text-xs text-muted-foreground italic">Not available yet</span>
+            }
+          </div>
+        </CardContent>
+      </Card>
+    );
+    return <Link key={listing.id} href={`/shop/${listing.id}`}>{card}</Link>;
+  };
 
   return (
     <>
       <SearchInput value={q} onChange={setQ} />
       <CategoryPills categories={categories} active={cat} onChange={setCat} />
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filtered.map((listing) => {
-          const card = (
-            <Card className={paymentsEnabled ? "hover:shadow-md transition-shadow cursor-pointer" : "opacity-90"}>
-              {(listing.images as string[])[0] && (
-                <div className="relative h-48 w-full overflow-hidden rounded-t-lg">
-                  <Image src={(listing.images as string[])[0]} alt={listing.plant_name} fill className="object-cover" />
-                </div>
-              )}
-              <CardContent className="p-4">
-                {listing.category && (
-                  <span className="inline-block text-xs font-medium text-leaf dark:text-sage bg-[#DFE7D4] dark:bg-forest/40 px-2 py-0.5 rounded-full mb-1.5">
-                    {listing.category}
-                  </span>
-                )}
-                <p className="font-semibold">{listing.plant_name}</p>
-                {listing.variety && <p className="text-sm text-muted-foreground">{listing.variety}</p>}
-                <div className="flex items-center justify-between mt-2">
-                  <span className="font-bold text-leaf">{centsToDisplay(listing.price_cents)}</span>
-                  {paymentsEnabled
-                    ? <Badge variant="secondary">{listing.quantity} avail.</Badge>
-                    : <span className="text-xs text-muted-foreground italic">Not available yet</span>
-                  }
-                </div>
-              </CardContent>
-            </Card>
-          );
-          return paymentsEnabled
-            ? <Link key={listing.id} href={`/shop/${listing.id}`}>{card}</Link>
-            : <div key={listing.id}>{card}</div>;
-        })}
-        {filtered.length === 0 && (
-          <p className="text-muted-foreground col-span-full">No listings match your search.</p>
-        )}
-      </div>
+      {filteredActive.length === 0 && filteredSoldOut.length === 0 && (
+        <p className="text-muted-foreground">No listings match your search.</p>
+      )}
+      {filteredActive.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredActive.map(renderCard)}
+        </div>
+      )}
+      {filteredSoldOut.length > 0 && (
+        <div className={cn("grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4", filteredActive.length > 0 && "mt-6")}>
+          {filteredActive.length > 0 && (
+            <p className="col-span-full text-xs font-medium text-muted-foreground uppercase tracking-wide">Sold out</p>
+          )}
+          {filteredSoldOut.map(renderCard)}
+        </div>
+      )}
     </>
   );
 }

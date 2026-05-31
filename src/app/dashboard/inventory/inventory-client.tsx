@@ -538,7 +538,13 @@ export default function InventoryClient({
     if (isNaN(val) || val < 0) return;
     const supabase = createClient();
     const { error } = await supabase.from("inventory").update({ quantity: val }).eq("id", rowId);
-    if (error) toast.error(error.message); else router.refresh();
+    if (error) { toast.error(error.message); return; }
+    const row = activeRows.find(r => r.id === rowId);
+    if (row?.listing_id && row.listing_status === "sold_out" && val > 0) {
+      await supabase.from("listings").update({ status: "active" }).eq("id", row.listing_id);
+      toast.success(`${row.plant_name} is back in your shop!`);
+    }
+    router.refresh();
   }
 
   async function submitListing() {
@@ -1293,7 +1299,7 @@ export default function InventoryClient({
     );
 
     return (
-      <div key={row.id} className="border-t border-border/40 px-4 py-3 space-y-2">
+      <div key={row.id} className={cn("border-t border-border/40 px-4 py-3 space-y-2", row.listing_status === "sold_out" && "border-l-2 border-l-amber-400 bg-amber-50/50 dark:bg-amber-950/20")}>
         {/* Size / Variant + qty + actions */}
         <div className="flex items-center gap-2">
           {row.images[0] ? (
@@ -1358,31 +1364,38 @@ export default function InventoryClient({
 
         {/* Shop */}
         {hasListing ? (
-          <div className="flex items-center gap-2 flex-wrap">
-            <Store size={12} className="text-leaf shrink-0" />
-            <span className="text-sm font-medium">{centsToDisplay(row.listing_price_cents ?? 0)}</span>
-            <span className={cn(
-              "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
-              row.listing_status === "active" ? "bg-[#DFE7D4] text-leaf dark:bg-forest/40 dark:text-sage" :
-              row.listing_status === "paused" ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400" :
-              "bg-red-100 text-red-600"
-            )}>{row.listing_status}</span>
-            {row.listing_sale_price_cents && row.listing_sale_ends_at && new Date(row.listing_sale_ends_at) > new Date() && (
-              <span className="text-xs text-orange-600 font-medium">✦ Sale</span>
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Store size={12} className="text-leaf shrink-0" />
+              <span className="text-sm font-medium">{centsToDisplay(row.listing_price_cents ?? 0)}</span>
+              <span className={cn(
+                "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
+                row.listing_status === "active" ? "bg-[#DFE7D4] text-leaf dark:bg-forest/40 dark:text-sage" :
+                row.listing_status === "paused" ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400" :
+                "bg-red-100 text-red-600"
+              )}>{row.listing_status}</span>
+              {row.listing_sale_price_cents && row.listing_sale_ends_at && new Date(row.listing_sale_ends_at) > new Date() && (
+                <span className="text-xs text-orange-600 font-medium">✦ Sale</span>
+              )}
+              {row.free_shipping ? (
+                <span className="text-xs text-muted-foreground">Free shipping</span>
+              ) : row.shipping_cost_cents ? (
+                <span className="text-xs text-muted-foreground">{centsToDisplay(row.shipping_cost_cents)} shipping</span>
+              ) : row.shipping_weight_oz ? (
+                <span className="text-xs text-muted-foreground">Calculated shipping</span>
+              ) : null}
+              {row.listing_status !== "sold_out" && (
+                <button
+                  onClick={() => openManageListing(row)}
+                  className={cn("text-xs hover:underline", managingListingId === row.id ? "text-foreground font-medium" : "text-blue-600")}
+                >
+                  {managingListingId === row.id ? "Hide ↑" : "Manage ↓"}
+                </button>
+              )}
+            </div>
+            {row.listing_status === "sold_out" && (
+              <p className="text-xs text-amber-700 dark:text-amber-400">Add stock → relists automatically</p>
             )}
-            {row.free_shipping ? (
-              <span className="text-xs text-muted-foreground">Free shipping</span>
-            ) : row.shipping_cost_cents ? (
-              <span className="text-xs text-muted-foreground">{centsToDisplay(row.shipping_cost_cents)} shipping</span>
-            ) : row.shipping_weight_oz ? (
-              <span className="text-xs text-muted-foreground">Calculated shipping</span>
-            ) : null}
-            <button
-              onClick={() => openManageListing(row)}
-              className={cn("text-xs hover:underline", managingListingId === row.id ? "text-foreground font-medium" : "text-blue-600")}
-            >
-              {managingListingId === row.id ? "Hide ↑" : "Manage ↓"}
-            </button>
           </div>
         ) : a > 0 ? (
           <button onClick={() => openModal({ type: "listing", row })} className="inline-flex items-center gap-1.5 text-sm text-leaf hover:underline font-medium">
@@ -1431,9 +1444,9 @@ export default function InventoryClient({
 
     return (
       <>
-      <tr key={row.id} className="border-t border-border/40 hover:bg-muted/20 transition-colors">
+      <tr key={row.id} className={cn("border-t border-border/40 hover:bg-muted/20 transition-colors", row.listing_status === "sold_out" && "bg-amber-50/50 dark:bg-amber-950/20")}>
         {/* Size / Variant */}
-        <td className="py-3 pl-3 pr-3 w-44">
+        <td className={cn("py-3 pl-3 pr-3 w-44", row.listing_status === "sold_out" && "border-l-2 border-l-amber-400")}>
           <div className="flex items-center gap-2">
             {row.images[0] ? (
               <Image src={row.images[0]} alt="" width={36} height={36} className="w-9 h-9 rounded object-cover border shrink-0" />
@@ -1518,6 +1531,9 @@ export default function InventoryClient({
                   <span className="text-xs text-orange-600 font-medium">✦ Sale</span>
                 )}
               </div>
+              {row.listing_status === "sold_out" && (
+                <p className="text-xs text-amber-700 dark:text-amber-400">Add stock → relists automatically</p>
+              )}
               {row.free_shipping ? (
                 <span className="text-xs text-muted-foreground">Free shipping</span>
               ) : row.shipping_cost_cents ? (
@@ -1525,12 +1541,14 @@ export default function InventoryClient({
               ) : row.shipping_weight_oz ? (
                 <span className="text-xs text-muted-foreground">Calculated shipping</span>
               ) : null}
-              <button
-                onClick={() => openManageListing(row)}
-                className={cn("text-xs hover:underline", managingListingId === row.id ? "text-foreground font-medium" : "text-blue-600")}
-              >
-                {managingListingId === row.id ? "Hide ↑" : "Manage listing ↓"}
-              </button>
+              {row.listing_status !== "sold_out" && (
+                <button
+                  onClick={() => openManageListing(row)}
+                  className={cn("text-xs hover:underline", managingListingId === row.id ? "text-foreground font-medium" : "text-blue-600")}
+                >
+                  {managingListingId === row.id ? "Hide ↑" : "Manage listing ↓"}
+                </button>
+              )}
             </div>
           ) : a > 0 ? (
             <button
@@ -1630,6 +1648,7 @@ export default function InventoryClient({
     const totalQty = group.variants.reduce((sum, v) => sum + v.quantity, 0);
     const totalAvail = group.variants.reduce((sum, v) => sum + avail(v), 0);
     const hasShop = group.variants.some(v => v.listing_id && v.listing_status === "active");
+    const hasSoldOut = group.variants.some(v => v.listing_status === "sold_out");
     const hasLiveAuction = group.variants.some(v => v.auctions.some(au => au.status === "active"));
     const first = group.variants[0];
 
@@ -1653,6 +1672,11 @@ export default function InventoryClient({
             {hasShop && (
               <span className="hidden sm:inline-flex items-center gap-1 text-xs text-leaf bg-[#DFE7D4] dark:bg-forest/40 dark:text-sage rounded-full px-2 py-0.5">
                 <Store size={10} /> Shop
+              </span>
+            )}
+            {hasSoldOut && (
+              <span className="hidden sm:inline-flex items-center gap-1 text-xs text-amber-700 bg-amber-100 dark:bg-amber-900/40 dark:text-amber-400 rounded-full px-2 py-0.5">
+                Sold out
               </span>
             )}
             {hasLiveAuction && (
@@ -1789,6 +1813,13 @@ export default function InventoryClient({
           <strong>Add a ship-from address before listing.</strong>{" "}
           Buyers can&apos;t see shipping rates until you set your shipping origin.{" "}
           <a href="/account#shipping-settings" className="underline font-medium hover:opacity-80">Add it now →</a>
+        </div>
+      )}
+
+      {activeRows.some(r => r.listing_status === "sold_out") && (
+        <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
+          <strong>{activeRows.filter(r => r.listing_status === "sold_out").length} item{activeRows.filter(r => r.listing_status === "sold_out").length !== 1 ? "s" : ""} sold out</strong>
+          {" "}— still visible on your storefront, but hidden from the public shop. Click a highlighted row&apos;s stock number to add inventory — the listing goes back live automatically.
         </div>
       )}
 

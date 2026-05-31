@@ -67,7 +67,7 @@ export default async function ListingPage({
     .from("listings")
     .select("*")
     .eq("id", id)
-    .eq("status", "active")
+    .in("status", ["active", "sold_out"])
     .single();
 
   if (!listing) notFound();
