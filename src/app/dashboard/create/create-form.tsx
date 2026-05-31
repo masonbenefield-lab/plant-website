@@ -170,6 +170,11 @@ export default function CreateInventoryPage() {
         setSaving(false);
         return;
       }
+      if (s.shippingMode === "weight" && (!s.weightOz || parseFloat(s.weightOz) <= 0)) {
+        toast.error("Enter a weight greater than 0 oz for calculated shipping");
+        setSaving(false);
+        return;
+      }
     }
 
     const rows = sizes.map(s => ({

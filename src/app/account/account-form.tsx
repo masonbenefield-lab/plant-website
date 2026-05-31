@@ -20,7 +20,7 @@ import {
 import { toast } from "sonner";
 import type { Database } from "@/lib/supabase/types";
 import { findProhibitedWord, censorWord, logViolation } from "@/lib/profanity";
-import { MapPin, Lock, Mail, KeyRound, Trash2 } from "lucide-react";
+import { MapPin, Lock, Mail, KeyRound, Trash2, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
@@ -86,6 +86,8 @@ export default function AccountForm({
     (profile as { auto_labels_enabled?: boolean } | null)?.auto_labels_enabled !== false
   );
   const [savingShipping, setSavingShipping] = useState(false);
+  const [addressValidation, setAddressValidation] = useState<{ valid: boolean; messages: string[] } | null>(null);
+  const [validatingAddress, setValidatingAddress] = useState(false);
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState("");
@@ -356,6 +358,7 @@ export default function AccountForm({
   async function saveShipping(e: React.FormEvent) {
     e.preventDefault();
     setSavingShipping(true);
+    setAddressValidation(null);
     const res = await fetch("/api/profile/update-shipping", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -368,8 +371,23 @@ export default function AccountForm({
     });
     const data = await res.json();
     setSavingShipping(false);
-    if (data.error) toast.error(data.error);
-    else toast.success("Shipping settings saved");
+    if (data.error) { toast.error(data.error); return; }
+    toast.success("Shipping settings saved");
+
+    // Validate the ship-from address with Shippo if one was provided
+    if (shipFrom.street1.trim() && shipFrom.city.trim() && shipFrom.zip.trim()) {
+      setValidatingAddress(true);
+      try {
+        const vRes = await fetch("/api/shippo/validate-address", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(shipFrom),
+        });
+        const vData = await vRes.json();
+        setAddressValidation(vData.error ? null : vData);
+      } catch { /* non-blocking */ }
+      setValidatingAddress(false);
+    }
   }
 
   function toggleService(token: string) {
@@ -856,11 +874,11 @@ export default function AccountForm({
               <div className="space-y-3">
                 <div className="space-y-1">
                   <Label htmlFor="sf-name">Full Name / Business Name</Label>
-                  <Input id="sf-name" value={shipFrom.name} onChange={(e) => setShipFrom({ ...shipFrom, name: e.target.value })} placeholder="Jane's Nursery" />
+                  <Input id="sf-name" value={shipFrom.name} onChange={(e) => { setShipFrom({ ...shipFrom, name: e.target.value }); setAddressValidation(null); }} placeholder="Jane's Nursery" />
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="sf-street1">Street Address</Label>
-                  <Input id="sf-street1" value={shipFrom.street1} onChange={(e) => setShipFrom({ ...shipFrom, street1: e.target.value })} placeholder="123 Main St" />
+                  <Input id="sf-street1" value={shipFrom.street1} onChange={(e) => { setShipFrom({ ...shipFrom, street1: e.target.value }); setAddressValidation(null); }} placeholder="123 Main St" />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
@@ -884,8 +902,36 @@ export default function AccountForm({
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="sf-phone">Phone <span className="text-destructive">*</span> <span className="text-xs font-normal text-muted-foreground">(required for shipping labels)</span></Label>
-                  <Input id="sf-phone" type="tel" value={shipFrom.phone} onChange={(e) => setShipFrom({ ...shipFrom, phone: e.target.value })} placeholder="e.g. 555-123-4567" />
+                  <Input id="sf-phone" type="tel" value={shipFrom.phone} onChange={(e) => { setShipFrom({ ...shipFrom, phone: e.target.value }); setAddressValidation(null); }} placeholder="e.g. 555-123-4567" />
                 </div>
+
+                {/* Address validation result — shown after saving */}
+                {validatingAddress && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 size={14} className="animate-spin" />
+                    Verifying address…
+                  </div>
+                )}
+                {!validatingAddress && addressValidation && (
+                  <div className={cn(
+                    "flex items-start gap-2 rounded-md border px-3 py-2 text-sm",
+                    addressValidation.valid
+                      ? "border-green-200 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-950/30 dark:text-green-300"
+                      : "border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950/30 dark:text-red-300"
+                  )}>
+                    {addressValidation.valid
+                      ? <CheckCircle2 size={15} className="mt-0.5 shrink-0" />
+                      : <XCircle size={15} className="mt-0.5 shrink-0" />}
+                    <div>
+                      <p className="font-medium">{addressValidation.valid ? "Address verified" : "Address issue detected"}</p>
+                      {addressValidation.messages.length > 0 && (
+                        <ul className="mt-0.5 space-y-0.5 text-xs opacity-80">
+                          {addressValidation.messages.map((m, i) => <li key={i}>{m}</li>)}
+                        </ul>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

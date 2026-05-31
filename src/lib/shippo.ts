@@ -103,6 +103,25 @@ export async function getShippingRates(params: {
   return rates;
 }
 
+export async function validateAddress(addr: ShipFromAddress): Promise<{ valid: boolean; messages: string[] }> {
+  const client = getClient();
+  const result = await client.addresses.create({
+    name: addr.name,
+    street1: addr.street1,
+    city: addr.city,
+    state: addr.state,
+    zip: addr.zip,
+    country: addr.country || "US",
+    phone: addr.phone ?? "",
+    validate: true,
+  });
+  const valid = result.validationResults?.isValid === true;
+  const messages = (result.validationResults?.messages ?? [])
+    .map((m: { text?: string }) => m.text ?? "")
+    .filter(Boolean);
+  return { valid, messages };
+}
+
 export async function purchaseLabel(rateId: string): Promise<{
   transactionId: string;
   trackingNumber: string;

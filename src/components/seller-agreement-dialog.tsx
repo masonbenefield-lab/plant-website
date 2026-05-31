@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollText } from "lucide-react";
 import { toast } from "sonner";
 
-const LAST_UPDATED = "April 29, 2026";
+const LAST_UPDATED = "May 31, 2026";
 
 interface SellerAgreementDialogProps {
   open: boolean;
@@ -98,6 +98,10 @@ export default function SellerAgreementDialog({ open, onOpenChange, onAccepted }
           <section>
             <h3 className="font-semibold mb-1">12. Governing Law</h3>
             <p>This Agreement is governed by the laws of the United States. Disputes shall be resolved through binding arbitration under the American Arbitration Association rules.</p>
+          </section>
+          <section>
+            <h3 className="font-semibold mb-1">13. Shipping Accuracy & Liability</h3>
+            <p>You are solely responsible for the accuracy of all shipping information you provide, including but not limited to package weight, dimensions, ship-from address, and handling time. Shipping rates displayed to buyers are <strong>estimates only</strong> based on the information you provide. Any carrier surcharges, postage adjustments, address correction fees, return shipping costs, or additional charges resulting from inaccurate or incomplete shipping information are your sole responsibility. Plantet does not guarantee the accuracy of any shipping estimate and will not absorb costs arising from seller-provided errors. By listing an item with shipping, you acknowledge that you have provided accurate weight and address information and accept full financial responsibility for any discrepancies identified by the carrier.</p>
           </section>
         </div>
 
