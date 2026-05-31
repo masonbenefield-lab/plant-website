@@ -70,7 +70,7 @@ export default async function SellerStorefront({
       supabase.from("ratings").select("*").eq("seller_id", profile.id).order("created_at", { ascending: false }),
       supabase.from("follows").select("*", { count: "exact", head: true }).eq("seller_id", profile.id),
       profile.garden_public
-        ? createAdminClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!).from("garden_plants").select("id, name, variety, status, location, planted_at, images, public_notes").eq("user_id", profile.id).or("is_public.eq.true,is_public.is.null").order("created_at", { ascending: false })
+        ? createAdminClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!).from("garden_plants").select("id, name, variety, status, location, planted_at, images, public_notes, pin_order").eq("user_id", profile.id).or("is_public.eq.true,is_public.is.null").order("pin_order", { ascending: true, nullsFirst: false }).order("created_at", { ascending: false })
         : Promise.resolve({ data: [] }),
       supabase.from("announcements").select("id, body, photos, created_at").eq("seller_id", profile.id).order("created_at", { ascending: false }).limit(20),
       profile.wishlist_public

@@ -38,6 +38,7 @@ type GardenPlant = {
   planted_at: string | null;
   images: string[] | null;
   public_notes?: string | null;
+  pin_order?: number | null;
 };
 
 type WishlistItem = {
