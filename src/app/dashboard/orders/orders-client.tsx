@@ -13,6 +13,7 @@ import { BulkOrderActions, OrderCheckbox } from "./bulk-order-actions";
 import type { OrderStatus } from "@/lib/supabase/types";
 import { toast } from "sonner";
 import { Printer } from "lucide-react";
+import GetLabelModal from "./get-label-modal";
 
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-100 text-yellow-800",
@@ -248,8 +249,10 @@ export default function OrdersClient({
                   )}
                   <div className="flex items-center gap-3 flex-wrap">
                     <TrackingInput orderId={order.id} initialValue={order.tracking_number ?? null} />
-                    {autoLabelsEnabled && order.shippo_rate_id && (
-                      <BuyLabelButton orderId={order.id} labelUrl={order.label_url} createdAt={order.created_at} />
+                    {autoLabelsEnabled && (
+                      order.shippo_rate_id
+                        ? <BuyLabelButton orderId={order.id} labelUrl={order.label_url} createdAt={order.created_at} />
+                        : <GetLabelModal orderId={order.id} initialLabelUrl={order.label_url} />
                     )}
                   </div>
                 </div>

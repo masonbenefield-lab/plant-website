@@ -16,7 +16,7 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { orderId } = await request.json() as { orderId: string };
+  const { orderId, rateId } = await request.json() as { orderId: string; rateId?: string };
   if (!orderId) return NextResponse.json({ error: "orderId required" }, { status: 400 });
 
   // Confirm caller owns this order as seller
@@ -33,12 +33,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ labelUrl: order.label_url });
   }
 
-  if (!order.shippo_rate_id) {
-    return NextResponse.json({ error: "No Shippo rate on this order — label cannot be purchased" }, { status: 400 });
+  const effectiveRateId = rateId ?? order.shippo_rate_id;
+  if (!effectiveRateId) {
+    return NextResponse.json({ error: "No rate selected" }, { status: 400 });
   }
 
   try {
-    const { transactionId, trackingNumber, labelUrl } = await purchaseLabel(order.shippo_rate_id);
+    const { transactionId, trackingNumber, labelUrl } = await purchaseLabel(effectiveRateId);
 
     const admin = adminClient();
     await admin.from("orders").update({
