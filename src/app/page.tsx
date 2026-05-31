@@ -583,14 +583,14 @@ export default async function LandingPage() {
       </section>
 
       {/* ── How it works ──────────────────────────────────────────── */}
-      <section className="py-16 sm:py-20 px-4 bg-sand">
+      <section className="py-16 sm:py-20 px-4 bg-sand dark:bg-muted">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="text-2xl sm:text-3xl font-bold mb-3 text-forest">How it works</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold mb-3 text-foreground">How it works</h2>
             <p className="text-muted-foreground max-w-md mx-auto">Simple for buyers. Simple for sellers.</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8">
-            <div className="bg-paper rounded-2xl p-6 sm:p-8 shadow-sm border border-rule">
+            <div className="bg-card rounded-2xl p-6 sm:p-8 shadow-sm border">
               <p className="text-xs font-bold uppercase tracking-widest text-leaf mb-6">For Buyers</p>
               <div className="space-y-6">
                 {([
@@ -603,17 +603,17 @@ export default async function LandingPage() {
                       {s.n}
                     </div>
                     <div>
-                      <p className="font-semibold text-ink mb-0.5">{s.title}</p>
+                      <p className="font-semibold text-foreground mb-0.5">{s.title}</p>
                       <p className="text-sm text-muted-foreground leading-relaxed">{s.desc}</p>
                     </div>
                   </div>
                 ))}
               </div>
-              <Link href="/shop" className="inline-block mt-7 text-sm font-medium text-leaf hover:text-forest underline underline-offset-2">
+              <Link href="/shop" className="inline-block mt-7 text-sm font-medium text-leaf hover:text-forest dark:hover:text-sage underline underline-offset-2">
                 Browse plants →
               </Link>
             </div>
-            <div className="bg-paper rounded-2xl p-6 sm:p-8 shadow-sm border border-rule">
+            <div className="bg-card rounded-2xl p-6 sm:p-8 shadow-sm border">
               <p className="text-xs font-bold uppercase tracking-widest text-leaf mb-6">For Sellers</p>
               <div className="space-y-6">
                 {([
@@ -626,13 +626,13 @@ export default async function LandingPage() {
                       {s.n}
                     </div>
                     <div>
-                      <p className="font-semibold text-ink mb-0.5">{s.title}</p>
+                      <p className="font-semibold text-foreground mb-0.5">{s.title}</p>
                       <p className="text-sm text-muted-foreground leading-relaxed">{s.desc}</p>
                     </div>
                   </div>
                 ))}
               </div>
-              <Link href="/signup" className="inline-block mt-7 text-sm font-medium text-leaf hover:text-forest underline underline-offset-2">
+              <Link href="/signup" className="inline-block mt-7 text-sm font-medium text-leaf hover:text-forest dark:hover:text-sage underline underline-offset-2">
                 Start selling free →
               </Link>
             </div>
