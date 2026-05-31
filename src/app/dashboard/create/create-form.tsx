@@ -170,7 +170,9 @@ export default function CreateInventoryPage() {
       images: imageUrls,
       category: category || "Other",
       pot_size: itemType === "plant" ? (s.potSize || null) : null,
-      shipping_weight_oz: s.weightOz ? Math.max(1, Math.round(parseFloat(s.weightOz))) : null,
+      free_shipping: s.listInShop && s.shippingMode === "free",
+      shipping_cost_cents: s.listInShop && s.shippingMode === "flat" && s.shippingCost ? dollarsToCents(s.shippingCost) : null,
+      shipping_weight_oz: s.shippingMode === "weight" && s.weightOz ? Math.max(1, Math.round(parseFloat(s.weightOz))) : null,
       item_type: itemType,
     }));
 
@@ -181,6 +183,7 @@ export default function CreateInventoryPage() {
 
     if (invErr || !invRows?.length) { toast.error(invErr?.message ?? "Failed to save"); setSaving(false); return; }
 
+    let listedCount = 0;
     if (anyListing) {
       for (let i = 0; i < sizes.length; i++) {
         const s = sizes[i];
@@ -204,23 +207,31 @@ export default function CreateInventoryPage() {
             inventory_id: inventoryId,
             status: "active",
             free_shipping: s.shippingMode === "free",
-            shipping_cost_cents: s.shippingMode === "flat" ? dollarsToCents(s.shippingCost) : null,
+            shipping_cost_cents: s.shippingMode === "flat" && s.shippingCost ? dollarsToCents(s.shippingCost) : null,
             shipping_weight_oz: s.shippingMode === "weight" && s.weightOz ? Math.max(1, Math.round(parseFloat(s.weightOz))) : null,
           })
           .select("id")
           .single();
 
-        if (listErr || !listing) { toast.error(`Failed to create listing: ${listErr?.message}`); continue; }
+        if (listErr || !listing) {
+          toast.error(`Saved to inventory but listing failed: ${listErr?.message ?? "unknown error"}`);
+          continue;
+        }
 
-        await supabase.from("inventory").update({
+        const { error: linkErr } = await supabase.from("inventory").update({
           listing_id: listing.id,
           listing_quantity: listedQty,
         }).eq("id", inventoryId);
+
+        if (linkErr) {
+          toast.error(`Listing created but couldn't link to inventory: ${linkErr.message}`);
+        } else {
+          listedCount++;
+        }
       }
     }
 
     setSaving(false);
-    const listedCount = sizes.filter(s => s.listInShop && s.shopPrice).length;
     const unitWord = itemType === "plant" ? "size" : "variant";
     if (sizes.length > 1) {
       toast.success(listedCount > 0 ? `${sizes.length} ${unitWord}s saved — ${listedCount} listed in shop` : `${sizes.length} ${unitWord}s added to inventory`);
