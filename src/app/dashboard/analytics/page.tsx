@@ -9,6 +9,7 @@ import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import RevenueChart from "./revenue-chart";
 import BuyerMap from "./buyer-map";
 import FollowerChart from "./follower-chart";
+import OffPlatformSalesTable from "@/components/off-platform-sales-table";
 
 type Order = {
   id: string;
@@ -577,32 +578,7 @@ export default async function AnalyticsPage() {
             </div>
             <Card>
               <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b text-muted-foreground text-xs uppercase tracking-wide">
-                        <th className="px-4 py-3 text-left font-medium">Item</th>
-                        <th className="px-4 py-3 text-right font-medium">Qty</th>
-                        <th className="px-4 py-3 text-right font-medium">Revenue</th>
-                        <th className="px-4 py-3 text-left font-medium">Note</th>
-                        <th className="px-4 py-3 text-right font-medium">Date</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {manualSales.map((s) => (
-                        <tr key={s.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                          <td className="px-4 py-3 font-medium">{s.plant_name}{s.variety ? ` — ${s.variety}` : ""}</td>
-                          <td className="px-4 py-3 text-right text-muted-foreground">{s.quantity}</td>
-                          <td className="px-4 py-3 text-right font-semibold">{centsToDisplay(s.price_cents * s.quantity)}</td>
-                          <td className="px-4 py-3 text-muted-foreground">{s.note ?? "—"}</td>
-                          <td className="px-4 py-3 text-right text-muted-foreground whitespace-nowrap">
-                            {new Date(s.sold_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <OffPlatformSalesTable sales={manualSales} />
               </CardContent>
             </Card>
           </div>
