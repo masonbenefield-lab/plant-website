@@ -68,9 +68,9 @@ export default async function SellerStorefront({
 
   const adminClient = createAdminClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
-  // Fetch archived inventory IDs so we can exclude their listings from the storefront
-  const { data: archivedInv } = await adminClient.from("inventory").select("id").eq("seller_id", profile.id).not("archived_at", "is", null);
-  const archivedInvIds = new Set(archivedInv?.map(r => r.id) ?? []);
+  // Fetch active (non-archived) inventory IDs so we can exclude listings whose inventory was archived or permanently deleted
+  const { data: activeInv } = await adminClient.from("inventory").select("id").eq("seller_id", profile.id).is("archived_at", null);
+  const activeInvIds = new Set(activeInv?.map(r => r.id) ?? []);
 
   const [{ data: rawListings }, { data: auctions }, { data: ratings }, { count: followerCount }, { data: gardenPlants }, { data: announcements }, { data: wishlistItems }] =
     await Promise.all([
@@ -90,10 +90,11 @@ export default async function SellerStorefront({
         : Promise.resolve({ data: [] }),
     ]);
 
-  // Exclude any listing whose linked inventory row has been archived
+  // Only show listings with no inventory link (standalone), or whose inventory row still exists and is active
   const listings = (rawListings ?? []).filter(l => {
     const invId = (l as { inventory_id?: string | null }).inventory_id;
-    return !invId || !archivedInvIds.has(invId);
+    if (!invId) return true;           // standalone listing — no inventory link, always show
+    return activeInvIds.has(invId);    // hide if inventory was archived or permanently deleted
   });
 
   const reviewerIds = [...new Set(ratings?.map((r) => r.reviewer_id) ?? [])];
