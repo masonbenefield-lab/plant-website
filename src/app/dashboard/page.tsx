@@ -218,7 +218,7 @@ export default async function DashboardPage() {
           label="Orders to Ship"
           value={paidCount}
           highlight={paidCount > 0}
-          href="/dashboard/orders"
+          href="/orders?tab=sales"
         />
         <StatCard
           label="This Month"
@@ -237,7 +237,7 @@ export default async function DashboardPage() {
         <div className="lg:col-span-2 space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="font-semibold">Sales awaiting shipment</h2>
-            <Link href="/dashboard/orders" className="text-sm text-leaf hover:underline">View all</Link>
+            <Link href="/orders?tab=sales" className="text-sm text-leaf hover:underline">View all</Link>
           </div>
           {recentOrders.length === 0 ? (
             <Card>
@@ -261,7 +261,7 @@ export default async function DashboardPage() {
                       </p>
                     </div>
                     <Link
-                      href="/dashboard/orders"
+                      href="/orders?tab=sales"
                       className={cn(buttonVariants({ size: "sm", variant: "outline" }), "shrink-0")}
                     >
                       Manage
@@ -281,7 +281,7 @@ export default async function DashboardPage() {
             <NavLink href="/dashboard/announcements" label="Announcements" />
             <NavLink href="/dashboard/listings" label="Manage Listings" />
             <NavLink href="/dashboard/auctions" label="Manage Auctions" />
-            <NavLink href="/dashboard/orders" label="My Sales" badge={paidCount > 0 ? paidCount : undefined} />
+            <NavLink href="/orders?tab=sales" label="My Sales" badge={paidCount > 0 ? paidCount : undefined} />
             <NavLink href="/dashboard/analytics" label="Analytics" />
             <NavLink href="/account" label="Account Settings" badge={!checks.stripe ? "!" : undefined} badgeColor="orange" />
           </div>

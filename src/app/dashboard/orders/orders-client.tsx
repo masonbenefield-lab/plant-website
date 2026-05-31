@@ -132,6 +132,8 @@ export default function OrdersClient({
   totalPages: number;
   total: number;
   pageSize: number;
+  prevHref: string | null;
+  nextHref: string | null;
   autoLabelsEnabled?: boolean;
 }) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -260,8 +262,8 @@ export default function OrdersClient({
         totalPages={totalPages}
         total={total}
         pageSize={pageSize}
-        prevHref={page > 1 ? `/dashboard/orders?page=${page - 1}` : null}
-        nextHref={page < totalPages ? `/dashboard/orders?page=${page + 1}` : null}
+        prevHref={prevHref}
+        nextHref={nextHref}
       />
     </div>
   );

@@ -101,7 +101,7 @@ export default async function OrderConfirmedPage({
 
       <p className="text-xs text-muted-foreground mb-6">
         Once your order is delivered, you can leave a review from{" "}
-        <Link href="/orders" className="text-leaf hover:underline">My Purchases</Link>.
+        <Link href="/orders" className="text-leaf hover:underline">My Orders</Link>.
       </p>
 
       {seller && seller.id !== user.id && !alreadyFollows && (

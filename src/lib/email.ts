@@ -480,7 +480,7 @@ export async function sendNewOrderAlert({
       <p>You have a new order!</p>
       <p><strong>${plantName}</strong> — ${centsToDisplay(amountCents)}</p>
       <p><strong>Ship to:</strong><br>${addr}</p>
-      <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/orders">View order in your dashboard</a></p>
+      <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/orders?tab=sales">View order in your dashboard</a></p>
     `,
   });
 }
