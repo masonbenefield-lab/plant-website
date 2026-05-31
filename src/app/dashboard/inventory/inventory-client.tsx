@@ -777,12 +777,35 @@ export default function InventoryClient({
     router.refresh();
   }
 
+  async function toggleUnlinkedListingPause(id: string, currentStatus: string) {
+    const supabase = createClient();
+    const newStatus = currentStatus === "active" ? "paused" : "active";
+    const { error } = await supabase.from("listings").update({ status: newStatus }).eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    toast.success(newStatus === "paused" ? "Listing paused" : "Listing resumed");
+    router.refresh();
+  }
+
+  async function deleteUnlinkedListing(id: string) {
+    const supabase = createClient();
+    const { error } = await supabase.from("listings").delete().eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Listing deleted");
+    router.refresh();
+  }
+
   async function archiveItem(id: string, listingId: string | null) {
     setLoadingId(id);
     const supabase = createClient();
     const { error } = await supabase.from("inventory").update({ archived_at: new Date().toISOString() }).eq("id", id);
-    if (!error && listingId) {
-      await supabase.from("listings").update({ status: "paused" }).eq("id", listingId);
+    if (!error) {
+      if (listingId) {
+        await supabase.from("listings").update({ status: "paused" }).eq("id", listingId);
+      } else {
+        // fallback: find listing linked by inventory_id
+        const { data: linked } = await supabase.from("listings").select("id").eq("inventory_id", id).maybeSingle();
+        if (linked) await supabase.from("listings").update({ status: "paused" }).eq("id", linked.id);
+      }
     }
     setLoadingId(null);
     if (error) { toast.error(error.message); return; }
@@ -1842,13 +1865,27 @@ export default function InventoryClient({
                           l.status === "paused" ? "bg-yellow-100 text-yellow-700" :
                           "bg-red-100 text-red-600"
                         )}>{l.status}</span>
-                        <button
-                          onClick={() => importListing(l)}
-                          disabled={importingId === l.id}
-                          className="ml-auto text-xs text-leaf hover:underline font-medium disabled:opacity-50"
-                        >
-                          {importingId === l.id ? "Importing…" : "Import to Inventory"}
-                        </button>
+                        <div className="ml-auto flex items-center gap-3">
+                          <button
+                            onClick={() => toggleUnlinkedListingPause(l.id, l.status)}
+                            className="text-xs text-muted-foreground hover:text-foreground font-medium"
+                          >
+                            {l.status === "active" ? "Pause" : "Resume"}
+                          </button>
+                          <button
+                            onClick={() => deleteUnlinkedListing(l.id)}
+                            className="text-xs text-destructive hover:text-destructive/80 font-medium"
+                          >
+                            Delete
+                          </button>
+                          <button
+                            onClick={() => importListing(l)}
+                            disabled={importingId === l.id}
+                            className="text-xs text-leaf hover:underline font-medium disabled:opacity-50"
+                          >
+                            {importingId === l.id ? "Importing…" : "Import"}
+                          </button>
+                        </div>
                       </div>
                     ))}
                     {group.auctions.map(a => (
