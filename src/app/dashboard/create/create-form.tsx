@@ -34,6 +34,7 @@ export default function CreateInventoryPage() {
   const [dragging, setDragging] = useState(false);
   const [profileWarning, setProfileWarning] = useState<"incomplete" | "unverified" | null>(null);
   const [planLimits, setPlanLimits] = useState<PlanLimits>({ listings: null, auctions: null, photos: null });
+  const [hasShipFrom, setHasShipFrom] = useState(true);
 
   const [itemType, setItemType] = useState<ItemType>("plant");
   const [plantName, setPlantName] = useState("");
@@ -59,6 +60,13 @@ export default function CreateInventoryPage() {
   }
 
   function updateSize(id: number, field: keyof Omit<SizeEntry, "id">, value: string | boolean) {
+    if (field === "listInShop" && value === true && !hasShipFrom) {
+      toast.error("Ship-from address required", {
+        description: "Add your ship-from address in Account Settings before listing items.",
+        action: { label: "Account Settings", onClick: () => window.location.href = "/account#shipping" },
+      });
+      return;
+    }
     setSizes(prev => prev.map(s => s.id === id ? { ...s, [field]: value } : s));
   }
 
@@ -69,10 +77,11 @@ export default function CreateInventoryPage() {
       if (!user) return;
       if (!user.email_confirmed_at) { setProfileWarning("unverified"); return; }
       const [{ data: profile }, { data: planProfile }] = await Promise.all([
-        supabase.from("profiles").select("bio, avatar_url").eq("id", user.id).single(),
+        supabase.from("profiles").select("bio, avatar_url, ship_from_address").eq("id", user.id).single(),
         supabase.from("profiles").select("plan, is_admin").eq("id", user.id).single(),
       ]);
       if (!profile?.bio?.trim() || !profile?.avatar_url) setProfileWarning("incomplete");
+      setHasShipFrom(!!(profile?.ship_from_address as { street1?: string } | null)?.street1);
       setPlanLimits(getPlanLimits(planProfile?.plan, !!planProfile?.is_admin));
     }
     checkProfile();
