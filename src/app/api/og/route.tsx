@@ -98,7 +98,7 @@ export async function GET(request: Request) {
                 fontSize: "18px",
                 color: "#bbf7d0",
                 marginBottom: "16px",
-                width: "fit-content",
+                alignSelf: "flex-start",
               }}
             >
               {category}
