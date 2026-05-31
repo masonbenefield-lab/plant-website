@@ -205,6 +205,7 @@ export default function InventoryClient({
   stripeOnboarded = false,
   hasReturnPolicy = true,
   hasShippingTimeline = true,
+  hasShipFrom = true,
   planLimits = { listings: null, auctions: 5, photos: 5 },
 }: {
   activeRows: Row[];
@@ -219,6 +220,7 @@ export default function InventoryClient({
   stripeOnboarded?: boolean;
   hasReturnPolicy?: boolean;
   hasShippingTimeline?: boolean;
+  hasShipFrom?: boolean;
   planLimits?: PlanLimits;
 }) {
   const router = useRouter();
@@ -386,6 +388,14 @@ export default function InventoryClient({
       return;
     }
     if (m.type === "listing") {
+      if (!hasShipFrom) {
+        toast.error("Ship-from address required", {
+          description: "Add your ship-from address in Account Settings before listing items.",
+          action: { label: "Account Settings", onClick: () => window.location.href = "/account#shipping" },
+          duration: 6000,
+        });
+        return;
+      }
       setPrice("");
       setListQty(String(Math.max(1, avail(m.row))));
       if (m.row.free_shipping) {
@@ -407,6 +417,14 @@ export default function InventoryClient({
       }
     }
     if (m.type === "auction") {
+      if (!hasShipFrom) {
+        toast.error("Ship-from address required", {
+          description: "Add your ship-from address in Account Settings before starting an auction.",
+          action: { label: "Account Settings", onClick: () => window.location.href = "/account#shipping" },
+          duration: 6000,
+        });
+        return;
+      }
       if (!stripeOnboarded) {
         toast.error("Connect your bank account before creating an auction.", {
           description: "Go to Account Settings → Seller Payments to set up Stripe.",
@@ -1731,6 +1749,14 @@ export default function InventoryClient({
           <strong>Set your return policy before listing.</strong>{" "}
           Buyers expect to know your policy upfront.{" "}
           <a href="/account#return-policy" className="underline font-medium hover:opacity-80">Set it now →</a>
+        </div>
+      )}
+
+      {!hasShipFrom && (
+        <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
+          <strong>Add a ship-from address before listing.</strong>{" "}
+          Buyers can&apos;t see shipping rates until you set your shipping origin.{" "}
+          <a href="/account#shipping" className="underline font-medium hover:opacity-80">Add it now →</a>
         </div>
       )}
 
