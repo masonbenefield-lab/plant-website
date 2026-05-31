@@ -257,7 +257,8 @@ export default function CreateInventoryPage() {
 
   const anyListing = sizes.some(s => s.listInShop && s.shopPrice);
   const hasIncompleteListings = sizes.some(s => s.listInShop && (!s.shopPrice || !s.shippingMode));
-  const canSubmit = !!plantName.trim() && sizes.every(s => Number(s.quantity) >= 1) && !hasIncompleteListings;
+  const hasOverQty = sizes.some(s => s.listInShop && s.shopQuantity !== "" && Number(s.shopQuantity) > (Number(s.quantity) || 1));
+  const canSubmit = !!plantName.trim() && sizes.every(s => Number(s.quantity) >= 1) && !hasIncompleteListings && !hasOverQty;
   const isSupply = itemType === "supply";
   const categories = isSupply ? SUPPLY_CATEGORIES : PLANT_CATEGORIES;
   const unitWord = isSupply ? "variant" : "size";
@@ -532,11 +533,14 @@ export default function CreateInventoryPage() {
                             id={`shop-qty-${size.id}`}
                             type="number"
                             min={1}
-                            max={Number(size.quantity) || 1}
                             placeholder={size.quantity || "1"}
                             value={size.shopQuantity}
                             onChange={e => updateSize(size.id, "shopQuantity", e.target.value)}
+                            className={size.shopQuantity !== "" && Number(size.shopQuantity) > (Number(size.quantity) || 1) ? "border-destructive focus-visible:ring-destructive" : ""}
                           />
+                          {size.shopQuantity !== "" && Number(size.shopQuantity) > (Number(size.quantity) || 1) && (
+                            <p className="text-xs text-destructive">Can't exceed your stock quantity ({size.quantity || 1})</p>
+                          )}
                         </div>
                       </div>
                       <div className="space-y-2">
@@ -622,7 +626,9 @@ export default function CreateInventoryPage() {
           </Button>
           {!canSubmit && (
             <p className="text-xs text-muted-foreground">
-              {hasIncompleteListings
+              {hasOverQty
+                ? "Listed qty can't exceed stock quantity."
+                : hasIncompleteListings
                 ? "Add a price and shipping option for each item listed in shop."
                 : `Fill in ${isSupply ? "item name" : "plant name"} and all quantities to save.`}
             </p>
