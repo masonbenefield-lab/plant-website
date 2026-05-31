@@ -282,10 +282,10 @@ function UserCard({
                   <MoreHorizontal size={15} />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" className="min-w-[180px]">
                 <DropdownMenuItem
                   onClick={() => onBlock(profile.id)}
-                  className="text-red-600 focus:text-red-600"
+                  className="text-red-600 focus:text-red-600 whitespace-nowrap"
                 >
                   <ShieldOff size={14} className="mr-2" />
                   Block {profile.username}
