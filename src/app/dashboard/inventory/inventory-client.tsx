@@ -1715,7 +1715,7 @@ export default function InventoryClient({
         />
         <Select value={categoryFilter || "_all"} onValueChange={v => setCategoryFilter(v === "_all" ? "" : (v ?? ""))}>
           <SelectTrigger className="w-40">
-            <SelectValue placeholder="All categories" />
+            <SelectValue>{categoryFilter || "All categories"}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="_all">All categories</SelectItem>
