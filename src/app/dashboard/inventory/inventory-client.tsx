@@ -285,6 +285,7 @@ export default function InventoryClient({
   // Listing modal
   const [price, setPrice] = useState("");
   const [listQty, setListQty] = useState("");
+  const [listModalStockQty, setListModalStockQty] = useState("");
   const [listingShippingMode, setListingShippingMode] = useState<"" | "free" | "flat" | "weight">("");
   const [listingShippingCost, setListingShippingCost] = useState("");
   const [listingShippingWeightOz, setListingShippingWeightOz] = useState("");
@@ -437,6 +438,7 @@ export default function InventoryClient({
       }
       setPrice(m.row.listing_price_cents ? (m.row.listing_price_cents / 100).toFixed(2) : "");
       setListQty(String(Math.max(1, avail(m.row))));
+      setListModalStockQty(String(m.row.quantity));
       if (m.row.free_shipping) {
         setListingShippingMode("free");
         setListingShippingCost("");
@@ -662,9 +664,18 @@ export default function InventoryClient({
       }
     }
 
-    const a = avail(modal.row);
-    const qty = Math.min(Math.max(1, Number(listQty) || a), a);
+    const modalStockVal = parseInt(listModalStockQty, 10);
+    const newTotalStock = !isNaN(modalStockVal) && modalStockVal >= 0 ? modalStockVal : modal.row.quantity;
+    // Re-derive available using possibly-updated stock (other allocations remain the same)
+    const otherAllocs = (modal.row.listing_quantity ?? 0) + modal.row.auctions.filter(a => a.status === "active").reduce((s, a) => s + a.quantity, 0);
+    const a = Math.max(0, newTotalStock - otherAllocs);
+    const qty = Math.max(1, Math.min(Number(listQty) || 1, newTotalStock));
     if (qty < 1) { toast.error("No stock available to list"); setSubmitting(false); return; }
+    if (qty > newTotalStock) {
+      toast.error(`Only ${newTotalStock} in stock — can't list more than you have`);
+      setSubmitting(false);
+      return;
+    }
     const { data: newListing, error } = await supabase.from("listings").insert({
       seller_id: user.id,
       plant_name: modal.row.plant_name,
@@ -685,6 +696,7 @@ export default function InventoryClient({
     await supabase.from("inventory").update({
       listing_id: newListing.id,
       listing_quantity: qty,
+      ...(newTotalStock !== modal.row.quantity ? { quantity: newTotalStock } : {}),
       free_shipping: listingShippingMode === "free",
       shipping_cost_cents: listingShippingMode === "flat" ? dollarsToCents(listingShippingCost) : null,
       shipping_weight_oz: listingShippingMode === "weight" ? Number(listingShippingWeightOz) : null,
@@ -2483,7 +2495,11 @@ export default function InventoryClient({
             )}
           </DialogHeader>
           {modal?.type === "listing" && (() => {
-            const a = avail(modal.row);
+            const modalStock = parseInt(listModalStockQty, 10);
+            const effectiveStock = !isNaN(modalStock) && modalStock >= 0 ? modalStock : modal.row.quantity;
+            const otherAllocs = modal.row.auctions.filter(a => a.status === "active").reduce((s, a) => s + a.quantity, 0);
+            const listNum = parseInt(listQty, 10);
+            const overStock = !isNaN(listNum) && listNum > effectiveStock;
             return (
               <div className="space-y-4 mt-1">
                 <div className="space-y-1">
@@ -2494,11 +2510,43 @@ export default function InventoryClient({
                   </div>
                   <PriceSuggestion plantName={modal.row.plant_name} variety={modal.row.variety} label="price" />
                 </div>
-                <div className="space-y-1">
-                  <Label htmlFor="modal-qty">Quantity to list *</Label>
-                  <Input id="modal-qty" type="number" min={1} max={a} value={listQty} onChange={e => setListQty(e.target.value)} />
-                  <p className="text-xs text-muted-foreground">{a} available</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="modal-stock" className={overStock ? "text-destructive" : ""}>
+                      Total in stock
+                    </Label>
+                    <Input
+                      id="modal-stock"
+                      type="number"
+                      min={0}
+                      value={listModalStockQty}
+                      onChange={e => setListModalStockQty(e.target.value)}
+                      className={overStock ? "border-destructive ring-1 ring-destructive" : ""}
+                    />
+                    <p className="text-xs text-muted-foreground">You currently have {modal.row.quantity}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="modal-qty">Quantity to list *</Label>
+                    <Input
+                      id="modal-qty"
+                      type="number"
+                      min={1}
+                      max={effectiveStock}
+                      value={listQty}
+                      onChange={e => setListQty(e.target.value)}
+                      className={overStock ? "border-destructive" : ""}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {Math.max(0, effectiveStock - otherAllocs)} available
+                    </p>
+                  </div>
                 </div>
+                {overStock && (
+                  <p className="text-xs text-destructive flex items-center gap-1">
+                    <AlertTriangle size={12} />
+                    Listing qty exceeds stock — increase stock or reduce listing qty
+                  </p>
+                )}
                 <div className="space-y-2">
                   <Label>Shipping <span className="text-destructive">*</span></Label>
                   <div className={`grid gap-2 ${shippingModes.length === 2 ? "grid-cols-2" : "grid-cols-3"}`}>
@@ -2557,7 +2605,7 @@ export default function InventoryClient({
                   <Button
                     onClick={submitListing}
                     disabled={
-                      submitting || !price || !listQty || !listingShippingMode ||
+                      submitting || !price || !listQty || !listingShippingMode || overStock ||
                       (listingShippingMode === "weight" && !listingShippingWeightOz) ||
                       (listingShippingMode === "flat" && !listingShippingCost)
                     }
