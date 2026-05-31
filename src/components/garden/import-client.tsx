@@ -446,6 +446,30 @@ export function ImportClient() {
         </p>
       )}
 
+      {/* Template section */}
+      <div className="rounded-xl border p-5 space-y-3">
+        <div className="flex items-center gap-2">
+          <FileText size={16} className="text-muted-foreground" />
+          <p className="font-medium text-sm">CSV format</p>
+        </div>
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          Your CSV should have a header row. Column names are flexible — we&apos;ll match common variations automatically.
+        </p>
+        <div className="overflow-x-auto rounded-lg border bg-muted/30 text-xs font-mono p-3 text-muted-foreground whitespace-nowrap">
+          {TEMPLATE_HEADERS.join(", ")}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Valid statuses: <span className="font-medium text-foreground">thriving, growing, dormant, struggling, dead</span>
+          {" "}— other values default to Growing.
+          Dates in <span className="font-medium text-foreground">YYYY-MM-DD</span> format.
+          Only <span className="font-medium text-foreground">name</span> is required.
+        </p>
+        <Button variant="outline" size="sm" onClick={downloadTemplate} className="gap-2">
+          <FileText size={14} />
+          Download template
+        </Button>
+      </div>
+
       {/* Divider */}
       <div className="flex items-center gap-3">
         <div className="flex-1 border-t" />
@@ -576,29 +600,6 @@ export function ImportClient() {
         />
       </div>
 
-      {/* Template section */}
-      <div className="rounded-xl border p-5 space-y-3">
-        <div className="flex items-center gap-2">
-          <FileText size={16} className="text-muted-foreground" />
-          <p className="font-medium text-sm">CSV format</p>
-        </div>
-        <p className="text-sm text-muted-foreground leading-relaxed">
-          Your CSV should have a header row. Column names are flexible — we&apos;ll match common variations automatically.
-        </p>
-        <div className="overflow-x-auto rounded-lg border bg-muted/30 text-xs font-mono p-3 text-muted-foreground whitespace-nowrap">
-          {TEMPLATE_HEADERS.join(", ")}
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Valid statuses: <span className="font-medium text-foreground">thriving, growing, dormant, struggling, dead</span>
-          {" "}— other values default to Growing.
-          Dates in <span className="font-medium text-foreground">YYYY-MM-DD</span> format.
-          Only <span className="font-medium text-foreground">name</span> is required.
-        </p>
-        <Button variant="outline" size="sm" onClick={downloadTemplate} className="gap-2">
-          <FileText size={14} />
-          Download template
-        </Button>
-      </div>
     </div>
   );
 }
