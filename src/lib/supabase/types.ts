@@ -467,6 +467,7 @@ export interface Database {
           shipping_weight_oz: number | null;
           shipping_cost_cents: number | null;
           free_shipping: boolean;
+          item_type: string | null;
           archived_at: string | null;
           created_at: string;
         };
@@ -490,6 +491,7 @@ export interface Database {
           shipping_weight_oz?: number | null;
           shipping_cost_cents?: number | null;
           free_shipping?: boolean;
+          item_type?: string | null;
           archived_at?: string | null;
           created_at?: string;
         };
@@ -511,6 +513,7 @@ export interface Database {
           shipping_weight_oz?: number | null;
           shipping_cost_cents?: number | null;
           free_shipping?: boolean;
+          item_type?: string | null;
           archived_at?: string | null;
         };
         Relationships: [];

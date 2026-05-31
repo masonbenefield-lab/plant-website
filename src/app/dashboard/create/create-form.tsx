@@ -171,6 +171,7 @@ export default function CreateInventoryPage() {
       category: category || "Other",
       pot_size: itemType === "plant" ? (s.potSize || null) : null,
       shipping_weight_oz: s.weightOz ? Math.max(1, Math.round(parseFloat(s.weightOz))) : null,
+      item_type: itemType,
     }));
 
     const { data: invRows, error: invErr } = await supabase

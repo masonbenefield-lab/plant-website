@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import PotSizePicker from "@/components/pot-size-picker";
+import { SUPPLY_CATEGORIES } from "@/lib/categories";
 import PriceSuggestion from "@/components/price-suggestion";
 import SellerAgreementDialog from "@/components/seller-agreement-dialog";
 import { findProhibitedWord, censorWord, logViolation } from "@/lib/profanity";
@@ -79,6 +80,7 @@ type Row = {
   images: string[];
   category: string | null;
   pot_size: string | null;
+  item_type: string;
   created_at: string;
   archived_at: string | null;
 };
@@ -296,6 +298,12 @@ export default function InventoryClient({
   const [editCostPrice, setEditCostPrice] = useState("");
   const [viewMode, setViewMode] = useState<"grouped" | "flat">("grouped");
   const categories = isAdmin ? ADMIN_CATEGORIES : BASE_CATEGORIES;
+  const SUPPLY_ONLY = new Set<string>(SUPPLY_CATEGORIES.filter(c => c !== "Other"));
+  function isSupply(row: Row): boolean {
+    if (row.item_type === "supply") return true;
+    if (row.item_type === "plant") return false;
+    return !!(row.category && SUPPLY_ONLY.has(row.category));
+  }
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -1241,7 +1249,7 @@ export default function InventoryClient({
         <div className="flex items-center gap-2">
           {row.pot_size
             ? <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium">{row.pot_size}</span>
-            : <span className="text-xs text-muted-foreground italic">No size</span>}
+            : <span className="text-xs text-muted-foreground italic">{isSupply(row) ? "No variant" : "No size"}</span>}
           {row.notes && (
             <div className="relative group/note shrink-0">
               <StickyNote size={13} className="text-muted-foreground cursor-help" />
@@ -1366,7 +1374,7 @@ export default function InventoryClient({
             {row.pot_size ? (
               <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium">{row.pot_size}</span>
             ) : (
-              <span className="text-xs text-muted-foreground italic">No size</span>
+              <span className="text-xs text-muted-foreground italic">{isSupply(row) ? "No variant" : "No size"}</span>
             )}
             {row.notes && (
               <div className="relative group/note">
@@ -1574,7 +1582,7 @@ export default function InventoryClient({
               </span>
             )}
             <span className="text-sm text-muted-foreground whitespace-nowrap">
-              {group.variants.length} size{group.variants.length !== 1 ? "s" : ""} · {totalQty} total
+              {group.variants.length} {first && isSupply(first) ? "variant" : "size"}{group.variants.length !== 1 ? "s" : ""} · {totalQty} total
               {totalAvail !== totalQty && <span className="ml-1 text-xs">({totalAvail} avail)</span>}
             </span>
             <button
@@ -1601,7 +1609,7 @@ export default function InventoryClient({
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-background border-t border-border/40">
-                    <th className="py-2 pl-12 pr-3 text-left text-xs font-medium text-muted-foreground w-28">Size</th>
+                    <th className="py-2 pl-12 pr-3 text-left text-xs font-medium text-muted-foreground w-28">{first && isSupply(first) ? "Variant" : "Size"}</th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground w-32">Stock</th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Shop Listing</th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Auction</th>
@@ -1942,7 +1950,7 @@ export default function InventoryClient({
                   <div className="divide-y divide-border/40">
                     {group.variants.map(row => (
                       <div key={row.id} className="flex items-center gap-4 px-4 py-2.5 text-sm">
-                        <span className="text-muted-foreground">{row.pot_size ?? "No size"}</span>
+                        <span className="text-muted-foreground">{row.pot_size ?? (isSupply(row) ? "No variant" : "No size")}</span>
                         <span>{row.quantity} in stock</span>
                         {row.archived_at && (
                           <span className="text-xs text-orange-600">{daysUntilPurge(row.archived_at)}d left</span>
@@ -2226,23 +2234,35 @@ export default function InventoryClient({
       <Dialog open={modal?.type === "edit"} onOpenChange={o => !o && setModal(null)}>
         <DialogContent className="max-w-sm max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Edit Item</DialogTitle></DialogHeader>
-          {modal?.type === "edit" && (
+          {modal?.type === "edit" && (() => {
+            const supply = isSupply(modal.row);
+            const editCategories = supply ? SUPPLY_CATEGORIES : categories;
+            return (
             <div className="space-y-4 mt-1">
-              <div className="grid grid-cols-2 gap-3">
+              <div className={supply ? "space-y-1" : "grid grid-cols-2 gap-3"}>
                 <div className="space-y-1">
-                  <Label htmlFor="edit-name">Plant name *</Label>
+                  <Label htmlFor="edit-name">{supply ? "Item name" : "Plant name"} *</Label>
                   <Input id="edit-name" value={editPlantName} onChange={e => setEditPlantName(e.target.value)} autoFocus />
                 </div>
-                <div className="space-y-1">
-                  <Label htmlFor="edit-variety">Variety</Label>
-                  <Input id="edit-variety" value={editVariety} onChange={e => setEditVariety(e.target.value)} placeholder="Optional" />
-                </div>
+                {!supply && (
+                  <div className="space-y-1">
+                    <Label htmlFor="edit-variety">Variety</Label>
+                    <Input id="edit-variety" value={editVariety} onChange={e => setEditVariety(e.target.value)} placeholder="Optional" />
+                  </div>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label>Pot Size</Label>
-                  <PotSizePicker value={editPotSize} onChange={setEditPotSize} />
-                </div>
+                {supply ? (
+                  <div className="space-y-1">
+                    <Label htmlFor="edit-variant">Variant <span className="font-normal text-muted-foreground">(optional)</span></Label>
+                    <Input id="edit-variant" value={editVariety} onChange={e => setEditVariety(e.target.value)} placeholder='e.g. "1 lb bag"' />
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    <Label>Pot Size</Label>
+                    <PotSizePicker value={editPotSize} onChange={setEditPotSize} />
+                  </div>
+                )}
                 <div className="space-y-1">
                   <Label htmlFor="edit-qty">Quantity</Label>
                   <Input id="edit-qty" type="number" min={0} value={editQuantity} onChange={e => setEditQuantity(e.target.value)} />
@@ -2254,13 +2274,13 @@ export default function InventoryClient({
                   <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="_none">— None —</SelectItem>
-                    {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    {editCategories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1">
                 <Label htmlFor="edit-desc">Description</Label>
-                <Textarea id="edit-desc" value={editDescription} onChange={e => setEditDescription(e.target.value)} rows={3} placeholder="Describe the plant…" />
+                <Textarea id="edit-desc" value={editDescription} onChange={e => setEditDescription(e.target.value)} rows={3} placeholder={supply ? "Describe the product…" : "Describe the plant…"} />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="edit-notes">Private notes</Label>
@@ -2408,7 +2428,8 @@ export default function InventoryClient({
                 </Button>
               </div>
             </div>
-          )}
+            );
+          })()}
         </DialogContent>
       </Dialog>
 

@@ -97,6 +97,7 @@ export default async function InventoryPage({
       images: (item.images as string[]) ?? [],
       category: item.category ?? null,
       pot_size: item.pot_size ?? null,
+      item_type: (item as { item_type?: string | null }).item_type ?? "plant",
       created_at: item.created_at,
       archived_at: null as string | null,
     };
@@ -130,6 +131,7 @@ export default async function InventoryPage({
     images: (item.images as string[]) ?? [],
     category: item.category ?? null,
     pot_size: item.pot_size ?? null,
+    item_type: (item as { item_type?: string | null }).item_type ?? "plant",
     created_at: item.created_at,
     archived_at: item.archived_at,
   }));
