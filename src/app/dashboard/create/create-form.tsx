@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { PLANT_CATEGORIES, SUPPLY_CATEGORIES } from "@/lib/categories";
 import { compressImage } from "@/lib/compress-image";
-import { AlertTriangle, Plus, X, Store, Leaf, Package } from "lucide-react";
+import { AlertTriangle, Plus, X, Store, Leaf, Package, HelpCircle } from "lucide-react";
 import { dollarsToCents } from "@/lib/stripe";
 import PotSizePicker from "@/components/pot-size-picker";
 import { findProhibitedWord, censorWord, logViolation } from "@/lib/profanity";
@@ -502,20 +502,31 @@ export default function CreateInventoryPage() {
                     <div className="space-y-3">
                       <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1">
-                          <Label className="text-xs" htmlFor={`price-${size.id}`}>Price ($) *</Label>
-                          <Input
-                            id={`price-${size.id}`}
-                            type="number"
-                            min={0.01}
-                            step={0.01}
-                            placeholder="0.00"
-                            value={size.shopPrice}
-                            onChange={e => updateSize(size.id, "shopPrice", e.target.value)}
-                          />
+                          <Label className="text-xs" htmlFor={`price-${size.id}`}>Price *</Label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">$</span>
+                            <Input
+                              id={`price-${size.id}`}
+                              type="number"
+                              min={0.01}
+                              step={0.01}
+                              placeholder="0.00"
+                              value={size.shopPrice}
+                              onChange={e => updateSize(size.id, "shopPrice", e.target.value)}
+                              onBlur={e => { const v = parseFloat(e.target.value); if (!isNaN(v)) updateSize(size.id, "shopPrice", v.toFixed(2)); }}
+                              className="pl-7"
+                            />
+                          </div>
                         </div>
                         <div className="space-y-1">
                           <Label className="text-xs" htmlFor={`shop-qty-${size.id}`}>
-                            Listed qty <span className="font-normal text-muted-foreground">(max {size.quantity || 1})</span>
+                            <span className="flex items-center gap-1">
+                              Listed qty
+                              <span className="font-normal text-muted-foreground">(max {size.quantity || 1})</span>
+                              <span title="Quantity is your total inventory stock. Listed qty is how many units show as available in your shop — must be ≤ your stock quantity.">
+                                <HelpCircle size={12} className="text-muted-foreground cursor-help" />
+                              </span>
+                            </span>
                           </Label>
                           <Input
                             id={`shop-qty-${size.id}`}
@@ -564,6 +575,7 @@ export default function CreateInventoryPage() {
                               placeholder="e.g. 6.99"
                               value={size.shippingCost}
                               onChange={(e) => updateSize(size.id, "shippingCost", e.target.value)}
+                              onBlur={e => { const v = parseFloat(e.target.value); if (!isNaN(v)) updateSize(size.id, "shippingCost", v.toFixed(2)); }}
                               className="max-w-[120px]"
                             />
                             <span className="text-xs text-muted-foreground">flat rate</span>

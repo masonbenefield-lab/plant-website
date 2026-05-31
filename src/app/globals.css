@@ -128,6 +128,13 @@
   --sidebar-ring: #8FA37E;
 }
 
+/* bg-leaf buttons use dark primary-foreground in dark mode — force cream text */
+.dark .bg-leaf,
+.dark .bg-leaf:hover,
+.dark .hover\:bg-forest:hover {
+  color: #F6F2E9;
+}
+
 @keyframes anchor-highlight {
   0%   { background-color: rgba(201, 107, 69, 0.25); box-shadow: 0 0 0 6px rgba(201, 107, 69, 0.25); border-radius: 0.5rem; }
   30%  { background-color: transparent; box-shadow: none; }
