@@ -82,18 +82,18 @@ export function EnterButton({ monthLabel, initialEntered, referralCode, userCoun
   if (entered) {
     return (
       <div className="space-y-3">
-        <div className="flex items-center gap-2 text-green-700 font-semibold text-lg">
+        <div className="flex items-center gap-2 text-leaf font-semibold text-lg">
           <CheckCircle2 size={22} />
           You&apos;re entered for {monthLabel}!
         </div>
         {referralCode && (
-          <div className="rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 px-4 py-3 space-y-2">
-            <p className="text-xs font-medium text-green-800 dark:text-green-300">
+          <div className="rounded-lg border border-[#C5D4BC] dark:border-forest bg-[#EBF0E6] dark:bg-forest/20 px-4 py-3 space-y-2">
+            <p className="text-xs font-medium text-forest dark:text-[#A8BF9A]">
               Boost your chances — share your referral link. Every friend who signs up and adds at least one plant to their Plantet garden earns you +1 extra entry.
             </p>
             <button
               onClick={handleCopy}
-              className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-md bg-green-700 text-white hover:bg-green-800 transition-colors"
+              className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-md bg-leaf text-white hover:bg-forest transition-colors"
             >
               {copied ? <Check size={12} /> : <Copy size={12} />}
               {copied ? "Copied!" : "Copy referral link"}
@@ -119,7 +119,7 @@ export function EnterButton({ monthLabel, initialEntered, referralCode, userCoun
     return (
       <div className="space-y-3 max-w-xs">
         <div className="flex items-center gap-2 text-sm font-medium">
-          <MapPin size={15} className="text-green-700" />
+          <MapPin size={15} className="text-leaf" />
           Where are you located?
         </div>
         <p className="text-xs text-muted-foreground">This giveaway is open to US and Canada residents. We just need to confirm eligibility.</p>
@@ -131,7 +131,7 @@ export function EnterButton({ monthLabel, initialEntered, referralCode, userCoun
               disabled={savingCountry}
               className={cn(
                 "flex items-center gap-2 px-4 py-2.5 rounded-lg border text-sm font-medium text-left transition-colors",
-                "hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-900/20"
+                "hover:border-leaf hover:bg-[#EBF0E6] dark:hover:bg-forest/20"
               )}
             >
               {savingCountry ? <Loader2 size={14} className="animate-spin" /> : null}
@@ -150,7 +150,7 @@ export function EnterButton({ monthLabel, initialEntered, referralCode, userCoun
   return (
     <Button
       size="lg"
-      className="bg-green-700 hover:bg-green-800 text-white px-10 text-base"
+      className="bg-leaf hover:bg-forest text-white px-10 text-base"
       onClick={handleEnterClick}
       disabled={isPending}
     >

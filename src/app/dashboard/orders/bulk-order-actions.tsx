@@ -50,7 +50,7 @@ export function BulkOrderActions({
           <SelectItem value="delivered">Mark as Delivered</SelectItem>
         </SelectContent>
       </Select>
-      <Button size="sm" onClick={apply} disabled={loading} className="bg-green-700 hover:bg-green-800 h-8">
+      <Button size="sm" onClick={apply} disabled={loading} className="bg-leaf hover:bg-forest h-8">
         {loading ? "Updating…" : "Apply"}
       </Button>
       <button onClick={onClear} className="text-xs text-muted-foreground hover:text-foreground ml-auto">
@@ -74,7 +74,7 @@ export function OrderCheckbox({
       type="checkbox"
       checked={selectedIds.includes(orderId)}
       onChange={() => onToggle(orderId)}
-      className="h-4 w-4 rounded border-gray-300 accent-green-700 cursor-pointer shrink-0 mt-0.5"
+      className="h-4 w-4 rounded border-gray-300 accent-leaf cursor-pointer shrink-0 mt-0.5"
       aria-label="Select order"
     />
   );

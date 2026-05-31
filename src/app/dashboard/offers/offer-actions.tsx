@@ -27,7 +27,7 @@ export default function OfferActions({ offerId }: { offerId: string }) {
     <div className="flex gap-2">
       <Button
         size="sm"
-        className="bg-green-700 hover:bg-green-800"
+        className="bg-leaf hover:bg-forest"
         disabled={loading !== null}
         onClick={() => respond("accept")}
       >

@@ -29,8 +29,8 @@ export default function ListingShareButton({ title }: { title: string }) {
     <Button variant="outline" size="sm" onClick={handleShare} className="gap-1.5 shrink-0">
       {copied ? (
         <>
-          <Check size={14} className="text-green-600" />
-          <span className="text-green-600">Copied!</span>
+          <Check size={14} className="text-leaf" />
+          <span className="text-leaf">Copied!</span>
         </>
       ) : (
         <>

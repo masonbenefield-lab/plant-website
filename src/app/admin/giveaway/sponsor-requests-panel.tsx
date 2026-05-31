@@ -88,7 +88,7 @@ export function SponsorRequestsPanel({
                       <span className={cn(
                         "text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0",
                         req.status === "open"
-                          ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400"
+                          ? "bg-[#DFE7D4] text-leaf dark:bg-forest/40 dark:text-sage"
                           : "bg-muted text-muted-foreground"
                       )}>
                         {req.status}
@@ -107,7 +107,7 @@ export function SponsorRequestsPanel({
                         {user?.username && (
                           <p className="text-xs text-muted-foreground">
                             Username:{" "}
-                            <a href={`/sellers/${user.username}`} target="_blank" className="font-medium hover:underline hover:text-green-700">
+                            <a href={`/sellers/${user.username}`} target="_blank" className="font-medium hover:underline hover:text-leaf">
                               {user.username}
                             </a>
                           </p>
@@ -192,12 +192,12 @@ function ReplyForm({ requestId, recipientId, onReplied }: { requestId: string; r
         onChange={(e) => setBody(e.target.value)}
         placeholder="Hi! Thanks for reaching out about donating…"
         rows={3}
-        className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-green-600 resize-none"
+        className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-leaf resize-none"
       />
       <button
         type="submit"
         disabled={sending || !body.trim()}
-        className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-md bg-green-700 text-white hover:bg-green-800 disabled:opacity-50 transition-colors"
+        className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-md bg-leaf text-white hover:bg-forest disabled:opacity-50 transition-colors"
       >
         {sending ? <Loader2 size={13} className="animate-spin" /> : <MessageSquare size={13} />}
         Send message

@@ -26,10 +26,10 @@ export function ReferralCard({
   }
 
   return (
-    <Card className="border-green-200 dark:border-green-800">
+    <Card className="border-[#C5D4BC] dark:border-forest">
       <CardContent className="p-5 space-y-4">
         <div className="flex items-start gap-3">
-          <Users size={18} className="text-green-700 mt-0.5 shrink-0" />
+          <Users size={18} className="text-leaf mt-0.5 shrink-0" />
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-sm">Refer friends for bonus entries</p>
             <p className="text-xs text-muted-foreground mt-0.5">
@@ -46,15 +46,15 @@ export function ReferralCard({
             onClick={handleCopy}
             className="shrink-0 flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-md border border-input bg-background hover:bg-muted transition-colors"
           >
-            {copied ? <Check size={13} className="text-green-600" /> : <Copy size={13} />}
+            {copied ? <Check size={13} className="text-leaf" /> : <Copy size={13} />}
             {copied ? "Copied!" : "Copy"}
           </button>
         </div>
 
         {bonusEntries > 0 && (
-          <div className="flex items-center gap-2 rounded-lg bg-green-50 dark:bg-green-900/20 px-3 py-2">
-            <span className="text-green-700 dark:text-green-400 font-bold text-sm">+{bonusEntries}</span>
-            <span className="text-xs text-green-800 dark:text-green-300">
+          <div className="flex items-center gap-2 rounded-lg bg-[#EBF0E6] dark:bg-forest/20 px-3 py-2">
+            <span className="text-leaf dark:text-sage font-bold text-sm">+{bonusEntries}</span>
+            <span className="text-xs text-forest dark:text-[#A8BF9A]">
               bonus {bonusEntries === 1 ? "entry" : "entries"} this month from your referrals
             </span>
           </div>

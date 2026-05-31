@@ -104,7 +104,7 @@ export default async function GiveawayPage() {
 
       {/* Header */}
       <div className="text-center space-y-2">
-        <span className="inline-block text-xs font-semibold uppercase tracking-widest text-green-700 bg-green-100 px-3 py-1 rounded-full">Monthly Giveaway</span>
+        <span className="inline-block text-xs font-semibold uppercase tracking-widest text-leaf bg-[#DFE7D4] px-3 py-1 rounded-full">Monthly Giveaway</span>
         <h1 className="text-3xl sm:text-4xl font-bold mt-3">{monthLabel} Giveaway</h1>
         <p className="text-muted-foreground">One lucky winner gets a free plant shipped to their door. New giveaway every month.</p>
       </div>
@@ -113,16 +113,16 @@ export default async function GiveawayPage() {
         <>
           {/* Sponsor banner */}
           {giveaway.sponsor_name && (
-            <div className="rounded-xl border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 px-5 py-4 flex items-center gap-4">
+            <div className="rounded-xl border border-[#C5D4BC] dark:border-forest bg-[#EBF0E6] dark:bg-forest/20 px-5 py-4 flex items-center gap-4">
               {giveaway.sponsor_logo_url && (
                 <div className="relative w-28 h-28 rounded-full overflow-hidden shrink-0">
                   <Image src={giveaway.sponsor_logo_url} alt={giveaway.sponsor_name} fill sizes="256px" className="object-cover" />
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-widest text-green-700 dark:text-green-400 mb-0.5">Prize donated by</p>
+                <p className="text-xs font-semibold uppercase tracking-widest text-leaf dark:text-sage mb-0.5">Prize donated by</p>
                 {giveaway.sponsor_username ? (
-                  <Link href={`/sellers/${giveaway.sponsor_username}`} className="font-bold text-sm hover:underline hover:text-green-700 transition-colors">
+                  <Link href={`/sellers/${giveaway.sponsor_username}`} className="font-bold text-sm hover:underline hover:text-leaf transition-colors">
                     {giveaway.sponsor_name}
                   </Link>
                 ) : (
@@ -135,7 +135,7 @@ export default async function GiveawayPage() {
               {giveaway.sponsor_username && (
                 <Link
                   href={`/sellers/${giveaway.sponsor_username}`}
-                  className="shrink-0 text-xs font-medium text-green-700 hover:underline whitespace-nowrap"
+                  className="shrink-0 text-xs font-medium text-leaf hover:underline whitespace-nowrap"
                 >
                   Visit shop →
                 </Link>
@@ -152,7 +152,7 @@ export default async function GiveawayPage() {
             )}
             <div className="p-6 sm:p-8 space-y-4">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-widest text-green-700 mb-1">This month&apos;s prize</p>
+                <p className="text-xs font-semibold uppercase tracking-widest text-leaf mb-1">This month&apos;s prize</p>
                 <h2 className="text-2xl font-bold">{giveaway.plant_name}</h2>
                 {giveaway.description && (
                   <p className="text-muted-foreground mt-2">{giveaway.description}</p>
@@ -168,7 +168,7 @@ export default async function GiveawayPage() {
               <div className="pt-2">
                 {!user ? (
                   <div className="space-y-2">
-                    <Link href="/login" className={cn(buttonVariants({ size: "lg" }), "bg-green-700 hover:bg-green-800 text-white px-10 text-base")}>
+                    <Link href="/login" className={cn(buttonVariants({ size: "lg" }), "bg-leaf hover:bg-forest text-white px-10 text-base")}>
                       Sign in to Enter
                     </Link>
                     <p className="text-xs text-muted-foreground">
@@ -204,7 +204,7 @@ export default async function GiveawayPage() {
                     <p className="text-xs text-muted-foreground mt-1">
                       Donated by{" "}
                       {nextGiveaway.sponsor_username ? (
-                        <Link href={`/sellers/${nextGiveaway.sponsor_username}`} className="font-medium hover:underline hover:text-green-700 transition-colors">
+                        <Link href={`/sellers/${nextGiveaway.sponsor_username}`} className="font-medium hover:underline hover:text-leaf transition-colors">
                           {nextGiveaway.sponsor_name}
                         </Link>
                       ) : (
@@ -228,7 +228,7 @@ export default async function GiveawayPage() {
                 { icon: <Trophy size={20} />, title: "3. Win a free plant", desc: "The winner gets the featured plant shipped free to their door." },
               ].map((s) => (
                 <div key={s.title} className="rounded-xl border p-4 space-y-2">
-                  <div className="text-green-700">{s.icon}</div>
+                  <div className="text-leaf">{s.icon}</div>
                   <p className="font-semibold text-sm">{s.title}</p>
                   <p className="text-xs text-muted-foreground">{s.desc}</p>
                 </div>
@@ -250,11 +250,11 @@ export default async function GiveawayPage() {
       ) : !user ? (
         <div className="rounded-2xl border border-dashed p-6 text-center space-y-2">
           <p className="font-semibold flex items-center justify-center gap-2">
-            <Gift size={18} className="text-green-700" />
+            <Gift size={18} className="text-leaf" />
             Get bonus entries
           </p>
           <p className="text-sm text-muted-foreground">
-            <Link href="/login" className="text-green-700 hover:underline font-medium">Sign in</Link> to get your referral link and earn extra entries.
+            <Link href="/login" className="text-leaf hover:underline font-medium">Sign in</Link> to get your referral link and earn extra entries.
           </p>
         </div>
       ) : null}
@@ -280,7 +280,7 @@ export default async function GiveawayPage() {
                     <p className="text-xs text-muted-foreground mt-0.5">
                       Donated by{" "}
                       {g.sponsor_username ? (
-                        <Link href={`/sellers/${g.sponsor_username}`} className="hover:text-green-700 hover:underline transition-colors font-medium">
+                        <Link href={`/sellers/${g.sponsor_username}`} className="hover:text-leaf hover:underline transition-colors font-medium">
                           {g.sponsor_name}
                         </Link>
                       ) : (
@@ -290,7 +290,7 @@ export default async function GiveawayPage() {
                   )}
                 </div>
                 {g.winner_user_id && winnerMap[g.winner_user_id] && (
-                  <Link href={`/sellers/${winnerMap[g.winner_user_id]}`} className="flex items-center gap-1.5 shrink-0 hover:text-green-700 transition-colors">
+                  <Link href={`/sellers/${winnerMap[g.winner_user_id]}`} className="flex items-center gap-1.5 shrink-0 hover:text-leaf transition-colors">
                     <Trophy size={13} className="text-amber-500" />
                     <span className="text-xs font-medium hover:underline">{winnerMap[g.winner_user_id]}</span>
                   </Link>
@@ -306,11 +306,11 @@ export default async function GiveawayPage() {
       ) : (
         <div className="rounded-2xl border border-dashed p-6 text-center space-y-2">
           <p className="font-semibold flex items-center justify-center gap-2">
-            <Gift size={18} className="text-green-700" />
+            <Gift size={18} className="text-leaf" />
             Want to donate a prize?
           </p>
           <p className="text-sm text-muted-foreground">
-            <Link href="/login" className="text-green-700 hover:underline font-medium">Sign in</Link> to submit a donation request for a future giveaway.
+            <Link href="/login" className="text-leaf hover:underline font-medium">Sign in</Link> to submit a donation request for a future giveaway.
           </p>
         </div>
       )}

@@ -19,7 +19,7 @@ const STATUS_LABEL: Record<GardenPlantStatus, string> = {
 };
 
 const STATUS_COLOR: Record<GardenPlantStatus, string> = {
-  thriving: "bg-green-100 text-green-700",
+  thriving: "bg-[#DFE7D4] text-leaf",
   growing: "bg-emerald-100 text-emerald-700",
   dormant: "bg-yellow-100 text-yellow-700",
   struggling: "bg-orange-100 text-orange-700",
@@ -214,10 +214,10 @@ export default async function PublicPlantDetailPage({
                   <span className="text-muted-foreground shrink-0">From</span>
                   <Link
                     href={`/sellers/${verifiedSourceUsername}`}
-                    className="font-medium text-green-700 hover:underline flex items-center gap-1"
+                    className="font-medium text-leaf hover:underline flex items-center gap-1"
                   >
                     @{verifiedSourceUsername}
-                    <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5 text-green-600" aria-label="Verified">
+                    <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5 text-leaf" aria-label="Verified">
                       <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   </Link>
@@ -248,7 +248,7 @@ export default async function PublicPlantDetailPage({
                 <p className="text-xs text-muted-foreground">Grown by</p>
                 <Link
                   href={`/gardens/${username}`}
-                  className="text-sm font-medium hover:text-green-700 transition-colors truncate block"
+                  className="text-sm font-medium hover:text-leaf transition-colors truncate block"
                 >
                   {displayName}
                 </Link>
@@ -260,7 +260,7 @@ export default async function PublicPlantDetailPage({
 
       <p className="text-center text-xs text-muted-foreground pt-4">
         Shared on{" "}
-        <Link href="/" className="text-green-700 hover:underline font-medium">
+        <Link href="/" className="text-leaf hover:underline font-medium">
           Plantet
         </Link>
       </p>

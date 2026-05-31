@@ -70,7 +70,7 @@ export default function RecentlyViewedStrip({ excludeId }: { excludeId?: string 
               {listing.variety && (
                 <p className="text-xs text-muted-foreground truncate">{listing.variety}</p>
               )}
-              <p className="text-xs font-bold text-green-700 mt-1">{centsToDisplay(listing.price_cents)}</p>
+              <p className="text-xs font-bold text-leaf mt-1">{centsToDisplay(listing.price_cents)}</p>
             </div>
           </Link>
         ))}

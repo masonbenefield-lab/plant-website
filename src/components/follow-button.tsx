@@ -55,8 +55,8 @@ export default function FollowButton({ userId, sellerId, initialFollowing, initi
       className={cn(
         "flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg border transition-colors",
         following
-          ? "border-green-300 bg-green-50 text-green-700 hover:bg-red-50 hover:border-red-300 hover:text-red-600 dark:border-green-800 dark:bg-green-950/30 dark:text-green-400"
-          : "border-border hover:border-green-400 hover:bg-green-50 hover:text-green-700 dark:hover:border-green-700 dark:hover:bg-green-950/30"
+          ? "border-[#A8BF9A] bg-[#EBF0E6] text-leaf hover:bg-red-50 hover:border-red-300 hover:text-red-600 dark:border-forest dark:bg-forest/30 dark:text-sage"
+          : "border-border hover:border-sage hover:bg-[#EBF0E6] hover:text-leaf dark:hover:border-leaf dark:hover:bg-forest/30"
       )}
     >
       {following ? <UserCheck size={16} /> : <UserPlus size={16} />}

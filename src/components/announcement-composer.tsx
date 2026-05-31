@@ -87,7 +87,7 @@ export default function AnnouncementComposer({ username, avatarUrl, initialAnnou
         <div className="flex items-start gap-3">
           <Avatar className="h-9 w-9 shrink-0">
             <AvatarImage src={avatarUrl ?? undefined} />
-            <AvatarFallback className="bg-green-100 text-green-700 text-sm font-semibold">
+            <AvatarFallback className="bg-[#DFE7D4] text-leaf text-sm font-semibold">
               {username.slice(0, 2).toUpperCase()}
             </AvatarFallback>
           </Avatar>
@@ -136,7 +136,7 @@ export default function AnnouncementComposer({ username, avatarUrl, initialAnnou
                 type="submit"
                 size="sm"
                 disabled={isPending || uploading || !body.trim() || body.length > 500}
-                className="bg-green-700 hover:bg-green-800"
+                className="bg-leaf hover:bg-forest"
               >
                 {isPending ? <Loader2 size={13} className="animate-spin mr-1.5" /> : null}
                 Post
@@ -158,7 +158,7 @@ export default function AnnouncementComposer({ username, avatarUrl, initialAnnou
               <div className="flex items-start gap-3">
                 <Avatar className="h-8 w-8 shrink-0">
                   <AvatarImage src={avatarUrl ?? undefined} />
-                  <AvatarFallback className="bg-green-100 text-green-700 text-xs font-semibold">
+                  <AvatarFallback className="bg-[#DFE7D4] text-leaf text-xs font-semibold">
                     {username.slice(0, 2).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>

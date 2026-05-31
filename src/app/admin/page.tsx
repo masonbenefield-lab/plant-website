@@ -62,7 +62,7 @@ export default async function AdminOverviewPage() {
                   </p>
                 </div>
                 {u.stripe_onboarded && (
-                  <span className="text-xs bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 px-2 py-0.5 rounded-full">
+                  <span className="text-xs bg-[#DFE7D4] text-leaf dark:bg-forest/40 dark:text-sage px-2 py-0.5 rounded-full">
                     Stripe connected
                   </span>
                 )}
@@ -86,7 +86,7 @@ export default async function AdminOverviewPage() {
                   </p>
                 </div>
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                  o.status === "delivered" ? "bg-green-100 text-green-700" :
+                  o.status === "delivered" ? "bg-[#DFE7D4] text-leaf" :
                   o.status === "shipped" ? "bg-blue-100 text-blue-700" :
                   o.status === "paid" ? "bg-yellow-100 text-yellow-700" :
                   "bg-muted text-muted-foreground"

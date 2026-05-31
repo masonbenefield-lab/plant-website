@@ -51,7 +51,7 @@ export function InventoryReviewCard({ draft, onChange, onRemove }: Props) {
   return (
     <div className={cn(
       "rounded-xl border transition-colors",
-      hasError ? "border-destructive/50" : open ? "border-green-300 dark:border-green-800" : "border-border"
+      hasError ? "border-destructive/50" : open ? "border-[#A8BF9A] dark:border-forest" : "border-border"
     )}>
       {/* Header row */}
       <div
@@ -238,7 +238,7 @@ export function InventoryReviewCard({ draft, onChange, onRemove }: Props) {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="w-20 h-20 rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center gap-1 text-muted-foreground hover:border-green-400 hover:text-green-700 transition-colors text-xs"
+                  className="w-20 h-20 rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center gap-1 text-muted-foreground hover:border-sage hover:text-leaf transition-colors text-xs"
                 >
                   <Upload size={16} />
                   <span>Add</span>

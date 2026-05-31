@@ -45,7 +45,7 @@ export function PostFollowButton({ postId, initialFollowing, size = "sm" }: Prop
       className={cn(
         "rounded-lg p-1.5 transition-colors shrink-0",
         following
-          ? "text-green-700 bg-green-100 dark:bg-green-900/30 dark:text-green-400"
+          ? "text-leaf bg-[#DFE7D4] dark:bg-forest/30 dark:text-sage"
           : "text-muted-foreground hover:text-foreground hover:bg-muted"
       )}
       title={following ? "Unsave post" : "Save post"}

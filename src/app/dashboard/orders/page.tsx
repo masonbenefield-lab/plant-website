@@ -38,9 +38,9 @@ export default async function OrdersDashboardPage({
           <p className="font-semibold mb-1">No sales yet</p>
           <p className="text-sm text-muted-foreground mb-6">Orders from buyers will appear here once someone purchases one of your listings.</p>
           <div className="flex justify-center gap-3">
-            <Link href="/dashboard/listings" className="text-sm text-green-700 hover:underline">View your listings</Link>
+            <Link href="/dashboard/listings" className="text-sm text-leaf hover:underline">View your listings</Link>
             <span className="text-muted-foreground">·</span>
-            <Link href="/dashboard/create" className="text-sm text-green-700 hover:underline">Add a listing</Link>
+            <Link href="/dashboard/create" className="text-sm text-leaf hover:underline">Add a listing</Link>
           </div>
         </div>
       </div>

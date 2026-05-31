@@ -129,7 +129,7 @@ export default async function DashboardAuctionsPage({
   const tabClass = (key: string) =>
     `px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
       tab === key
-        ? "border-green-700 text-green-700"
+        ? "border-leaf text-leaf"
         : "border-transparent text-muted-foreground hover:text-foreground"
     }`;
 
@@ -180,7 +180,7 @@ export default async function DashboardAuctionsPage({
               </p>
               <Link
                 href="/dashboard/inventory"
-                className="inline-flex items-center justify-center rounded-md bg-green-700 hover:bg-green-800 text-white px-4 py-2 text-sm font-medium transition-colors"
+                className="inline-flex items-center justify-center rounded-md bg-leaf hover:bg-forest text-white px-4 py-2 text-sm font-medium transition-colors"
               >
                 Go to My Stock →
               </Link>
@@ -198,7 +198,7 @@ export default async function DashboardAuctionsPage({
                         )}
                         <Badge
                           variant={auction.status === "active" ? "default" : "secondary"}
-                          className={auction.status === "active" ? "bg-green-700" : ""}
+                          className={auction.status === "active" ? "bg-leaf" : ""}
                         >
                           {auction.status}
                         </Badge>
@@ -250,7 +250,7 @@ export default async function DashboardAuctionsPage({
               </p>
               <Link
                 href="/auctions"
-                className="inline-flex items-center justify-center rounded-md bg-green-700 hover:bg-green-800 text-white px-4 py-2 text-sm font-medium transition-colors"
+                className="inline-flex items-center justify-center rounded-md bg-leaf hover:bg-forest text-white px-4 py-2 text-sm font-medium transition-colors"
               >
                 Browse Auctions →
               </Link>
@@ -277,17 +277,17 @@ export default async function DashboardAuctionsPage({
                             {a.plant_name}{a.variety ? ` ${a.variety}` : ""}
                           </p>
                           <div className="flex items-center gap-2 mt-1 flex-wrap text-sm text-muted-foreground">
-                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${isWinning ? "bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400"}`}>
+                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${isWinning ? "bg-[#DFE7D4] text-leaf dark:bg-forest/40 dark:text-sage" : "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400"}`}>
                               {isWinning ? "Winning" : "Outbid"}
                             </span>
                             <span>Your bid: <span className="font-medium text-foreground">{centsToDisplay(myBid)}</span></span>
                             {!isWinning && (
-                              <span>Current: <span className="font-medium text-green-700">{centsToDisplay(a.current_bid_cents)}</span></span>
+                              <span>Current: <span className="font-medium text-leaf">{centsToDisplay(a.current_bid_cents)}</span></span>
                             )}
                             <span>Ends: <LocalDate iso={a.ends_at} /></span>
                           </div>
                         </div>
-                        <span className="shrink-0 text-sm font-semibold text-green-700 underline underline-offset-2">
+                        <span className="shrink-0 text-sm font-semibold text-leaf underline underline-offset-2">
                           {isWinning ? "View →" : "Bid again →"}
                         </span>
                       </CardContent>
@@ -320,7 +320,7 @@ export default async function DashboardAuctionsPage({
                 const img = a.images?.[0];
                 let badgeLabel = "Ended";
                 let badgeClass = "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400";
-                if (won) { badgeLabel = "Won"; badgeClass = "bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400"; }
+                if (won) { badgeLabel = "Won"; badgeClass = "bg-[#DFE7D4] text-leaf dark:bg-forest/40 dark:text-sage"; }
                 else if (noWinner) { badgeLabel = "No winner"; }
                 return (
                   <Link key={a.id} href={`/auctions/${a.id}`}>
@@ -349,7 +349,7 @@ export default async function DashboardAuctionsPage({
                           </div>
                         </div>
                         {won && (
-                          <span className="shrink-0 text-sm font-semibold text-green-700 underline underline-offset-2">
+                          <span className="shrink-0 text-sm font-semibold text-leaf underline underline-offset-2">
                             Complete purchase →
                           </span>
                         )}

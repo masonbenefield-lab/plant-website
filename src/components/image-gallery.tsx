@@ -60,7 +60,7 @@ export default function ImageGallery({ images, alt }: { images: string[]; alt: s
                 aria-label={`View image ${i + 1} of ${images.length}`}
                 aria-pressed={i === 0}
                 className={`relative h-20 w-20 flex-shrink-0 rounded-lg overflow-hidden border-2 transition-colors ${
-                  i === 0 ? "border-green-600" : "border-transparent hover:border-green-400"
+                  i === 0 ? "border-leaf" : "border-transparent hover:border-sage"
                 }`}
               >
                 <Image src={url} alt={`${alt} — image ${i + 1}`} fill className="object-cover" />

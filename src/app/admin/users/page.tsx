@@ -154,7 +154,7 @@ export default async function AdminUsersPage({
                     <td className="px-4 py-3">{auctionMap[p.id] ?? 0}</td>
                     <td className="px-4 py-3 hidden sm:table-cell">
                       {p.stripe_onboarded ? (
-                        <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400">
+                        <Badge variant="secondary" className="bg-[#DFE7D4] text-leaf dark:bg-forest/40 dark:text-sage">
                           Connected
                         </Badge>
                       ) : (

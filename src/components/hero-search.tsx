@@ -26,7 +26,7 @@ export default function HeroSearch() {
       </div>
       <button
         type="submit"
-        className="px-4 py-2.5 bg-green-900 hover:bg-green-950 text-white text-sm font-semibold rounded-lg transition-colors shrink-0"
+        className="px-4 py-2.5 bg-forest hover:bg-forest text-white text-sm font-semibold rounded-lg transition-colors shrink-0"
       >
         Search
       </button>

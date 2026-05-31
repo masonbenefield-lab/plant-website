@@ -146,18 +146,18 @@ export function CommunityReplies({ postId, postType, postOwnerId, currentUserId,
           key={reply.id}
           className={cn(
             "rounded-xl border p-4 group",
-            reply.is_solution ? "border-green-400 bg-green-50/50 dark:bg-green-950/20" : "bg-card"
+            reply.is_solution ? "border-sage bg-[#EBF0E6]/50 dark:bg-forest/20" : "bg-card"
           )}
         >
           {reply.is_solution && (
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-green-700 mb-2">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-leaf mb-2">
               <CheckCircle2 size={13} /> Solution
             </div>
           )}
           <div className="flex items-start gap-3">
             <Avatar className="h-8 w-8 shrink-0">
               <AvatarImage src={reply.avatar_url ?? undefined} />
-              <AvatarFallback className="bg-green-100 text-green-700 text-xs font-semibold">
+              <AvatarFallback className="bg-[#DFE7D4] text-leaf text-xs font-semibold">
                 {reply.username.slice(0, 2).toUpperCase()}
               </AvatarFallback>
             </Avatar>
@@ -185,7 +185,7 @@ export function CommunityReplies({ postId, postType, postOwnerId, currentUserId,
               {isHelpPost && isPostOwner && !reply.is_solution && (
                 <button
                   onClick={() => markSolution(reply.id)}
-                  className="mt-2 flex items-center gap-1 text-xs text-muted-foreground hover:text-green-700 transition-colors"
+                  className="mt-2 flex items-center gap-1 text-xs text-muted-foreground hover:text-leaf transition-colors"
                 >
                   <CheckCircle2 size={12} /> Mark as solution
                 </button>
@@ -193,7 +193,7 @@ export function CommunityReplies({ postId, postType, postOwnerId, currentUserId,
               {isHelpPost && isPostOwner && reply.is_solution && (
                 <button
                   onClick={() => unmarkSolution(reply.id)}
-                  className="mt-2 flex items-center gap-1 text-xs text-green-700 hover:text-muted-foreground transition-colors"
+                  className="mt-2 flex items-center gap-1 text-xs text-leaf hover:text-muted-foreground transition-colors"
                 >
                   <CheckCircle2 size={12} /> Unmark solution
                 </button>
@@ -258,7 +258,7 @@ export function CommunityReplies({ postId, postType, postOwnerId, currentUserId,
                 <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden"
                   onChange={(e) => { if (e.target.files?.length) handlePhotoUpload(e.target.files); e.target.value = ""; }} />
               </div>
-              <Button type="submit" size="sm" disabled={isPending || uploading || !body.trim()} className="bg-green-700 hover:bg-green-800">
+              <Button type="submit" size="sm" disabled={isPending || uploading || !body.trim()} className="bg-leaf hover:bg-forest">
                 {isPending ? <Loader2 size={13} className="animate-spin mr-1.5" /> : null}
                 Reply
               </Button>
@@ -267,7 +267,7 @@ export function CommunityReplies({ postId, postType, postOwnerId, currentUserId,
         </div>
       ) : (
         <div className="border rounded-xl p-4 text-sm text-muted-foreground text-center">
-          <Link href="/login" className="text-green-700 hover:underline">Sign in</Link> to leave a reply.
+          <Link href="/login" className="text-leaf hover:underline">Sign in</Link> to leave a reply.
         </div>
       )}
     </div>

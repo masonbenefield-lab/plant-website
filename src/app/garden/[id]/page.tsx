@@ -22,7 +22,7 @@ const STATUS_LABEL: Record<GardenPlantStatus, string> = {
 };
 
 const STATUS_COLOR: Record<GardenPlantStatus, string> = {
-  thriving: "bg-green-100 text-green-700",
+  thriving: "bg-[#DFE7D4] text-leaf",
   growing: "bg-emerald-100 text-emerald-700",
   dormant: "bg-yellow-100 text-yellow-700",
   struggling: "bg-orange-100 text-orange-700",
@@ -198,7 +198,7 @@ export default async function GardenPlantDetailPage({
                   <span className="font-medium text-right flex items-center gap-1">
                     {plant.source_name}
                     {plant.origin_verified && (
-                      <span className="text-xs text-green-700 font-normal ml-1">✓ verified</span>
+                      <span className="text-xs text-leaf font-normal ml-1">✓ verified</span>
                     )}
                     {!plant.origin_verified && originRequest?.status === "pending" && (
                       <span className="text-xs text-amber-600 font-normal ml-1">pending confirmation</span>

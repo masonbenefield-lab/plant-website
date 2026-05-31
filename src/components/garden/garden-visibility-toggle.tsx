@@ -48,8 +48,8 @@ export function GardenVisibilityToggle({ initialPublic, username }: Props) {
         className={cn(
           "flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-full border transition-colors",
           isPublic
-            ? "bg-green-50 border-green-300 text-green-700 hover:bg-green-100"
-            : "bg-muted border-border text-muted-foreground hover:text-foreground hover:border-green-400"
+            ? "bg-[#EBF0E6] border-[#A8BF9A] text-leaf hover:bg-[#DFE7D4]"
+            : "bg-muted border-border text-muted-foreground hover:text-foreground hover:border-sage"
         )}
       >
         {isPending ? (
@@ -66,7 +66,7 @@ export function GardenVisibilityToggle({ initialPublic, username }: Props) {
           href={`/gardens/${username}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-green-700 transition-colors"
+          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-leaf transition-colors"
           title="Preview your public garden"
         >
           <ExternalLink size={12} />
@@ -76,10 +76,10 @@ export function GardenVisibilityToggle({ initialPublic, username }: Props) {
       {isPublic && username && (
         <button
           onClick={copyLink}
-          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-green-700 transition-colors"
+          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-leaf transition-colors"
           title="Copy garden link"
         >
-          {copied ? <Check size={12} className="text-green-600" /> : <Link2 size={12} />}
+          {copied ? <Check size={12} className="text-leaf" /> : <Link2 size={12} />}
           {copied ? "Link copied!" : "Share garden"}
         </button>
       )}

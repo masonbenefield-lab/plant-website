@@ -105,7 +105,7 @@ export default async function AuctionPage({
                 <h1 className="text-2xl font-bold">{auction.plant_name}</h1>
                 <Badge
                   variant={auction.status === "active" ? "default" : "secondary"}
-                  className={auction.status === "active" ? "bg-green-700" : auction.status === "scheduled" ? "bg-blue-600 text-white" : ""}
+                  className={auction.status === "active" ? "bg-leaf" : auction.status === "scheduled" ? "bg-blue-600 text-white" : ""}
                 >
                   {auction.status === "scheduled" ? "Upcoming" : auction.status}
                 </Badge>
@@ -204,7 +204,7 @@ export default async function AuctionPage({
             >
               <Avatar className="h-10 w-10">
                 <AvatarImage src={seller.avatar_url ?? undefined} />
-                <AvatarFallback className="bg-green-100 text-green-700">
+                <AvatarFallback className="bg-[#DFE7D4] text-leaf">
                   {(seller.display_name ?? seller.username).slice(0, 1).toUpperCase()}
                 </AvatarFallback>
               </Avatar>

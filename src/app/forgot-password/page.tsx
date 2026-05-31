@@ -41,7 +41,7 @@ function ForgotForm() {
           </CardDescription>
         </CardHeader>
         <CardFooter className="justify-center">
-          <Link href="/login" className="text-sm text-green-700 hover:underline">
+          <Link href="/login" className="text-sm text-leaf hover:underline">
             Back to sign in
           </Link>
         </CardFooter>
@@ -72,7 +72,7 @@ function ForgotForm() {
           </div>
         </CardContent>
         <CardFooter className="flex flex-col gap-3">
-          <Button type="submit" className="w-full bg-green-700 hover:bg-green-800" disabled={loading}>
+          <Button type="submit" className="w-full bg-leaf hover:bg-forest" disabled={loading}>
             {loading ? "Sending…" : "Send reset link"}
           </Button>
           <Link href="/login" className="text-sm text-muted-foreground hover:text-foreground">

@@ -18,7 +18,7 @@ const STATUS_LABEL: Record<GardenPlantStatus, string> = {
 };
 
 const STATUS_COLOR: Record<GardenPlantStatus, string> = {
-  thriving: "bg-green-100 text-green-700",
+  thriving: "bg-[#DFE7D4] text-leaf",
   growing: "bg-emerald-100 text-emerald-700",
   dormant: "bg-yellow-100 text-yellow-700",
   struggling: "bg-orange-100 text-orange-700",
@@ -51,7 +51,7 @@ export default function GardenPlantCard({
       <Link href={`/garden/${plant.id}`}>
         <Card className={cn(
           "overflow-hidden hover:shadow-md transition-shadow h-full",
-          pinOrder !== null && "ring-2 ring-green-500"
+          pinOrder !== null && "ring-2 ring-leaf"
         )}>
           <div className="aspect-square relative bg-muted">
             {plant.images?.[0] ? (

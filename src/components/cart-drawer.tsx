@@ -17,7 +17,7 @@ export function CartButton() {
     >
       <ShoppingCart size={17} />
       {count > 0 && (
-        <span className="absolute -top-1 -right-1 bg-green-700 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none">
+        <span className="absolute -top-1 -right-1 bg-leaf text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none">
           {count > 9 ? "9+" : count}
         </span>
       )}
@@ -57,7 +57,7 @@ export function CartDrawer() {
             {sellerUsername && (
               <p className="px-5 pt-3 text-xs text-muted-foreground">
                 From{" "}
-                <Link href={`/sellers/${sellerUsername}`} onClick={closeCart} className="text-green-700 hover:underline font-medium">
+                <Link href={`/sellers/${sellerUsername}`} onClick={closeCart} className="text-leaf hover:underline font-medium">
                   {sellerUsername}
                 </Link>
                 {" "}— items from one seller per cart
@@ -83,7 +83,7 @@ export function CartDrawer() {
                       {item.plantName}{item.variety ? ` — ${item.variety}` : ""}
                     </p>
                     <div className="flex items-center gap-1.5 mt-0.5">
-                      <p className="text-sm text-green-700 font-semibold">{centsToDisplay(effectivePrice(item))}</p>
+                      <p className="text-sm text-leaf font-semibold">{centsToDisplay(effectivePrice(item))}</p>
                       {item.bundleDiscountPct && item.quantity >= 2 && (
                         <span className="text-xs text-purple-600 font-medium">{item.bundleDiscountPct}% bundle deal</span>
                       )}
@@ -117,10 +117,10 @@ export function CartDrawer() {
             <div className="px-5 py-4 border-t space-y-3">
               <div className="flex justify-between text-sm font-medium">
                 <span>Total</span>
-                <span className="text-green-700 text-base font-bold">{centsToDisplay(totalCents)}</span>
+                <span className="text-leaf text-base font-bold">{centsToDisplay(totalCents)}</span>
               </div>
               <Link href="/checkout/cart" onClick={closeCart}>
-                <Button className="w-full bg-green-700 hover:bg-green-800" size="lg">
+                <Button className="w-full bg-leaf hover:bg-forest" size="lg">
                   Checkout
                 </Button>
               </Link>

@@ -101,7 +101,7 @@ export default async function WishlistPage({
               href={buildHref(value, sort)}
               className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
                 tab === value
-                  ? "bg-green-700 text-white border-green-700"
+                  ? "bg-leaf text-white border-leaf"
                   : "text-muted-foreground border-border hover:border-foreground hover:text-foreground"
               }`}
             >
@@ -116,7 +116,7 @@ export default async function WishlistPage({
               href={buildHref(tab, value)}
               className={`text-sm transition-colors ${
                 sort === value
-                  ? "text-green-700 font-semibold"
+                  ? "text-leaf font-semibold"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -132,9 +132,9 @@ export default async function WishlistPage({
           <p className="font-semibold mb-1">{tab === "all" ? "Nothing saved yet" : `No ${tab} saved`}</p>
           <p className="text-sm text-muted-foreground mb-6">Tap the heart on any listing or auction to save it here.</p>
           <div className="flex justify-center gap-3">
-            <Link href="/shop" className="text-sm text-green-700 hover:underline">Browse Shop</Link>
+            <Link href="/shop" className="text-sm text-leaf hover:underline">Browse Shop</Link>
             <span className="text-muted-foreground">·</span>
-            <Link href="/auctions" className="text-sm text-green-700 hover:underline">Browse Auctions</Link>
+            <Link href="/auctions" className="text-sm text-leaf hover:underline">Browse Auctions</Link>
           </div>
         </div>
       ) : (
@@ -179,7 +179,7 @@ export default async function WishlistPage({
                   </div>
                   <CardContent className="p-4">
                     {"category" in data && data.category && (
-                      <span className="inline-block text-xs font-medium px-2 py-0.5 rounded-full mb-1.5 text-green-700 bg-green-100 dark:text-green-400 dark:bg-green-900/40">
+                      <span className="inline-block text-xs font-medium px-2 py-0.5 rounded-full mb-1.5 text-leaf bg-[#DFE7D4] dark:text-sage dark:bg-forest/40">
                         {data.category}
                       </span>
                     )}
@@ -188,7 +188,7 @@ export default async function WishlistPage({
                       <p className="text-sm text-muted-foreground truncate">{data.variety}</p>
                     )}
                     <div className="mt-2">
-                      <span className="font-bold text-green-700">
+                      <span className="font-bold text-leaf">
                         {"price_cents" in data ? centsToDisplay(data.price_cents) : ""}
                       </span>
                     </div>

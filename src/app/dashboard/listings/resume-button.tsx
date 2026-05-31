@@ -33,7 +33,7 @@ export default function ResumeButton({ listingId }: { listingId: string }) {
     <button
       onClick={resume}
       disabled={loading}
-      className="text-xs font-medium text-green-700 hover:text-green-800 hover:underline disabled:opacity-50"
+      className="text-xs font-medium text-leaf hover:text-forest hover:underline disabled:opacity-50"
     >
       {loading ? "Activating…" : "Resume"}
     </button>

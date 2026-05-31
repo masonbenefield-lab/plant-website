@@ -54,7 +54,7 @@ export function PlantVisibilityToggle({ plantId, initialPublic, gardenPublic, va
           gardenPublic === false && isPublic
             ? "bg-amber-500/90 text-white hover:bg-amber-600"
             : isPublic
-              ? "bg-green-600/90 text-white hover:bg-green-700"
+              ? "bg-leaf/90 text-white hover:bg-leaf"
               : "bg-black/50 text-white/70 hover:bg-black/70"
         )}
       >
@@ -78,8 +78,8 @@ export function PlantVisibilityToggle({ plantId, initialPublic, gardenPublic, va
         className={cn(
           "flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-full border transition-colors",
           isPublic
-            ? "bg-green-50 border-green-300 text-green-700 hover:bg-green-100"
-            : "bg-muted border-border text-muted-foreground hover:text-foreground hover:border-green-400"
+            ? "bg-[#EBF0E6] border-[#A8BF9A] text-leaf hover:bg-[#DFE7D4]"
+            : "bg-muted border-border text-muted-foreground hover:text-foreground hover:border-sage"
         )}
       >
         {isPending

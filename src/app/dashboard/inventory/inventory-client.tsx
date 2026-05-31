@@ -984,13 +984,13 @@ export default function InventoryClient({
             <input
               type="number" min={0.01} step={0.01} value={inlinePrice}
               onChange={e => setInlinePrice(e.target.value)}
-              className="w-24 h-7 px-2 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-green-600 bg-background"
+              className="w-24 h-7 px-2 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-leaf bg-background"
             />
           </div>
           <button
             onClick={() => saveInlinePrice(row)}
             disabled={inlineSavingPrice || !inlinePrice}
-            className="h-7 px-2.5 text-xs bg-green-700 hover:bg-green-800 text-white rounded disabled:opacity-50 transition-colors"
+            className="h-7 px-2.5 text-xs bg-leaf hover:bg-forest text-white rounded disabled:opacity-50 transition-colors"
           >
             {inlineSavingPrice ? "Saving…" : "Save"}
           </button>
@@ -1000,7 +1000,7 @@ export default function InventoryClient({
               "h-7 px-2.5 text-xs rounded border font-medium transition-colors",
               row.listing_status === "active"
                 ? "border-yellow-400 text-yellow-700 hover:bg-yellow-50 dark:hover:bg-yellow-900/20"
-                : "border-green-600 text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20"
+                : "border-leaf text-leaf hover:bg-[#EBF0E6] dark:hover:bg-forest/20"
             )}
           >
             {row.listing_status === "active" ? "Pause" : "Resume"}
@@ -1129,13 +1129,13 @@ export default function InventoryClient({
         <td className="px-2 py-2.5 text-sm tabular-nums">
           <span className="font-medium">{row.quantity}</span>
           {a !== row.quantity && <span className="text-xs text-muted-foreground ml-1">({a} avail)</span>}
-          {(row.listing_quantity ?? 0) > 0 && <span className="text-xs text-green-600 block">{row.listing_quantity} in shop</span>}
+          {(row.listing_quantity ?? 0) > 0 && <span className="text-xs text-leaf block">{row.listing_quantity} in shop</span>}
           {totalAuctionQty > 0 && <span className="text-xs text-blue-600 block">{totalAuctionQty} in auction</span>}
         </td>
         <td className="px-2 py-2.5 text-sm">
           <span className={cn(
             "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
-            row.status === "In Shop" || row.status === "Shop + Auction" ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400" :
+            row.status === "In Shop" || row.status === "Shop + Auction" ? "bg-[#DFE7D4] text-leaf dark:bg-forest/40 dark:text-sage" :
             row.status.includes("Auction") ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400" :
             row.status === "Paused" ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400" :
             "bg-muted text-muted-foreground"
@@ -1226,12 +1226,12 @@ export default function InventoryClient({
               onBlur={() => saveQtyEdit(row.id)}
               onKeyDown={e => { if (e.key === "Enter") saveQtyEdit(row.id); if (e.key === "Escape") setEditingQtyId(null); }}
               autoFocus
-              className="w-16 px-1.5 py-0.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-green-600"
+              className="w-16 px-1.5 py-0.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-leaf"
             />
           ) : (
             <button
               onClick={() => { setEditingQtyId(row.id); setEditingQtyValue(String(row.quantity)); }}
-              className="inline-flex items-center gap-1 text-sm font-medium tabular-nums hover:text-green-700 group"
+              className="inline-flex items-center gap-1 text-sm font-medium tabular-nums hover:text-leaf group"
               title="Click to edit total stock"
             >
               {row.quantity} <Pencil size={11} className="opacity-0 group-hover:opacity-50 transition-opacity" />
@@ -1244,7 +1244,7 @@ export default function InventoryClient({
         {(!!row.listing_id || totalAuctionQty > 0) && (
           <div className="flex gap-3 text-xs">
             {!!row.listing_id && (
-              <span className={(row.listing_quantity ?? 0) === 0 ? "text-amber-600 tabular-nums" : "text-green-600 tabular-nums"}>
+              <span className={(row.listing_quantity ?? 0) === 0 ? "text-amber-600 tabular-nums" : "text-leaf tabular-nums"}>
                 {row.listing_quantity ?? 0} in shop
               </span>
             )}
@@ -1262,11 +1262,11 @@ export default function InventoryClient({
         {/* Shop */}
         {hasListing ? (
           <div className="flex items-center gap-2 flex-wrap">
-            <Store size={12} className="text-green-600 shrink-0" />
+            <Store size={12} className="text-leaf shrink-0" />
             <span className="text-sm font-medium">{centsToDisplay(row.listing_price_cents ?? 0)}</span>
             <span className={cn(
               "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
-              row.listing_status === "active" ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400" :
+              row.listing_status === "active" ? "bg-[#DFE7D4] text-leaf dark:bg-forest/40 dark:text-sage" :
               row.listing_status === "paused" ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400" :
               "bg-red-100 text-red-600"
             )}>{row.listing_status}</span>
@@ -1281,7 +1281,7 @@ export default function InventoryClient({
             </button>
           </div>
         ) : a > 0 ? (
-          <button onClick={() => openModal({ type: "listing", row })} className="inline-flex items-center gap-1.5 text-sm text-green-700 hover:underline font-medium">
+          <button onClick={() => openModal({ type: "listing", row })} className="inline-flex items-center gap-1.5 text-sm text-leaf hover:underline font-medium">
             <Store size={13} /> List in Shop
           </button>
         ) : null}
@@ -1357,12 +1357,12 @@ export default function InventoryClient({
               onBlur={() => saveQtyEdit(row.id)}
               onKeyDown={e => { if (e.key === "Enter") saveQtyEdit(row.id); if (e.key === "Escape") setEditingQtyId(null); }}
               autoFocus
-              className="w-16 px-1.5 py-0.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-green-600"
+              className="w-16 px-1.5 py-0.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-leaf"
             />
           ) : (
             <button
               onClick={() => { setEditingQtyId(row.id); setEditingQtyValue(String(row.quantity)); }}
-              className="inline-flex items-center gap-1 font-medium tabular-nums hover:text-green-700 group"
+              className="inline-flex items-center gap-1 font-medium tabular-nums hover:text-leaf group"
               title="Click to edit total stock"
             >
               {row.quantity}
@@ -1372,7 +1372,7 @@ export default function InventoryClient({
           {(!!row.listing_id || totalAuctionQty > 0) && (
             <div className="text-xs mt-0.5 space-y-0.5">
               {!!row.listing_id && (
-                <div className={(row.listing_quantity ?? 0) === 0 ? "text-amber-600 tabular-nums" : "text-green-600 tabular-nums"}>
+                <div className={(row.listing_quantity ?? 0) === 0 ? "text-amber-600 tabular-nums" : "text-leaf tabular-nums"}>
                   {row.listing_quantity ?? 0} in shop
                 </div>
               )}
@@ -1396,7 +1396,7 @@ export default function InventoryClient({
                 <span className="font-medium text-sm">{centsToDisplay(row.listing_price_cents ?? 0)}</span>
                 <span className={cn(
                   "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
-                  row.listing_status === "active" ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400" :
+                  row.listing_status === "active" ? "bg-[#DFE7D4] text-leaf dark:bg-forest/40 dark:text-sage" :
                   row.listing_status === "paused" ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400" :
                   "bg-red-100 text-red-600"
                 )}>
@@ -1416,7 +1416,7 @@ export default function InventoryClient({
           ) : a > 0 ? (
             <button
               onClick={() => openModal({ type: "listing", row })}
-              className="inline-flex items-center gap-1.5 text-sm text-green-700 hover:underline font-medium"
+              className="inline-flex items-center gap-1.5 text-sm text-leaf hover:underline font-medium"
             >
               <Store size={13} /> List in Shop
             </button>
@@ -1532,7 +1532,7 @@ export default function InventoryClient({
           </div>
           <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
             {hasShop && (
-              <span className="hidden sm:inline-flex items-center gap-1 text-xs text-green-700 bg-green-100 dark:bg-green-900/40 dark:text-green-400 rounded-full px-2 py-0.5">
+              <span className="hidden sm:inline-flex items-center gap-1 text-xs text-leaf bg-[#DFE7D4] dark:bg-forest/40 dark:text-sage rounded-full px-2 py-0.5">
                 <Store size={10} /> Shop
               </span>
             )}
@@ -1551,7 +1551,7 @@ export default function InventoryClient({
                 e.stopPropagation();
                 openModal({ type: "add-variant", plant_name: group.plant_name, variety: group.variety, category: first?.category ?? null });
               }}
-              className="inline-flex items-center gap-1 text-xs text-green-700 hover:text-green-800 border border-green-200 hover:border-green-400 rounded-full px-2.5 py-0.5 transition-colors bg-background"
+              className="inline-flex items-center gap-1 text-xs text-leaf hover:text-forest border border-[#C5D4BC] hover:border-sage rounded-full px-2.5 py-0.5 transition-colors bg-background"
             >
               <Plus size={11} /> Variant
             </button>
@@ -1599,21 +1599,21 @@ export default function InventoryClient({
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="flex gap-3">
-              <span className="flex-shrink-0 w-7 h-7 rounded-full bg-green-100 text-green-700 font-bold flex items-center justify-center text-sm">1</span>
+              <span className="flex-shrink-0 w-7 h-7 rounded-full bg-[#DFE7D4] text-leaf font-bold flex items-center justify-center text-sm">1</span>
               <div>
                 <p className="font-medium text-sm">Add your plants to inventory</p>
                 <p className="text-xs text-muted-foreground">Click <strong>+ Add</strong> to create an inventory item. Enter the plant name, variety, and how many you have in stock.</p>
               </div>
             </div>
             <div className="flex gap-3">
-              <span className="flex-shrink-0 w-7 h-7 rounded-full bg-green-100 text-green-700 font-bold flex items-center justify-center text-sm">2</span>
+              <span className="flex-shrink-0 w-7 h-7 rounded-full bg-[#DFE7D4] text-leaf font-bold flex items-center justify-center text-sm">2</span>
               <div>
                 <p className="font-medium text-sm">List it in your shop or start an auction</p>
                 <p className="text-xs text-muted-foreground">Each inventory row has a <strong>List in Shop</strong> and <strong>Create Auction</strong> button. Allocate some stock to each — you stay in control of how many go where.</p>
               </div>
             </div>
             <div className="flex gap-3">
-              <span className="flex-shrink-0 w-7 h-7 rounded-full bg-green-100 text-green-700 font-bold flex items-center justify-center text-sm">3</span>
+              <span className="flex-shrink-0 w-7 h-7 rounded-full bg-[#DFE7D4] text-leaf font-bold flex items-center justify-center text-sm">3</span>
               <div>
                 <p className="font-medium text-sm">Stock updates automatically when you sell</p>
                 <p className="text-xs text-muted-foreground">When a buyer purchases, your inventory count decrements automatically. You can also log off-platform sales manually.</p>
@@ -1622,7 +1622,7 @@ export default function InventoryClient({
             <p className="text-xs text-muted-foreground pt-1">Need help later? Click the <strong>?</strong> next to the Inventory heading anytime.</p>
           </div>
           <div className="flex justify-end gap-2 pt-2">
-            <Button className="bg-green-700 hover:bg-green-800" onClick={() => setWelcomeOpen(false)}>
+            <Button className="bg-leaf hover:bg-forest" onClick={() => setWelcomeOpen(false)}>
               Got it, let&apos;s go!
             </Button>
           </div>
@@ -1702,7 +1702,7 @@ export default function InventoryClient({
             <Upload size={13} /> Import
           </Link>
           <button onClick={exportExcel} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>Export</button>
-          <Link href="/dashboard/create" className={cn(buttonVariants({ size: "sm" }), "bg-green-700 hover:bg-green-800")}>+ Add</Link>
+          <Link href="/dashboard/create" className={cn(buttonVariants({ size: "sm" }), "bg-leaf hover:bg-forest")}>+ Add</Link>
         </div>
       </div>
 
@@ -1765,7 +1765,7 @@ export default function InventoryClient({
           <p className="text-4xl mb-4">📦</p>
           <p className="font-medium text-lg">{(search.trim() || categoryFilter) ? `No results${search.trim() ? ` for "${search}"` : ""}${categoryFilter ? ` in ${categoryFilter}` : ""}` : "No inventory yet"}</p>
           {!search.trim() && (
-            <Link href="/dashboard/create" className={cn(buttonVariants(), "mt-6 bg-green-700 hover:bg-green-800")}>+ Add to Inventory</Link>
+            <Link href="/dashboard/create" className={cn(buttonVariants(), "mt-6 bg-leaf hover:bg-forest")}>+ Add to Inventory</Link>
           )}
         </div>
       ) : viewMode === "flat" ? (
@@ -1822,21 +1822,21 @@ export default function InventoryClient({
                   <div className="divide-y divide-border/40">
                     {group.listings.map(l => (
                       <div key={l.id} className="flex items-center gap-3 px-4 py-3 text-sm flex-wrap">
-                        <Store size={13} className="text-green-600 shrink-0" />
+                        <Store size={13} className="text-leaf shrink-0" />
                         <span className="font-medium">Shop Listing</span>
                         {l.pot_size && <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs">{l.pot_size}</span>}
                         <span>{l.quantity} in stock</span>
                         <span className="font-medium">{centsToDisplay(l.price_cents)}</span>
                         <span className={cn(
                           "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
-                          l.status === "active" ? "bg-green-100 text-green-700" :
+                          l.status === "active" ? "bg-[#DFE7D4] text-leaf" :
                           l.status === "paused" ? "bg-yellow-100 text-yellow-700" :
                           "bg-red-100 text-red-600"
                         )}>{l.status}</span>
                         <button
                           onClick={() => importListing(l)}
                           disabled={importingId === l.id}
-                          className="ml-auto text-xs text-green-700 hover:underline font-medium disabled:opacity-50"
+                          className="ml-auto text-xs text-leaf hover:underline font-medium disabled:opacity-50"
                         >
                           {importingId === l.id ? "Importing…" : "Import to Inventory"}
                         </button>
@@ -1859,7 +1859,7 @@ export default function InventoryClient({
                         <button
                           onClick={() => importAuction(a)}
                           disabled={importingId === a.id}
-                          className="ml-auto text-xs text-green-700 hover:underline font-medium disabled:opacity-50"
+                          className="ml-auto text-xs text-leaf hover:underline font-medium disabled:opacity-50"
                         >
                           {importingId === a.id ? "Importing…" : "Import to Inventory"}
                         </button>
@@ -1904,7 +1904,7 @@ export default function InventoryClient({
                         <button
                           onClick={() => restoreItem(row.id)}
                           disabled={loadingId === row.id}
-                          className="ml-auto text-xs text-green-700 hover:underline disabled:opacity-50"
+                          className="ml-auto text-xs text-leaf hover:underline disabled:opacity-50"
                         >
                           {loadingId === row.id ? "Restoring…" : "Restore"}
                         </button>
@@ -1953,7 +1953,7 @@ export default function InventoryClient({
                         onClick={() => setListingShippingMode(mode)}
                         className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
                           listingShippingMode === mode
-                            ? "border-green-700 bg-green-50 text-green-800 dark:bg-green-950/40 dark:text-green-300 dark:border-green-600"
+                            ? "border-leaf bg-[#EBF0E6] text-forest dark:bg-forest/40 dark:text-[#A8BF9A] dark:border-leaf"
                             : "border-input hover:bg-muted"
                         }`}
                       >
@@ -2003,7 +2003,7 @@ export default function InventoryClient({
                       (listingShippingMode === "weight" && !listingShippingWeightOz) ||
                       (listingShippingMode === "flat" && !listingShippingCost)
                     }
-                    className="flex-1 bg-green-700 hover:bg-green-800"
+                    className="flex-1 bg-leaf hover:bg-forest"
                   >
                     {submitting ? "Publishing…" : "Go Live"}
                   </Button>
@@ -2067,7 +2067,7 @@ export default function InventoryClient({
                         onClick={() => setAuctionShippingMode(mode)}
                         className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
                           auctionShippingMode === mode
-                            ? "border-green-700 bg-green-50 text-green-800 dark:bg-green-950/40 dark:text-green-300 dark:border-green-600"
+                            ? "border-leaf bg-[#EBF0E6] text-forest dark:bg-forest/40 dark:text-[#A8BF9A] dark:border-leaf"
                             : "border-input hover:bg-muted"
                         }`}
                       >
@@ -2129,7 +2129,7 @@ export default function InventoryClient({
                       (auctionShippingMode === "weight" && !auctionShippingWeightOz) ||
                       (auctionShippingMode === "flat" && !auctionShippingCost)
                     }
-                    className="flex-1 bg-green-700 hover:bg-green-800"
+                    className="flex-1 bg-leaf hover:bg-forest"
                   >
                     {submitting ? "Starting…" : "Start Auction"}
                   </Button>
@@ -2167,7 +2167,7 @@ export default function InventoryClient({
               </div>
               <div className="flex gap-2 pt-1">
                 <Button variant="outline" onClick={() => setModal(null)} className="flex-1">Cancel</Button>
-                <Button onClick={submitAddVariant} disabled={submitting || !variantQty} className="flex-1 bg-green-700 hover:bg-green-800">
+                <Button onClick={submitAddVariant} disabled={submitting || !variantQty} className="flex-1 bg-leaf hover:bg-forest">
                   {submitting ? "Adding…" : "Add Variant"}
                 </Button>
               </div>
@@ -2309,7 +2309,7 @@ export default function InventoryClient({
                       <div className="grid grid-cols-3 gap-2">
                         {(["free", "flat", "weight"] as const).map((mode) => (
                           <button key={mode} type="button" onClick={() => setEditShippingMode(editShippingMode === mode ? "" : mode)}
-                            className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors ${editShippingMode === mode ? "border-green-700 bg-green-50 text-green-800 dark:bg-green-950/40 dark:text-green-300 dark:border-green-600" : "border-input hover:bg-muted"}`}
+                            className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors ${editShippingMode === mode ? "border-leaf bg-[#EBF0E6] text-forest dark:bg-forest/40 dark:text-[#A8BF9A] dark:border-leaf" : "border-input hover:bg-muted"}`}
                           >
                             {mode === "free" ? "Free" : mode === "flat" ? "Flat rate" : "By weight"}
                           </button>
@@ -2357,7 +2357,7 @@ export default function InventoryClient({
               </div>
               <div className="flex gap-2 pt-1">
                 <Button variant="outline" onClick={() => setModal(null)} className="flex-1">Cancel</Button>
-                <Button onClick={submitEdit} disabled={submitting || !editPlantName.trim()} className="flex-1 bg-green-700 hover:bg-green-800">
+                <Button onClick={submitEdit} disabled={submitting || !editPlantName.trim()} className="flex-1 bg-leaf hover:bg-forest">
                   {submitting ? "Saving…" : "Save Changes"}
                 </Button>
               </div>
@@ -2427,7 +2427,7 @@ export default function InventoryClient({
               <p className="text-muted-foreground">Every row tracks four numbers:</p>
               <ul className="list-disc pl-4 space-y-0.5 text-muted-foreground">
                 <li><span className="font-medium text-foreground">Total</span> — everything you own (click the number to edit)</li>
-                <li><span className="font-medium text-green-700">In Shop</span> — allocated to an active shop listing</li>
+                <li><span className="font-medium text-leaf">In Shop</span> — allocated to an active shop listing</li>
                 <li><span className="font-medium text-blue-700">In Auction</span> — reserved for a live auction</li>
                 <li><span className="font-medium text-foreground">Available</span> — Total minus In Shop minus In Auction</li>
               </ul>

@@ -10,7 +10,7 @@ export default function NotFound() {
       <p className="text-muted-foreground mb-8 max-w-sm">
         This page doesn&apos;t exist or may have been removed.
       </p>
-      <Link href="/" className={cn(buttonVariants(), "bg-green-700 hover:bg-green-800")}>
+      <Link href="/" className={cn(buttonVariants(), "bg-leaf hover:bg-forest")}>
         Go home
       </Link>
     </div>

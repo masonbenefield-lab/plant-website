@@ -30,7 +30,7 @@ export default function GlobalError({
         >
           Try again
         </button>
-        <Link href="/" className={cn(buttonVariants(), "bg-green-700 hover:bg-green-800")}>
+        <Link href="/" className={cn(buttonVariants(), "bg-leaf hover:bg-forest")}>
           Go home
         </Link>
       </div>

@@ -64,7 +64,7 @@ export default async function MessagesPage() {
 
             return (
               <Link key={conv.id} href={`/messages/${conv.id}`}>
-                <Card className={cn("hover:bg-muted/40 transition-colors", unread > 0 && "border-green-300 bg-green-50/50 dark:bg-green-950/20")}>
+                <Card className={cn("hover:bg-muted/40 transition-colors", unread > 0 && "border-[#A8BF9A] bg-[#EBF0E6]/50 dark:bg-forest/20")}>
                   <CardContent className="p-4 flex items-center gap-3">
                     <div className="relative shrink-0">
                       <div className="w-10 h-10 rounded-full bg-muted overflow-hidden">
@@ -77,7 +77,7 @@ export default async function MessagesPage() {
                         )}
                       </div>
                       {unread > 0 && (
-                        <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-green-600 text-white text-[10px] font-bold flex items-center justify-center">
+                        <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-leaf text-white text-[10px] font-bold flex items-center justify-center">
                           {unread > 9 ? "9+" : unread}
                         </span>
                       )}

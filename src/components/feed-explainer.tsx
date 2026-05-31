@@ -20,20 +20,20 @@ export function FeedExplainer() {
   if (!visible) return null;
 
   return (
-    <div className="flex items-start gap-3 mb-6 rounded-xl border bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800 px-4 py-3.5">
+    <div className="flex items-start gap-3 mb-6 rounded-xl border bg-[#EBF0E6] dark:bg-forest/20 border-[#C5D4BC] dark:border-forest px-4 py-3.5">
       <span className="text-xl shrink-0 mt-0.5">🌱</span>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-green-900 dark:text-green-200">Welcome to your feed</p>
-        <p className="text-xs text-green-800/70 dark:text-green-300/70 mt-0.5 leading-relaxed">
+        <p className="text-sm font-medium text-forest dark:text-[#C5D4BC]">Welcome to your feed</p>
+        <p className="text-xs text-forest/70 dark:text-[#A8BF9A]/70 mt-0.5 leading-relaxed">
           Your feed shows new listings, announcements, and garden updates from sellers you follow.
           Discover sellers by browsing the{" "}
-          <a href="/shop" className="underline hover:text-green-700">shop</a>{" "}
+          <a href="/shop" className="underline hover:text-leaf">shop</a>{" "}
           or{" "}
-          <a href="/community" className="underline hover:text-green-700">community</a>,
+          <a href="/community" className="underline hover:text-leaf">community</a>,
           then follow them from their storefront.
         </p>
       </div>
-      <button onClick={dismiss} className="text-green-700/60 hover:text-green-700 transition-colors shrink-0 mt-0.5">
+      <button onClick={dismiss} className="text-leaf/60 hover:text-leaf transition-colors shrink-0 mt-0.5">
         <X size={15} />
       </button>
     </div>

@@ -348,7 +348,7 @@ export default function ListingActions({ listing }: { listing: Listing }) {
               <Button
                 onClick={saveEdit}
                 disabled={saving || !price}
-                className="bg-green-700 hover:bg-green-800"
+                className="bg-leaf hover:bg-forest"
               >
                 {saving ? "Saving…" : "Save"}
               </Button>

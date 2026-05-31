@@ -54,10 +54,10 @@ export default function CommunityGardensGrid({
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search gardens..."
-            className="w-full pl-8 pr-3 py-2 text-sm rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-green-600"
+            className="w-full pl-8 pr-3 py-2 text-sm rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-leaf"
           />
         </div>
-        <button type="submit" className="px-3 py-2 text-sm rounded-lg bg-green-700 text-white hover:bg-green-800 transition-colors font-medium">
+        <button type="submit" className="px-3 py-2 text-sm rounded-lg bg-leaf text-white hover:bg-forest transition-colors font-medium">
           Search
         </button>
       </form>
@@ -80,9 +80,9 @@ export default function CommunityGardensGrid({
             const isOwnGarden = currentUserId === profile.id;
             return (
               <Link key={profile.id} href={isOwnGarden ? "/garden" : `/gardens/${profile.username}`}>
-                <Card className={cn("overflow-hidden hover:shadow-md transition-shadow group h-full relative", isOwnGarden && "ring-2 ring-green-500")}>
+                <Card className={cn("overflow-hidden hover:shadow-md transition-shadow group h-full relative", isOwnGarden && "ring-2 ring-leaf")}>
                   {isOwnGarden && (
-                    <div className="absolute top-2 left-2 z-10 text-[10px] font-semibold bg-green-600 text-white px-2 py-0.5 rounded-full">
+                    <div className="absolute top-2 left-2 z-10 text-[10px] font-semibold bg-leaf text-white px-2 py-0.5 rounded-full">
                       Your garden
                     </div>
                   )}
@@ -106,13 +106,13 @@ export default function CommunityGardensGrid({
                     <div className="flex items-center gap-2">
                       <Avatar className="h-6 w-6 shrink-0">
                         <AvatarImage src={profile.avatar_url ?? undefined} />
-                        <AvatarFallback className="text-[10px] bg-green-100 text-green-700">
+                        <AvatarFallback className="text-[10px] bg-[#DFE7D4] text-leaf">
                           {name?.slice(0, 2).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                       <p className="font-semibold text-sm leading-tight truncate">{name}</p>
                       {profile.open_to_trades && (
-                        <span className="ml-auto shrink-0 flex items-center gap-1 text-[10px] font-medium text-green-700 bg-green-100 dark:bg-green-900/40 dark:text-green-400 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                        <span className="ml-auto shrink-0 flex items-center gap-1 text-[10px] font-medium text-leaf bg-[#DFE7D4] dark:bg-forest/40 dark:text-sage px-1.5 py-0.5 rounded-full whitespace-nowrap">
                           <ArrowLeftRight size={9} />
                           Trades
                         </span>

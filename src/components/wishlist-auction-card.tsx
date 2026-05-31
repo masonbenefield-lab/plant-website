@@ -69,7 +69,7 @@ export default function WishlistAuctionCard({
         <p className="font-semibold truncate">{plant_name}</p>
         {variety && <p className="text-sm text-muted-foreground truncate">{variety}</p>}
         <div className="flex items-center justify-between mt-2">
-          <span className="font-bold text-green-700">
+          <span className="font-bold text-leaf">
             Bid: {centsToDisplay(current_bid_cents)}
           </span>
           {isActive && (

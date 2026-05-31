@@ -46,7 +46,7 @@ export default function BuyButton({ listingId, maxQty }: { listingId: string; ma
       <Button
         onClick={handleBuy}
         disabled={isPending}
-        className="bg-green-700 hover:bg-green-800 w-full"
+        className="bg-leaf hover:bg-forest w-full"
         size="lg"
       >
         {isPending ? "Loading…" : "Buy Now"}

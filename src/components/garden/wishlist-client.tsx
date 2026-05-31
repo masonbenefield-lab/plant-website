@@ -26,7 +26,7 @@ const PRIORITY_LABEL: Record<Priority, string> = {
 const PRIORITY_COLOR: Record<Priority, string> = {
   nice: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400",
   want: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400",
-  must: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400",
+  must: "bg-[#DFE7D4] text-leaf dark:bg-forest/40 dark:text-sage",
 };
 
 export function WishlistClient({ initialItems }: { initialItems: WishlistItem[] }) {
@@ -131,10 +131,10 @@ export function WishlistClient({ initialItems }: { initialItems: WishlistItem[] 
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search wishlist..."
-            className="pl-8 pr-3 py-2 text-sm rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-green-600 w-56"
+            className="pl-8 pr-3 py-2 text-sm rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-leaf w-56"
           />
         </div>
-        <button type="submit" className="px-3 py-2 text-sm rounded-lg bg-green-700 text-white hover:bg-green-800 transition-colors font-medium">
+        <button type="submit" className="px-3 py-2 text-sm rounded-lg bg-leaf text-white hover:bg-forest transition-colors font-medium">
           Search
         </button>
       </form>
@@ -143,7 +143,7 @@ export function WishlistClient({ initialItems }: { initialItems: WishlistItem[] 
       {!showForm ? (
         <button
           onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg border-2 border-dashed border-border text-sm text-muted-foreground hover:border-green-400 hover:text-green-700 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg border-2 border-dashed border-border text-sm text-muted-foreground hover:border-sage hover:text-leaf transition-colors"
         >
           <Plus size={16} />
           Add plant to wishlist
@@ -160,7 +160,7 @@ export function WishlistClient({ initialItems }: { initialItems: WishlistItem[] 
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="e.g. Fiddle Leaf Fig"
-                    className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-green-600"
+                    className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-leaf"
                     required
                   />
                 </div>
@@ -170,7 +170,7 @@ export function WishlistClient({ initialItems }: { initialItems: WishlistItem[] 
                     value={variety}
                     onChange={(e) => setVariety(e.target.value)}
                     placeholder="e.g. Bambino"
-                    className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-green-600"
+                    className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-leaf"
                   />
                 </div>
               </div>
@@ -181,7 +181,7 @@ export function WishlistClient({ initialItems }: { initialItems: WishlistItem[] 
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Where to find it, why you want it…"
                   rows={2}
-                  className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-green-600 resize-none"
+                  className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-leaf resize-none"
                 />
               </div>
               <div className="space-y-1">
@@ -196,7 +196,7 @@ export function WishlistClient({ initialItems }: { initialItems: WishlistItem[] 
                         "px-3 py-1 rounded-full text-xs font-medium transition-colors border",
                         priority === p
                           ? PRIORITY_COLOR[p] + " border-transparent"
-                          : "border-border text-muted-foreground hover:border-green-400"
+                          : "border-border text-muted-foreground hover:border-sage"
                       )}
                     >
                       {PRIORITY_LABEL[p]}
@@ -208,7 +208,7 @@ export function WishlistClient({ initialItems }: { initialItems: WishlistItem[] 
                 <button
                   type="submit"
                   disabled={saving || !name.trim()}
-                  className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-md bg-green-700 text-white hover:bg-green-800 disabled:opacity-50 transition-colors"
+                  className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-md bg-leaf text-white hover:bg-forest disabled:opacity-50 transition-colors"
                 >
                   {saving ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
                   Add to wishlist
@@ -261,7 +261,7 @@ export function WishlistClient({ initialItems }: { initialItems: WishlistItem[] 
                         autoFocus
                         value={editName}
                         onChange={(e) => setEditName(e.target.value)}
-                        className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-green-600"
+                        className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-leaf"
                       />
                     </div>
                     <div className="space-y-1">
@@ -269,7 +269,7 @@ export function WishlistClient({ initialItems }: { initialItems: WishlistItem[] 
                       <input
                         value={editVariety}
                         onChange={(e) => setEditVariety(e.target.value)}
-                        className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-green-600"
+                        className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-leaf"
                       />
                     </div>
                   </div>
@@ -279,7 +279,7 @@ export function WishlistClient({ initialItems }: { initialItems: WishlistItem[] 
                       value={editNotes}
                       onChange={(e) => setEditNotes(e.target.value)}
                       rows={2}
-                      className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-green-600 resize-none"
+                      className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-leaf resize-none"
                     />
                   </div>
                   <div className="space-y-1">
@@ -294,7 +294,7 @@ export function WishlistClient({ initialItems }: { initialItems: WishlistItem[] 
                             "px-3 py-1 rounded-full text-xs font-medium transition-colors border",
                             editPriority === p
                               ? PRIORITY_COLOR[p] + " border-transparent"
-                              : "border-border text-muted-foreground hover:border-green-400"
+                              : "border-border text-muted-foreground hover:border-sage"
                           )}
                         >
                           {PRIORITY_LABEL[p]}
@@ -306,7 +306,7 @@ export function WishlistClient({ initialItems }: { initialItems: WishlistItem[] 
                     <button
                       onClick={() => handleEdit(item.id)}
                       disabled={editSaving || !editName.trim()}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md bg-green-700 text-white hover:bg-green-800 disabled:opacity-50 transition-colors"
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md bg-leaf text-white hover:bg-forest disabled:opacity-50 transition-colors"
                     >
                       {editSaving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
                       Save

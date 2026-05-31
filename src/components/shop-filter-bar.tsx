@@ -204,7 +204,7 @@ export default function ShopFilterBar() {
           className={cn(
             "h-10 px-3 rounded-md border text-sm font-medium transition-colors whitespace-nowrap",
             onSale
-              ? "bg-green-700 text-white border-green-700"
+              ? "bg-leaf text-white border-leaf"
               : "border-input bg-background text-muted-foreground hover:text-foreground hover:border-foreground"
           )}
         >
@@ -224,7 +224,7 @@ export default function ShopFilterBar() {
           <SlidersHorizontal size={14} />
           More Filters
           {hasMoreActive && (
-            <span className="ml-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-green-700 text-[10px] text-white font-bold">
+            <span className="ml-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-leaf text-[10px] text-white font-bold">
               {[location, potSize].filter(Boolean).length}
             </span>
           )}
@@ -237,7 +237,7 @@ export default function ShopFilterBar() {
           className={cn(
             "h-10 px-3 rounded-md border text-sm font-medium transition-colors flex items-center gap-1.5 whitespace-nowrap",
             showGuide
-              ? "bg-green-700 text-white border-green-700"
+              ? "bg-leaf text-white border-leaf"
               : "border-input bg-background text-muted-foreground hover:text-foreground hover:border-foreground"
           )}
         >

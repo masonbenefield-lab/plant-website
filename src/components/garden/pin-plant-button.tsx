@@ -45,7 +45,7 @@ export default function PinPlantButton({ plantId, initialPinOrder, onPinChange }
       className={cn(
         "w-6 h-6 rounded-full flex items-center justify-center transition-colors shadow-sm text-[10px] font-bold",
         isPinned
-          ? "bg-green-600/90 text-white hover:bg-green-700"
+          ? "bg-leaf/90 text-white hover:bg-leaf"
           : "bg-black/50 text-white/70 hover:bg-black/70"
       )}
     >

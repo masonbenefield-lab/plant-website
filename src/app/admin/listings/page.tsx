@@ -4,7 +4,7 @@ import { centsToDisplay } from "@/lib/stripe";
 import { DeleteListingButton, PauseListingButton } from "./listing-actions";
 
 const statusColor: Record<string, string> = {
-  active:   "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400",
+  active:   "bg-[#DFE7D4] text-leaf dark:bg-forest/40 dark:text-sage",
   paused:   "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400",
   sold_out: "bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400",
 };
@@ -54,7 +54,7 @@ export default async function AdminListingsPage() {
                   </td>
                   <td className="px-4 py-3 hidden sm:table-cell">
                     {seller ? (
-                      <Link href={`/sellers/${seller.username}`} className="text-green-700 hover:underline" target="_blank">
+                      <Link href={`/sellers/${seller.username}`} className="text-leaf hover:underline" target="_blank">
                         {seller.username}
                       </Link>
                     ) : "—"}

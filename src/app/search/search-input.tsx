@@ -57,13 +57,13 @@ export default function SearchInput({
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search plant name, variety…"
-            className="w-full pl-9 pr-3 py-2.5 rounded-lg text-sm border bg-background focus:outline-none focus:ring-2 focus:ring-green-500"
+            className="w-full pl-9 pr-3 py-2.5 rounded-lg text-sm border bg-background focus:outline-none focus:ring-2 focus:ring-leaf"
             autoFocus
           />
         </div>
         <button
           type="submit"
-          className="px-5 py-2.5 bg-green-700 hover:bg-green-800 text-white text-sm font-semibold rounded-lg transition-colors shrink-0"
+          className="px-5 py-2.5 bg-leaf hover:bg-forest text-white text-sm font-semibold rounded-lg transition-colors shrink-0"
         >
           Search
         </button>
@@ -74,7 +74,7 @@ export default function SearchInput({
           <select
             value={cat}
             onChange={(e) => { setCat(e.target.value); navigate(q, e.target.value, sort); }}
-            className="text-sm border rounded-lg px-3 py-1.5 bg-background focus:outline-none focus:ring-2 focus:ring-green-500"
+            className="text-sm border rounded-lg px-3 py-1.5 bg-background focus:outline-none focus:ring-2 focus:ring-leaf"
           >
             <option value="">All Categories</option>
             {PLANT_CATEGORIES.map((c) => (
@@ -85,7 +85,7 @@ export default function SearchInput({
           <select
             value={sort}
             onChange={(e) => { setSort(e.target.value); navigate(q, cat, e.target.value); }}
-            className="text-sm border rounded-lg px-3 py-1.5 bg-background focus:outline-none focus:ring-2 focus:ring-green-500"
+            className="text-sm border rounded-lg px-3 py-1.5 bg-background focus:outline-none focus:ring-2 focus:ring-leaf"
           >
             {SORT_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>

@@ -69,7 +69,7 @@ export function SharePlantButton({ plantId, plantName, isPublic, gardenPublic, l
 
   if (shared) {
     return (
-      <div className="flex items-center gap-1.5 text-sm text-green-700 font-medium px-3 py-1.5">
+      <div className="flex items-center gap-1.5 text-sm text-leaf font-medium px-3 py-1.5">
         <CheckCheck size={14} />
         Shared to feed
       </div>
@@ -96,7 +96,7 @@ export function SharePlantButton({ plantId, plantName, isPublic, gardenPublic, l
             <Button variant="outline" className="flex-1" onClick={() => setConfirmOpen(false)}>
               Cancel
             </Button>
-            <Button className="flex-1 bg-green-700 hover:bg-green-800" onClick={doShare} disabled={isPending}>
+            <Button className="flex-1 bg-leaf hover:bg-forest" onClick={doShare} disabled={isPending}>
               {isPending ? <Loader2 size={14} className="animate-spin mr-1" /> : null}
               Share anyway
             </Button>

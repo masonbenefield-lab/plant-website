@@ -115,7 +115,7 @@ export default function FollowingClient({ currentUserId, followingIds, followerI
             onClick={() => { setTab(t); setQuery(""); setSearchQuery(""); setSearchResults([]); }}
             className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
               tab === t
-                ? "border-green-700 text-green-700"
+                ? "border-leaf text-leaf"
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -244,7 +244,7 @@ function UserCard({
     <div className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-muted/30 transition-colors">
       <Avatar className="h-10 w-10 shrink-0">
         <AvatarImage src={profile.avatar_url ?? undefined} />
-        <AvatarFallback className="bg-green-100 text-green-700 text-sm font-semibold">
+        <AvatarFallback className="bg-[#DFE7D4] text-leaf text-sm font-semibold">
           {profile.username.slice(0, 2).toUpperCase()}
         </AvatarFallback>
       </Avatar>
@@ -252,7 +252,7 @@ function UserCard({
       <div className="flex-1 min-w-0">
         <Link
           href={`/sellers/${profile.username}`}
-          className="font-medium text-sm hover:text-green-700 hover:underline block truncate"
+          className="font-medium text-sm hover:text-leaf hover:underline block truncate"
         >
           {profile.display_name ?? profile.username}
         </Link>

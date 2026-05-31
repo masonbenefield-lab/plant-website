@@ -121,7 +121,7 @@ export function PlantPhotoManager({ plantId, initialImages, alt }: Props) {
                 onClick={() => setActiveIndex(i)}
                 className={cn(
                   "w-full h-full relative rounded-lg overflow-hidden bg-muted transition-all",
-                  i === activeIndex ? "ring-2 ring-green-600 ring-offset-1" : "opacity-60 hover:opacity-100"
+                  i === activeIndex ? "ring-2 ring-leaf ring-offset-1" : "opacity-60 hover:opacity-100"
                 )}
               >
                 <Image src={url} alt={`${alt} photo ${i + 1}`} fill className="object-cover" />
@@ -141,7 +141,7 @@ export function PlantPhotoManager({ plantId, initialImages, alt }: Props) {
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
-              className="w-20 h-20 shrink-0 rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center gap-1 text-muted-foreground hover:border-green-400 hover:text-green-700 transition-colors text-xs"
+              className="w-20 h-20 shrink-0 rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center gap-1 text-muted-foreground hover:border-sage hover:text-leaf transition-colors text-xs"
             >
               {uploading ? <Loader2 size={16} className="animate-spin" /> : <Camera size={16} />}
               <span>Add</span>

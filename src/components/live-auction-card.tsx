@@ -63,7 +63,7 @@ export default function LiveAuctionCard({
             <p className="text-xs text-muted-foreground">
               {bid_count != null && bid_count > 0 ? `${bid_count} bid${bid_count !== 1 ? "s" : ""}` : "Starting bid"}
             </p>
-            <p className={`text-sm font-bold ${bid_count != null && bid_count > 0 ? "text-green-700" : "text-muted-foreground"}`}>{centsToDisplay(current_bid_cents)}</p>
+            <p className={`text-sm font-bold ${bid_count != null && bid_count > 0 ? "text-leaf" : "text-muted-foreground"}`}>{centsToDisplay(current_bid_cents)}</p>
           </div>
           <div className="text-right">
             <p className="text-xs text-muted-foreground">Ends in</p>

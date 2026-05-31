@@ -115,7 +115,7 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button className="bg-green-700 hover:bg-green-800" />}>
+      <DialogTrigger render={<Button className="bg-leaf hover:bg-forest" />}>
         + New Auction
       </DialogTrigger>
       <DialogContent className="max-w-lg">
@@ -240,7 +240,7 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
                   disabled={atAuctionLimit}
                   className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
                     shippingMode === mode
-                      ? "border-green-700 bg-green-50 text-green-800 dark:bg-green-950/40 dark:text-green-300 dark:border-green-600"
+                      ? "border-leaf bg-[#EBF0E6] text-forest dark:bg-forest/40 dark:text-[#A8BF9A] dark:border-leaf"
                       : "border-input hover:bg-muted"
                   }`}
                 >
@@ -283,7 +283,7 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
           )}
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={saving || atAuctionLimit || !shippingMode} className="bg-green-700 hover:bg-green-800">
+            <Button type="submit" disabled={saving || atAuctionLimit || !shippingMode} className="bg-leaf hover:bg-forest">
               {saving ? "Saving…" : "Create auction"}
             </Button>
           </div>

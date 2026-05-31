@@ -43,7 +43,7 @@ export function CommunitySearchBar() {
         defaultValue={q}
         onChange={handleChange}
         placeholder="Search posts…"
-        className="w-full rounded-xl border bg-background pl-9 pr-9 py-2.5 text-sm outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition"
+        className="w-full rounded-xl border bg-background pl-9 pr-9 py-2.5 text-sm outline-none focus:ring-2 focus:ring-leaf focus:border-leaf transition"
       />
       {q && (
         <button

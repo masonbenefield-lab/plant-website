@@ -93,7 +93,7 @@ function PaymentStep({
       <Button
         type="submit"
         disabled={loading || !stripe}
-        className="w-full bg-green-700 hover:bg-green-800"
+        className="w-full bg-leaf hover:bg-forest"
         size="lg"
       >
         {loading ? "Processing…" : `Pay ${centsToDisplay(totalCents)}`}
@@ -285,7 +285,7 @@ export default function CheckoutForm({ listingId, auctionId, offerId, priceCents
                     key={rate.objectId}
                     className={cn(
                       "flex items-center gap-4 rounded-lg border p-4 cursor-pointer transition-colors",
-                      isSelected ? "border-green-600 bg-green-50 dark:bg-green-900/20" : "hover:bg-muted"
+                      isSelected ? "border-leaf bg-[#EBF0E6] dark:bg-forest/20" : "hover:bg-muted"
                     )}
                     onClick={() => {
                       setSelectedRate(rate);
@@ -301,7 +301,7 @@ export default function CheckoutForm({ listingId, auctionId, offerId, priceCents
                         setSelectedRate(rate);
                         setTotalCents(priceCents + rateCents);
                       }}
-                      className="accent-green-700"
+                      className="accent-leaf"
                     />
                     <Package size={18} className="text-muted-foreground shrink-0" />
                     <div className="flex-1 min-w-0">
@@ -343,7 +343,7 @@ export default function CheckoutForm({ listingId, auctionId, offerId, priceCents
               <Button
                 type="submit"
                 disabled={loading || !selectedRate}
-                className="flex-1 bg-green-700 hover:bg-green-800"
+                className="flex-1 bg-leaf hover:bg-forest"
               >
                 {loading ? "Loading…" : "Continue to Payment"}
               </Button>
@@ -467,7 +467,7 @@ export default function CheckoutForm({ listingId, auctionId, offerId, priceCents
           <Button
             type="submit"
             disabled={fetchingRates}
-            className="w-full bg-green-700 hover:bg-green-800 mt-2"
+            className="w-full bg-leaf hover:bg-forest mt-2"
             size="lg"
           >
             {fetchingRates ? (

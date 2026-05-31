@@ -56,7 +56,7 @@ function PaymentStep({ clientSecret, totalCents, onSuccess }: { clientSecret: st
   return (
     <form onSubmit={handlePay} className="space-y-4">
       <PaymentElement />
-      <Button type="submit" disabled={loading || !stripe} className="w-full bg-green-700 hover:bg-green-800" size="lg">
+      <Button type="submit" disabled={loading || !stripe} className="w-full bg-leaf hover:bg-forest" size="lg">
         {loading ? "Processing…" : `Pay ${centsToDisplay(totalCents)}`}
       </Button>
     </form>
@@ -94,7 +94,7 @@ export default function CartCheckoutPage() {
     return (
       <div className="max-w-xl mx-auto px-4 py-16 text-center">
         <p className="text-muted-foreground mb-4">Your cart is empty.</p>
-        <Link href="/shop" className="text-green-700 hover:underline">Browse the shop →</Link>
+        <Link href="/shop" className="text-leaf hover:underline">Browse the shop →</Link>
       </div>
     );
   }
@@ -221,7 +221,7 @@ export default function CartCheckoutPage() {
         )}
         <div className="flex justify-between font-semibold pt-1 border-t">
           <span>Total</span>
-          <span className="text-green-700">{centsToDisplay(grandTotalCents)}</span>
+          <span className="text-leaf">{centsToDisplay(grandTotalCents)}</span>
         </div>
       </div>
     </div>
@@ -259,7 +259,7 @@ export default function CartCheckoutPage() {
                           key={rate.objectId}
                           className={cn(
                             "flex items-center gap-4 rounded-lg border p-4 cursor-pointer transition-colors",
-                            isSelected ? "border-green-600 bg-green-50 dark:bg-green-900/20" : "hover:bg-muted"
+                            isSelected ? "border-leaf bg-[#EBF0E6] dark:bg-forest/20" : "hover:bg-muted"
                           )}
                           onClick={() => {
                             setSelectedRate(rate);
@@ -275,7 +275,7 @@ export default function CartCheckoutPage() {
                               setSelectedRate(rate);
                               setGrandTotalCents(itemsTotalCents + rateCents);
                             }}
-                            className="accent-green-700"
+                            className="accent-leaf"
                           />
                           <Package size={18} className="text-muted-foreground shrink-0" />
                           <div className="flex-1 min-w-0">
@@ -291,7 +291,7 @@ export default function CartCheckoutPage() {
                   </div>
                   <div className="flex gap-3">
                     <Button type="button" variant="outline" className="flex-1" onClick={() => setStep("address")}>Back</Button>
-                    <Button type="submit" disabled={loading || !selectedRate} className="flex-1 bg-green-700 hover:bg-green-800">
+                    <Button type="submit" disabled={loading || !selectedRate} className="flex-1 bg-leaf hover:bg-forest">
                       {loading ? "Loading…" : "Continue to Payment"}
                     </Button>
                   </div>
@@ -349,7 +349,7 @@ export default function CartCheckoutPage() {
                     <input type="checkbox" checked={saveAddress} onChange={(e) => setSaveAddress(e.target.checked)} className="rounded" />
                     Save this address for next time
                   </label>
-                  <Button type="submit" disabled={fetchingRates} className="w-full bg-green-700 hover:bg-green-800 mt-2" size="lg">
+                  <Button type="submit" disabled={fetchingRates} className="w-full bg-leaf hover:bg-forest mt-2" size="lg">
                     {fetchingRates ? (
                       <span className="flex items-center gap-2"><Loader2 size={16} className="animate-spin" /> Fetching shipping rates…</span>
                     ) : "Continue"}

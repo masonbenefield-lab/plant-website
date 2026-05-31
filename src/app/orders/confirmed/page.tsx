@@ -75,7 +75,7 @@ export default async function OrderConfirmedPage({
               <div>
                 <p className="font-semibold">{item.plant_name}</p>
                 {item.variety && <p className="text-sm text-muted-foreground">{item.variety}</p>}
-                <p className="text-sm font-medium text-green-700 mt-0.5">{centsToDisplay(order.amount_cents)}</p>
+                <p className="text-sm font-medium text-leaf mt-0.5">{centsToDisplay(order.amount_cents)}</p>
               </div>
             </div>
           )}
@@ -91,7 +91,7 @@ export default async function OrderConfirmedPage({
           {seller?.username && (
             <div className="border-t pt-4 text-sm">
               <span className="text-muted-foreground">Seller: </span>
-              <Link href={`/sellers/${seller.username}`} className="font-medium text-green-700 hover:underline">
+              <Link href={`/sellers/${seller.username}`} className="font-medium text-leaf hover:underline">
                 {seller.username}
               </Link>
             </div>
@@ -101,11 +101,11 @@ export default async function OrderConfirmedPage({
 
       <p className="text-xs text-muted-foreground mb-6">
         Once your order is delivered, you can leave a review from{" "}
-        <Link href="/orders" className="text-green-700 hover:underline">My Purchases</Link>.
+        <Link href="/orders" className="text-leaf hover:underline">My Purchases</Link>.
       </p>
 
       {seller && seller.id !== user.id && !alreadyFollows && (
-        <div className="mb-6 border rounded-xl p-4 flex items-center justify-between gap-4 text-left bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800">
+        <div className="mb-6 border rounded-xl p-4 flex items-center justify-between gap-4 text-left bg-[#EBF0E6] dark:bg-forest/20 border-[#C5D4BC] dark:border-forest">
           <div>
             <p className="font-medium text-sm">Follow {seller.username}</p>
             <p className="text-xs text-muted-foreground">Get notified when they list new plants</p>
@@ -123,7 +123,7 @@ export default async function OrderConfirmedPage({
         <Link href="/orders" className={cn(buttonVariants({ variant: "outline" }))}>
           View my purchases
         </Link>
-        <Link href="/shop" className={cn(buttonVariants(), "bg-green-700 hover:bg-green-800")}>
+        <Link href="/shop" className={cn(buttonVariants(), "bg-leaf hover:bg-forest")}>
           Continue shopping
         </Link>
       </div>

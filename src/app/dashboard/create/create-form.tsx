@@ -328,8 +328,8 @@ export default function CreateInventoryPage() {
                   planLimits.photos !== null && imageUrls.length >= planLimits.photos
                     ? "border-muted-foreground/20 opacity-50 cursor-not-allowed"
                     : dragging
-                    ? "border-green-500 bg-green-50 cursor-pointer"
-                    : "border-muted-foreground/25 hover:border-green-400 hover:bg-muted/40 cursor-pointer"
+                    ? "border-leaf bg-[#EBF0E6] cursor-pointer"
+                    : "border-muted-foreground/25 hover:border-sage hover:bg-muted/40 cursor-pointer"
                 } ${uploading ? "pointer-events-none opacity-60" : ""}`}
               >
                 {uploading ? (
@@ -419,7 +419,7 @@ export default function CreateInventoryPage() {
                     onClick={() => updateSize(size.id, "listInShop", !size.listInShop)}
                     className="flex items-center gap-2.5 text-left"
                   >
-                    <div className={`w-8 h-5 rounded-full transition-colors flex items-center px-0.5 ${size.listInShop ? "bg-green-600" : "bg-muted-foreground/30"}`}>
+                    <div className={`w-8 h-5 rounded-full transition-colors flex items-center px-0.5 ${size.listInShop ? "bg-leaf" : "bg-muted-foreground/30"}`}>
                       <div className={`w-4 h-4 rounded-full bg-white shadow transition-transform ${size.listInShop ? "translate-x-3" : "translate-x-0"}`} />
                     </div>
                     <span className="text-xs font-medium flex items-center gap-1"><Store size={12} /> List in Shop</span>
@@ -465,7 +465,7 @@ export default function CreateInventoryPage() {
         </Card>
 
         <div className="flex items-center gap-3">
-          <Button type="submit" disabled={saving || !canSubmit} className="bg-green-700 hover:bg-green-800">
+          <Button type="submit" disabled={saving || !canSubmit} className="bg-leaf hover:bg-forest">
             {saving
               ? "Saving…"
               : anyListing

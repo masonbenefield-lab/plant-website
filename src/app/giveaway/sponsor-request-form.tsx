@@ -31,16 +31,16 @@ export function SponsorRequestForm({ hasOpenRequest }: { hasOpenRequest: boolean
 
   if (submitted) {
     return (
-      <Card className="border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20">
+      <Card className="border-[#C5D4BC] dark:border-forest bg-[#EBF0E6] dark:bg-forest/20">
         <CardContent className="p-5 flex items-start gap-3">
-          <Gift size={18} className="text-green-700 shrink-0 mt-0.5" />
+          <Gift size={18} className="text-leaf shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
-            <p className="text-sm text-green-800 dark:text-green-300 font-medium">
+            <p className="text-sm text-forest dark:text-[#A8BF9A] font-medium">
               Your sponsor request is submitted — we&apos;ll reach out via your messages inbox.
             </p>
             <button
               onClick={() => { setSubmitted(false); setShowForm(true); setItemName(""); setMessage(""); }}
-              className="mt-2 text-xs text-green-700 dark:text-green-400 hover:underline"
+              className="mt-2 text-xs text-leaf dark:text-sage hover:underline"
             >
               Submit another request
             </button>
@@ -53,7 +53,7 @@ export function SponsorRequestForm({ hasOpenRequest }: { hasOpenRequest: boolean
   return (
     <div className="rounded-2xl border border-dashed p-6 space-y-4">
       <div className="flex items-start gap-3">
-        <Gift size={20} className="text-green-700 mt-0.5 shrink-0" />
+        <Gift size={20} className="text-leaf mt-0.5 shrink-0" />
         <div>
           <p className="font-semibold">Want to donate a prize?</p>
           <p className="text-sm text-muted-foreground mt-0.5">
@@ -65,7 +65,7 @@ export function SponsorRequestForm({ hasOpenRequest }: { hasOpenRequest: boolean
       {!showForm ? (
         <button
           onClick={() => setShowForm(true)}
-          className="px-4 py-2 text-sm font-medium rounded-lg bg-green-700 text-white hover:bg-green-800 transition-colors"
+          className="px-4 py-2 text-sm font-medium rounded-lg bg-leaf text-white hover:bg-forest transition-colors"
         >
           Submit a donation request
         </button>
@@ -78,7 +78,7 @@ export function SponsorRequestForm({ hasOpenRequest }: { hasOpenRequest: boolean
               value={itemName}
               onChange={(e) => setItemName(e.target.value)}
               placeholder="e.g. Variegated Monstera cutting"
-              className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-green-600"
+              className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-leaf"
               required
             />
           </div>
@@ -89,14 +89,14 @@ export function SponsorRequestForm({ hasOpenRequest }: { hasOpenRequest: boolean
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Size, condition, shipping notes, your shop link…"
               rows={3}
-              className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-green-600 resize-none"
+              className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-leaf resize-none"
             />
           </div>
           <div className="flex gap-2">
             <button
               type="submit"
               disabled={saving || !itemName.trim()}
-              className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-md bg-green-700 text-white hover:bg-green-800 disabled:opacity-50 transition-colors"
+              className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-md bg-leaf text-white hover:bg-forest disabled:opacity-50 transition-colors"
             >
               {saving && <Loader2 size={13} className="animate-spin" />}
               Submit request

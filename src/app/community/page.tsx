@@ -19,7 +19,7 @@ export const dynamic = "force-dynamic";
 const TYPE_LABEL = { help: "Help Request", show_and_tell: "Show & Tell", discussion: "Discussion" } as const;
 const TYPE_COLOR = {
   help: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
-  show_and_tell: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400",
+  show_and_tell: "bg-[#DFE7D4] text-leaf dark:bg-forest/40 dark:text-sage",
   discussion: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
 } as const;
 
@@ -181,13 +181,13 @@ export default async function CommunityPage({
         </div>
         {!isGardensView && (
           user ? (
-            <Link href="/community/new" className={cn(buttonVariants(), "bg-green-700 hover:bg-green-800")}>
+            <Link href="/community/new" className={cn(buttonVariants(), "bg-leaf hover:bg-forest")}>
               + New Post
             </Link>
           ) : (
             <Link
               href="/login?redirectTo=/community/new&message=Sign+in+to+create+a+post"
-              className={cn(buttonVariants(), "bg-green-700 hover:bg-green-800")}
+              className={cn(buttonVariants(), "bg-leaf hover:bg-forest")}
             >
               + New Post
             </Link>
@@ -244,19 +244,19 @@ export default async function CommunityPage({
               {isMineView && !user ? (
                 <>
                   <p className="font-semibold mb-1">Sign in to see your posts</p>
-                  <Link href="/login" className={cn(buttonVariants(), "bg-green-700 hover:bg-green-800 mt-3")}>Sign in</Link>
+                  <Link href="/login" className={cn(buttonVariants(), "bg-leaf hover:bg-forest mt-3")}>Sign in</Link>
                 </>
               ) : isMineView ? (
                 <>
                   <p className="font-semibold mb-1">You haven&apos;t posted yet</p>
                   <p className="text-sm text-muted-foreground mb-4">Share a question, a plant, or start a discussion.</p>
-                  <Link href="/community/new" className={cn(buttonVariants(), "bg-green-700 hover:bg-green-800")}>Create your first post</Link>
+                  <Link href="/community/new" className={cn(buttonVariants(), "bg-leaf hover:bg-forest")}>Create your first post</Link>
                 </>
               ) : isSavedView && !user ? (
                 <>
                   <p className="font-semibold mb-1">Sign in to save posts</p>
                   <p className="text-sm text-muted-foreground mb-4">Bookmark posts to find them again later.</p>
-                  <Link href="/login" className={cn(buttonVariants(), "bg-green-700 hover:bg-green-800")}>Sign in</Link>
+                  <Link href="/login" className={cn(buttonVariants(), "bg-leaf hover:bg-forest")}>Sign in</Link>
                 </>
               ) : isSavedView ? (
                 <>
@@ -268,13 +268,13 @@ export default async function CommunityPage({
                 <>
                   <p className="font-semibold mb-1">No posts match &ldquo;{searchQuery}&rdquo;</p>
                   <p className="text-sm text-muted-foreground mb-4">Try a different search term or clear the search.</p>
-                  <Link href={buildHref({ type: validType, sort: validSort })} className="text-sm text-green-700 hover:underline">Clear search</Link>
+                  <Link href={buildHref({ type: validType, sort: validSort })} className="text-sm text-leaf hover:underline">Clear search</Link>
                 </>
               ) : (
                 <>
                   <p className="font-semibold mb-1">Nothing here yet</p>
                   <p className="text-sm text-muted-foreground mb-6">Be the first to post in the community.</p>
-                  <Link href="/community/new" className={cn(buttonVariants(), "bg-green-700 hover:bg-green-800")}>
+                  <Link href="/community/new" className={cn(buttonVariants(), "bg-leaf hover:bg-forest")}>
                     Post something
                   </Link>
                 </>
@@ -295,7 +295,7 @@ export default async function CommunityPage({
                       <div className="flex items-start gap-3">
                         <Avatar className="h-8 w-8 shrink-0 mt-0.5">
                           <AvatarImage src={author?.avatar_url ?? undefined} />
-                          <AvatarFallback className="bg-green-100 text-green-700 text-xs font-semibold">
+                          <AvatarFallback className="bg-[#DFE7D4] text-leaf text-xs font-semibold">
                             {author?.username?.slice(0, 2).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
@@ -305,7 +305,7 @@ export default async function CommunityPage({
                               {TYPE_LABEL[post.post_type as PostType]}
                             </Badge>
                             {post.solved && (
-                              <span className="flex items-center gap-0.5 text-xs text-green-700 font-medium">
+                              <span className="flex items-center gap-0.5 text-xs text-leaf font-medium">
                                 <CheckCircle2 size={12} /> Solved
                               </span>
                             )}
@@ -375,7 +375,7 @@ function SectionTab({ href, active, children }: { href: string; active: boolean;
       className={cn(
         "px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap",
         active
-          ? "border-green-700 text-green-700"
+          ? "border-leaf text-leaf"
           : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground"
       )}
     >
@@ -397,8 +397,8 @@ function FilterChip({
         "rounded-full font-medium transition-colors border flex items-center gap-1",
         small ? "px-2.5 py-1 text-xs" : "px-3 py-1.5 text-sm",
         active
-          ? "bg-green-700 text-white border-green-700"
-          : "bg-background text-muted-foreground border-border hover:text-foreground hover:border-green-400"
+          ? "bg-leaf text-white border-leaf"
+          : "bg-background text-muted-foreground border-border hover:text-foreground hover:border-sage"
       )}
     >
       {icon}

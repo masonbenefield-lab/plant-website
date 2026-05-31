@@ -63,7 +63,7 @@ function ResetForm() {
           </CardDescription>
         </CardHeader>
         <CardFooter className="justify-center">
-          <a href="/forgot-password" className="text-sm text-green-700 hover:underline">
+          <a href="/forgot-password" className="text-sm text-leaf hover:underline">
             Request a new reset link
           </a>
         </CardFooter>
@@ -125,7 +125,7 @@ function ResetForm() {
           </div>
         </CardContent>
         <CardFooter>
-          <Button type="submit" className="w-full bg-green-700 hover:bg-green-800" disabled={loading}>
+          <Button type="submit" className="w-full bg-leaf hover:bg-forest" disabled={loading}>
             {loading ? "Saving…" : "Set new password"}
           </Button>
         </CardFooter>

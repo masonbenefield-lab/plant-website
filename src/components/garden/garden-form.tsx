@@ -279,7 +279,7 @@ export function GardenForm({ mode, plant, initialValues }: GardenFormProps) {
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
-              className="w-24 h-24 rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center gap-1 text-muted-foreground hover:border-green-400 hover:text-green-700 transition-colors text-xs"
+              className="w-24 h-24 rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center gap-1 text-muted-foreground hover:border-sage hover:text-leaf transition-colors text-xs"
             >
               {uploading ? <Loader2 size={18} className="animate-spin" /> : <Upload size={18} />}
               {!uploading && <span>Add photo</span>}
@@ -385,7 +385,7 @@ export function GardenForm({ mode, plant, initialValues }: GardenFormProps) {
               </p>
             )}
             {resolvedUsername && !checkingUser && (
-              <p className="text-xs text-green-700 flex items-center gap-1">
+              <p className="text-xs text-leaf flex items-center gap-1">
                 <CheckCircle2 size={11} />
                 @{resolvedUsername}{" "}is on Plantet — they&apos;ll be asked to confirm
               </p>
@@ -396,7 +396,7 @@ export function GardenForm({ mode, plant, initialValues }: GardenFormProps) {
               </p>
             )}
             {mode === "edit" && !sourceNameTouched && plant?.origin_verified && (
-              <p className="text-xs text-green-700 flex items-center gap-1">
+              <p className="text-xs text-leaf flex items-center gap-1">
                 <CheckCircle2 size={11} /> Verified
               </p>
             )}
@@ -447,7 +447,7 @@ export function GardenForm({ mode, plant, initialValues }: GardenFormProps) {
             type="checkbox"
             checked={shareToFeed}
             onChange={(e) => setShareToFeed(e.target.checked)}
-            className="mt-0.5 h-4 w-4 rounded border-border accent-green-700"
+            className="mt-0.5 h-4 w-4 rounded border-border accent-leaf"
           />
           <div>
             <span className="text-sm font-medium">Share to your followers&apos; feeds</span>
@@ -462,7 +462,7 @@ export function GardenForm({ mode, plant, initialValues }: GardenFormProps) {
         <Button
           type="submit"
           disabled={isPending || uploading}
-          className="bg-green-700 hover:bg-green-800"
+          className="bg-leaf hover:bg-forest"
         >
           {isPending ? <Loader2 size={16} className="animate-spin mr-2" /> : null}
           {mode === "add" ? "Add to garden" : "Save changes"}

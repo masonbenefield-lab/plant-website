@@ -90,10 +90,10 @@ export default async function CheckoutPage({
           <div>
             <p className="font-semibold">{itemName}</p>
             {auctionId && <p className="text-xs text-muted-foreground mt-0.5">Won at auction</p>}
-            {offerId && offerNote && <p className="text-xs text-green-700 font-medium mt-0.5">✓ {offerNote}</p>}
+            {offerId && offerNote && <p className="text-xs text-leaf font-medium mt-0.5">✓ {offerNote}</p>}
             {listingId && !offerId && quantity > 1 && <p className="text-xs text-muted-foreground mt-0.5">Qty: {quantity}</p>}
           </div>
-          <p className="text-lg font-bold text-green-700 shrink-0">{centsToDisplay(priceCents)}</p>
+          <p className="text-lg font-bold text-leaf shrink-0">{centsToDisplay(priceCents)}</p>
         </div>
         {listingId && !offerId && quantity > 1 && (
           <p className="text-xs text-muted-foreground border-t pt-2">

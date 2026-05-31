@@ -44,7 +44,7 @@ export default function FeedUpdates({ sellerIds }: { sellerIds: string[] }) {
   return (
     <button
       onClick={() => { setNewCount(0); router.refresh(); }}
-      className="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-green-700 hover:bg-green-800 text-white text-sm font-medium px-5 py-2.5 rounded-full shadow-lg transition-colors whitespace-nowrap"
+      className="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-leaf hover:bg-forest text-white text-sm font-medium px-5 py-2.5 rounded-full shadow-lg transition-colors whitespace-nowrap"
     >
       {newCount} new post{newCount !== 1 ? "s" : ""} — click to refresh
     </button>

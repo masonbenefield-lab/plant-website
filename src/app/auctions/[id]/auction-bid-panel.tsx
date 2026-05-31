@@ -291,12 +291,12 @@ export default function AuctionBidPanel({
           ⚠️ Bids placed in the final 2 minutes extend this auction by 2 minutes.
         </p>
       )}
-      <Card className="bg-green-50 border-green-200">
+      <Card className="bg-[#EBF0E6] border-[#C5D4BC]">
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-muted-foreground">Current bid</p>
-              <p className="text-2xl font-bold text-green-700">
+              <p className="text-2xl font-bold text-leaf">
                 {centsToDisplay(auction.current_bid_cents)}
               </p>
               <p className="text-xs text-muted-foreground mt-0.5">
@@ -309,7 +309,7 @@ export default function AuctionBidPanel({
               )}
               {auction.reserve_price_cents && (
                 auction.current_bid_cents >= auction.reserve_price_cents ? (
-                  <p className="text-xs text-green-700 font-medium mt-0.5">✓ Reserve met</p>
+                  <p className="text-xs text-leaf font-medium mt-0.5">✓ Reserve met</p>
                 ) : (
                   <p className="text-xs text-amber-600 font-medium mt-0.5">Reserve not met</p>
                 )
@@ -328,7 +328,7 @@ export default function AuctionBidPanel({
       {isWinner && (
         <a
           href={`/checkout?auction=${auction.id}`}
-          className={cn(buttonVariants({ size: "lg" }), "w-full bg-green-700 hover:bg-green-800")}
+          className={cn(buttonVariants({ size: "lg" }), "w-full bg-leaf hover:bg-forest")}
         >
           You won! Complete Purchase →
         </a>
@@ -369,7 +369,7 @@ export default function AuctionBidPanel({
                 key={inc}
                 type="button"
                 onClick={() => setBidAmount(((auction.current_bid_cents + inc) / 100).toFixed(2))}
-                className="flex-1 text-xs font-medium border border-green-300 text-green-700 rounded-lg py-1.5 hover:bg-green-50 transition-colors"
+                className="flex-1 text-xs font-medium border border-[#A8BF9A] text-leaf rounded-lg py-1.5 hover:bg-[#EBF0E6] transition-colors"
               >
                 +{centsToDisplay(inc)}
               </button>
@@ -395,7 +395,7 @@ export default function AuctionBidPanel({
               <Button
                 type="submit"
                 disabled={placing}
-                className="bg-green-700 hover:bg-green-800"
+                className="bg-leaf hover:bg-forest"
               >
                 {placing ? "…" : "Place Bid"}
               </Button>
@@ -441,7 +441,7 @@ export default function AuctionBidPanel({
               "rounded-lg border px-4 py-3 space-y-3",
               isSafetyWarning(pendingConfirm.cents)
                 ? "border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800"
-                : "border-green-300 bg-green-50 dark:bg-green-900/20 dark:border-green-800"
+                : "border-[#A8BF9A] bg-[#EBF0E6] dark:bg-forest/20 dark:border-forest"
             )}>
               {isSafetyWarning(pendingConfirm.cents) && (
                 <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
@@ -457,7 +457,7 @@ export default function AuctionBidPanel({
                     "text-sm font-medium",
                     isSafetyWarning(pendingConfirm.cents)
                       ? "text-amber-800 dark:text-amber-300"
-                      : "text-green-800 dark:text-green-300"
+                      : "text-forest dark:text-[#A8BF9A]"
                   )}>
                     Confirm bid of{" "}
                     <span className="font-bold">{centsToDisplay(pendingConfirm.cents)}</span>?
@@ -475,7 +475,7 @@ export default function AuctionBidPanel({
                     onClick={confirmBid}
                     className={isSafetyWarning(pendingConfirm.cents)
                       ? "bg-amber-600 hover:bg-amber-700"
-                      : "bg-green-700 hover:bg-green-800"
+                      : "bg-leaf hover:bg-forest"
                     }
                   >
                     Confirm

@@ -16,7 +16,7 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 const STATUS_COLOR: Record<string, string> = {
-  thriving: "bg-green-100 text-green-700",
+  thriving: "bg-[#DFE7D4] text-leaf",
   growing: "bg-emerald-100 text-emerald-700",
   dormant: "bg-yellow-100 text-yellow-700",
   struggling: "bg-orange-100 text-orange-700",
@@ -53,7 +53,7 @@ export function GardenPublicGrid({ plants, username }: { plants: Plant[]; userna
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search plants…"
-            className="w-full pl-8 pr-8 py-2 text-sm rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-green-600"
+            className="w-full pl-8 pr-8 py-2 text-sm rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-leaf"
           />
           {q && (
             <button

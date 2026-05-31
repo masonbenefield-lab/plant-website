@@ -65,11 +65,11 @@ export default function FeedList({ items, sellerMap }: { items: FeedItem[]; sell
             <div className="rounded-2xl border bg-card overflow-hidden hover:shadow-md transition-shadow">
               {/* Seller header */}
               <Link href={`/sellers/${seller?.username}`} className="flex items-center gap-2 px-4 pt-3 pb-2 hover:bg-muted/40 transition-colors">
-                <div className="relative w-7 h-7 rounded-full bg-green-100 overflow-hidden border shrink-0">
+                <div className="relative w-7 h-7 rounded-full bg-[#DFE7D4] overflow-hidden border shrink-0">
                   {seller?.avatar_url ? (
                     <Image src={seller.avatar_url} alt={seller.username} fill className="object-cover" />
                   ) : (
-                    <div className="flex items-center justify-center h-full text-xs font-bold text-green-700">
+                    <div className="flex items-center justify-center h-full text-xs font-bold text-leaf">
                       {seller?.username?.slice(0, 1).toUpperCase()}
                     </div>
                   )}
@@ -115,17 +115,17 @@ export default function FeedList({ items, sellerMap }: { items: FeedItem[]; sell
                         <Badge className="bg-blue-600 text-white text-xs px-1.5 py-0">Auction</Badge>
                       )}
                       {kind === "garden" && (
-                        <Badge className="bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 text-xs px-1.5 py-0 border-0">🌱 New in garden</Badge>
+                        <Badge className="bg-[#DFE7D4] text-leaf dark:bg-forest/40 dark:text-sage text-xs px-1.5 py-0 border-0">🌱 New in garden</Badge>
                       )}
                     </div>
                     {variety && <p className="text-sm text-muted-foreground truncate">{variety}</p>}
                     {category && (
-                      <span className="inline-block text-xs font-medium px-2 py-0.5 rounded-full mt-1 text-green-700 bg-green-100 dark:text-green-400 dark:bg-green-900/40">
+                      <span className="inline-block text-xs font-medium px-2 py-0.5 rounded-full mt-1 text-leaf bg-[#DFE7D4] dark:text-sage dark:bg-forest/40">
                         {category}
                       </span>
                     )}
                     {kind !== "garden" && (
-                      <p className="text-sm font-bold text-green-700 mt-1">
+                      <p className="text-sm font-bold text-leaf mt-1">
                         {price_cents !== undefined
                           ? centsToDisplay(price_cents)
                           : `Bid: ${centsToDisplay(current_bid_cents ?? 0)}`}

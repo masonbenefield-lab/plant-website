@@ -51,7 +51,7 @@ export function GiveawayAdminClient({ months }: { months: GiveawayMonth[] }) {
                   <p className="text-xs text-muted-foreground">{m.plant_name}</p>
                 </div>
                 {data[m.month]?.sponsor_name && (
-                  <span className="text-xs bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 px-2 py-0.5 rounded-full font-medium">
+                  <span className="text-xs bg-[#DFE7D4] text-leaf dark:bg-forest/40 dark:text-sage px-2 py-0.5 rounded-full font-medium">
                     Sponsored by {data[m.month].sponsor_name}
                   </span>
                 )}
@@ -148,7 +148,7 @@ function PlantDetailsForm({
           value={plantName}
           onChange={(e) => setPlantName(e.target.value)}
           placeholder="e.g. Cravens Craving Fig"
-          className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-green-600"
+          className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-leaf"
         />
       </div>
       <div className="space-y-1">
@@ -158,7 +158,7 @@ function PlantDetailsForm({
           onChange={(e) => setDescription(e.target.value)}
           placeholder="A short description shown on the giveaway page…"
           rows={3}
-          className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-green-600 resize-none"
+          className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-leaf resize-none"
         />
       </div>
       <div className="space-y-2">
@@ -177,7 +177,7 @@ function PlantDetailsForm({
                 </button>
               </div>
             )}
-            <label className="cursor-pointer flex items-center gap-2 px-3 py-2 text-sm rounded-md border border-dashed border-border hover:border-green-400 hover:text-green-700 transition-colors text-muted-foreground">
+            <label className="cursor-pointer flex items-center gap-2 px-3 py-2 text-sm rounded-md border border-dashed border-border hover:border-sage hover:text-leaf transition-colors text-muted-foreground">
               {uploading ? <Loader2 size={14} className="animate-spin" /> : null}
               {uploading ? "Uploading…" : imageUrl ? "Replace photo" : "Upload photo"}
               <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploading} />
@@ -193,7 +193,7 @@ function PlantDetailsForm({
       <button
         onClick={handleSave}
         disabled={saving || !plantName.trim()}
-        className="px-4 py-2 text-sm font-medium rounded-md bg-green-700 text-white hover:bg-green-800 disabled:opacity-50 transition-colors flex items-center gap-1.5"
+        className="px-4 py-2 text-sm font-medium rounded-md bg-leaf text-white hover:bg-forest disabled:opacity-50 transition-colors flex items-center gap-1.5"
       >
         {saving ? <Loader2 size={13} className="animate-spin" /> : null}
         Save plant details
@@ -278,7 +278,7 @@ function SponsorForm({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Green Thumb Nursery"
-            className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-green-600"
+            className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-leaf"
           />
         </div>
         <div className="space-y-1">
@@ -294,7 +294,7 @@ function SponsorForm({
           onChange={(e) => setMessage(e.target.value)}
           placeholder="A short note from the sponsor, e.g. 'Specializing in rare tropicals since 2018.'"
           rows={2}
-          className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-green-600 resize-none"
+          className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-leaf resize-none"
         />
       </div>
 
@@ -313,7 +313,7 @@ function SponsorForm({
               </button>
             </div>
           )}
-          <label className="cursor-pointer flex items-center gap-2 px-3 py-2 text-sm rounded-md border border-dashed border-border hover:border-green-400 hover:text-green-700 transition-colors text-muted-foreground">
+          <label className="cursor-pointer flex items-center gap-2 px-3 py-2 text-sm rounded-md border border-dashed border-border hover:border-sage hover:text-leaf transition-colors text-muted-foreground">
             {uploading ? <Loader2 size={14} className="animate-spin" /> : null}
             {uploading ? "Uploading…" : logoUrl ? "Replace logo" : "Upload logo"}
             <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} disabled={uploading} />
@@ -325,7 +325,7 @@ function SponsorForm({
         <button
           onClick={handleSave}
           disabled={saving || !name.trim()}
-          className="px-4 py-2 text-sm font-medium rounded-md bg-green-700 text-white hover:bg-green-800 disabled:opacity-50 transition-colors flex items-center gap-1.5"
+          className="px-4 py-2 text-sm font-medium rounded-md bg-leaf text-white hover:bg-forest disabled:opacity-50 transition-colors flex items-center gap-1.5"
         >
           {saving ? <Loader2 size={13} className="animate-spin" /> : null}
           Save sponsor
@@ -402,7 +402,7 @@ function WinnerPicker({ month }: { month: string }) {
         <button
           onClick={handlePick}
           disabled={picking}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-green-700 text-white hover:bg-green-800 disabled:opacity-50 transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-leaf text-white hover:bg-forest disabled:opacity-50 transition-colors"
         >
           {picking ? <Loader2 size={12} className="animate-spin" /> : results ? <RefreshCw size={12} /> : <Trophy size={12} />}
           {picking ? "Drawing…" : results ? "Re-roll" : "Draw winner"}
@@ -419,7 +419,7 @@ function WinnerPicker({ month }: { month: string }) {
               key={r.user_id}
               className={cn(
                 "flex items-center gap-3 rounded-lg border p-3",
-                r.rank === 0 && "border-green-400 dark:border-green-600 bg-green-50 dark:bg-green-900/20"
+                r.rank === 0 && "border-sage dark:border-leaf bg-[#EBF0E6] dark:bg-forest/20"
               )}
             >
               <div className="w-8 h-8 rounded-full bg-muted overflow-hidden shrink-0 border">
@@ -439,14 +439,14 @@ function WinnerPicker({ month }: { month: string }) {
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {r.rank === 0 ? "Winner" : `Backup #${r.rank}`} · {r.total_entries} {r.total_entries === 1 ? "entry" : "entries"}
-                  {r.bonus_entries > 0 && <span className="text-green-600"> (+{r.bonus_entries} referral)</span>}
+                  {r.bonus_entries > 0 && <span className="text-leaf"> (+{r.bonus_entries} referral)</span>}
                 </p>
               </div>
               {r.rank === 0 && (
                 <button
                   onClick={() => handleSave(r.user_id)}
                   disabled={saving || saved}
-                  className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-green-700 text-white hover:bg-green-800 disabled:opacity-50 transition-colors"
+                  className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-leaf text-white hover:bg-forest disabled:opacity-50 transition-colors"
                 >
                   {saving ? <Loader2 size={11} className="animate-spin" /> : saved ? <Check size={11} /> : null}
                   {saved ? "Saved!" : "Confirm winner"}
@@ -512,7 +512,7 @@ function UsernameTypeahead({ value, onChange }: { value: string; onChange: (v: s
           onChange={(e) => onChange(e.target.value)}
           onFocus={() => results.length > 0 && setOpen(true)}
           placeholder="Search by username…"
-          className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-green-600"
+          className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-leaf"
           autoComplete="off"
         />
         {loading && (

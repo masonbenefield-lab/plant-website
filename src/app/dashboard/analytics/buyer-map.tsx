@@ -38,10 +38,10 @@ const ROWS = 8;
 function tileColorClass(count: number, max: number): string {
   if (count === 0) return "bg-muted text-muted-foreground/40";
   const r = count / max;
-  if (r > 0.75) return "bg-green-700 text-white";
-  if (r > 0.5)  return "bg-green-600 text-white";
-  if (r > 0.25) return "bg-green-400 text-white";
-  return "bg-green-200 text-green-900 dark:bg-green-900/60 dark:text-green-100";
+  if (r > 0.75) return "bg-leaf text-white";
+  if (r > 0.5)  return "bg-leaf text-white";
+  if (r > 0.25) return "bg-sage text-white";
+  return "bg-[#C5D4BC] text-forest dark:bg-forest/60 dark:text-[#DFE7D4]";
 }
 
 export default function BuyerMap({ states }: { states: StateEntry[] }) {
@@ -97,7 +97,7 @@ export default function BuyerMap({ states }: { states: StateEntry[] }) {
                     return (
                       <div
                         key={abbr}
-                        className={`absolute flex items-center justify-center rounded text-[10px] font-bold select-none transition-transform hover:z-10 hover:scale-110 hover:ring-2 hover:ring-green-500 ${colorClass} ${count > 0 ? "cursor-pointer" : "cursor-default"}`}
+                        className={`absolute flex items-center justify-center rounded text-[10px] font-bold select-none transition-transform hover:z-10 hover:scale-110 hover:ring-2 hover:ring-leaf ${colorClass} ${count > 0 ? "cursor-pointer" : "cursor-default"}`}
                         style={{ left, top, width: CELL, height: CELL }}
                         onMouseEnter={() => count > 0 ? setHovered({ abbr, name, count }) : setHovered(null)}
                         onMouseLeave={() => setHovered(null)}
@@ -115,7 +115,7 @@ export default function BuyerMap({ states }: { states: StateEntry[] }) {
                   <span>
                     <span className="font-medium">{hovered.name}</span>
                     <span className="text-muted-foreground"> — </span>
-                    <span className="font-semibold text-green-700">
+                    <span className="font-semibold text-leaf">
                       {hovered.count} order{hovered.count !== 1 ? "s" : ""}
                     </span>
                   </span>
@@ -128,7 +128,7 @@ export default function BuyerMap({ states }: { states: StateEntry[] }) {
               <div className="flex items-center justify-center gap-2">
                 <span className="text-xs text-muted-foreground">Fewer orders</span>
                 <div className="flex gap-0.5">
-                  {["bg-green-200", "bg-green-400", "bg-green-600", "bg-green-700"].map(c => (
+                  {["bg-[#C5D4BC]", "bg-sage", "bg-leaf", "bg-leaf"].map(c => (
                     <div key={c} className={`h-3 w-8 rounded-sm ${c}`} />
                   ))}
                 </div>

@@ -43,7 +43,7 @@ function CategoryPills({
         onClick={() => onChange("")}
         className={`px-3 py-1 rounded-full text-sm font-medium border transition-colors ${
           active === ""
-            ? "bg-green-700 text-white border-green-700"
+            ? "bg-leaf text-white border-leaf"
             : "text-muted-foreground border-border hover:border-foreground hover:text-foreground"
         }`}
       >
@@ -55,7 +55,7 @@ function CategoryPills({
           onClick={() => onChange(c)}
           className={`px-3 py-1 rounded-full text-sm font-medium border transition-colors ${
             active === c
-              ? "bg-green-700 text-white border-green-700"
+              ? "bg-leaf text-white border-leaf"
               : "text-muted-foreground border-border hover:border-foreground hover:text-foreground"
           }`}
         >
@@ -87,14 +87,14 @@ export function StorefrontListings({ listings, paymentsEnabled = true }: { listi
               )}
               <CardContent className="p-4">
                 {listing.category && (
-                  <span className="inline-block text-xs font-medium text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/40 px-2 py-0.5 rounded-full mb-1.5">
+                  <span className="inline-block text-xs font-medium text-leaf dark:text-sage bg-[#DFE7D4] dark:bg-forest/40 px-2 py-0.5 rounded-full mb-1.5">
                     {listing.category}
                   </span>
                 )}
                 <p className="font-semibold">{listing.plant_name}</p>
                 {listing.variety && <p className="text-sm text-muted-foreground">{listing.variety}</p>}
                 <div className="flex items-center justify-between mt-2">
-                  <span className="font-bold text-green-700">{centsToDisplay(listing.price_cents)}</span>
+                  <span className="font-bold text-leaf">{centsToDisplay(listing.price_cents)}</span>
                   {paymentsEnabled
                     ? <Badge variant="secondary">{listing.quantity} avail.</Badge>
                     : <span className="text-xs text-muted-foreground italic">Not available yet</span>
@@ -143,7 +143,7 @@ export function StorefrontAuctions({ auctions, paymentsEnabled = true }: { aucti
                 <p className="font-semibold">{auction.plant_name}</p>
                 {auction.variety && <p className="text-sm text-muted-foreground">{auction.variety}</p>}
                 <div className="flex items-center justify-between mt-2">
-                  <span className="font-bold text-green-700">
+                  <span className="font-bold text-leaf">
                     {paymentsEnabled ? `Bid: ${centsToDisplay(auction.current_bid_cents)}` : centsToDisplay(auction.current_bid_cents)}
                   </span>
                   {paymentsEnabled

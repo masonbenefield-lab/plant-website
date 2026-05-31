@@ -268,7 +268,7 @@ export default function AccountForm({
 
     const planLabel = plan === "nursery" ? "Nursery" : plan === "grower" ? "Grower" : "Seedling";
     const planColor = plan === "nursery" ? "text-blue-700 bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300"
-      : plan === "grower" ? "text-green-700 bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800 dark:text-green-300"
+      : plan === "grower" ? "text-leaf bg-[#EBF0E6] border-[#C5D4BC] dark:bg-forest/20 dark:border-forest dark:text-[#A8BF9A]"
       : "text-muted-foreground bg-muted border-border";
 
     return (
@@ -410,7 +410,7 @@ export default function AccountForm({
                 <div className="w-full h-36 rounded-lg border-2 border-dashed border-border bg-muted flex flex-col items-center justify-center gap-2 text-muted-foreground">
                   <Lock size={20} />
                   <p className="text-sm font-medium">Custom banner is a Grower+ feature</p>
-                  <Link href="/pricing" className="text-xs text-green-700 hover:underline font-medium">
+                  <Link href="/pricing" className="text-xs text-leaf hover:underline font-medium">
                     Upgrade to unlock →
                   </Link>
                 </div>
@@ -427,7 +427,7 @@ export default function AccountForm({
                   className="rounded-full object-cover"
                 />
               ) : (
-                <div className="w-[72px] h-[72px] rounded-full bg-green-100 flex items-center justify-center text-2xl font-bold text-green-700">
+                <div className="w-[72px] h-[72px] rounded-full bg-[#DFE7D4] flex items-center justify-center text-2xl font-bold text-leaf">
                   {username.slice(0, 1).toUpperCase() || "?"}
                 </div>
               )}
@@ -520,7 +520,7 @@ export default function AccountForm({
                 role="switch"
                 aria-checked={showFollowerCount}
                 onClick={() => setShowFollowerCount((v) => !v)}
-                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${showFollowerCount ? "bg-green-600" : "bg-input"}`}
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${showFollowerCount ? "bg-leaf" : "bg-input"}`}
               >
                 <span
                   className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition-transform ${showFollowerCount ? "translate-x-5" : "translate-x-0"}`}
@@ -611,7 +611,7 @@ export default function AccountForm({
                   role="switch"
                   aria-checked={offersEnabled}
                   onClick={() => setOffersEnabled((v) => !v)}
-                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${offersEnabled ? "bg-green-600" : "bg-input"}`}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${offersEnabled ? "bg-leaf" : "bg-input"}`}
                 >
                   <span className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition-transform ${offersEnabled ? "translate-x-5" : "translate-x-0"}`} />
                 </button>
@@ -664,7 +664,7 @@ export default function AccountForm({
               <p className="text-xs text-muted-foreground">Shown as a banner at the top of your storefront. Max 200 characters. Clear to remove.</p>
             </div>
 
-            <Button type="submit" disabled={saving} className="bg-green-700 hover:bg-green-800">
+            <Button type="submit" disabled={saving} className="bg-leaf hover:bg-forest">
               {saving ? "Saving…" : "Save profile"}
             </Button>
           </form>
@@ -688,7 +688,7 @@ export default function AccountForm({
               role="switch"
               aria-checked={emailOptIn}
               onClick={() => setEmailOptIn((v) => !v)}
-              className={`mt-0.5 relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${emailOptIn ? "bg-green-600" : "bg-input"}`}
+              className={`mt-0.5 relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${emailOptIn ? "bg-leaf" : "bg-input"}`}
             >
               <span className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition-transform ${emailOptIn ? "translate-x-5" : "translate-x-0"}`} />
             </button>
@@ -741,7 +741,7 @@ export default function AccountForm({
         </CardHeader>
         <CardContent className="space-y-3">
           {profile?.stripe_onboarded ? (
-            <p className="text-sm text-green-700 font-medium">
+            <p className="text-sm text-leaf font-medium">
               ✓ Stripe account connected — you can receive payments
             </p>
           ) : (
@@ -750,7 +750,7 @@ export default function AccountForm({
                 Connect your bank account via Stripe to receive payments from buyers. Stripe handles all
                 payouts securely.
               </p>
-              <Button onClick={startStripeConnect} disabled={connectingStripe} className="bg-green-700 hover:bg-green-800">
+              <Button onClick={startStripeConnect} disabled={connectingStripe} className="bg-leaf hover:bg-forest">
                 {connectingStripe ? "Redirecting to Stripe..." : "Connect Bank Account"}
               </Button>
             </>
@@ -816,7 +816,7 @@ export default function AccountForm({
                       type="checkbox"
                       checked={shippingServices.includes(token)}
                       onChange={() => toggleService(token)}
-                      className="mt-0.5 accent-green-700"
+                      className="mt-0.5 accent-leaf"
                     />
                     <div>
                       <p className="text-sm font-medium">{label}</p>
@@ -840,7 +840,7 @@ export default function AccountForm({
                   role="switch"
                   aria-checked={calculatedShippingEnabled}
                   onClick={() => setCalculatedShippingEnabled((v) => !v)}
-                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ml-4 ${calculatedShippingEnabled ? "bg-green-700" : "bg-input"}`}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ml-4 ${calculatedShippingEnabled ? "bg-leaf" : "bg-input"}`}
                 >
                   <span className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition-transform ${calculatedShippingEnabled ? "translate-x-5" : "translate-x-0"}`} />
                 </button>
@@ -856,14 +856,14 @@ export default function AccountForm({
                   role="switch"
                   aria-checked={autoLabelsEnabled}
                   onClick={() => setAutoLabelsEnabled((v) => !v)}
-                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ml-4 ${autoLabelsEnabled ? "bg-green-700" : "bg-input"}`}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ml-4 ${autoLabelsEnabled ? "bg-leaf" : "bg-input"}`}
                 >
                   <span className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition-transform ${autoLabelsEnabled ? "translate-x-5" : "translate-x-0"}`} />
                 </button>
               </div>
             </div>
 
-            <Button type="submit" disabled={savingShipping || shippingServices.length === 0} className="bg-green-700 hover:bg-green-800">
+            <Button type="submit" disabled={savingShipping || shippingServices.length === 0} className="bg-leaf hover:bg-forest">
               {savingShipping ? "Saving…" : "Save shipping settings"}
             </Button>
           </form>
@@ -948,7 +948,7 @@ function BillingToggleSection({
             onClick={() => setBilling("monthly")}
             className={cn(
               "px-3 py-1 rounded-full transition-colors",
-              billing === "monthly" ? "bg-green-700 text-white" : "text-muted-foreground hover:text-foreground"
+              billing === "monthly" ? "bg-leaf text-white" : "text-muted-foreground hover:text-foreground"
             )}
           >
             Monthly
@@ -958,14 +958,14 @@ function BillingToggleSection({
             onClick={() => setBilling("annual")}
             className={cn(
               "px-3 py-1 rounded-full transition-colors",
-              billing === "annual" ? "bg-green-700 text-white" : "text-muted-foreground hover:text-foreground"
+              billing === "annual" ? "bg-leaf text-white" : "text-muted-foreground hover:text-foreground"
             )}
           >
             Annual
           </button>
         </div>
         {billing === "annual" && (
-          <span className="text-xs font-medium text-green-700 bg-green-100 dark:bg-green-900/40 dark:text-green-400 px-2 py-0.5 rounded-full">
+          <span className="text-xs font-medium text-leaf bg-[#DFE7D4] dark:bg-forest/40 dark:text-sage px-2 py-0.5 rounded-full">
             Save 2 months
           </span>
         )}
@@ -977,10 +977,10 @@ function BillingToggleSection({
             Grower — {billing === "annual" ? "$86/yr" : "$9/mo"}
           </p>
           {billing === "annual" && (
-            <p className="text-xs text-green-700 dark:text-green-400 font-medium">$7.17/mo · 2 months free</p>
+            <p className="text-xs text-leaf dark:text-sage font-medium">$7.17/mo · 2 months free</p>
           )}
           <p className="text-xs text-muted-foreground">50 listings · 4.5% commission · digest exposure</p>
-          <Button size="sm" className="w-full bg-green-700 hover:bg-green-800" disabled={subscribing} onClick={() => startSubscription("grower", billing)}>
+          <Button size="sm" className="w-full bg-leaf hover:bg-forest" disabled={subscribing} onClick={() => startSubscription("grower", billing)}>
             {subscribing ? "Redirecting…" : "Upgrade"}
           </Button>
         </div>
@@ -989,10 +989,10 @@ function BillingToggleSection({
             Nursery — {billing === "annual" ? "$278/yr" : "$29/mo"}
           </p>
           {billing === "annual" && (
-            <p className="text-xs text-green-700 dark:text-green-400 font-medium">$23.17/mo · 2 months free</p>
+            <p className="text-xs text-leaf dark:text-sage font-medium">$23.17/mo · 2 months free</p>
           )}
           <p className="text-xs text-muted-foreground">Unlimited listings · 20 photos · 3% commission · full digest + homepage</p>
-          <Button size="sm" className="w-full bg-green-700 hover:bg-green-800" disabled={subscribing} onClick={() => startSubscription("nursery", billing)}>
+          <Button size="sm" className="w-full bg-leaf hover:bg-forest" disabled={subscribing} onClick={() => startSubscription("nursery", billing)}>
             {subscribing ? "Redirecting…" : "Upgrade"}
           </Button>
         </div>

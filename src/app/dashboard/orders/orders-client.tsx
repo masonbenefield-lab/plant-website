@@ -18,7 +18,7 @@ const statusColors: Record<string, string> = {
   pending: "bg-yellow-100 text-yellow-800",
   paid: "bg-blue-100 text-blue-800",
   shipped: "bg-purple-100 text-purple-800",
-  delivered: "bg-green-100 text-green-800",
+  delivered: "bg-[#DFE7D4] text-forest",
 };
 
 type OrderRow = {
@@ -57,7 +57,7 @@ function BuyLabelButton({ orderId, labelUrl: initialLabelUrl, createdAt }: { ord
         href={labelUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-1.5 text-xs font-medium text-green-700 hover:text-green-800 hover:underline"
+        className="inline-flex items-center gap-1.5 text-xs font-medium text-leaf hover:text-forest hover:underline"
       >
         <Printer size={13} /> View label
       </a>
@@ -160,7 +160,7 @@ export default function OrdersClient({
             checked={selectedIds.length === orders.length && orders.length > 0}
             ref={(el) => { if (el) el.indeterminate = selectedIds.length > 0 && selectedIds.length < orders.length; }}
             onChange={toggleAll}
-            className="h-4 w-4 rounded border-gray-300 accent-green-700 cursor-pointer"
+            className="h-4 w-4 rounded border-gray-300 accent-leaf cursor-pointer"
           />
           Select all
         </label>

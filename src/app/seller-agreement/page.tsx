@@ -35,7 +35,7 @@ function AgreementContent() {
   return (
     <div className="max-w-3xl mx-auto px-4 py-12">
       <div className="flex items-center gap-3 mb-2">
-        <ScrollText className="text-green-700 h-6 w-6 shrink-0" />
+        <ScrollText className="text-leaf h-6 w-6 shrink-0" />
         <h1 className="text-2xl font-bold">Plantet Seller Agreement</h1>
       </div>
       <p className="text-sm text-muted-foreground mb-8">Last updated: {LAST_UPDATED}</p>
@@ -178,7 +178,7 @@ function AgreementContent() {
               type="checkbox"
               checked={agreed}
               onChange={(e) => setAgreed(e.target.checked)}
-              className="mt-0.5 h-4 w-4 accent-green-700"
+              className="mt-0.5 h-4 w-4 accent-leaf"
             />
             <span className="text-sm">
               I have read and agree to the Plantet Seller Agreement. I confirm I am at least 18 years old and will comply with all applicable laws regarding the sale and shipment of plants.
@@ -188,7 +188,7 @@ function AgreementContent() {
             <Button
               onClick={handleAccept}
               disabled={!agreed || saving}
-              className="bg-green-700 hover:bg-green-800"
+              className="bg-leaf hover:bg-forest"
             >
               {saving ? "Saving…" : "I Agree — Start Selling"}
             </Button>

@@ -23,8 +23,8 @@ export default function PotSizePicker({ value, onChange }: Props) {
             className={cn(
               "px-2.5 py-1 text-xs rounded-full border font-medium transition-colors",
               value === size
-                ? "bg-green-700 text-white border-green-700"
-                : "border-border text-muted-foreground bg-background hover:border-green-500 hover:text-green-700"
+                ? "bg-leaf text-white border-leaf"
+                : "border-border text-muted-foreground bg-background hover:border-leaf hover:text-leaf"
             )}
           >
             {size}

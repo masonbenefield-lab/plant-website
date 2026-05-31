@@ -168,7 +168,7 @@ if (on_sale === "1") params.set("on_sale", "1");
               <Link
                 key={c}
                 href={`/shop?category=${encodeURIComponent(c)}`}
-                className="inline-flex items-center px-3 py-1.5 rounded-full border text-sm hover:bg-muted hover:border-green-600 hover:text-green-700 transition-colors"
+                className="inline-flex items-center px-3 py-1.5 rounded-full border text-sm hover:bg-muted hover:border-leaf hover:text-leaf transition-colors"
               >
                 {c}
               </Link>
@@ -206,14 +206,14 @@ if (on_sale === "1") params.set("on_sale", "1");
                         </span>
                       )}
                       {!onSale && isNew && (
-                        <span className="absolute top-2 right-2 z-10 bg-green-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
+                        <span className="absolute top-2 right-2 z-10 bg-leaf text-white text-xs font-semibold px-2 py-0.5 rounded-full">
                           New
                         </span>
                       )}
                     </div>
                     <CardContent className="p-4">
                       {listing.category && (
-                        <span className="inline-block text-xs font-medium text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/40 px-2 py-0.5 rounded-full mb-1.5">
+                        <span className="inline-block text-xs font-medium text-leaf dark:text-sage bg-[#DFE7D4] dark:bg-forest/40 px-2 py-0.5 rounded-full mb-1.5">
                           {listing.category}
                         </span>
                       )}
@@ -223,7 +223,7 @@ if (on_sale === "1") params.set("on_sale", "1");
                       )}
                       <div className="flex items-center justify-between mt-2">
                         <div className="flex items-center gap-1.5">
-                          <span className={`font-bold ${onSale ? "text-red-600" : "text-green-700"}`}>
+                          <span className={`font-bold ${onSale ? "text-red-600" : "text-leaf"}`}>
                             {centsToDisplay(displayPrice)}
                           </span>
                           {onSale && (
@@ -237,7 +237,7 @@ if (on_sale === "1") params.set("on_sale", "1");
                         </Badge>
                       </div>
                       {listing.free_shipping ? (
-                        <p className="text-xs text-green-700 dark:text-green-400 font-medium mt-1.5">Free shipping</p>
+                        <p className="text-xs text-leaf dark:text-sage font-medium mt-1.5">Free shipping</p>
                       ) : listing.shipping_cost_cents ? (
                         <p className="text-xs text-muted-foreground mt-1.5">+ {centsToDisplay(listing.shipping_cost_cents)} shipping</p>
                       ) : listing.shipping_weight_oz ? (
@@ -249,7 +249,7 @@ if (on_sale === "1") params.set("on_sale", "1");
                     <div className="px-4 pb-3 flex items-center gap-2 flex-wrap">
                       <Link
                         href={`/sellers/${seller.username}`}
-                        className="text-xs text-muted-foreground hover:text-green-700 hover:underline transition-colors"
+                        className="text-xs text-muted-foreground hover:text-leaf hover:underline transition-colors"
                       >
                         by {seller.display_name ?? seller.username}
                       </Link>

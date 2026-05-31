@@ -101,7 +101,7 @@ export function RestoreUserButton({ userId, username }: { userId: string; userna
   }
 
   return (
-    <button onClick={handleRestore} disabled={loading} className="text-xs text-green-700 hover:underline font-medium disabled:opacity-50">
+    <button onClick={handleRestore} disabled={loading} className="text-xs text-leaf hover:underline font-medium disabled:opacity-50">
       {loading ? "Restoring…" : "Restore"}
     </button>
   );

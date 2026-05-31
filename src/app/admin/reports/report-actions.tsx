@@ -125,7 +125,7 @@ export function ReportActions({ reportId, listingId, auctionId, reportedUserId, 
 
   return (
     <div className="flex items-center gap-2 flex-wrap">
-      <button onClick={() => { setNote(""); setResolveOpen(true); }} className="text-xs text-green-700 hover:underline font-medium">
+      <button onClick={() => { setNote(""); setResolveOpen(true); }} className="text-xs text-leaf hover:underline font-medium">
         Resolve
       </button>
       <button onClick={() => { setNote(""); setRemoveOpen(true); }} className="text-xs text-orange-600 hover:underline font-medium">
@@ -146,7 +146,7 @@ export function ReportActions({ reportId, listingId, auctionId, reportedUserId, 
           </div>
           <div className="flex gap-2 mt-2">
             <Button variant="outline" onClick={() => setResolveOpen(false)} className="flex-1">Cancel</Button>
-            <Button onClick={handleResolve} disabled={loading} className="flex-1 bg-green-700 hover:bg-green-800">
+            <Button onClick={handleResolve} disabled={loading} className="flex-1 bg-leaf hover:bg-forest">
               {loading ? "Saving…" : "Resolve"}
             </Button>
           </div>

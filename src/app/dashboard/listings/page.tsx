@@ -110,7 +110,7 @@ export default async function DashboardListingsPage({
           </p>
           <Link
             href="/dashboard/inventory"
-            className="inline-flex items-center justify-center rounded-md bg-green-700 hover:bg-green-800 text-white px-4 py-2 text-sm font-medium transition-colors"
+            className="inline-flex items-center justify-center rounded-md bg-leaf hover:bg-forest text-white px-4 py-2 text-sm font-medium transition-colors"
           >
             Go to My Stock →
           </Link>
@@ -130,7 +130,7 @@ export default async function DashboardListingsPage({
                   <div className="flex items-stretch gap-0">
                     {/* Color bar by status */}
                     <div className={`w-1 shrink-0 ${
-                      listing.status === "active" ? "bg-green-500" :
+                      listing.status === "active" ? "bg-leaf" :
                       listing.status === "paused" ? "bg-yellow-400" :
                       "bg-red-400"
                     }`} />
@@ -167,7 +167,7 @@ export default async function DashboardListingsPage({
                           <div className="flex items-center gap-3 mt-1.5 flex-wrap">
                             {/* Price */}
                             <div className="flex items-center gap-1.5">
-                              <span className={`text-sm font-semibold ${onSale ? "text-red-600" : "text-green-700"}`}>
+                              <span className={`text-sm font-semibold ${onSale ? "text-red-600" : "text-leaf"}`}>
                                 {centsToDisplay(displayPrice)}
                               </span>
                               {onSale && (
@@ -179,7 +179,7 @@ export default async function DashboardListingsPage({
                             <Badge
                               variant={listing.status === "active" ? "default" : "secondary"}
                               className={
-                                listing.status === "active" ? "bg-green-700 text-white text-[11px] px-1.5 py-0" :
+                                listing.status === "active" ? "bg-leaf text-white text-[11px] px-1.5 py-0" :
                                 listing.status === "paused" ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 text-[11px] px-1.5 py-0" :
                                 "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 text-[11px] px-1.5 py-0"
                               }

@@ -165,12 +165,12 @@ export function MessageThread({
                     className={cn(
                       "max-w-[75%] rounded-2xl px-4 py-2 text-sm leading-relaxed",
                       isMe
-                        ? "bg-green-700 text-white rounded-br-sm"
+                        ? "bg-leaf text-white rounded-br-sm"
                         : "bg-muted text-foreground rounded-bl-sm"
                     )}
                   >
                     <p className="whitespace-pre-wrap break-words">{msg.body}</p>
-                    <p className={cn("text-[10px] mt-0.5 text-right", isMe ? "text-green-200" : "text-muted-foreground")}>
+                    <p className={cn("text-[10px] mt-0.5 text-right", isMe ? "text-[#C5D4BC]" : "text-muted-foreground")}>
                       {new Date(msg.created_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
                     </p>
                   </div>
@@ -197,7 +197,7 @@ export function MessageThread({
           onClick={handleSend}
           disabled={isPending || !body.trim()}
           size="sm"
-          className="bg-green-700 hover:bg-green-800 shrink-0 h-10"
+          className="bg-leaf hover:bg-forest shrink-0 h-10"
         >
           {isPending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
         </Button>

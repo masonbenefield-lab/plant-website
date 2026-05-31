@@ -63,7 +63,7 @@ export function PhotoGallery({ images, alt }: PhotoGalleryProps) {
               className={cn(
                 "w-20 h-20 shrink-0 relative rounded-lg overflow-hidden bg-muted transition-all",
                 i === activeIndex
-                  ? "ring-2 ring-green-600 ring-offset-1"
+                  ? "ring-2 ring-leaf ring-offset-1"
                   : "opacity-60 hover:opacity-100"
               )}
             >

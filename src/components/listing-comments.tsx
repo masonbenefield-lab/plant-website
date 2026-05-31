@@ -90,7 +90,7 @@ export function ListingComments({ listingId, sellerId, currentUserId, initialCom
               type="submit"
               size="sm"
               disabled={isPending || !body.trim()}
-              className="bg-green-700 hover:bg-green-800"
+              className="bg-leaf hover:bg-forest"
             >
               {isPending ? <Loader2 size={13} className="animate-spin mr-1.5" /> : null}
               Post
@@ -99,7 +99,7 @@ export function ListingComments({ listingId, sellerId, currentUserId, initialCom
         </form>
       ) : (
         <p className="text-sm text-muted-foreground">
-          <Link href="/login" className="text-green-700 hover:underline">Sign in</Link> to ask a question or leave a comment.
+          <Link href="/login" className="text-leaf hover:underline">Sign in</Link> to ask a question or leave a comment.
         </p>
       )}
 
@@ -113,7 +113,7 @@ export function ListingComments({ listingId, sellerId, currentUserId, initialCom
           {comments.map((c) => (
             <div key={c.id} className="flex items-start gap-3 group">
               <Avatar className="h-8 w-8 shrink-0">
-                <AvatarFallback className="bg-green-100 text-green-700 text-xs font-semibold">
+                <AvatarFallback className="bg-[#DFE7D4] text-leaf text-xs font-semibold">
                   {c.username.slice(0, 2).toUpperCase()}
                 </AvatarFallback>
                 {c.avatar_url && <AvatarImage src={c.avatar_url} />}
@@ -122,7 +122,7 @@ export function ListingComments({ listingId, sellerId, currentUserId, initialCom
                 <div className="flex items-center gap-2 mb-0.5">
                   <span className="text-sm font-medium">
                     {c.user_id === sellerId ? (
-                      <span className="text-green-700">{c.username} <span className="text-xs font-normal text-green-600">(Seller)</span></span>
+                      <span className="text-leaf">{c.username} <span className="text-xs font-normal text-leaf">(Seller)</span></span>
                     ) : c.username}
                   </span>
                   <span className="text-xs text-muted-foreground">

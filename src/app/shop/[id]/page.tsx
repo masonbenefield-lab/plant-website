@@ -155,7 +155,7 @@ export default async function ListingPage({
                 <p className="text-muted-foreground mt-1">{listing.variety}</p>
               )}
               {listing.category && (
-                <span className="inline-block mt-2 text-xs font-medium text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/40 px-2 py-0.5 rounded-full">
+                <span className="inline-block mt-2 text-xs font-medium text-leaf dark:text-sage bg-[#DFE7D4] dark:bg-forest/40 px-2 py-0.5 rounded-full">
                   {listing.category}
                 </span>
               )}
@@ -173,7 +173,7 @@ export default async function ListingPage({
             return (
               <div className="mt-4 space-y-1">
                 <div className="flex items-center gap-3">
-                  <span className={`text-3xl font-bold ${onSale ? "text-red-600" : "text-green-700"}`}>
+                  <span className={`text-3xl font-bold ${onSale ? "text-red-600" : "text-leaf"}`}>
                     {centsToDisplay(displayPrice)}
                   </span>
                   {onSale && (
@@ -282,7 +282,7 @@ export default async function ListingPage({
               <>
                 <Link
                   href={`/login?redirectTo=/shop/${listing.id}`}
-                  className={cn(buttonVariants(), "bg-green-700 hover:bg-green-800 w-full")}
+                  className={cn(buttonVariants(), "bg-leaf hover:bg-forest w-full")}
                 >
                   Sign in to buy
                 </Link>
@@ -313,7 +313,7 @@ export default async function ListingPage({
             >
               <Avatar className="h-10 w-10">
                 <AvatarImage src={seller.avatar_url ?? undefined} />
-                <AvatarFallback className="bg-green-100 text-green-700">
+                <AvatarFallback className="bg-[#DFE7D4] text-leaf">
                   {(seller.display_name ?? seller.username).slice(0, 1).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
@@ -364,7 +364,7 @@ export default async function ListingPage({
                   {item.variety && (
                     <p className="text-xs text-muted-foreground truncate">{item.variety}</p>
                   )}
-                  <p className="text-sm font-bold text-green-700 mt-1">
+                  <p className="text-sm font-bold text-leaf mt-1">
                     {centsToDisplay(item.price_cents)}
                   </p>
                 </CardContent>

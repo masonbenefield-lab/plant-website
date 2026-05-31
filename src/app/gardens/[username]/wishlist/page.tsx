@@ -20,7 +20,7 @@ const PRIORITY_LABEL: Record<Priority, string> = {
 const PRIORITY_COLOR: Record<Priority, string> = {
   nice: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400",
   want: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400",
-  must: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400",
+  must: "bg-[#DFE7D4] text-leaf dark:bg-forest/40 dark:text-sage",
 };
 
 export async function generateMetadata({
@@ -103,7 +103,7 @@ export default async function PublicWishlistPage({
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
-        <div className="w-14 h-14 rounded-full bg-muted overflow-hidden shrink-0 ring-2 ring-green-100">
+        <div className="w-14 h-14 rounded-full bg-muted overflow-hidden shrink-0 ring-2 ring-[#DFE7D4]">
           {profile.avatar_url ? (
             <Image
               src={profile.avatar_url}
@@ -127,14 +127,14 @@ export default async function PublicWishlistPage({
             {profile.garden_public && (
               <Link
                 href={`/gardens/${username}`}
-                className="text-xs text-green-700 hover:underline font-medium"
+                className="text-xs text-leaf hover:underline font-medium"
               >
                 View their garden →
               </Link>
             )}
             <Link
               href={`/sellers/${username}`}
-              className="text-xs text-muted-foreground hover:text-green-700 hover:underline transition-colors"
+              className="text-xs text-muted-foreground hover:text-leaf hover:underline transition-colors"
             >
               Visit their shop →
             </Link>
@@ -179,7 +179,7 @@ export default async function PublicWishlistPage({
 
       <p className="text-center text-xs text-muted-foreground pt-4">
         Shared on{" "}
-        <Link href="/" className="text-green-700 hover:underline font-medium">
+        <Link href="/" className="text-leaf hover:underline font-medium">
           Plantet
         </Link>
       </p>

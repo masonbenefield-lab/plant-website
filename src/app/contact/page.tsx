@@ -97,7 +97,7 @@ export default function ContactPage() {
                 placeholder="How can we help?"
               />
             </div>
-            <Button type="submit" disabled={loading} className="w-full bg-green-700 hover:bg-green-800">
+            <Button type="submit" disabled={loading} className="w-full bg-leaf hover:bg-forest">
               {loading ? "Sending…" : "Send message"}
             </Button>
           </CardContent>

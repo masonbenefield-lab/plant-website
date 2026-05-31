@@ -33,12 +33,12 @@ export default function SizePicker({
               className={cn(
                 "flex flex-col items-center px-4 py-2 rounded-lg border text-sm font-medium transition-colors",
                 isSelected
-                  ? "border-green-600 bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 dark:border-green-500"
-                  : "border-border hover:border-green-400 hover:bg-muted"
+                  ? "border-leaf bg-[#EBF0E6] text-leaf dark:bg-forest/20 dark:text-sage dark:border-leaf"
+                  : "border-border hover:border-sage hover:bg-muted"
               )}
             >
               <span>{s.pot_size ?? "No size"}</span>
-              <span className={cn("text-xs font-normal mt-0.5", isSelected ? "text-green-600 dark:text-green-400" : "text-muted-foreground")}>
+              <span className={cn("text-xs font-normal mt-0.5", isSelected ? "text-leaf dark:text-sage" : "text-muted-foreground")}>
                 {centsToDisplay(s.price_cents)}
               </span>
             </button>

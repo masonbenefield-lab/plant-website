@@ -14,7 +14,7 @@ import ReportButton from "@/components/report-button";
 const TYPE_LABEL = { help: "Help Request", show_and_tell: "Show & Tell", discussion: "Discussion" } as const;
 const TYPE_COLOR = {
   help: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
-  show_and_tell: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400",
+  show_and_tell: "bg-[#DFE7D4] text-leaf dark:bg-forest/40 dark:text-sage",
   discussion: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
 } as const;
 
@@ -77,7 +77,7 @@ export default async function CommunityPostPage({
               {TYPE_LABEL[post.post_type as PostType]}
             </Badge>
             {post.solved && (
-              <span className="flex items-center gap-1 text-xs text-green-700 font-medium">
+              <span className="flex items-center gap-1 text-xs text-leaf font-medium">
                 <CheckCircle2 size={12} /> Solved
               </span>
             )}
@@ -102,7 +102,7 @@ export default async function CommunityPostPage({
         <div className="flex items-center gap-2 pt-3 border-t">
           <Avatar className="h-7 w-7">
             <AvatarImage src={author?.avatar_url ?? undefined} />
-            <AvatarFallback className="bg-green-100 text-green-700 text-xs font-semibold">
+            <AvatarFallback className="bg-[#DFE7D4] text-leaf text-xs font-semibold">
               {author?.username?.slice(0, 2).toUpperCase()}
             </AvatarFallback>
           </Avatar>

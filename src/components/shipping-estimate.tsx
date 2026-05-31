@@ -31,7 +31,7 @@ export function ShippingEstimate({ listingId, auctionId, freeShipping, shippingC
 
   if (freeShipping) {
     return (
-      <div className="flex items-center gap-1.5 text-sm text-green-700 dark:text-green-400 font-medium">
+      <div className="flex items-center gap-1.5 text-sm text-leaf dark:text-sage font-medium">
         <Truck size={14} />
         Free shipping
       </div>
@@ -120,7 +120,7 @@ export function ShippingEstimate({ listingId, auctionId, freeShipping, shippingC
       )}
 
       {isFreeResult && (
-        <p className="text-xs text-green-700 dark:text-green-400 font-medium">
+        <p className="text-xs text-leaf dark:text-sage font-medium">
           ✓ Free shipping to this ZIP code
         </p>
       )}

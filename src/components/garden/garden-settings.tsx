@@ -94,7 +94,7 @@ export default function GardenSettings({ initialBio, initialOpenToTrades, discla
           <div className="flex items-start justify-between gap-4 rounded-lg border p-3">
             <div className="space-y-0.5">
               <div className="flex items-center gap-1.5 font-medium text-sm">
-                <ArrowLeftRight size={14} className="text-green-700" />
+                <ArrowLeftRight size={14} className="text-leaf" />
                 Open to trades
               </div>
               <p className="text-xs text-muted-foreground">
@@ -106,7 +106,7 @@ export default function GardenSettings({ initialBio, initialOpenToTrades, discla
               onClick={handleTradesToggle}
               className={cn(
                 "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none",
-                openToTrades ? "bg-green-600" : "bg-muted-foreground/30"
+                openToTrades ? "bg-leaf" : "bg-muted-foreground/30"
               )}
             >
               <span
@@ -120,7 +120,7 @@ export default function GardenSettings({ initialBio, initialOpenToTrades, discla
 
           <div className="flex justify-end gap-2">
             <Button variant="outline" size="sm" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button size="sm" onClick={save} disabled={isPending} className="bg-green-700 hover:bg-green-800">
+            <Button size="sm" onClick={save} disabled={isPending} className="bg-leaf hover:bg-forest">
               {isPending ? "Saving…" : "Save"}
             </Button>
           </div>
@@ -147,14 +147,14 @@ export default function GardenSettings({ initialBio, initialOpenToTrades, discla
                 type="checkbox"
                 checked={disclaimerChecked}
                 onChange={(e) => setDisclaimerChecked(e.target.checked)}
-                className="mt-0.5 accent-green-700 h-4 w-4"
+                className="mt-0.5 accent-leaf h-4 w-4"
               />
               <span>I understand that trades are arranged privately and Plantet is not responsible for the outcome.</span>
             </label>
             <div className="flex gap-2">
               <Button variant="outline" className="flex-1" onClick={() => setShowDisclaimer(false)}>Cancel</Button>
               <Button
-                className="flex-1 bg-green-700 hover:bg-green-800"
+                className="flex-1 bg-leaf hover:bg-forest"
                 disabled={!disclaimerChecked}
                 onClick={acceptDisclaimer}
               >

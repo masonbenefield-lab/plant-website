@@ -34,7 +34,7 @@ const statusColors: Record<string, string> = {
   pending: "bg-yellow-100 text-yellow-800",
   paid: "bg-blue-100 text-blue-800",
   shipped: "bg-purple-100 text-purple-800",
-  delivered: "bg-green-100 text-green-800",
+  delivered: "bg-[#DFE7D4] text-forest",
 };
 
 export const dynamic = "force-dynamic";
@@ -66,7 +66,7 @@ export default async function MyOrdersPage({
           href={value ? `/orders?status=${value}` : "/orders"}
           className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
             status === value
-              ? "bg-green-700 text-white border-green-700"
+              ? "bg-leaf text-white border-leaf"
               : "text-muted-foreground border-border hover:border-foreground hover:text-foreground"
           }`}
         >
@@ -177,7 +177,7 @@ export default async function MyOrdersPage({
                         <p className="text-sm text-muted-foreground mt-0.5">
                           Seller:{" "}
                           {seller?.username ? (
-                            <Link href={`/sellers/${seller.username}`} className="text-green-700 hover:underline">
+                            <Link href={`/sellers/${seller.username}`} className="text-leaf hover:underline">
                               {seller.username}
                             </Link>
                           ) : "—"}
@@ -198,7 +198,7 @@ export default async function MyOrdersPage({
                       href={getCarrierUrl(order.tracking_number)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="font-mono font-medium text-foreground hover:text-green-700 hover:underline"
+                      className="font-mono font-medium text-foreground hover:text-leaf hover:underline"
                     >
                       {order.tracking_number}
                     </a>
@@ -212,7 +212,7 @@ export default async function MyOrdersPage({
                       href={(listingMap[order.listing_id] as { care_guide_pdf_url: string }).care_guide_pdf_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-green-700 hover:underline font-medium"
+                      className="text-leaf hover:underline font-medium"
                     >
                       📄 Download care guide
                     </a>
@@ -232,7 +232,7 @@ export default async function MyOrdersPage({
                   </div>
                 )}
                 {order.status === "delivered" && ratedOrderIds.has(order.id) && (
-                  <p className="mt-3 text-sm text-green-700">✓ You left a review for this order</p>
+                  <p className="mt-3 text-sm text-leaf">✓ You left a review for this order</p>
                 )}
 
                 {order.status === "delivered" && (() => {
@@ -252,7 +252,7 @@ export default async function MyOrdersPage({
                             <div key={ci.listing_id} className="flex items-center gap-2">
                               <Link
                                 href={`/garden/new?${params.toString()}`}
-                                className="inline-flex items-center gap-1.5 text-xs font-medium text-green-700 hover:text-green-800 hover:underline"
+                                className="inline-flex items-center gap-1.5 text-xs font-medium text-leaf hover:text-forest hover:underline"
                               >
                                 🪴 Add {ci.plant_name}{ci.variety ? ` — ${ci.variety}` : ""} to garden →
                               </Link>
@@ -282,7 +282,7 @@ export default async function MyOrdersPage({
                     <div className="mt-3 pt-3 border-t flex items-center gap-2">
                       <Link
                         href={`/garden/new?${params.toString()}`}
-                        className="inline-flex items-center gap-1.5 text-xs font-medium text-green-700 hover:text-green-800 hover:underline"
+                        className="inline-flex items-center gap-1.5 text-xs font-medium text-leaf hover:text-forest hover:underline"
                       >
                         🪴 Add to garden →
                       </Link>

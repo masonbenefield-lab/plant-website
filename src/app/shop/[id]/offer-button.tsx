@@ -74,7 +74,7 @@ export default function OfferButton({
 
   if (wasAccepted) {
     return (
-      <div className="rounded-md bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 px-3 py-2 text-sm text-green-800 dark:text-green-300">
+      <div className="rounded-md bg-[#EBF0E6] dark:bg-forest/30 border border-[#C5D4BC] dark:border-forest px-3 py-2 text-sm text-forest dark:text-[#A8BF9A]">
         ✓ Your offer was accepted!{" "}
         <a href={`/checkout?listing=${listingId}&offer=accepted`} className="font-semibold underline">
           Complete your purchase →
@@ -149,7 +149,7 @@ export default function OfferButton({
               <Button
                 onClick={submitOffer}
                 disabled={submitting || !amount}
-                className="flex-1 bg-green-700 hover:bg-green-800"
+                className="flex-1 bg-leaf hover:bg-forest"
               >
                 {submitting ? "Sending…" : "Send Offer"}
               </Button>

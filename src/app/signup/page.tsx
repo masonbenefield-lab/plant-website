@@ -105,9 +105,9 @@ export default function SignupPage() {
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4 pb-6">
             {planInfo && (
-              <div className="flex items-center justify-between rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 px-3 py-2 text-sm">
-                <span className="font-medium text-green-800 dark:text-green-300">{planInfo.name} plan</span>
-                <span className="text-green-700 dark:text-green-400">{planInfo.price}</span>
+              <div className="flex items-center justify-between rounded-lg bg-[#EBF0E6] dark:bg-forest/20 border border-[#C5D4BC] dark:border-forest px-3 py-2 text-sm">
+                <span className="font-medium text-forest dark:text-[#A8BF9A]">{planInfo.name} plan</span>
+                <span className="text-leaf dark:text-sage">{planInfo.price}</span>
               </div>
             )}
             {error && <p className="text-sm text-destructive">{error}</p>}
@@ -177,7 +177,7 @@ export default function SignupPage() {
                 type="checkbox"
                 checked={ageConfirmed}
                 onChange={(e) => setAgeConfirmed(e.target.checked)}
-                className="mt-0.5 accent-green-700"
+                className="mt-0.5 accent-leaf"
                 required
               />
               <span>
@@ -193,13 +193,13 @@ export default function SignupPage() {
                 type="checkbox"
                 checked={emailOptIn}
                 onChange={(e) => setEmailOptIn(e.target.checked)}
-                className="mt-0.5 accent-green-700"
+                className="mt-0.5 accent-leaf"
               />
               <span>
                 Send me the weekly plant digest — new arrivals, hot auctions, and picks from shops I follow. Delivered every Sunday. Unsubscribe anytime.
               </span>
             </label>
-            <Button type="submit" className="w-full bg-green-700 hover:bg-green-800" disabled={loading || !ageConfirmed}>
+            <Button type="submit" className="w-full bg-leaf hover:bg-forest" disabled={loading || !ageConfirmed}>
               {loading ? "Creating account…" : "Create account"}
             </Button>
             {planInfo && (

@@ -30,7 +30,7 @@ function TrendBadge({ change }: { change: number | null }) {
   if (change === 0) return <span className="text-xs text-muted-foreground flex items-center gap-0.5"><Minus size={12} /> flat vs last month</span>;
   const up = change > 0;
   return (
-    <span className={cn("text-xs font-semibold flex items-center gap-0.5", up ? "text-green-700" : "text-red-600")}>
+    <span className={cn("text-xs font-semibold flex items-center gap-0.5", up ? "text-leaf" : "text-red-600")}>
       {up ? <TrendingUp size={13} /> : <TrendingDown size={13} />}
       {up ? "+" : ""}{change}% vs last month
     </span>
@@ -61,7 +61,7 @@ function MiniBar({ value, max, label, sub }: { value: number; max: number; label
         <span className="text-muted-foreground shrink-0">{sub}</span>
       </div>
       <div className="h-2 bg-muted rounded-full overflow-hidden">
-        <div className="h-full bg-green-600 rounded-full" style={{ width: `${width}%` }} />
+        <div className="h-full bg-leaf rounded-full" style={{ width: `${width}%` }} />
       </div>
     </div>
   );
@@ -617,7 +617,7 @@ export default async function AnalyticsPage() {
             <p className="text-sm text-muted-foreground leading-relaxed">
               Upgrade to <strong>Grower</strong> for a monthly revenue chart. Upgrade to <strong>Nursery</strong> for per-listing breakdowns, auction performance, buyer geography, and category revenue.
             </p>
-            <Link href="/pricing" className={cn(buttonVariants({ size: "sm" }), "bg-green-700 hover:bg-green-800 text-white")}>
+            <Link href="/pricing" className={cn(buttonVariants({ size: "sm" }), "bg-leaf hover:bg-forest text-white")}>
               View pricing
             </Link>
           </CardContent>
@@ -632,7 +632,7 @@ export default async function AnalyticsPage() {
             <p className="text-sm text-muted-foreground leading-relaxed">
               Upgrade to <strong>Nursery</strong> to unlock a full per-listing breakdown, auction performance stats, buyer geography, and category revenue.
             </p>
-            <Link href="/pricing" className={cn(buttonVariants({ size: "sm" }), "bg-green-700 hover:bg-green-800 text-white")}>
+            <Link href="/pricing" className={cn(buttonVariants({ size: "sm" }), "bg-leaf hover:bg-forest text-white")}>
               See Nursery plan
             </Link>
           </CardContent>

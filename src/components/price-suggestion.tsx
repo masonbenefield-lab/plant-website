@@ -59,7 +59,7 @@ export default function PriceSuggestion({ plantName, variety, label = "price" }:
 
   return (
     <p className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
-      <TrendingUp size={12} className="shrink-0 text-green-600" />
+      <TrendingUp size={12} className="shrink-0 text-leaf" />
       Based on{" "}
       <span className="font-medium text-foreground">
         {suggestion.count} similar listing{suggestion.count !== 1 ? "s" : ""}
@@ -69,7 +69,7 @@ export default function PriceSuggestion({ plantName, variety, label = "price" }:
         {cents(suggestion.min)} – {cents(suggestion.max)}
       </span>
       , typical{" "}
-      <span className="font-medium text-green-700">{cents(suggestion.median)}</span>
+      <span className="font-medium text-leaf">{cents(suggestion.median)}</span>
     </p>
   );
 }

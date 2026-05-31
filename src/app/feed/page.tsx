@@ -207,7 +207,7 @@ export default async function FeedPage() {
           <p className="text-sm text-muted-foreground mb-4">
             Follow sellers to see their new listings and updates here.
           </p>
-          <Link href="/shop" className="text-sm font-medium text-green-700 hover:underline">
+          <Link href="/shop" className="text-sm font-medium text-leaf hover:underline">
             Browse the shop to discover sellers →
           </Link>
         </div>
@@ -220,7 +220,7 @@ export default async function FeedPage() {
                 <div key={seller.id} className="flex items-center gap-3 p-3 border rounded-xl bg-card">
                   <Avatar className="h-10 w-10 shrink-0">
                     <AvatarImage src={seller.avatar_url ?? undefined} />
-                    <AvatarFallback className="bg-green-100 text-green-700 text-xs font-semibold">
+                    <AvatarFallback className="bg-[#DFE7D4] text-leaf text-xs font-semibold">
                       {seller.username?.slice(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>

@@ -68,7 +68,7 @@ export function GiveawayAdminTabs({
           >
             {t}
             {t === "Donation Requests" && openCount > 0 && (
-              <span className="ml-1.5 inline-flex items-center justify-center w-4 h-4 text-[10px] font-bold rounded-full bg-green-600 text-white">
+              <span className="ml-1.5 inline-flex items-center justify-center w-4 h-4 text-[10px] font-bold rounded-full bg-leaf text-white">
                 {openCount}
               </span>
             )}

@@ -9,7 +9,7 @@ import OfferActions from "./offer-actions";
 
 const statusColor: Record<string, string> = {
   pending: "bg-amber-100 text-amber-800",
-  accepted: "bg-green-100 text-green-800",
+  accepted: "bg-[#DFE7D4] text-forest",
   declined: "bg-red-100 text-red-700",
   withdrawn: "bg-muted text-muted-foreground",
 };
@@ -72,7 +72,7 @@ export default async function OffersPage() {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <p className="text-lg font-bold text-green-700">{centsToDisplay(offer.amount_cents)}</p>
+              <p className="text-lg font-bold text-leaf">{centsToDisplay(offer.amount_cents)}</p>
               <Badge
                 variant="secondary"
                 className={statusColor[displayStatus] ?? ""}

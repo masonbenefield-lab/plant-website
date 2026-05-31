@@ -184,7 +184,7 @@ export default function AuctionFilterBar() {
           className={cn(
             "h-10 px-4 rounded-md border text-sm font-medium transition-colors whitespace-nowrap",
             hasBuyNow
-              ? "bg-green-700 text-white border-green-700"
+              ? "bg-leaf text-white border-leaf"
               : "border-input bg-background text-muted-foreground hover:text-foreground hover:border-foreground"
           )}
         >
@@ -197,7 +197,7 @@ export default function AuctionFilterBar() {
           className={cn(
             "h-10 px-4 rounded-md border text-sm font-medium transition-colors whitespace-nowrap",
             noBids
-              ? "bg-green-700 text-white border-green-700"
+              ? "bg-leaf text-white border-leaf"
               : "border-input bg-background text-muted-foreground hover:text-foreground hover:border-foreground"
           )}
         >
@@ -211,7 +211,7 @@ export default function AuctionFilterBar() {
           className={cn(
             "h-10 px-3 rounded-md border text-sm font-medium transition-colors flex items-center gap-1.5 whitespace-nowrap",
             showGuide
-              ? "bg-green-700 text-white border-green-700"
+              ? "bg-leaf text-white border-leaf"
               : "border-input bg-background text-muted-foreground hover:text-foreground hover:border-foreground"
           )}
         >

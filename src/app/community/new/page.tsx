@@ -30,8 +30,8 @@ const POST_TYPES = [
     label: "Show & Tell",
     description: "Share a plant, growth update, or proud moment",
     icon: <Camera size={18} />,
-    color: "border-green-300 bg-green-50 text-green-700 dark:bg-green-900/20 dark:border-green-700 dark:text-green-400",
-    selectedColor: "border-green-500 bg-green-100 dark:bg-green-900/40",
+    color: "border-[#A8BF9A] bg-[#EBF0E6] text-leaf dark:bg-forest/20 dark:border-leaf dark:text-sage",
+    selectedColor: "border-leaf bg-[#DFE7D4] dark:bg-forest/40",
   },
   {
     value: "discussion" as const,
@@ -207,7 +207,7 @@ export default function NewCommunityPost() {
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
-                className="w-24 h-24 rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center gap-1 text-muted-foreground hover:border-green-400 hover:text-green-700 transition-colors text-xs"
+                className="w-24 h-24 rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center gap-1 text-muted-foreground hover:border-sage hover:text-leaf transition-colors text-xs"
               >
                 {uploading ? <Loader2 size={18} className="animate-spin" /> : <Upload size={18} />}
                 {!uploading && <span>Add photo</span>}
@@ -225,7 +225,7 @@ export default function NewCommunityPost() {
         </div>
 
         <div className="flex gap-3 pt-2">
-          <Button type="submit" disabled={isPending || uploading || !title.trim()} className="bg-green-700 hover:bg-green-800">
+          <Button type="submit" disabled={isPending || uploading || !title.trim()} className="bg-leaf hover:bg-forest">
             {isPending ? <Loader2 size={14} className="animate-spin mr-2" /> : null}
             Post to Community
           </Button>

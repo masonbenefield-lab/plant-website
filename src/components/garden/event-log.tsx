@@ -32,7 +32,7 @@ const MAX_EVENT_PHOTOS = 3;
 
 const EVENT_OPTIONS: { value: GardenEventType; label: string; icon: React.ReactNode; color: string }[] = [
   { value: "watered",     label: "Watered",     icon: <Droplets size={14} />,   color: "bg-blue-100 text-blue-700" },
-  { value: "fertilized",  label: "Fertilized",  icon: <Leaf size={14} />,       color: "bg-green-100 text-green-700" },
+  { value: "fertilized",  label: "Fertilized",  icon: <Leaf size={14} />,       color: "bg-[#DFE7D4] text-leaf" },
   { value: "repotted",    label: "Repotted",    icon: <FlowerIcon size={14} />, color: "bg-amber-100 text-amber-700" },
   { value: "pruned",      label: "Pruned",      icon: <Scissors size={14} />,   color: "bg-purple-100 text-purple-700" },
   { value: "treated",     label: "Treated",     icon: <Syringe size={14} />,    color: "bg-red-100 text-red-700" },
@@ -141,7 +141,7 @@ export function EventLog({ plantId, initialEvents }: EventLogProps) {
       <div className="flex items-center justify-between">
         <h2 className="font-semibold">Care log</h2>
         <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
-          <DialogTrigger render={<Button size="sm" className="bg-green-700 hover:bg-green-800 gap-1" />}>
+          <DialogTrigger render={<Button size="sm" className="bg-leaf hover:bg-forest gap-1" />}>
             <Plus size={14} />
             Log event
           </DialogTrigger>
@@ -162,7 +162,7 @@ export function EventLog({ plantId, initialEvents }: EventLogProps) {
                         "flex flex-col items-center gap-1 rounded-lg border p-2 text-xs font-medium transition-colors",
                         eventType === opt.value
                           ? `${opt.color} border-current`
-                          : "border-border text-muted-foreground hover:border-green-400"
+                          : "border-border text-muted-foreground hover:border-sage"
                       )}
                     >
                       {opt.icon}
@@ -214,7 +214,7 @@ export function EventLog({ plantId, initialEvents }: EventLogProps) {
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
                       disabled={uploading}
-                      className="w-20 h-20 rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center gap-1 text-muted-foreground hover:border-green-400 hover:text-green-700 transition-colors text-xs"
+                      className="w-20 h-20 rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center gap-1 text-muted-foreground hover:border-sage hover:text-leaf transition-colors text-xs"
                     >
                       {uploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
                       {!uploading && <span>Add</span>}
@@ -231,7 +231,7 @@ export function EventLog({ plantId, initialEvents }: EventLogProps) {
                 />
               </div>
 
-              <Button type="submit" disabled={isPending || uploading} className="w-full bg-green-700 hover:bg-green-800">
+              <Button type="submit" disabled={isPending || uploading} className="w-full bg-leaf hover:bg-forest">
                 {isPending ? <Loader2 size={14} className="animate-spin mr-2" /> : null}
                 Save event
               </Button>

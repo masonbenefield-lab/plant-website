@@ -5,7 +5,7 @@ import { ReportActions } from "./report-actions";
 
 const statusColor: Record<string, string> = {
   pending:   "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
-  resolved:  "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+  resolved:  "bg-[#DFE7D4] text-leaf dark:bg-forest/30 dark:text-sage",
   dismissed: "bg-muted text-muted-foreground",
 };
 
@@ -18,7 +18,7 @@ const typeLabel: Record<string, string> = {
 };
 
 const typeColor: Record<string, string> = {
-  listing:          "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400",
+  listing:          "bg-[#DFE7D4] text-leaf dark:bg-forest/40 dark:text-sage",
   auction:          "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400",
   user:             "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400",
   community_post:   "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400",
@@ -176,7 +176,7 @@ export default async function AdminReportsPage({
                   </td>
                   <td className="px-4 py-3 font-medium max-w-[220px]">
                     {targetHref ? (
-                      <Link href={targetHref} className="hover:underline text-green-700 truncate block" target="_blank">
+                      <Link href={targetHref} className="hover:underline text-leaf truncate block" target="_blank">
                         {targetName}
                       </Link>
                     ) : (

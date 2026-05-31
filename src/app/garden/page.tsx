@@ -21,7 +21,7 @@ const STATUS_LABEL: Record<GardenPlantStatus, string> = {
 };
 
 const STATUS_COLOR: Record<GardenPlantStatus, string> = {
-  thriving: "bg-green-100 text-green-700",
+  thriving: "bg-[#DFE7D4] text-leaf",
   growing: "bg-emerald-100 text-emerald-700",
   dormant: "bg-yellow-100 text-yellow-700",
   struggling: "bg-orange-100 text-orange-700",
@@ -80,7 +80,7 @@ export default async function GardenPage({
           <Link href="/garden/import" className={cn(buttonVariants({ variant: "outline" }))}>
             Bulk Upload
           </Link>
-          <Link href="/garden/new" className={cn(buttonVariants(), "bg-green-700 hover:bg-green-800")}>
+          <Link href="/garden/new" className={cn(buttonVariants(), "bg-leaf hover:bg-forest")}>
             + Add Plant
           </Link>
         </div>
@@ -135,7 +135,7 @@ export default async function GardenPage({
               </div>
             )}
             {!status && (
-              <Link href="/garden/new" className={cn(buttonVariants(), "bg-green-700 hover:bg-green-800 mt-2")}>
+              <Link href="/garden/new" className={cn(buttonVariants(), "bg-leaf hover:bg-forest mt-2")}>
                 Add your first plant
               </Link>
             )}
@@ -163,8 +163,8 @@ function FilterChip({ href, label, active }: { href: string; label: string; acti
       className={cn(
         "px-3 py-1.5 rounded-full text-sm font-medium transition-colors border",
         active
-          ? "bg-green-700 text-white border-green-700"
-          : "bg-background text-muted-foreground border-border hover:text-foreground hover:border-green-400"
+          ? "bg-leaf text-white border-leaf"
+          : "bg-background text-muted-foreground border-border hover:text-foreground hover:border-sage"
       )}
     >
       {label}

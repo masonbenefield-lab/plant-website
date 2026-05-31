@@ -47,7 +47,7 @@ export function OriginRequestCards({ initialRequests }: { initialRequests: Origi
         >
           <div className="flex-1 min-w-0">
             <p className="text-sm">
-              <Link href={`/sellers/${req.requester_username}`} className="font-semibold hover:underline hover:text-green-700 transition-colors">
+              <Link href={`/sellers/${req.requester_username}`} className="font-semibold hover:underline hover:text-leaf transition-colors">
                 @{req.requester_username}
               </Link>{" "}
               says they got a{" "}
@@ -59,7 +59,7 @@ export function OriginRequestCards({ initialRequests }: { initialRequests: Origi
             <button
               onClick={() => handleAction(req.id, "confirm")}
               disabled={acting === req.id}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-700 text-white text-xs font-medium hover:bg-green-800 disabled:opacity-50 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-leaf text-white text-xs font-medium hover:bg-forest disabled:opacity-50 transition-colors"
             >
               {acting === req.id ? (
                 <Loader2 size={12} className="animate-spin" />

@@ -4,7 +4,7 @@ import { centsToDisplay } from "@/lib/stripe";
 import { CancelAuctionButton, DeleteAuctionButton } from "./auction-actions";
 
 const statusColor: Record<string, string> = {
-  active:    "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400",
+  active:    "bg-[#DFE7D4] text-leaf dark:bg-forest/40 dark:text-sage",
   ended:     "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400",
   cancelled: "bg-muted text-muted-foreground",
 };
@@ -54,7 +54,7 @@ export default async function AdminAuctionsPage() {
                   </td>
                   <td className="px-4 py-3 hidden sm:table-cell">
                     {seller ? (
-                      <Link href={`/sellers/${seller.username}`} className="text-green-700 hover:underline" target="_blank">
+                      <Link href={`/sellers/${seller.username}`} className="text-leaf hover:underline" target="_blank">
                         {seller.username}
                       </Link>
                     ) : "—"}

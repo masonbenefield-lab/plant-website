@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Bricolage_Grotesque } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import Navbar from "@/components/layout/navbar";
@@ -12,6 +12,12 @@ import { createClient } from "@/lib/supabase/server";
 const inter = Inter({
   variable: "--font-sans",
   subsets: ["latin"],
+});
+
+const bricolage = Bricolage_Grotesque({
+  variable: "--font-bricolage",
+  subsets: ["latin"],
+  weight: ["700"],
 });
 
 export const metadata: Metadata = {
@@ -45,11 +51,11 @@ export default async function RootLayout({
   }
 
   return (
-    <html lang="en" className={`${inter.variable} h-full antialiased`} suppressHydrationWarning>
+    <html lang="en" className={`${inter.variable} ${bricolage.variable} h-full antialiased`} suppressHydrationWarning>
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <ThemeProvider>
           <CartProvider>
-            <div className="w-full bg-yellow-400 text-yellow-900 text-center text-sm font-medium py-2 px-4">
+            <div className="w-full bg-sand text-forest text-center text-sm font-medium py-2 px-4">
               🚧 Plantet is currently in development — payments are not active yet. Stay tuned!
             </div>
             <Navbar

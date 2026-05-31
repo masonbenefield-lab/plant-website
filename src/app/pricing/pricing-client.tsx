@@ -177,7 +177,7 @@ function GroundbreakerOnlyView({ groundbreakerCount, spotsLeft }: { groundbreake
           <div className="rounded-2xl border bg-card p-6 space-y-3">
             {groundbreakerFeatures.map((feature) => (
               <div key={feature} className="flex items-start gap-3">
-                <Check size={16} className="mt-0.5 shrink-0 text-green-600" />
+                <Check size={16} className="mt-0.5 shrink-0 text-leaf" />
                 <span className="text-sm">{feature}</span>
               </div>
             ))}
@@ -211,7 +211,7 @@ function BreakevenCalculator() {
 
   const bestColor =
     bestPlan === "Nursery" ? "text-blue-600" :
-    bestPlan === "Grower"  ? "text-green-700" :
+    bestPlan === "Grower"  ? "text-leaf" :
     "text-muted-foreground";
 
   return (
@@ -234,7 +234,7 @@ function BreakevenCalculator() {
             step={50}
             value={monthlySales}
             onChange={(e) => setMonthlySales(Number(e.target.value))}
-            className="w-full accent-green-700"
+            className="w-full accent-leaf"
           />
           <div className="flex justify-between text-xs text-muted-foreground mt-1">
             <span>$0</span>
@@ -253,7 +253,7 @@ function BreakevenCalculator() {
               className={cn(
                 "rounded-xl border p-4 text-center transition-all",
                 bestPlan === t.name
-                  ? "border-green-500 bg-green-50 dark:bg-green-900/20 ring-2 ring-green-500"
+                  ? "border-leaf bg-[#EBF0E6] dark:bg-forest/20 ring-2 ring-leaf"
                   : "bg-card"
               )}
             >
@@ -263,7 +263,7 @@ function BreakevenCalculator() {
                 {t.sub > 0 ? `$${t.sub}/mo + ` : ""}{t.name === "Seedling" ? "6.5" : t.name === "Grower" ? "4.5" : "3"}% commission
               </p>
               {bestPlan === t.name && (
-                <span className="inline-block mt-2 text-xs font-semibold text-green-700 dark:text-green-400">Best value</span>
+                <span className="inline-block mt-2 text-xs font-semibold text-leaf dark:text-sage">Best value</span>
               )}
             </div>
           ))}
@@ -272,11 +272,11 @@ function BreakevenCalculator() {
         <div className="rounded-lg bg-background border px-5 py-4 text-sm space-y-1.5 text-muted-foreground">
           <p>
             Upgrading to <strong className="text-foreground">Grower</strong> pays for itself at{" "}
-            <strong className="text-green-700">${growerBreakeven.toLocaleString()}/mo</strong> in sales.
+            <strong className="text-leaf">${growerBreakeven.toLocaleString()}/mo</strong> in sales.
           </p>
           <p>
             Upgrading to <strong className="text-foreground">Nursery</strong> (from Grower) pays for itself at{" "}
-            <strong className="text-green-700">${(growerBreakeven + nurseryBreakeven).toLocaleString()}/mo</strong> in sales.
+            <strong className="text-leaf">${(growerBreakeven + nurseryBreakeven).toLocaleString()}/mo</strong> in sales.
           </p>
           {monthlySales > 0 && (
             <p className="pt-1 border-t">
@@ -324,8 +324,8 @@ function StorefrontBannerSection() {
           </div>
 
           <div>
-            <p className="text-xs font-semibold text-green-700 uppercase tracking-widest mb-3 text-center">Grower &amp; Nursery — with banner</p>
-            <div className="rounded-2xl border overflow-hidden bg-card shadow-sm ring-2 ring-green-500">
+            <p className="text-xs font-semibold text-leaf uppercase tracking-widest mb-3 text-center">Grower &amp; Nursery — with banner</p>
+            <div className="rounded-2xl border overflow-hidden bg-card shadow-sm ring-2 ring-leaf">
               <div
                 className="h-24 relative flex items-end px-4 pb-3"
                 style={{ background: "linear-gradient(135deg, #052e16 0%, #14532d 35%, #166534 65%, #15803d 100%)" }}
@@ -335,22 +335,22 @@ function StorefrontBannerSection() {
                   style={{ backgroundImage: "radial-gradient(ellipse at 75% 40%, rgba(134,239,172,0.4) 0%, transparent 55%)" }}
                 />
                 <div className="relative flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-full bg-green-800/60 border-2 border-white/20 shrink-0 flex items-center justify-center text-lg">
+                  <div className="w-11 h-11 rounded-full bg-forest/60 border-2 border-white/20 shrink-0 flex items-center justify-center text-lg">
                     🌿
                   </div>
                   <div>
                     <p className="font-semibold text-sm text-white">leafy_greens</p>
                     <div className="flex items-center gap-1.5">
-                      <p className="text-xs text-green-300">12 listings</p>
-                      <span className="text-green-500 text-xs">·</span>
-                      <p className="text-xs text-green-300">⭐ 4.9</p>
+                      <p className="text-xs text-[#A8BF9A]">12 listings</p>
+                      <span className="text-leaf text-xs">·</span>
+                      <p className="text-xs text-[#A8BF9A]">⭐ 4.9</p>
                     </div>
                   </div>
                 </div>
               </div>
               <div className="p-4 grid grid-cols-3 gap-2">
                 {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <div key={i} className="aspect-square bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-100 dark:border-green-800/40" />
+                  <div key={i} className="aspect-square bg-[#EBF0E6] dark:bg-forest/20 rounded-lg border border-[#DFE7D4] dark:border-forest/40" />
                 ))}
               </div>
             </div>
@@ -391,22 +391,22 @@ function SearchPlacementSection() {
               <span className="opacity-50">🔍</span>
               <span>monstera</span>
             </div>
-            <div className="bg-green-700 text-white rounded-lg px-4 py-2.5 text-sm font-medium select-none">Search</div>
+            <div className="bg-leaf text-white rounded-lg px-4 py-2.5 text-sm font-medium select-none">Search</div>
           </div>
 
           <p className="text-xs text-muted-foreground mb-3">6 results for &quot;monstera&quot;</p>
 
           <div className="grid grid-cols-3 gap-3 mb-2">
             {priority.map((listing) => (
-              <div key={listing.name} className="rounded-xl border overflow-hidden bg-background ring-1 ring-green-500/30">
-                <div className="aspect-square relative bg-green-50 dark:bg-green-900/20">
-                  <span className="absolute top-1.5 left-1.5 bg-green-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide">
+              <div key={listing.name} className="rounded-xl border overflow-hidden bg-background ring-1 ring-leaf/30">
+                <div className="aspect-square relative bg-[#EBF0E6] dark:bg-forest/20">
+                  <span className="absolute top-1.5 left-1.5 bg-leaf text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide">
                     ⚡ Priority
                   </span>
                 </div>
                 <div className="p-2">
                   <p className="text-[11px] font-medium leading-tight truncate">{listing.name}</p>
-                  <p className="text-[10px] text-green-700 dark:text-green-400 font-semibold mt-0.5">{listing.price}</p>
+                  <p className="text-[10px] text-leaf dark:text-sage font-semibold mt-0.5">{listing.price}</p>
                   <p className="text-[9px] text-muted-foreground truncate">{listing.seller}</p>
                 </div>
               </div>
@@ -471,8 +471,8 @@ const PLAN_TIERS = [
   },
   {
     name: "Nursery",
-    color: "bg-green-50 dark:bg-green-900/20",
-    border: "border border-green-200 dark:border-green-800",
+    color: "bg-[#EBF0E6] dark:bg-forest/20",
+    border: "border border-[#C5D4BC] dark:border-forest",
     items: ["Everything in Grower", "Repeat buyer rate", "Follower growth chart", "Buyer geography map"],
   },
 ];
@@ -498,7 +498,7 @@ function AnalyticsDashboardSection() {
               <ul className="space-y-1.5">
                 {tier.items.map((item) => (
                   <li key={item} className="flex items-start gap-1.5 text-xs">
-                    <Check size={11} className="mt-0.5 text-green-600 shrink-0" />
+                    <Check size={11} className="mt-0.5 text-leaf shrink-0" />
                     <span>{item}</span>
                   </li>
                 ))}
@@ -510,7 +510,7 @@ function AnalyticsDashboardSection() {
         <div className="rounded-2xl border bg-card p-5">
           <div className="flex items-center justify-between mb-5">
             <p className="text-sm font-semibold">Dashboard preview</p>
-            <span className="text-xs bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 px-2.5 py-1 rounded-full font-medium">
+            <span className="text-xs bg-[#DFE7D4] dark:bg-forest/40 text-leaf dark:text-sage px-2.5 py-1 rounded-full font-medium">
               Nursery plan
             </span>
           </div>
@@ -524,7 +524,7 @@ function AnalyticsDashboardSection() {
               <div key={stat.label} className="rounded-xl bg-muted/60 p-3">
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1.5">{stat.label}</p>
                 <p className="text-xl font-bold">{stat.value}</p>
-                <p className="text-[10px] text-green-700 dark:text-green-400 mt-0.5">{stat.sub}</p>
+                <p className="text-[10px] text-leaf dark:text-sage mt-0.5">{stat.sub}</p>
               </div>
             ))}
           </div>
@@ -535,7 +535,7 @@ function AnalyticsDashboardSection() {
               {CHART_DATA.map(({ month, value }) => (
                 <div key={month} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
                   <div
-                    className="w-full rounded-t-md bg-green-600 transition-all"
+                    className="w-full rounded-t-md bg-leaf transition-all"
                     style={{ height: `${Math.round((value / max) * 72)}px` }}
                   />
                   <span className="text-[9px] text-muted-foreground shrink-0">{month}</span>
@@ -555,7 +555,7 @@ function AnalyticsDashboardSection() {
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="text-[10px] text-muted-foreground">{item.sold} sold</span>
-                    <span className="text-xs font-semibold text-green-700 dark:text-green-400">{item.revenue}</span>
+                    <span className="text-xs font-semibold text-leaf dark:text-sage">{item.revenue}</span>
                   </div>
                 </div>
               ))}
@@ -572,7 +572,7 @@ function AnalyticsDashboardSection() {
               <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1.5">Top shipping states</p>
               <div className="flex flex-wrap gap-1 mt-1">
                 {["TX", "CA", "FL", "NY", "WA"].map((s) => (
-                  <span key={s} className="text-[9px] font-bold bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 px-1.5 py-0.5 rounded">
+                  <span key={s} className="text-[9px] font-bold bg-[#DFE7D4] dark:bg-forest/40 text-leaf dark:text-sage px-1.5 py-0.5 rounded">
                     {s}
                   </span>
                 ))}
@@ -617,7 +617,7 @@ function FullPricingView({ groundbreakerCount }: { groundbreakerCount: number })
               )}
             >
               Annual
-              <span className="ml-2 text-xs bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 px-1.5 py-0.5 rounded-full font-semibold">
+              <span className="ml-2 text-xs bg-[#DFE7D4] text-leaf dark:bg-forest/40 dark:text-sage px-1.5 py-0.5 rounded-full font-semibold">
                 Save 20%
               </span>
             </button>
@@ -664,18 +664,18 @@ function FullPricingView({ groundbreakerCount }: { groundbreakerCount: number })
                 className={cn(
                   "relative flex flex-col rounded-2xl border p-8",
                   isPopular
-                    ? "border-green-500 bg-green-700 text-white shadow-xl shadow-green-900/20 scale-[1.02]"
+                    ? "border-leaf bg-leaf text-white shadow-xl shadow-forest/20 scale-[1.02]"
                     : "bg-card"
                 )}
               >
                 {tier.badge && (
-                  <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-green-400 text-green-900 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">
+                  <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-sage text-forest text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">
                     {tier.badge}
                   </span>
                 )}
 
                 <div className="mb-6">
-                  <p className={cn("text-xs font-bold uppercase tracking-widest mb-2", isPopular ? "text-green-200" : "text-muted-foreground")}>
+                  <p className={cn("text-xs font-bold uppercase tracking-widest mb-2", isPopular ? "text-[#C5D4BC]" : "text-muted-foreground")}>
                     {tier.name}
                   </p>
                   <div className="flex items-end gap-1 mb-2">
@@ -684,18 +684,18 @@ function FullPricingView({ groundbreakerCount }: { groundbreakerCount: number })
                     ) : (
                       <>
                         <span className="text-5xl font-bold">${price}</span>
-                        <span className={cn("text-sm mb-2", isPopular ? "text-green-200" : "text-muted-foreground")}>
+                        <span className={cn("text-sm mb-2", isPopular ? "text-[#C5D4BC]" : "text-muted-foreground")}>
                           /{annual ? "yr" : "mo"}
                         </span>
                       </>
                     )}
                   </div>
                   {annual && price > 0 && (
-                    <p className={cn("text-xs", isPopular ? "text-green-200" : "text-muted-foreground")}>
+                    <p className={cn("text-xs", isPopular ? "text-[#C5D4BC]" : "text-muted-foreground")}>
                       ${(price / 12).toFixed(2)}/mo billed annually
                     </p>
                   )}
-                  <p className={cn("text-sm mt-3 leading-relaxed", isPopular ? "text-green-100" : "text-muted-foreground")}>
+                  <p className={cn("text-sm mt-3 leading-relaxed", isPopular ? "text-[#DFE7D4]" : "text-muted-foreground")}>
                     {tier.description}
                   </p>
                 </div>
@@ -709,11 +709,11 @@ function FullPricingView({ groundbreakerCount }: { groundbreakerCount: number })
                     return (
                       <li key={row.key} className="flex items-start gap-2.5 text-sm">
                         {isFalse ? (
-                          <Minus size={16} className={cn("mt-0.5 shrink-0", isPopular ? "text-green-400" : "text-muted-foreground/40")} />
+                          <Minus size={16} className={cn("mt-0.5 shrink-0", isPopular ? "text-sage" : "text-muted-foreground/40")} />
                         ) : (
-                          <Check size={16} className={cn("mt-0.5 shrink-0", isPopular ? "text-green-300" : "text-green-600")} />
+                          <Check size={16} className={cn("mt-0.5 shrink-0", isPopular ? "text-[#A8BF9A]" : "text-leaf")} />
                         )}
-                        <span className={cn(isFalse && !isPopular && "text-muted-foreground/60", isFalse && isPopular && "text-green-300/60")}>
+                        <span className={cn(isFalse && !isPopular && "text-muted-foreground/60", isFalse && isPopular && "text-[#A8BF9A]/60")}>
                           {row.key === "digest" ? (
                             <a href="#weekly-digest" className={cn("underline underline-offset-2 decoration-dotted hover:opacity-80", isPopular ? "text-white" : "")}>
                               {isString ? val : row.label}
@@ -747,10 +747,10 @@ function FullPricingView({ groundbreakerCount }: { groundbreakerCount: number })
                     buttonVariants({ size: "lg" }),
                     "w-full justify-center font-semibold",
                     isPopular
-                      ? "bg-white text-green-800 hover:bg-green-50"
+                      ? "bg-white text-forest hover:bg-[#EBF0E6]"
                       : tier.ctaStyle === "outline"
                       ? "bg-transparent border border-border hover:bg-muted"
-                      : "bg-green-700 hover:bg-green-800 text-white"
+                      : "bg-leaf hover:bg-forest text-white"
                   )}
                 >
                   {tier.cta}
@@ -810,10 +810,10 @@ function FullPricingView({ groundbreakerCount }: { groundbreakerCount: number })
                   <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">Your newest listings are eligible for the &quot;Fresh Picks&quot; section shown to every subscriber. Up to 6 Grower+ sellers are featured per digest (1 listing each), rotating weekly.</p>
                 </div>
               </div>
-              <div className="flex items-start gap-3 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4">
+              <div className="flex items-start gap-3 rounded-xl bg-[#EBF0E6] dark:bg-forest/20 border border-[#C5D4BC] dark:border-forest p-4">
                 <span className="text-lg mt-0.5">🌳</span>
                 <div>
-                  <p className="text-sm font-semibold text-green-800 dark:text-green-300">Nursery — Fresh Picks + Follower Highlights</p>
+                  <p className="text-sm font-semibold text-forest dark:text-[#A8BF9A]">Nursery — Fresh Picks + Follower Highlights</p>
                   <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">Eligible for Fresh Picks <em>and</em> a personalized &quot;From shops you follow&quot; section sent to every buyer following your store. Up to 4 of your newest listings per digest, delivered straight to your most engaged audience.</p>
                 </div>
               </div>

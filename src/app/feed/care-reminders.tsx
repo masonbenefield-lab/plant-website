@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 const CARE_META: Record<string, { icon: React.ReactNode; color: string; bg: string }> = {
   Water:     { icon: <Droplets size={14} />,   color: "text-blue-700",   bg: "bg-blue-100" },
-  Fertilize: { icon: <Leaf size={14} />,       color: "text-green-700",  bg: "bg-green-100" },
+  Fertilize: { icon: <Leaf size={14} />,       color: "text-leaf",  bg: "bg-[#DFE7D4]" },
   Repot:     { icon: <FlowerIcon size={14} />, color: "text-amber-700",  bg: "bg-amber-100" },
   Prune:     { icon: <Scissors size={14} />,   color: "text-purple-700", bg: "bg-purple-100" },
 };
@@ -20,11 +20,11 @@ interface CareItem {
 
 export function CareReminders({ items }: { items: CareItem[] }) {
   return (
-    <Card className="mb-8 border-green-200 bg-green-50/60 dark:bg-green-950/20 dark:border-green-900">
+    <Card className="mb-8 border-[#C5D4BC] bg-[#EBF0E6]/60 dark:bg-forest/20 dark:border-forest">
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm text-green-800 dark:text-green-300 flex items-center gap-2">
+        <CardTitle className="text-sm text-forest dark:text-[#A8BF9A] flex items-center gap-2">
           🌿 Today&apos;s garden care
-          <span className="ml-auto text-xs font-normal text-green-700/70">
+          <span className="ml-auto text-xs font-normal text-leaf/70">
             <Link href="/garden" className="hover:underline">View garden →</Link>
           </span>
         </CardTitle>
@@ -45,7 +45,7 @@ export function CareReminders({ items }: { items: CareItem[] }) {
                     {item.careType}
                     {overdueDays > 0
                       ? <span className="text-orange-600 font-medium"> · {overdueDays}d overdue</span>
-                      : <span className="text-green-700 font-medium"> · due today</span>}
+                      : <span className="text-leaf font-medium"> · due today</span>}
                   </p>
                 </div>
               </div>

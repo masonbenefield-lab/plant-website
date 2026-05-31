@@ -161,7 +161,7 @@ export default function RateSellerForm({
         type="submit"
         size="sm"
         disabled={saving || uploading}
-        className="bg-green-700 hover:bg-green-800"
+        className="bg-leaf hover:bg-forest"
       >
         {saving ? "Submitting…" : "Submit Review"}
       </Button>

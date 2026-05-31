@@ -73,7 +73,7 @@ export function PlantNotesEditor({ plantId, field, initialValue, label, placehol
             className="resize-none text-sm"
           />
           <div className="flex gap-2">
-            <Button size="sm" onClick={handleSave} disabled={saving} className="bg-green-700 hover:bg-green-800 h-7 px-3 text-xs">
+            <Button size="sm" onClick={handleSave} disabled={saving} className="bg-leaf hover:bg-forest h-7 px-3 text-xs">
               {saving ? "Saving…" : "Save"}
             </Button>
             <Button size="sm" variant="ghost" onClick={handleCancel} disabled={saving} className="h-7 px-3 text-xs">

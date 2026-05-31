@@ -26,7 +26,7 @@ const GARDEN_STATUS_LABEL: Record<GardenPlantStatus, string> = {
 };
 
 const GARDEN_STATUS_COLOR: Record<GardenPlantStatus, string> = {
-  thriving: "bg-green-100 text-green-700",
+  thriving: "bg-[#DFE7D4] text-leaf",
   growing: "bg-emerald-100 text-emerald-700",
   dormant: "bg-yellow-100 text-yellow-700",
   struggling: "bg-orange-100 text-orange-700",
@@ -147,7 +147,7 @@ export default async function SellerStorefront({
 
       {/* Storefront announcement */}
       {(profile as { announcement?: string | null }).announcement && (
-        <div className="mb-6 rounded-lg border border-green-200 bg-green-50 dark:bg-green-950/30 dark:border-green-800 px-4 py-3 text-sm text-green-900 dark:text-green-200 font-medium">
+        <div className="mb-6 rounded-lg border border-[#C5D4BC] bg-[#EBF0E6] dark:bg-forest/30 dark:border-forest px-4 py-3 text-sm text-forest dark:text-[#C5D4BC] font-medium">
           {(profile as { announcement?: string | null }).announcement}
         </div>
       )}
@@ -169,7 +169,7 @@ export default async function SellerStorefront({
       <div className="flex items-start gap-6 mb-10">
         <Avatar className="h-20 w-20">
           <AvatarImage src={profile.avatar_url ?? undefined} />
-          <AvatarFallback className="bg-green-100 text-green-700 text-2xl font-bold">
+          <AvatarFallback className="bg-[#DFE7D4] text-leaf text-2xl font-bold">
             {profile.username.slice(0, 1).toUpperCase()}
           </AvatarFallback>
         </Avatar>
@@ -303,7 +303,7 @@ export default async function SellerStorefront({
                 <div className="flex items-start gap-3">
                   <Avatar className="h-8 w-8 shrink-0">
                     <AvatarImage src={profile.avatar_url ?? undefined} />
-                    <AvatarFallback className="bg-green-100 text-green-700 text-xs font-semibold">
+                    <AvatarFallback className="bg-[#DFE7D4] text-leaf text-xs font-semibold">
                       {profile.username.slice(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
@@ -336,7 +336,7 @@ export default async function SellerStorefront({
           <div className="space-y-6">
             {/* Submit a review */}
             {orderToRate && (
-              <Card className="border-green-200 bg-green-50 dark:bg-green-900/20 dark:border-green-800">
+              <Card className="border-[#C5D4BC] bg-[#EBF0E6] dark:bg-forest/20 dark:border-forest">
                 <CardContent className="p-5">
                   <RateSellerForm orderId={orderToRate} sellerUsername={profile.username} />
                 </CardContent>

@@ -140,14 +140,14 @@ export default async function DashboardPage() {
           <NavLink href="/account" label="Account Settings" />
         </div>
 
-        <div className="rounded-xl border bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800 p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="rounded-xl border bg-[#EBF0E6] dark:bg-forest/20 border-[#C5D4BC] dark:border-forest p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <p className="font-semibold text-green-900 dark:text-green-200">Want to sell your plants?</p>
-            <p className="text-sm text-green-800/70 dark:text-green-300/70 mt-0.5">
+            <p className="font-semibold text-forest dark:text-[#C5D4BC]">Want to sell your plants?</p>
+            <p className="text-sm text-forest/70 dark:text-[#A8BF9A]/70 mt-0.5">
               Open a free storefront and list plants for fixed price or timed auction.
             </p>
           </div>
-          <Link href="/account#seller-payments" className={cn(buttonVariants(), "bg-green-700 hover:bg-green-800 shrink-0")}>
+          <Link href="/account#seller-payments" className={cn(buttonVariants(), "bg-leaf hover:bg-forest shrink-0")}>
             Start selling
           </Link>
         </div>
@@ -173,16 +173,16 @@ export default async function DashboardPage() {
             <p className="text-muted-foreground text-sm mt-0.5">Welcome back, {profile.username}</p>
           )}
         </div>
-        <Link href="/dashboard/create" className={cn(buttonVariants(), "bg-green-700 hover:bg-green-800 gap-1")}>
+        <Link href="/dashboard/create" className={cn(buttonVariants(), "bg-leaf hover:bg-forest gap-1")}>
           + Add Inventory
         </Link>
       </div>
 
       {/* Onboarding checklist */}
       {!allDone && (
-        <Card className="border-green-200 bg-green-50">
+        <Card className="border-[#C5D4BC] bg-[#EBF0E6]">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base text-green-800">Get your shop ready</CardTitle>
+            <CardTitle className="text-base text-forest">Get your shop ready</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             <CheckItem done={checks.profile}       label="Complete your profile"              href="/account"                    hint="Add a bio and profile photo so buyers trust you" />
@@ -237,7 +237,7 @@ export default async function DashboardPage() {
         <div className="lg:col-span-2 space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="font-semibold">Sales awaiting shipment</h2>
-            <Link href="/dashboard/orders" className="text-sm text-green-700 hover:underline">View all</Link>
+            <Link href="/dashboard/orders" className="text-sm text-leaf hover:underline">View all</Link>
           </div>
           {recentOrders.length === 0 ? (
             <Card>
@@ -302,7 +302,7 @@ function StatCard({ label, value, highlight, sub, trend, href }: { label: string
         <p className={cn("text-3xl font-bold", highlight && "text-blue-700")}>{value}</p>
         {sub && <p className="text-xs text-muted-foreground mt-1">{sub}</p>}
         {trend != null && (
-          <p className={cn("text-xs font-semibold flex items-center gap-0.5 mt-1.5", trend >= 0 ? "text-green-700" : "text-red-600")}>
+          <p className={cn("text-xs font-semibold flex items-center gap-0.5 mt-1.5", trend >= 0 ? "text-leaf" : "text-red-600")}>
             {trend >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
             {trend >= 0 ? "+" : ""}{trend}% vs last month
           </p>
@@ -322,22 +322,22 @@ function CheckItem({ done, label, href, hint, external, doneHref }: {
   const linkRel    = external ? "noopener noreferrer" : undefined;
   return (
     <div className="flex items-start gap-3">
-      <div className={cn("mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold", done ? "bg-green-600 text-white" : "border-2 border-green-400 text-green-700")}>
+      <div className={cn("mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold", done ? "bg-leaf text-white" : "border-2 border-sage text-leaf")}>
         {done ? "✓" : ""}
       </div>
       <div>
         {done ? (
           doneHref ? (
-            <Link href={doneHref} target={linkTarget} rel={linkRel} className="text-sm font-medium text-green-800/60 line-through hover:text-green-800 hover:no-underline transition-colors">
+            <Link href={doneHref} target={linkTarget} rel={linkRel} className="text-sm font-medium text-forest/60 line-through hover:text-forest hover:no-underline transition-colors">
               {label}
             </Link>
           ) : (
-            <p className="text-sm font-medium text-green-800 line-through opacity-60">{label}</p>
+            <p className="text-sm font-medium text-forest line-through opacity-60">{label}</p>
           )
         ) : (
-          <Link href={href} target={linkTarget} rel={linkRel} className="text-sm font-medium text-green-800 hover:underline">{label}</Link>
+          <Link href={href} target={linkTarget} rel={linkRel} className="text-sm font-medium text-forest hover:underline">{label}</Link>
         )}
-        {!done && <p className="text-xs text-green-700/70 mt-0.5">{hint}</p>}
+        {!done && <p className="text-xs text-leaf/70 mt-0.5">{hint}</p>}
       </div>
     </div>
   );
@@ -354,7 +354,7 @@ function NavLink({ href, label, badge, badgeColor = "blue" }: { href: string; la
         <span className={cn(
           "rounded-full px-2 py-0.5 text-xs font-semibold",
           badgeColor === "orange" ? "bg-orange-100 text-orange-700" :
-          badgeColor === "green"  ? "bg-green-100 text-green-700" :
+          badgeColor === "green"  ? "bg-[#DFE7D4] text-leaf" :
           "bg-blue-100 text-blue-700"
         )}>
           {badge}

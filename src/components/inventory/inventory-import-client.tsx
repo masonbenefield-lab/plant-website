@@ -287,7 +287,7 @@ export function InventoryImportClient() {
           <Button
             onClick={handleSubmit}
             disabled={submitting || hasErrors}
-            className="bg-green-700 hover:bg-green-800 shadow-lg px-6"
+            className="bg-leaf hover:bg-forest shadow-lg px-6"
             size="lg"
           >
             {submitting ? (
@@ -318,11 +318,11 @@ export function InventoryImportClient() {
         className={cn(
           "flex flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed px-8 py-16 text-center cursor-pointer transition-colors",
           dragging
-            ? "border-green-500 bg-green-50 dark:bg-green-950/20"
-            : "border-border hover:border-green-400 hover:bg-muted/30"
+            ? "border-leaf bg-[#EBF0E6] dark:bg-forest/20"
+            : "border-border hover:border-sage hover:bg-muted/30"
         )}
       >
-        <div className={cn("rounded-full p-4", dragging ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground")}>
+        <div className={cn("rounded-full p-4", dragging ? "bg-[#DFE7D4] text-leaf" : "bg-muted text-muted-foreground")}>
           <Upload size={28} />
         </div>
         <div>

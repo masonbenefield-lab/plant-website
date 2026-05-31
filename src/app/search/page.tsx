@@ -106,7 +106,7 @@ export default async function SearchPage({
               href={`/search?${p.toString()}`}
               className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
                 tab === value
-                  ? "bg-green-700 text-white border-green-700"
+                  ? "bg-leaf text-white border-leaf"
                   : "text-muted-foreground border-border hover:border-foreground hover:text-foreground"
               }`}
             >
@@ -129,9 +129,9 @@ export default async function SearchPage({
           <p className="font-semibold mb-1">No results found</p>
           <p className="text-sm text-muted-foreground mb-6">Try a different search term.</p>
           <div className="flex justify-center gap-3">
-            <Link href="/shop" className="text-sm text-green-700 hover:underline">Browse Shop</Link>
+            <Link href="/shop" className="text-sm text-leaf hover:underline">Browse Shop</Link>
             <span className="text-muted-foreground">·</span>
-            <Link href="/auctions" className="text-sm text-green-700 hover:underline">Browse Auctions</Link>
+            <Link href="/auctions" className="text-sm text-leaf hover:underline">Browse Auctions</Link>
           </div>
         </div>
       ) : (
@@ -156,7 +156,7 @@ export default async function SearchPage({
                       <div className="p-3 flex-1 flex flex-col gap-0.5">
                         <p className="font-semibold text-sm truncate">{l.plant_name}</p>
                         {l.variety && <p className="text-xs text-muted-foreground truncate">{l.variety}</p>}
-                        <p className="text-sm font-bold text-green-700 mt-auto pt-2">{centsToDisplay(l.price_cents)}</p>
+                        <p className="text-sm font-bold text-leaf mt-auto pt-2">{centsToDisplay(l.price_cents)}</p>
                       </div>
                     </Link>
                   ))}
@@ -184,7 +184,7 @@ export default async function SearchPage({
                       <div className="p-3 flex-1 flex flex-col gap-0.5">
                         <p className="font-semibold text-sm truncate">{a.plant_name}</p>
                         {a.variety && <p className="text-xs text-muted-foreground truncate">{a.variety}</p>}
-                        <p className="text-sm font-bold text-green-700 mt-auto pt-2">Bid: {centsToDisplay(a.current_bid_cents)}</p>
+                        <p className="text-sm font-bold text-leaf mt-auto pt-2">Bid: {centsToDisplay(a.current_bid_cents)}</p>
                       </div>
                     </Link>
                   ))}

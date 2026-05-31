@@ -88,7 +88,7 @@ export default async function PublicGardenPage({
 
       {/* Hero header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
-        <div className="w-16 h-16 rounded-full bg-muted overflow-hidden shrink-0 ring-2 ring-green-100">
+        <div className="w-16 h-16 rounded-full bg-muted overflow-hidden shrink-0 ring-2 ring-[#DFE7D4]">
           {profile.avatar_url ? (
             <Image
               src={profile.avatar_url}
@@ -109,19 +109,19 @@ export default async function PublicGardenPage({
             {total} plant{total !== 1 ? "s" : ""}
           </p>
           {profile.garden_bio && (
-            <p className="text-sm text-green-800 dark:text-green-300 mt-1.5 leading-relaxed max-w-lg font-medium">
+            <p className="text-sm text-forest dark:text-[#A8BF9A] mt-1.5 leading-relaxed max-w-lg font-medium">
               {profile.garden_bio}
             </p>
           )}
           {profile.open_to_trades && (
             <div className="flex items-center gap-1.5 mt-2">
-              <span className="flex items-center gap-1.5 text-xs font-medium text-green-700 bg-green-100 dark:bg-green-900/40 dark:text-green-400 px-2.5 py-1 rounded-full">
+              <span className="flex items-center gap-1.5 text-xs font-medium text-leaf bg-[#DFE7D4] dark:bg-forest/40 dark:text-sage px-2.5 py-1 rounded-full">
                 <ArrowLeftRight size={11} />
                 Open to trades
               </span>
               <Link
                 href={`/messages?to=${profile.username}`}
-                className="text-xs text-muted-foreground hover:text-green-700 hover:underline flex items-center gap-1"
+                className="text-xs text-muted-foreground hover:text-leaf hover:underline flex items-center gap-1"
               >
                 <MessageSquare size={11} />
                 Message to arrange
@@ -132,7 +132,7 @@ export default async function PublicGardenPage({
         <div className="flex flex-col gap-2 shrink-0">
           <Link
             href={`/sellers/${profile.username}`}
-            className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-full border border-green-300 bg-green-50 text-green-700 hover:bg-green-100 transition-colors font-medium"
+            className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-full border border-[#A8BF9A] bg-[#EBF0E6] text-leaf hover:bg-[#DFE7D4] transition-colors font-medium"
           >
             <Store size={14} />
             Visit shop
@@ -144,7 +144,7 @@ export default async function PublicGardenPage({
 
       <p className="text-center text-xs text-muted-foreground pt-4">
         Shared on{" "}
-        <Link href="/" className="text-green-700 hover:underline font-medium">
+        <Link href="/" className="text-leaf hover:underline font-medium">
           Plantet
         </Link>
       </p>

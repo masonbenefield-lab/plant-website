@@ -131,8 +131,9 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
 
         {/* Left: logo + desktop nav */}
         <div className="flex items-center gap-8">
-          <Link href="/" className="font-bold text-xl text-green-700" onClick={closeMenu}>
-            Plantet
+          <Link href="/" className="flex items-center gap-2 shrink-0" onClick={closeMenu}>
+            <img src="/plantet-mark-color.svg" alt="" width={28} height={28} />
+            <span className="font-bold text-[21px] tracking-[-0.02em] text-forest dark:text-cream" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>Plantet</span>
           </Link>
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
             <Link href="/shop" className="text-muted-foreground hover:text-foreground transition-colors">
@@ -168,7 +169,7 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
                 <Link href="/feed" className="relative flex flex-col items-center gap-0.5 px-1.5 py-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
                   <Rss size={15} />
                   {hasNewFeed && (
-                    <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-green-500" />
+                    <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-leaf" />
                   )}
                   <span className="text-[9px] leading-none font-medium">Feed</span>
                 </Link>
@@ -177,7 +178,7 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
                 <Link href="/messages" className="relative flex flex-col items-center gap-0.5 px-1.5 py-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
                   <MessageSquare size={15} />
                   {liveUnread > 0 && (
-                    <span className="absolute top-0.5 right-0.5 w-3.5 h-3.5 rounded-full bg-green-600 text-white text-[9px] font-bold flex items-center justify-center">
+                    <span className="absolute top-0.5 right-0.5 w-3.5 h-3.5 rounded-full bg-leaf text-white text-[9px] font-bold flex items-center justify-center">
                       {liveUnread > 9 ? "9+" : liveUnread}
                     </span>
                   )}
@@ -188,10 +189,10 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
             )}
             {user ? (
               <DropdownMenu>
-                <DropdownMenuTrigger className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-green-500">
+                <DropdownMenuTrigger className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-leaf">
                   <Avatar className="h-8 w-8">
                     <AvatarImage src={avatarUrl ?? undefined} />
-                    <AvatarFallback className="bg-green-100 text-green-700 text-xs">
+                    <AvatarFallback className="bg-[#DFE7D4] text-leaf text-xs">
                       {username?.slice(0, 2).toUpperCase() ?? "??"}
                     </AvatarFallback>
                   </Avatar>
@@ -223,7 +224,7 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
             ) : (
               <>
                 <Link href="/login" className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}>Sign in</Link>
-                <Link href="/signup" className={cn(buttonVariants({ size: "sm" }), "bg-green-700 hover:bg-green-800")}>Get started</Link>
+                <Link href="/signup" className={cn(buttonVariants({ size: "sm" }), "bg-leaf hover:bg-forest")}>Get started</Link>
               </>
             )}
           </div>
@@ -271,7 +272,7 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
               <div className="flex items-center gap-3 px-3 py-2 mb-1">
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={avatarUrl ?? undefined} />
-                  <AvatarFallback className="bg-green-100 text-green-700 text-xs">
+                  <AvatarFallback className="bg-[#DFE7D4] text-leaf text-xs">
                     {username?.slice(0, 2).toUpperCase() ?? "??"}
                   </AvatarFallback>
                 </Avatar>
@@ -327,7 +328,7 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
                 <Link
                   href="/signup"
                   onClick={closeMenu}
-                  className={cn(buttonVariants(), "w-full justify-center bg-green-700 hover:bg-green-800")}
+                  className={cn(buttonVariants(), "w-full justify-center bg-leaf hover:bg-forest")}
                 >
                   Get started
                 </Link>

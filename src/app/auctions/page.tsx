@@ -196,7 +196,7 @@ export default async function AuctionsPage({
                   </div>
                   <div className="p-2.5">
                     <p className="text-sm font-semibold truncate">{auction.plant_name}{auction.variety ? ` ${auction.variety}` : ""}</p>
-                    <p className={`text-sm font-bold mt-0.5 ${auction.bid_count > 0 ? "text-green-700" : "text-muted-foreground"}`}>{centsToDisplay(auction.current_bid_cents)}</p>
+                    <p className={`text-sm font-bold mt-0.5 ${auction.bid_count > 0 ? "text-leaf" : "text-muted-foreground"}`}>{centsToDisplay(auction.current_bid_cents)}</p>
                   </div>
                 </Link>
               );
@@ -256,7 +256,7 @@ export default async function AuctionsPage({
                           <p className="text-xs text-muted-foreground">
                             {auction.bid_count > 0 ? `${auction.bid_count} bid${auction.bid_count !== 1 ? "s" : ""}` : "Starting bid"}
                           </p>
-                          <span className={`font-bold ${auction.bid_count > 0 ? "text-green-700" : "text-muted-foreground"}`}>
+                          <span className={`font-bold ${auction.bid_count > 0 ? "text-leaf" : "text-muted-foreground"}`}>
                             {centsToDisplay(auction.current_bid_cents)}
                           </span>
                         </div>
@@ -270,7 +270,7 @@ export default async function AuctionsPage({
                         )}
                       </div>
                       {auction.free_shipping ? (
-                        <p className="text-xs text-green-700 dark:text-green-400 font-medium mt-1.5">Free shipping</p>
+                        <p className="text-xs text-leaf dark:text-sage font-medium mt-1.5">Free shipping</p>
                       ) : auction.shipping_cost_cents ? (
                         <p className="text-xs text-muted-foreground mt-1.5">+ {centsToDisplay(auction.shipping_cost_cents)} shipping</p>
                       ) : auction.shipping_weight_oz ? (
@@ -282,7 +282,7 @@ export default async function AuctionsPage({
                     <div className="px-4 pb-3 flex items-center gap-2 flex-wrap">
                       <Link
                         href={`/sellers/${seller.username}`}
-                        className="text-xs text-muted-foreground hover:text-green-700 hover:underline transition-colors"
+                        className="text-xs text-muted-foreground hover:text-leaf hover:underline transition-colors"
                       >
                         by {seller.display_name ?? seller.username}
                       </Link>
@@ -335,7 +335,7 @@ export default async function AuctionsPage({
                   {auction.variety && (
                     <p className="text-xs text-muted-foreground truncate">{auction.variety}</p>
                   )}
-                  <p className="text-sm font-bold text-green-700 mt-0.5">{centsToDisplay(auction.current_bid_cents)}</p>
+                  <p className="text-sm font-bold text-leaf mt-0.5">{centsToDisplay(auction.current_bid_cents)}</p>
                   <p className="text-[11px] text-muted-foreground">
                     {auction.bid_count} bid{auction.bid_count !== 1 ? "s" : ""} · {soldAgo}
                     {sellerUsername && <> · <span className="hover:underline">{sellerUsername}</span></>}

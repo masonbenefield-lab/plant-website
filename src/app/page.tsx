@@ -12,7 +12,7 @@ import HeroSearch from "@/components/hero-search";
 import LiveAuctionCard from "@/components/live-auction-card";
 
 const fallbackListings = [
-  { emoji: "🌿", name: "Monstera Deliciosa", price: "$24", regularPrice: null, onSale: false, tag: "In Shop", bg: "bg-green-100",   href: "/shop" },
+  { emoji: "🌿", name: "Monstera Deliciosa", price: "$24", regularPrice: null, onSale: false, tag: "In Shop", bg: "bg-[#DFE7D4]",   href: "/shop" },
   { emoji: "🌸", name: "Pink Princess",      price: "$85", regularPrice: null, onSale: false, tag: "Auction", bg: "bg-pink-100",    href: "/auctions" },
   { emoji: "🌵", name: "Blue Torch Cactus",  price: "$18", regularPrice: null, onSale: false, tag: "In Shop", bg: "bg-amber-100",   href: "/shop" },
   { emoji: "🪴", name: "Golden Pothos",       price: "$12", regularPrice: null, onSale: false, tag: "In Shop", bg: "bg-emerald-100", href: "/shop" },
@@ -137,7 +137,7 @@ export default async function LandingPage() {
     featuredListings = data ?? [];
   }
 
-  const bgCycle = ["bg-green-100", "bg-pink-100", "bg-amber-100", "bg-emerald-100"];
+  const bgCycle = ["bg-[#DFE7D4]", "bg-pink-100", "bg-amber-100", "bg-emerald-100"];
   const emojiCycle = ["🌿", "🌸", "🌵", "🪴"];
 
   const heroCards = liveListings && liveListings.length >= 2
@@ -175,7 +175,7 @@ export default async function LandingPage() {
       )}
 
       {/* ── Hero ─────────────────────────────────────────────────── */}
-      <section className="bg-gradient-to-br from-green-800 via-green-700 to-emerald-600 text-white overflow-hidden">
+      <section className="text-white overflow-hidden" style={{ background: "linear-gradient(160deg, #235140, #19392B)" }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-20 lg:py-24">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
 
@@ -184,31 +184,31 @@ export default async function LandingPage() {
               <span className="inline-block bg-white/20 text-white text-xs font-semibold uppercase tracking-widest px-4 py-1.5 rounded-full mb-6">
                 Built for plant people
               </span>
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight mb-6">
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight mb-6 tracking-[-0.02em]" style={{ fontFamily: "var(--font-bricolage), sans-serif" }}>
                 The marketplace<br className="hidden sm:block" /> for plant lovers
               </h1>
-              <p className="text-base sm:text-lg text-green-100 mb-8 max-w-lg mx-auto lg:mx-0">
+              <p className="text-base sm:text-lg text-cream/80 mb-8 max-w-lg mx-auto lg:mx-0">
                 Track your collection, connect with fellow growers, and buy or sell plants — all in one place.
               </p>
 
               {/* Dual CTA */}
               <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start mb-6">
-                <Link href="/signup" className={cn(buttonVariants({ size: "lg" }), "bg-white text-green-800 hover:bg-green-50 font-semibold px-8 text-base flex flex-col items-center gap-0 h-auto py-3")}>
-                  <span className="text-[11px] font-normal text-green-700/70 leading-none mb-1">For sellers</span>
+                <Link href="/signup" className={cn(buttonVariants({ size: "lg" }), "bg-terra text-white hover:bg-[#B05A39] font-semibold px-8 text-base flex flex-col items-center gap-0 h-auto py-3 border-0")}>
+                  <span className="text-[11px] font-normal text-white/70 leading-none mb-1">For sellers</span>
                   Start Selling Free
                 </Link>
-                <Link href="/shop" className={cn(buttonVariants({ size: "lg" }), "bg-white/15 text-white border border-white/40 hover:bg-white/25 font-semibold px-8 text-base flex flex-col items-center gap-0 h-auto py-3")}>
-                  <span className="text-[11px] font-normal text-green-100/70 leading-none mb-1">For buyers</span>
+                <Link href="/shop" className={cn(buttonVariants({ size: "lg" }), "bg-transparent text-cream border border-cream/50 hover:bg-cream/10 font-semibold px-8 text-base flex flex-col items-center gap-0 h-auto py-3")}>
+                  <span className="text-[11px] font-normal text-cream/60 leading-none mb-1">For buyers</span>
                   Browse Plants
                 </Link>
               </div>
-              <p className="text-sm text-green-100/80 text-center lg:text-left">
+              <p className="text-sm text-[#DFE7D4]/80 text-center lg:text-left">
                 or{" "}
-                <Link href="/auctions" className="font-medium text-white underline underline-offset-2 hover:text-green-200">
+                <Link href="/auctions" className="font-medium text-white underline underline-offset-2 hover:text-[#C5D4BC]">
                   browse live auctions
                 </Link>
                 {" · "}
-                <Link href="/garden" className="font-medium text-white underline underline-offset-2 hover:text-green-200">
+                <Link href="/garden" className="font-medium text-white underline underline-offset-2 hover:text-[#C5D4BC]">
                   start your garden log →
                 </Link>
               </p>
@@ -235,12 +235,12 @@ export default async function LandingPage() {
                         {l.onSale && (
                           <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-red-600 text-white">SALE</span>
                         )}
-                        <span className="text-green-600 dark:text-green-400 font-bold text-sm">{l.price}</span>
+                        <span className="text-leaf dark:text-sage font-bold text-sm">{l.price}</span>
                         {l.regularPrice && (
                           <span className="text-muted-foreground text-xs line-through">{l.regularPrice}</span>
                         )}
                       </div>
-                      <span className={cn("shrink-0 text-xs px-2 py-0.5 rounded-full font-medium", l.tag === "Auction" ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300" : "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300")}>
+                      <span className={cn("shrink-0 text-xs px-2 py-0.5 rounded-full font-medium", l.tag === "Auction" ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300" : "bg-[#DFE7D4] text-leaf dark:bg-forest/40 dark:text-[#A8BF9A]")}>
                         {l.tag}
                       </span>
                     </div>
@@ -262,7 +262,7 @@ export default async function LandingPage() {
               <Link
                 key={c}
                 href={`/shop?category=${encodeURIComponent(c)}`}
-                className="inline-flex items-center px-3.5 py-1.5 rounded-full border text-sm font-medium hover:border-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
+                className="inline-flex items-center px-3.5 py-1.5 rounded-full border text-sm font-medium hover:border-leaf hover:text-leaf hover:bg-[#EBF0E6] dark:hover:bg-forest/20 transition-colors"
               >
                 {c}
               </Link>
@@ -275,22 +275,22 @@ export default async function LandingPage() {
       <section className="border-b bg-muted/40 py-5 px-4">
         <div className="max-w-4xl mx-auto">
           <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-muted-foreground">
-            <span className="flex items-center gap-2"><span className="text-green-600 font-bold text-base">2,400+</span> plants listed</span>
+            <span className="flex items-center gap-2"><span className="text-leaf font-bold text-base">2,400+</span> plants listed</span>
             <span className="hidden sm:block text-border">·</span>
-            <span className="flex items-center gap-2"><span className="text-green-600 font-bold text-base">180+</span> active sellers</span>
+            <span className="flex items-center gap-2"><span className="text-leaf font-bold text-base">180+</span> active sellers</span>
             <span className="hidden sm:block text-border">·</span>
-            <span className="flex items-center gap-2"><span className="text-green-600 font-bold text-base">4.9★</span> avg seller rating</span>
+            <span className="flex items-center gap-2"><span className="text-leaf font-bold text-base">4.9★</span> avg seller rating</span>
             <span className="hidden sm:block text-border">·</span>
-            <span className="flex items-center gap-2"><span className="text-green-600 font-bold text-base">Free</span> to start selling</span>
+            <span className="flex items-center gap-2"><span className="text-leaf font-bold text-base">Free</span> to start selling</span>
           </div>
         </div>
       </section>
 
       {/* ── Garden log feature spotlight ──────────────────────────── */}
-      <section className="py-16 sm:py-20 px-4 bg-green-50 dark:bg-green-950/20">
+      <section className="py-16 sm:py-20 px-4 bg-[#EBF0E6] dark:bg-forest/20">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-10">
-            <span className="inline-block bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 text-xs font-semibold uppercase tracking-widest px-4 py-1.5 rounded-full mb-4">
+            <span className="inline-block bg-[#DFE7D4] dark:bg-forest/40 text-leaf dark:text-sage text-xs font-semibold uppercase tracking-widest px-4 py-1.5 rounded-full mb-4">
               Free for everyone
             </span>
             <h2 className="text-2xl sm:text-3xl font-bold mb-3">Your personal plant journal</h2>
@@ -315,7 +315,7 @@ export default async function LandingPage() {
             ))}
           </div>
           <div className="text-center">
-            <Link href="/signup" className={cn(buttonVariants({ size: "lg" }), "bg-green-700 hover:bg-green-800 text-white font-semibold px-10")}>
+            <Link href="/signup" className={cn(buttonVariants({ size: "lg" }), "bg-leaf hover:bg-forest text-white font-semibold px-10")}>
               Start your garden log — it&apos;s free
             </Link>
           </div>
@@ -327,7 +327,7 @@ export default async function LandingPage() {
         <section className="py-16 sm:py-20 px-4 bg-background">
           <div className="max-w-5xl mx-auto">
             <div className="text-center mb-10">
-              <span className="inline-block text-xs font-semibold uppercase tracking-widest text-green-700 bg-green-100 px-3 py-1 rounded-full mb-3">From the community</span>
+              <span className="inline-block text-xs font-semibold uppercase tracking-widest text-leaf bg-[#DFE7D4] px-3 py-1 rounded-full mb-3">From the community</span>
               <h2 className="text-2xl sm:text-3xl font-bold">See what people are growing</h2>
               <p className="text-muted-foreground mt-2 max-w-md mx-auto text-sm">Plant lovers keeping a digital garden log — photos, care notes, and growth over time.</p>
             </div>
@@ -367,7 +367,7 @@ export default async function LandingPage() {
                 <h2 className="text-2xl sm:text-3xl font-bold">Live Auctions</h2>
                 <p className="text-muted-foreground mt-1 text-sm">Bid now — these end soon.</p>
               </div>
-              <Link href="/auctions" className="text-sm font-medium text-green-700 hover:underline">
+              <Link href="/auctions" className="text-sm font-medium text-leaf hover:underline">
                 View all →
               </Link>
             </div>
@@ -395,18 +395,18 @@ export default async function LandingPage() {
             <div className="flex items-center justify-between mb-6">
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-bold uppercase tracking-widest text-green-700 bg-green-100 dark:bg-green-900/40 dark:text-green-400 px-2 py-0.5 rounded-full">Featured</span>
+                  <span className="text-xs font-bold uppercase tracking-widest text-leaf bg-[#DFE7D4] dark:bg-forest/40 dark:text-sage px-2 py-0.5 rounded-full">Featured</span>
                 </div>
                 <h2 className="text-2xl sm:text-3xl font-bold">From top nurseries</h2>
                 <p className="text-muted-foreground mt-1 text-sm">Hand-picked from our highest-rated professional sellers.</p>
               </div>
-              <Link href="/shop" className="text-sm font-medium text-green-700 hover:underline">
+              <Link href="/shop" className="text-sm font-medium text-leaf hover:underline">
                 Browse all →
               </Link>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {featuredListings.map((l, i) => {
-                const bg = ["bg-green-100", "bg-pink-100", "bg-amber-100", "bg-emerald-100"][i % 4];
+                const bg = ["bg-[#DFE7D4]", "bg-pink-100", "bg-amber-100", "bg-emerald-100"][i % 4];
                 const emoji = ["🌿", "🌸", "🌵", "🪴"][i % 4];
                 const featOnSale = !!(l.sale_price_cents && l.sale_ends_at && new Date(l.sale_ends_at) > new Date());
                 return (
@@ -425,7 +425,7 @@ export default async function LandingPage() {
                       <p className="font-semibold text-card-foreground text-sm leading-tight truncate">{l.plant_name}{l.variety ? ` ${l.variety}` : ""}</p>
                       <div className="flex items-center justify-between mt-1.5 gap-1">
                         <div className="flex items-center gap-1.5 min-w-0">
-                          <span className="text-green-600 dark:text-green-400 font-bold text-sm">{centsToDisplay(featOnSale ? l.sale_price_cents! : l.price_cents)}</span>
+                          <span className="text-leaf dark:text-sage font-bold text-sm">{centsToDisplay(featOnSale ? l.sale_price_cents! : l.price_cents)}</span>
                           {featOnSale && (
                             <span className="text-muted-foreground text-xs line-through">{centsToDisplay(l.price_cents)}</span>
                           )}
@@ -465,8 +465,8 @@ export default async function LandingPage() {
           <p className="text-muted-foreground text-center mb-10 max-w-xl mx-auto">One platform handles your storefront, payments, orders, and reputation — so you can focus on growing.</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {features.map((f) => (
-              <div key={f.title} className="group rounded-2xl border bg-card p-6 hover:border-green-300 hover:shadow-md transition-all">
-                <div className="w-11 h-11 rounded-xl bg-green-50 dark:bg-green-900/30 flex items-center justify-center text-2xl mb-4 group-hover:bg-green-100 dark:group-hover:bg-green-900/50 transition-colors">
+              <div key={f.title} className="group rounded-2xl border bg-card p-6 hover:border-[#A8BF9A] hover:shadow-md transition-all">
+                <div className="w-11 h-11 rounded-xl bg-[#EBF0E6] dark:bg-forest/30 flex items-center justify-center text-2xl mb-4 group-hover:bg-[#DFE7D4] dark:group-hover:bg-forest/50 transition-colors">
                   {f.icon}
                 </div>
                 <p className="font-semibold text-foreground mb-1.5">{f.title}</p>
@@ -478,10 +478,10 @@ export default async function LandingPage() {
       </section>
 
       {/* ── Community spotlight ──────────────────────────────────── */}
-      <section className="py-16 sm:py-20 px-4 bg-green-50 dark:bg-green-950/20">
+      <section className="py-16 sm:py-20 px-4 bg-[#EBF0E6] dark:bg-forest/20">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-10">
-            <span className="inline-block bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 text-xs font-semibold uppercase tracking-widest px-4 py-1.5 rounded-full mb-4">
+            <span className="inline-block bg-[#DFE7D4] dark:bg-forest/40 text-leaf dark:text-sage text-xs font-semibold uppercase tracking-widest px-4 py-1.5 rounded-full mb-4">
               More than a marketplace
             </span>
             <h2 className="text-2xl sm:text-3xl font-bold mb-3">A place for plant people</h2>
@@ -498,19 +498,19 @@ export default async function LandingPage() {
               <p className="text-sm text-muted-foreground leading-relaxed">
                 Post a help request, share a plant you&apos;re proud of, or start a discussion. Fellow growers are here to help.
               </p>
-              <Link href="/community" className="text-sm font-medium text-green-700 hover:underline mt-auto">
+              <Link href="/community" className="text-sm font-medium text-leaf hover:underline mt-auto">
                 Browse community →
               </Link>
             </div>
             <div className="bg-card rounded-2xl border p-6 shadow-sm flex flex-col gap-3">
-              <div className="w-12 h-12 rounded-xl bg-green-50 dark:bg-green-900/30 flex items-center justify-center text-2xl">
+              <div className="w-12 h-12 rounded-xl bg-[#EBF0E6] dark:bg-forest/30 flex items-center justify-center text-2xl">
                 📣
               </div>
               <p className="font-bold text-foreground">Follow & Get Updates</p>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 Follow sellers you love and get their new arrivals, restocks, and announcements straight in your personal feed.
               </p>
-              <Link href="/shop" className="text-sm font-medium text-green-700 hover:underline mt-auto">
+              <Link href="/shop" className="text-sm font-medium text-leaf hover:underline mt-auto">
                 Find sellers to follow →
               </Link>
             </div>
@@ -522,7 +522,7 @@ export default async function LandingPage() {
               <p className="text-sm text-muted-foreground leading-relaxed">
                 Log every plant you own, record care events, set watering reminders, and share your garden publicly with other enthusiasts.
               </p>
-              <Link href="/signup" className="text-sm font-medium text-green-700 hover:underline mt-auto">
+              <Link href="/signup" className="text-sm font-medium text-leaf hover:underline mt-auto">
                 Start your garden log →
               </Link>
             </div>
@@ -532,10 +532,10 @@ export default async function LandingPage() {
             <div className="mt-8 border rounded-2xl bg-card overflow-hidden shadow-sm">
               <div className="px-5 py-3.5 border-b flex items-center justify-between">
                 <p className="text-sm font-semibold">Recent in the community</p>
-                <Link href="/community" className="text-xs font-medium text-green-700 hover:underline">See all →</Link>
+                <Link href="/community" className="text-xs font-medium text-leaf hover:underline">See all →</Link>
               </div>
               {recentCommunityPosts.map((post) => {
-                const typeColor = post.post_type === "help" ? "bg-amber-100 text-amber-700" : post.post_type === "show_and_tell" ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700";
+                const typeColor = post.post_type === "help" ? "bg-amber-100 text-amber-700" : post.post_type === "show_and_tell" ? "bg-[#DFE7D4] text-leaf" : "bg-blue-100 text-blue-700";
                 const typeLabel = post.post_type === "help" ? "Help" : post.post_type === "show_and_tell" ? "Show & Tell" : "Discussion";
                 return (
                   <Link key={post.id} href={`/community/${post.id}`} className="flex items-center gap-3 px-5 py-3.5 hover:bg-muted/50 transition-colors border-b last:border-0">
@@ -561,17 +561,17 @@ export default async function LandingPage() {
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
             <div className="bg-card rounded-2xl border p-6 flex flex-col items-center">
-              <p className="text-4xl font-bold text-green-700 mb-2">$0</p>
+              <p className="text-4xl font-bold text-leaf mb-2">$0</p>
               <p className="font-semibold mb-2">To list</p>
               <p className="text-sm text-muted-foreground leading-relaxed">No listing fees — ever. Free plan includes 10 listings and 5 auctions. Unlimited on paid plans.</p>
             </div>
-            <div className="bg-card rounded-2xl border-2 border-green-600 p-6 flex flex-col items-center shadow-md">
-              <p className="text-4xl font-bold text-green-700 mb-2">3–6.5%</p>
+            <div className="bg-card rounded-2xl border-2 border-leaf p-6 flex flex-col items-center shadow-md">
+              <p className="text-4xl font-bold text-leaf mb-2">3–6.5%</p>
               <p className="font-semibold mb-2">Per sale</p>
               <p className="text-sm text-muted-foreground leading-relaxed">A small fee taken only when a sale completes. Rate depends on your plan.</p>
             </div>
             <div className="bg-card rounded-2xl border p-6 flex flex-col items-center">
-              <p className="text-4xl font-bold text-green-700 mb-2">$0</p>
+              <p className="text-4xl font-bold text-leaf mb-2">$0</p>
               <p className="font-semibold mb-2">Monthly fee</p>
               <p className="text-sm text-muted-foreground leading-relaxed">No subscription, no hidden charges, no surprises.</p>
             </div>
@@ -583,15 +583,15 @@ export default async function LandingPage() {
       </section>
 
       {/* ── How it works ──────────────────────────────────────────── */}
-      <section className="py-16 sm:py-20 px-4 bg-green-700 text-white">
+      <section className="py-16 sm:py-20 px-4 bg-leaf text-white">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-2xl sm:text-3xl font-bold mb-3">How it works</h2>
-            <p className="text-green-100 max-w-md mx-auto">Simple for buyers. Simple for sellers.</p>
+            <p className="text-[#DFE7D4] max-w-md mx-auto">Simple for buyers. Simple for sellers.</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8">
             <div className="bg-white/10 rounded-2xl p-6 sm:p-8">
-              <p className="text-xs font-bold uppercase tracking-widest text-green-200 mb-6">For Buyers</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-[#C5D4BC] mb-6">For Buyers</p>
               <div className="space-y-6">
                 {([
                   { n: "1", title: "Browse the shop or auctions", desc: "Search by plant name, category, or price. Filter to in-stock only. Bid on live auctions in real time." },
@@ -599,22 +599,22 @@ export default async function LandingPage() {
                   { n: "3", title: "Track it in your garden log", desc: "Once it arrives, add it to My Garden. Log care events, set reminders, and share your collection." },
                 ] as const).map((s) => (
                   <div key={s.n} className="flex gap-4">
-                    <div className="w-9 h-9 rounded-full bg-white text-green-700 flex items-center justify-center text-sm font-bold shrink-0 shadow">
+                    <div className="w-9 h-9 rounded-full bg-white text-leaf flex items-center justify-center text-sm font-bold shrink-0 shadow">
                       {s.n}
                     </div>
                     <div>
                       <p className="font-semibold text-white mb-0.5">{s.title}</p>
-                      <p className="text-sm text-green-100 leading-relaxed">{s.desc}</p>
+                      <p className="text-sm text-[#DFE7D4] leading-relaxed">{s.desc}</p>
                     </div>
                   </div>
                 ))}
               </div>
-              <Link href="/shop" className="inline-block mt-7 text-sm font-medium text-white underline underline-offset-2 hover:text-green-200">
+              <Link href="/shop" className="inline-block mt-7 text-sm font-medium text-white underline underline-offset-2 hover:text-[#C5D4BC]">
                 Browse plants →
               </Link>
             </div>
             <div className="bg-white/10 rounded-2xl p-6 sm:p-8">
-              <p className="text-xs font-bold uppercase tracking-widest text-green-200 mb-6">For Sellers</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-[#C5D4BC] mb-6">For Sellers</p>
               <div className="space-y-6">
                 {([
                   { n: "1", title: "Connect your bank account", desc: "Sign up free and link your bank via Stripe. Takes under 10 minutes — no monthly fees, ever." },
@@ -622,17 +622,17 @@ export default async function LandingPage() {
                   { n: "3", title: "Get paid when you sell", desc: "Funds deposit directly to your bank after each sale. Buyer's shipping address lands in your dashboard, ready to ship." },
                 ] as const).map((s) => (
                   <div key={s.n} className="flex gap-4">
-                    <div className="w-9 h-9 rounded-full bg-white text-green-700 flex items-center justify-center text-sm font-bold shrink-0 shadow">
+                    <div className="w-9 h-9 rounded-full bg-white text-leaf flex items-center justify-center text-sm font-bold shrink-0 shadow">
                       {s.n}
                     </div>
                     <div>
                       <p className="font-semibold text-white mb-0.5">{s.title}</p>
-                      <p className="text-sm text-green-100 leading-relaxed">{s.desc}</p>
+                      <p className="text-sm text-[#DFE7D4] leading-relaxed">{s.desc}</p>
                     </div>
                   </div>
                 ))}
               </div>
-              <Link href="/signup" className="inline-block mt-7 text-sm font-medium text-white underline underline-offset-2 hover:text-green-200">
+              <Link href="/signup" className="inline-block mt-7 text-sm font-medium text-white underline underline-offset-2 hover:text-[#C5D4BC]">
                 Start selling free →
               </Link>
             </div>
@@ -651,7 +651,7 @@ export default async function LandingPage() {
                 <div className="flex gap-0.5 text-amber-400 text-sm">{"★★★★★"}</div>
                 <p className="text-sm text-muted-foreground leading-relaxed flex-1">&ldquo;{t.quote}&rdquo;</p>
                 <div className="flex items-center gap-3 pt-2 border-t">
-                  <div className="w-9 h-9 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 font-bold text-xs flex items-center justify-center shrink-0">
+                  <div className="w-9 h-9 rounded-full bg-[#DFE7D4] dark:bg-forest/40 text-leaf dark:text-sage font-bold text-xs flex items-center justify-center shrink-0">
                     {t.initials}
                   </div>
                   <div>
@@ -666,18 +666,18 @@ export default async function LandingPage() {
       </section>
 
       {/* ── CTA ───────────────────────────────────────────────────── */}
-      <section className="py-20 px-4 bg-gradient-to-br from-green-800 to-emerald-600 text-white text-center">
+      <section className="py-20 px-4 bg-gradient-to-br from-forest to-emerald-600 text-white text-center">
         <div className="max-w-xl mx-auto">
           <span className="text-4xl mb-6 block">🌱</span>
           <h2 className="text-3xl sm:text-4xl font-bold mb-4">Ready to grow your plant business?</h2>
-          <p className="text-green-100 mb-8 text-base sm:text-lg">
+          <p className="text-[#DFE7D4] mb-8 text-base sm:text-lg">
             Join hundreds of nurseries and hobbyists already buying and selling on Plantet.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link href="/signup" className={cn(buttonVariants({ size: "lg" }), "bg-white text-green-800 hover:bg-green-50 font-semibold px-10 text-base")}>
+            <Link href="/signup" className={cn(buttonVariants({ size: "lg" }), "bg-terra text-white hover:bg-[#B05A39] font-semibold px-10 text-base border-0")}>
               Create Free Account
             </Link>
-            <Link href="/shop" className={cn(buttonVariants({ variant: "outline", size: "lg" }), "bg-transparent border-white/60 text-white hover:bg-white/10 font-semibold px-10 text-base")}>
+            <Link href="/shop" className={cn(buttonVariants({ variant: "outline", size: "lg" }), "bg-transparent border-cream/50 text-cream hover:bg-cream/10 font-semibold px-10 text-base")}>
               Browse Plants
             </Link>
           </div>
