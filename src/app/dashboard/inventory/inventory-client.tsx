@@ -158,6 +158,13 @@ function daysUntilPurge(archivedAt: string) {
   return Math.max(0, Math.ceil((purge - Date.now()) / (1000 * 60 * 60 * 24)));
 }
 
+const SUPPLY_ONLY = new Set<string>(SUPPLY_CATEGORIES.filter(c => c !== "Other"));
+function isSupply(row: Row): boolean {
+  if (row.item_type === "supply") return true;
+  if (row.item_type === "plant") return false;
+  return !!(row.category && SUPPLY_ONLY.has(row.category));
+}
+
 function groupRows(rows: Row[]): PlantGroup[] {
   const map = new Map<string, PlantGroup>();
   for (const row of rows) {
@@ -298,12 +305,7 @@ export default function InventoryClient({
   const [editCostPrice, setEditCostPrice] = useState("");
   const [viewMode, setViewMode] = useState<"grouped" | "flat">("grouped");
   const categories = isAdmin ? ADMIN_CATEGORIES : BASE_CATEGORIES;
-  const SUPPLY_ONLY = new Set<string>(SUPPLY_CATEGORIES.filter(c => c !== "Other"));
-  function isSupply(row: Row): boolean {
-    if (row.item_type === "supply") return true;
-    if (row.item_type === "plant") return false;
-    return !!(row.category && SUPPLY_ONLY.has(row.category));
-  }
+  const [stockTab, setStockTab] = useState<"plants" | "supplies">("plants");
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -343,6 +345,11 @@ export default function InventoryClient({
   }, [activeRows, search, categoryFilter, sortBy]);
 
   const archivedGroups = useMemo(() => groupRows(archivedRows), [archivedRows]);
+
+  const hasSupplies = useMemo(() => activeRows.some(r => isSupply(r)), [activeRows]);
+  const plantGroups = useMemo(() => activeGroups.filter(g => !isSupply(g.variants[0])), [activeGroups]);
+  const supplyGroups = useMemo(() => activeGroups.filter(g => isSupply(g.variants[0])), [activeGroups]);
+  const visibleGroups = hasSupplies ? (stockTab === "plants" ? plantGroups : supplyGroups) : activeGroups;
 
   function toggleGroup(key: string) {
     setOpenGroups(prev => {
@@ -1724,7 +1731,7 @@ export default function InventoryClient({
             </button>
           </div>
           <p className="text-sm text-muted-foreground mt-1">
-            {activeRows.length} item{activeRows.length !== 1 ? "s" : ""} · {activeGroups.length} plant{activeGroups.length !== 1 ? "s" : ""}
+            {activeRows.length} item{activeRows.length !== 1 ? "s" : ""} · {plantGroups.length} plant{plantGroups.length !== 1 ? "s" : ""}{hasSupplies ? ` · ${supplyGroups.length} supply item${supplyGroups.length !== 1 ? "s" : ""}` : ""}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -1751,6 +1758,29 @@ export default function InventoryClient({
           <Link href="/dashboard/create" className={cn(buttonVariants({ size: "sm" }), "bg-leaf hover:bg-forest")}>+ Add</Link>
         </div>
       </div>
+
+      {hasSupplies && (
+        <div className="flex border-b mb-5">
+          {(["plants", "supplies"] as const).map(tab => {
+            const count = tab === "plants" ? plantGroups.length : supplyGroups.length;
+            const label = tab === "plants" ? "Plants" : "Garden Supplies";
+            return (
+              <button
+                key={tab}
+                onClick={() => setStockTab(tab)}
+                className={cn(
+                  "px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors",
+                  stockTab === tab
+                    ? "border-leaf text-foreground"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {label} <span className={cn("ml-1 text-xs rounded-full px-1.5 py-0.5", stockTab === tab ? "bg-leaf/20 text-forest dark:text-[#A8BF9A]" : "bg-muted text-muted-foreground")}>{count}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-2 mb-5">
         <Input
@@ -1787,10 +1817,10 @@ export default function InventoryClient({
             Clear
           </button>
         )}
-        {viewMode === "grouped" && activeGroups.length > 0 && (
+        {viewMode === "grouped" && visibleGroups.length > 0 && (
           <div className="flex items-center gap-1 ml-auto">
             <button
-              onClick={() => setOpenGroups(new Set(activeGroups.map(g => g.key)))}
+              onClick={() => setOpenGroups(new Set(visibleGroups.map(g => g.key)))}
               className="text-xs text-muted-foreground hover:text-foreground underline self-center"
             >
               Expand all
@@ -1806,10 +1836,16 @@ export default function InventoryClient({
         )}
       </div>
 
-      {activeGroups.length === 0 ? (
+      {visibleGroups.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">
           <p className="text-4xl mb-4">📦</p>
-          <p className="font-medium text-lg">{(search.trim() || categoryFilter) ? `No results${search.trim() ? ` for "${search}"` : ""}${categoryFilter ? ` in ${categoryFilter}` : ""}` : "No inventory yet"}</p>
+          <p className="font-medium text-lg">
+            {(search.trim() || categoryFilter)
+              ? `No results${search.trim() ? ` for "${search}"` : ""}${categoryFilter ? ` in ${categoryFilter}` : ""}`
+              : hasSupplies && stockTab === "supplies"
+                ? "No garden supplies yet"
+                : "No inventory yet"}
+          </p>
           {!search.trim() && (
             <Link href="/dashboard/create" className={cn(buttonVariants(), "mt-6 bg-leaf hover:bg-forest")}>+ Add to Inventory</Link>
           )}
@@ -1819,23 +1855,23 @@ export default function InventoryClient({
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-muted/30">
-                <th className="py-2.5 pl-3 pr-1 text-left text-xs font-medium text-muted-foreground">Plant</th>
+                <th className="py-2.5 pl-3 pr-1 text-left text-xs font-medium text-muted-foreground">{hasSupplies && stockTab === "supplies" ? "Item" : "Plant"}</th>
                 <th className="px-2 py-2.5 text-left text-xs font-medium text-muted-foreground">Variety</th>
-                <th className="px-2 py-2.5 text-left text-xs font-medium text-muted-foreground">Size</th>
+                <th className="px-2 py-2.5 text-left text-xs font-medium text-muted-foreground">{hasSupplies && stockTab === "supplies" ? "Variant" : "Size"}</th>
                 <th className="px-2 py-2.5 text-left text-xs font-medium text-muted-foreground">Stock</th>
                 <th className="px-2 py-2.5 text-left text-xs font-medium text-muted-foreground">Status</th>
                 <th className="px-2 py-2.5 w-16" />
               </tr>
             </thead>
             <tbody>
-              {activeGroups.flatMap(g =>
+              {visibleGroups.flatMap(g =>
                 g.variants.map(row => renderFlatRow(row, g.plant_name))
               )}
             </tbody>
           </table>
         </div>
       ) : (
-        <div>{activeGroups.map(renderGroup)}</div>
+        <div>{visibleGroups.map(renderGroup)}</div>
       )}
 
       {/* Unlinked listings & auctions */}
