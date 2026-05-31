@@ -71,7 +71,11 @@ export default function GetLabelModal({
     const res = await fetch("/api/shipping/purchase-label", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ orderId, rateId: selectedRateId }),
+      body: JSON.stringify({
+        orderId,
+        rateId: selectedRateId,
+        rateAmountCents: Math.round(parseFloat(rates.find(r => r.objectId === selectedRateId)?.amount ?? "0") * 100),
+      }),
     });
     const data = await res.json();
     if (data.error) {
