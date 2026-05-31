@@ -187,7 +187,7 @@ export default async function DashboardPage() {
           <CardContent className="space-y-2">
             <CheckItem done={checks.profile}       label="Complete your profile"              href="/account"                    hint="Add a bio and profile photo so buyers trust you" />
             <CheckItem done={checks.stripe}        label="Connect your bank account"           href="/account#seller-payments"    hint="Required to receive payments — connect your bank via Stripe before listing" />
-            <CheckItem done={checks.shipping}      label="Set up your ship-from address"       href="/account#shipping-settings"  hint="Required so buyers get accurate shipping rates at checkout" />
+            <CheckItem done={checks.shipping}      label="Set up your ship-from address &amp; shipping preferences"  href="/account#shipping-settings"  hint="Required for calculated shipping rates and auto labels — also review your rate and label toggle settings" />
             <CheckItem done={checks.shippingTimeline} label="Set your shipping timeline"         href="/account#shipping-days"      hint="Let buyers know how quickly you ship so they know what to expect" />
             <CheckItem done={checks.returnPolicy}     label="Set your return policy"              href="/account#return-policy"      hint="Let buyers know upfront whether you accept returns, offer a DOA guarantee, or handle issues case by case" />
             <CheckItem done={checks.inventory}     label="Add your first item to inventory"    href="/dashboard/inventory"        hint="Everything starts in inventory — add your first plant here" />
