@@ -7,7 +7,7 @@ import { ChevronLeft } from "lucide-react";
 export default async function NewGardenPlantPage({
   searchParams,
 }: {
-  searchParams: Promise<{ name?: string; variety?: string; source_type?: string; source_name?: string; source_listing_id?: string }>;
+  searchParams: Promise<{ name?: string; variety?: string; source_type?: string; source_name?: string; source_listing_id?: string; order_id?: string; seller_id?: string }>;
 }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -20,6 +20,8 @@ export default async function NewGardenPlantPage({
     sourceType: params.source_type,
     sourceName: params.source_name,
     sourceListingId: params.source_listing_id,
+    orderId: params.order_id,
+    sellerId: params.seller_id,
   };
   const hasInitial = !!(params.name || params.variety);
 

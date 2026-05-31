@@ -68,6 +68,8 @@ interface GardenFormProps {
     sourceType?: string;
     sourceName?: string;
     sourceListingId?: string;
+    orderId?: string;
+    sellerId?: string;
   };
 }
 
@@ -210,9 +212,21 @@ export function GardenForm({ mode, plant, initialValues, returnTo }: GardenFormP
     startTransition(async () => {
       const supabase = createClient();
 
-      const fromUserIdPayload = plantetUserChanged
+      // If coming from a Plantet order, verify and auto-approve the origin
+      let fromUserIdPayload: Record<string, unknown> = plantetUserChanged
         ? { from_user_id: selectedPlantetUser?.id ?? null, ...(selectedPlantetUser ? { origin_verified: false } : {}) }
         : {};
+
+      if (mode === "add" && initialValues?.orderId && initialValues?.sellerId) {
+        const { data: order } = await supabase
+          .from("orders")
+          .select("id")
+          .eq("id", initialValues.orderId)
+          .single();
+        if (order) {
+          fromUserIdPayload = { from_user_id: initialValues.sellerId, origin_verified: true };
+        }
+      }
 
       const payload = {
         name: name.trim(),
@@ -412,7 +426,13 @@ export function GardenForm({ mode, plant, initialValues, returnTo }: GardenFormP
         </div>
       </div>
 
-      {/* Plantet member */}
+      {/* Plantet member — hidden when auto-verified from a Plantet order */}
+      {initialValues?.orderId && initialValues?.sellerId ? (
+        <div className="flex items-center gap-2 text-sm text-leaf">
+          <CheckCircle2 size={14} />
+          <span>Plantet purchase — seller origin auto-verified</span>
+        </div>
+      ) : (
       <div className="space-y-2">
         <Label>Got this from a Plantet member?</Label>
         <div className="relative" ref={plantetRef}>
@@ -493,6 +513,7 @@ export function GardenForm({ mode, plant, initialValues, returnTo }: GardenFormP
           Select a member and they&apos;ll be asked to confirm — shows as &quot;Verified&quot; once they do.
         </p>
       </div>
+      )}
 
       {/* Notes */}
       <div className="space-y-4">

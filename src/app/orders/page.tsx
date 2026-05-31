@@ -293,6 +293,8 @@ export default async function OrdersPage({
                               source_type: "purchase",
                               ...(seller?.username ? { source_name: seller.username } : {}),
                               source_listing_id: ci.listing_id,
+                              order_id: order.id,
+                              seller_id: order.seller_id,
                             });
                             return (
                               <div key={ci.listing_id} className="flex items-center gap-2">
@@ -322,6 +324,8 @@ export default async function OrdersPage({
                       source_type: "purchase",
                       ...(seller?.username ? { source_name: seller.username } : {}),
                       source_listing_id: listingId,
+                      order_id: order.id,
+                      seller_id: order.seller_id,
                     });
                     return (
                       <div className="mt-3 pt-3 border-t flex items-center gap-2">
