@@ -235,6 +235,8 @@ export default function InventoryClient({
     return new Set();
   });
   const [showArchived, setShowArchived] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
   const [search, setSearch] = useState(initialSearch);
   const [categoryFilter, setCategoryFilter] = useState(initialCategory);
   const [modal, setModal] = useState<ModalState>(null);
@@ -955,6 +957,22 @@ export default function InventoryClient({
     setLoadingId(null);
     if (error) { toast.error(error.message); return; }
     toast.success("Item restored.");
+    router.refresh();
+  }
+
+  async function deleteArchivedItem(row: Row) {
+    setDeletingItemId(row.id);
+    const supabase = createClient();
+    // Pause linked listings (don't delete — they may have order history)
+    if (row.listing_id) {
+      await supabase.from("listings").update({ status: "paused" }).eq("id", row.listing_id);
+    }
+    await supabase.from("listings").update({ status: "paused" }).eq("inventory_id", row.id);
+    const { error } = await supabase.from("inventory").delete().eq("id", row.id);
+    setDeletingItemId(null);
+    setConfirmDeleteId(null);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Item permanently deleted");
     router.refresh();
   }
 
@@ -2238,19 +2256,46 @@ export default function InventoryClient({
                   </div>
                   <div className="divide-y divide-border/40">
                     {group.variants.map(row => (
-                      <div key={row.id} className="flex items-center gap-4 px-4 py-2.5 text-sm">
+                      <div key={row.id} className="flex items-center gap-3 px-4 py-2.5 text-sm flex-wrap">
                         <span className="text-muted-foreground">{row.pot_size ?? (isSupply(row) ? "No variant" : "No size")}</span>
                         <span>{row.quantity} in stock</span>
                         {row.archived_at && (
                           <span className="text-xs text-orange-600">{daysUntilPurge(row.archived_at)}d left</span>
                         )}
-                        <button
-                          onClick={() => restoreItem(row.id, row.listing_id)}
-                          disabled={loadingId === row.id}
-                          className="ml-auto text-xs text-leaf hover:underline disabled:opacity-50"
-                        >
-                          {loadingId === row.id ? "Restoring…" : "Restore"}
-                        </button>
+                        {confirmDeleteId === row.id ? (
+                          <div className="ml-auto flex items-center gap-2 flex-wrap">
+                            <span className="text-xs text-destructive font-medium">Permanently delete? This cannot be undone.</span>
+                            <button
+                              onClick={() => deleteArchivedItem(row)}
+                              disabled={deletingItemId === row.id}
+                              className="text-xs bg-destructive hover:bg-destructive/90 text-destructive-foreground px-2.5 py-1 rounded disabled:opacity-50 transition-colors"
+                            >
+                              {deletingItemId === row.id ? "Deleting…" : "Yes, Delete"}
+                            </button>
+                            <button
+                              onClick={() => setConfirmDeleteId(null)}
+                              className="text-xs border rounded px-2.5 py-1 text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="ml-auto flex items-center gap-3">
+                            <button
+                              onClick={() => restoreItem(row.id, row.listing_id)}
+                              disabled={loadingId === row.id}
+                              className="text-xs text-leaf hover:underline disabled:opacity-50"
+                            >
+                              {loadingId === row.id ? "Restoring…" : "Restore"}
+                            </button>
+                            <button
+                              onClick={() => setConfirmDeleteId(row.id)}
+                              className="text-xs text-destructive hover:underline"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
