@@ -148,6 +148,8 @@ export async function POST(request: Request) {
       metadata: {
         listing_id: listingId,
         listing_qty: String(quantity),
+        platform_fee_cents: String(feeCents),
+        stripe_fee_cents: String(stripeFeeCents),
         ...(listing.inventory_id ? { inventory_id: listing.inventory_id } : {}),
       },
     }).catch(async (err) => {
@@ -167,6 +169,7 @@ export async function POST(request: Request) {
         shipping_cost_cents: shippingCents,
         shipping_service: shippingService ?? null,
         shippo_rate_id: shippoRateId ?? null,
+        platform_fee_cents: feeCents,
       })
       .select()
       .single();
@@ -260,6 +263,11 @@ export async function POST(request: Request) {
       application_fee_amount: auctionApplicationFeeCents,
       on_behalf_of: sellerProfile.stripe_account_id,
       transfer_data: { destination: sellerProfile.stripe_account_id },
+      metadata: {
+        auction_id: auctionId,
+        platform_fee_cents: String(feeCents),
+        stripe_fee_cents: String(stripeFeeCents),
+      },
     });
 
     const { data: order, error: orderError } = await supabase
@@ -274,6 +282,7 @@ export async function POST(request: Request) {
         shipping_cost_cents: auctionShippingCents,
         shipping_service: shippingService ?? null,
         shippo_rate_id: shippoRateId ?? null,
+        platform_fee_cents: feeCents,
       })
       .select()
       .single();

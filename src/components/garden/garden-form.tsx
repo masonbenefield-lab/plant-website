@@ -404,27 +404,33 @@ export function GardenForm({ mode, plant, initialValues, returnTo }: GardenFormP
       </div>
 
       {/* Source */}
-      <div className="space-y-2">
-        <Label>Where did it come from?</Label>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Select value={sourceType} onValueChange={(v) => setSourceType(v ?? "")}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select source type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">Not specified</SelectItem>
-              {SOURCE_TYPE_OPTIONS.map((o) => (
-                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Input
-            value={sourceName}
-            onChange={(e) => setSourceName(e.target.value)}
-            placeholder="Nursery, friend, seller name…"
-          />
-        </div>
-      </div>
+      {(() => {
+        const isAutoVerified = !!(initialValues?.orderId && initialValues?.sellerId);
+        return (
+          <div className="space-y-2">
+            <Label>Where did it come from?</Label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Select value={sourceType} onValueChange={(v) => setSourceType(v ?? "")} disabled={isAutoVerified}>
+                <SelectTrigger disabled={isAutoVerified}>
+                  <SelectValue placeholder="Select source type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Not specified</SelectItem>
+                  {SOURCE_TYPE_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Input
+                value={sourceName}
+                onChange={(e) => setSourceName(e.target.value)}
+                placeholder="Nursery, friend, seller name…"
+                disabled={isAutoVerified}
+              />
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Plantet member — hidden when auto-verified from a Plantet order */}
       {initialValues?.orderId && initialValues?.sellerId ? (

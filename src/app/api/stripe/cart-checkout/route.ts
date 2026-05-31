@@ -145,7 +145,11 @@ export async function POST(request: Request) {
     application_fee_amount: applicationFeeCents,
     on_behalf_of: sellerProfile.stripe_account_id,
     transfer_data: { destination: sellerProfile.stripe_account_id },
-    metadata: { cart_checkout: "true" },
+    metadata: {
+      cart_checkout: "true",
+      platform_fee_cents: String(feeCents),
+      stripe_fee_cents: String(stripeFeeCents),
+    },
   }).catch(async (err) => {
     await Promise.all(
       decrementedItems.map((d) =>
@@ -167,6 +171,7 @@ export async function POST(request: Request) {
       shipping_cost_cents: shippingCents,
       shipping_service: shippingService ?? null,
       shippo_rate_id: shippoRateId ?? null,
+      platform_fee_cents: feeCents,
     })
     .select()
     .single();
