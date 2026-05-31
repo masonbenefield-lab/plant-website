@@ -363,7 +363,7 @@ export function ImportClient() {
             )}
           </div>
           <button
-            onClick={() => setDrafts(null)}
+            onClick={() => { setDrafts(null); setScanPreview(null); }}
             className="text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
             Start over
@@ -453,61 +453,6 @@ export function ImportClient() {
         <div className="flex-1 border-t" />
       </div>
 
-      {/* Photo scan */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <Camera size={16} className="text-muted-foreground" />
-          <p className="font-medium text-sm">Scan a photo of a list</p>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Upload a photo of a handwritten or printed plant list — AI will extract the names for you to review.
-        </p>
-        {scanPreview && (
-          <div className="relative w-24 h-24 rounded-lg overflow-hidden border">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={scanPreview} alt="Scan preview" className="w-full h-full object-cover" />
-          </div>
-        )}
-        <div className="flex items-center gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            disabled={scanning}
-            onClick={() => photoScanRef.current?.click()}
-            className="gap-2"
-          >
-            {scanning ? (
-              <>
-                <Loader2 size={14} className="animate-spin" />
-                Scanning…
-              </>
-            ) : (
-              <>
-                <Camera size={14} />
-                Choose photo
-              </>
-            )}
-          </Button>
-          {scanning && (
-            <p className="text-xs text-muted-foreground">Reading plant names with AI…</p>
-          )}
-        </div>
-        <input
-          ref={photoScanRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePhotoScan(f); e.target.value = ""; }}
-        />
-      </div>
-
-      {/* Divider */}
-      <div className="flex items-center gap-3">
-        <div className="flex-1 border-t" />
-        <span className="text-xs text-muted-foreground">or</span>
-        <div className="flex-1 border-t" />
-      </div>
-
       {/* Paste list */}
       <div className="space-y-3">
         <div className="flex items-center gap-2">
@@ -565,6 +510,70 @@ export function ImportClient() {
           <CheckCircle2 size={14} />
           Review list
         </Button>
+      </div>
+
+      {/* Divider */}
+      <div className="flex items-center gap-3">
+        <div className="flex-1 border-t" />
+        <span className="text-xs text-muted-foreground">or</span>
+        <div className="flex-1 border-t" />
+      </div>
+
+      {/* Photo scan */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Camera size={16} className="text-muted-foreground" />
+          <p className="font-medium text-sm">Scan a photo of a list</p>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Upload a photo of a handwritten or printed plant list — AI will extract the names for you to review.
+        </p>
+        {scanPreview && (
+          <div className="flex items-start gap-3">
+            <div className="relative w-24 h-24 rounded-lg overflow-hidden border shrink-0">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={scanPreview} alt="Scan preview" className="w-full h-full object-cover" />
+            </div>
+            <button
+              type="button"
+              onClick={() => setScanPreview(null)}
+              className="text-xs text-muted-foreground hover:text-destructive transition-colors mt-1"
+            >
+              Remove
+            </button>
+          </div>
+        )}
+        <div className="flex items-center gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={scanning}
+            onClick={() => photoScanRef.current?.click()}
+            className="gap-2"
+          >
+            {scanning ? (
+              <>
+                <Loader2 size={14} className="animate-spin" />
+                Scanning…
+              </>
+            ) : (
+              <>
+                <Camera size={14} />
+                Choose photo
+              </>
+            )}
+          </Button>
+          {scanning && (
+            <p className="text-xs text-muted-foreground">Reading plant names with AI…</p>
+          )}
+        </div>
+        <input
+          ref={photoScanRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePhotoScan(f); e.target.value = ""; }}
+        />
       </div>
 
       {/* Template section */}
