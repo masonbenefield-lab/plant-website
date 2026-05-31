@@ -203,12 +203,6 @@ export function ImportClient() {
 
   async function handleSubmit() {
     if (!drafts?.length) return;
-    const invalid = drafts.filter((d) => !d.name.trim());
-    if (invalid.length) {
-      toast.error(`${invalid.length} plant${invalid.length > 1 ? "s are" : " is"} missing a plant type.`);
-      return;
-    }
-
     setSubmitting(true);
     setProgress({ done: 0, total: drafts.length });
 
@@ -240,7 +234,7 @@ export function ImportClient() {
 
       rows.push({
         user_id: user.id,
-        name: d.name.trim(),
+        name: d.name.trim() || d.variety.trim() || "Unnamed plant",
         variety: d.variety.trim() || null,
         status: d.status,
         location: d.location.trim() || null,
@@ -297,7 +291,7 @@ export function ImportClient() {
               </span>
             )}
             {invalidCount > 0 && (
-              <span className="flex items-center gap-1 text-destructive text-xs">
+              <span className="flex items-center gap-1 text-amber-600 text-xs">
                 <AlertTriangle size={13} />
                 {invalidCount} plant{invalidCount > 1 ? "s" : ""} missing a plant type
               </span>
@@ -327,7 +321,7 @@ export function ImportClient() {
         <div className="sticky bottom-4 flex justify-end">
           <Button
             onClick={handleSubmit}
-            disabled={submitting || invalidCount > 0}
+            disabled={submitting}
             className="bg-leaf hover:bg-forest shadow-lg px-6"
             size="lg"
           >
@@ -403,7 +397,7 @@ export function ImportClient() {
         <Textarea
           value={pasteText}
           onChange={(e) => setPasteText(e.target.value)}
-          placeholder={pasteMode === "variety" ? "BNR, Brown Turkey, LSU Purple\nor one per line" : "Fig, Monstera, Pothos\nor one per line"}
+          placeholder={pasteMode === "variety" ? "Cavendish, Eureka, Satsuma\nor one per line" : "Banana, Lemon, Mandarin\nor one per line"}
           rows={4}
           className="font-mono text-sm resize-none"
         />

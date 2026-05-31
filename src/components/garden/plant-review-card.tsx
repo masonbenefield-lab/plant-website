@@ -41,7 +41,6 @@ export function PlantReviewCard({ draft, onChange, onRemove }: Props) {
   const [open, setOpen] = useState(draft.statusInvalid || !draft.name.trim());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const statusMeta = STATUS_OPTIONS.find((s) => s.value === draft.status) ?? STATUS_OPTIONS[1];
-  const missingName = !draft.name.trim();
 
   function handlePhotoFiles(files: FileList) {
     const remaining = MAX_PHOTOS - draft.images.length;
@@ -67,7 +66,7 @@ export function PlantReviewCard({ draft, onChange, onRemove }: Props) {
   return (
     <div className={cn(
       "rounded-xl border transition-colors",
-      missingName ? "border-destructive/50" : open ? "border-[#A8BF9A] dark:border-forest" : "border-border"
+      open ? "border-[#A8BF9A] dark:border-forest" : "border-border"
     )}>
       {/* Header row — always visible */}
       <div
@@ -79,13 +78,12 @@ export function PlantReviewCard({ draft, onChange, onRemove }: Props) {
           className={cn("text-muted-foreground shrink-0 transition-transform", open && "rotate-180")}
         />
         <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
-          {missingName ? (
-            <span className="text-sm text-destructive flex items-center gap-1">
-              <AlertTriangle size={13} />
-              Missing plant type
-            </span>
-          ) : (
+          {draft.name.trim() ? (
             <span className="text-sm font-semibold truncate">{draft.name}</span>
+          ) : draft.variety.trim() ? (
+            <span className="text-sm font-semibold truncate">{draft.variety}</span>
+          ) : (
+            <span className="text-sm text-muted-foreground italic">Unnamed plant</span>
           )}
           {draft.variety && (
             <span className="text-xs text-muted-foreground truncate">{draft.variety}</span>
@@ -118,15 +116,12 @@ export function PlantReviewCard({ draft, onChange, onRemove }: Props) {
           {/* Plant type + Variety */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor={`${draft.id}-name`}>
-                Plant type <span className="text-destructive">*</span>
-              </Label>
+              <Label htmlFor={`${draft.id}-name`}>Plant type</Label>
               <Input
                 id={`${draft.id}-name`}
                 value={draft.name}
                 onChange={(e) => onChange({ name: e.target.value })}
-                placeholder="e.g. Fig, Monstera, Pothos"
-                className={missingName ? "border-destructive" : ""}
+                placeholder="e.g. Banana, Lemon, Mandarin"
               />
             </div>
             <div className="space-y-1.5">
@@ -135,7 +130,7 @@ export function PlantReviewCard({ draft, onChange, onRemove }: Props) {
                 id={`${draft.id}-variety`}
                 value={draft.variety}
                 onChange={(e) => onChange({ variety: e.target.value })}
-                placeholder="e.g. BNR, Deliciosa"
+                placeholder="e.g. Cavendish, Eureka, Satsuma"
               />
             </div>
           </div>

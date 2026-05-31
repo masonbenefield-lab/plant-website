@@ -186,9 +186,7 @@ export function InventoryImportClient() {
 
   async function handleSubmit() {
     if (!drafts?.length) return;
-    const missingName = drafts.filter((d) => !d.plant_name.trim());
     const missingQty = drafts.filter((d) => !d.quantity || parseInt(d.quantity) <= 0);
-    if (missingName.length) { toast.error(`${missingName.length} item${missingName.length > 1 ? "s are" : " is"} missing a plant type.`); return; }
     if (missingQty.length) { toast.error(`${missingQty.length} item${missingQty.length > 1 ? "s have" : " has"} an invalid quantity.`); return; }
 
     setSubmitting(true);
@@ -219,7 +217,7 @@ export function InventoryImportClient() {
 
       const { error } = await supabase.from("inventory").insert({
         seller_id: user.id,
-        plant_name: d.plant_name.trim(),
+        plant_name: d.plant_name.trim() || d.variety.trim() || "Unnamed plant",
         variety: d.variety.trim() || null,
         pot_size: d.pot_size.trim() || null,
         quantity: parseInt(d.quantity),
@@ -245,7 +243,7 @@ export function InventoryImportClient() {
   if (drafts !== null) {
     const missingName = drafts.filter((d) => !d.plant_name.trim()).length;
     const missingQty = drafts.filter((d) => !d.quantity || parseInt(d.quantity) <= 0).length;
-    const hasErrors = missingName > 0 || missingQty > 0;
+    const hasErrors = missingQty > 0;
 
     return (
       <div className="space-y-6">
@@ -253,7 +251,7 @@ export function InventoryImportClient() {
           <div className="flex items-center gap-3 flex-wrap text-sm">
             <span className="font-semibold">{drafts.length} item{drafts.length !== 1 ? "s" : ""} ready to review</span>
             {missingName > 0 && (
-              <span className="flex items-center gap-1 text-destructive text-xs">
+              <span className="flex items-center gap-1 text-amber-600 text-xs">
                 <AlertTriangle size={13} />
                 {missingName} missing plant type
               </span>
@@ -362,7 +360,7 @@ export function InventoryImportClient() {
         <Textarea
           value={pasteText}
           onChange={(e) => setPasteText(e.target.value)}
-          placeholder={pasteMode === "variety" ? "BNR, Brown Turkey, LSU Purple\nor one per line" : "Fig, Monstera, Pothos\nor one per line"}
+          placeholder={pasteMode === "variety" ? "Cavendish, Eureka, Satsuma\nor one per line" : "Banana, Lemon, Mandarin\nor one per line"}
           rows={4}
           className="font-mono text-sm resize-none"
         />

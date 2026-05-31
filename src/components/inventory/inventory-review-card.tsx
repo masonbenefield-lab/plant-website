@@ -25,9 +25,9 @@ export function InventoryReviewCard({ draft, onChange, onRemove }: Props) {
   const missingName = !draft.plant_name.trim();
   const qty = parseInt(draft.quantity);
   const invalidQty = draft.quantity !== "" && (isNaN(qty) || qty <= 0);
-  const hasError = missingName || invalidQty;
+  const hasError = invalidQty;
 
-  const [open, setOpen] = useState(hasError);
+  const [open, setOpen] = useState(missingName || invalidQty);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isPotSizePreset = (POT_SIZES as readonly string[]).includes(draft.pot_size);
 
@@ -52,6 +52,7 @@ export function InventoryReviewCard({ draft, onChange, onRemove }: Props) {
     <div className={cn(
       "rounded-xl border transition-colors",
       hasError ? "border-destructive/50" : open ? "border-[#A8BF9A] dark:border-forest" : "border-border"
+
     )}>
       {/* Header row */}
       <div
@@ -60,12 +61,12 @@ export function InventoryReviewCard({ draft, onChange, onRemove }: Props) {
       >
         <ChevronDown size={16} className={cn("text-muted-foreground shrink-0 transition-transform", open && "rotate-180")} />
         <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
-          {missingName ? (
-            <span className="text-sm text-destructive flex items-center gap-1">
-              <AlertTriangle size={13} /> Missing plant type
-            </span>
-          ) : (
+          {draft.plant_name.trim() ? (
             <span className="text-sm font-semibold truncate">{draft.plant_name}</span>
+          ) : draft.variety.trim() ? (
+            <span className="text-sm font-semibold truncate">{draft.variety}</span>
+          ) : (
+            <span className="text-sm text-muted-foreground italic">Unnamed plant</span>
           )}
           {draft.variety && <span className="text-xs text-muted-foreground">{draft.variety}</span>}
           {draft.pot_size && <span className="text-xs text-muted-foreground">{draft.pot_size}</span>}
@@ -98,15 +99,12 @@ export function InventoryReviewCard({ draft, onChange, onRemove }: Props) {
           {/* Plant type + Variety */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor={`${draft.id}-name`}>
-                Plant type <span className="text-destructive">*</span>
-              </Label>
+              <Label htmlFor={`${draft.id}-name`}>Plant type</Label>
               <Input
                 id={`${draft.id}-name`}
                 value={draft.plant_name}
                 onChange={(e) => onChange({ plant_name: e.target.value })}
-                placeholder="e.g. Fig, Monstera, Pothos"
-                className={missingName ? "border-destructive" : ""}
+                placeholder="e.g. Banana, Lemon, Mandarin"
               />
             </div>
             <div className="space-y-1.5">
@@ -115,7 +113,7 @@ export function InventoryReviewCard({ draft, onChange, onRemove }: Props) {
                 id={`${draft.id}-variety`}
                 value={draft.variety}
                 onChange={(e) => onChange({ variety: e.target.value })}
-                placeholder="e.g. BNR, Deliciosa"
+                placeholder="e.g. Cavendish, Eureka, Satsuma"
               />
             </div>
           </div>
