@@ -118,12 +118,15 @@
 }
 
 @keyframes anchor-highlight {
-  0%   { background-color: rgba(251, 191, 36, 0.3); box-shadow: 0 0 0 6px rgba(251, 191, 36, 0.3); border-radius: 0.5rem; }
+  0%   { background-color: rgba(251, 191, 36, 0.35); box-shadow: 0 0 0 6px rgba(251, 191, 36, 0.35); border-radius: 0.5rem; }
+  30%  { background-color: transparent; box-shadow: none; }
+  55%  { background-color: rgba(251, 191, 36, 0.35); box-shadow: 0 0 0 6px rgba(251, 191, 36, 0.35); border-radius: 0.5rem; }
+  80%  { background-color: transparent; box-shadow: none; }
   100% { background-color: transparent; box-shadow: none; }
 }
 
 .anchor-flash {
-  animation: anchor-highlight 2s ease-out forwards;
+  animation: anchor-highlight 3s ease-out forwards;
 }
 
 @layer base {

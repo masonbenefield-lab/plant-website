@@ -56,8 +56,9 @@ export default function AccountForm({
     if (!hash) return;
     const el = document.getElementById(hash);
     if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
     el.classList.add("anchor-flash");
-    const t = setTimeout(() => el.classList.remove("anchor-flash"), 2000);
+    const t = setTimeout(() => el.classList.remove("anchor-flash"), 3000);
     return () => clearTimeout(t);
   }, []);
 
