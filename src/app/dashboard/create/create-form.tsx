@@ -20,7 +20,8 @@ import { findProhibitedWord, censorWord, logViolation } from "@/lib/profanity";
 import { getPlanLimits, type PlanLimits } from "@/lib/plan-limits";
 
 type ItemType = "plant" | "supply";
-type SizeEntry = { id: number; potSize: string; quantity: string; weightOz: string; listInShop: boolean; shopPrice: string; shopQuantity: string };
+type ShippingMode = "" | "free" | "flat" | "weight";
+type SizeEntry = { id: number; potSize: string; quantity: string; weightOz: string; listInShop: boolean; shopPrice: string; shopQuantity: string; shippingMode: ShippingMode; shippingCost: string };
 
 let nextId = 1;
 
@@ -41,7 +42,7 @@ export default function CreateInventoryPage() {
   const [category, setCategory] = useState("Other");
   const [existingGroup, setExistingGroup] = useState<{ plant_name: string; count: number } | null>(null);
 
-  const [sizes, setSizes] = useState<SizeEntry[]>([{ id: 0, potSize: "", quantity: "1", weightOz: "", listInShop: false, shopPrice: "", shopQuantity: "" }]);
+  const [sizes, setSizes] = useState<SizeEntry[]>([{ id: 0, potSize: "", quantity: "1", weightOz: "", listInShop: false, shopPrice: "", shopQuantity: "", shippingMode: "" as ShippingMode, shippingCost: "" }]);
 
   function switchType(type: ItemType) {
     setItemType(type);
@@ -50,7 +51,7 @@ export default function CreateInventoryPage() {
   }
 
   function addSize() {
-    setSizes(prev => [...prev, { id: nextId++, potSize: "", quantity: "1", weightOz: "", listInShop: false, shopPrice: "", shopQuantity: "" }]);
+    setSizes(prev => [...prev, { id: nextId++, potSize: "", quantity: "1", weightOz: "", listInShop: false, shopPrice: "", shopQuantity: "", shippingMode: "" as ShippingMode, shippingCost: "" }]);
   }
 
   function removeSize(id: number) {
@@ -152,6 +153,14 @@ export default function CreateInventoryPage() {
 
     const anyListing = sizes.some(s => s.listInShop && s.shopPrice);
 
+    for (const s of sizes) {
+      if (s.listInShop && s.shopPrice && !s.shippingMode) {
+        toast.error("Choose a shipping option for each item you're listing in the shop");
+        setSaving(false);
+        return;
+      }
+    }
+
     const rows = sizes.map(s => ({
       seller_id: user.id,
       plant_name: plantName.trim(),
@@ -193,6 +202,9 @@ export default function CreateInventoryPage() {
             price_cents: dollarsToCents(s.shopPrice),
             inventory_id: inventoryId,
             status: "active",
+            free_shipping: s.shippingMode === "free",
+            shipping_cost_cents: s.shippingMode === "flat" ? dollarsToCents(s.shippingCost) : null,
+            shipping_weight_oz: s.shippingMode === "weight" && s.weightOz ? Math.max(1, Math.round(parseFloat(s.weightOz))) : null,
           })
           .select("id")
           .single();
@@ -485,21 +497,56 @@ export default function CreateInventoryPage() {
                           />
                         </div>
                       </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs" htmlFor={`weight-${size.id}`}>
-                          Ship weight (oz) <span className="font-normal text-muted-foreground">(optional)</span>
-                        </Label>
-                        <Input
-                          id={`weight-${size.id}`}
-                          type="number"
-                          min={1}
-                          step={1}
-                          placeholder="e.g. 16"
-                          value={size.weightOz}
-                          onChange={(e) => updateSize(size.id, "weightOz", e.target.value)}
-                          className="max-w-[120px]"
-                        />
-                        <p className="text-xs text-muted-foreground">Used for live rate quotes at checkout</p>
+                      <div className="space-y-2">
+                        <Label className="text-xs">Shipping <span className="text-destructive">*</span></Label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {(["free", "flat", "weight"] as const).map((mode) => (
+                            <button
+                              key={mode}
+                              type="button"
+                              onClick={() => updateSize(size.id, "shippingMode", mode)}
+                              className={`rounded-md border px-3 py-2 text-xs font-medium transition-colors ${
+                                size.shippingMode === mode
+                                  ? "border-leaf bg-[#EBF0E6] text-forest dark:bg-forest/40 dark:text-[#A8BF9A] dark:border-leaf"
+                                  : "border-input hover:bg-muted"
+                              }`}
+                            >
+                              {mode === "free" ? "Free" : mode === "flat" ? "Flat rate" : "By weight"}
+                            </button>
+                          ))}
+                        </div>
+                        {size.shippingMode === "flat" && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">$</span>
+                            <Input
+                              type="number"
+                              min={0.01}
+                              step={0.01}
+                              placeholder="e.g. 6.99"
+                              value={size.shippingCost}
+                              onChange={(e) => updateSize(size.id, "shippingCost", e.target.value)}
+                              className="max-w-[120px]"
+                            />
+                            <span className="text-xs text-muted-foreground">flat rate</span>
+                          </div>
+                        )}
+                        {size.shippingMode === "weight" && (
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="number"
+                              min={0.1}
+                              step={0.1}
+                              placeholder="oz"
+                              value={size.weightOz}
+                              onChange={(e) => updateSize(size.id, "weightOz", e.target.value)}
+                              className="max-w-[90px]"
+                            />
+                            <span className="text-xs text-muted-foreground">oz — rate calculated at checkout</span>
+                          </div>
+                        )}
+                        {!size.shippingMode && (
+                          <p className="text-xs text-amber-700 dark:text-amber-400">Choose a shipping option above to continue.</p>
+                        )}
                       </div>
                     </div>
                   )}
