@@ -349,6 +349,7 @@ export default function InventoryClient({
   const [inlineDeleteConfirm, setInlineDeleteConfirm] = useState<string | null>(null);
   const [inlineDeleting, setInlineDeleting] = useState(false);
 
+  const [confirmDeleteAuctionId, setConfirmDeleteAuctionId] = useState<string | null>(null);
   const [importingId, setImportingId] = useState<string | null>(null);
   const [importingAll, setImportingAll] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
@@ -954,6 +955,15 @@ export default function InventoryClient({
     const { error } = await supabase.from("listings").delete().eq("id", id);
     if (error) { toast.error(error.message); return; }
     toast.success("Listing deleted");
+    router.refresh();
+  }
+
+  async function deleteUnlinkedAuction(id: string) {
+    const supabase = createClient();
+    // Cancel rather than hard-delete to preserve any order/bid history
+    const { error } = await supabase.from("auctions").update({ status: "cancelled" }).eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Auction removed");
     router.refresh();
   }
 
@@ -2324,13 +2334,41 @@ export default function InventoryClient({
                           "bg-muted text-muted-foreground"
                         )}>{a.status}</span>
                         <span className="text-xs text-muted-foreground">Ends {new Date(a.ends_at).toLocaleDateString()}</span>
-                        <button
-                          onClick={() => importAuction(a)}
-                          disabled={importingId === a.id}
-                          className="ml-auto text-xs text-leaf hover:underline font-medium disabled:opacity-50"
-                        >
-                          {importingId === a.id ? "Importing…" : "Import to Inventory"}
-                        </button>
+                        <div className="ml-auto flex items-center gap-3">
+                          {confirmDeleteAuctionId === a.id ? (
+                            <>
+                              <span className="text-xs text-destructive font-medium">Remove this auction?</span>
+                              <button
+                                onClick={() => { setConfirmDeleteAuctionId(null); deleteUnlinkedAuction(a.id); }}
+                                className="text-xs bg-destructive hover:bg-destructive/90 text-destructive-foreground px-2.5 py-1 rounded transition-colors"
+                              >
+                                Yes, Remove
+                              </button>
+                              <button
+                                onClick={() => setConfirmDeleteAuctionId(null)}
+                                className="text-xs border rounded px-2.5 py-1 text-muted-foreground hover:text-foreground transition-colors"
+                              >
+                                Cancel
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => setConfirmDeleteAuctionId(a.id)}
+                                className="text-xs text-destructive hover:text-destructive/80 font-medium"
+                              >
+                                Delete
+                              </button>
+                              <button
+                                onClick={() => importAuction(a)}
+                                disabled={importingId === a.id}
+                                className="text-xs text-leaf hover:underline font-medium disabled:opacity-50"
+                              >
+                                {importingId === a.id ? "Importing…" : "Import to Inventory"}
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
