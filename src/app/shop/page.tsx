@@ -55,8 +55,13 @@ export default async function ShopPage({
     .in("seller_id", onboardedSellerIds.length ? onboardedSellerIds : ["00000000-0000-0000-0000-000000000000"]);
 
   if (activeTab === "supplies") {
-    query = query.in("category", supplyOnly);
+    // New listings: item_type = 'supply'. Old listings: supply-specific category.
+    const catConditions = supplyOnly.map(c => `category.eq."${c}"`).join(",");
+    query = query.or(`item_type.eq.supply,${catConditions}`);
   } else {
+    // Exclude anything explicitly tagged as a supply (handles "Other" supply listings)
+    query = query.or("item_type.neq.supply,item_type.is.null");
+    // Also exclude supply-specific categories (handles old listings without item_type)
     for (const cat of supplyOnly) query = query.neq("category", cat);
   }
 

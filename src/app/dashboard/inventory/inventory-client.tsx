@@ -582,6 +582,7 @@ export default function InventoryClient({
       category: modal.row.category || null,
       pot_size: modal.row.pot_size || null,
       inventory_id: modal.row.id,
+      item_type: modal.row.item_type || null,
       free_shipping: listingShippingMode === "free",
       shipping_cost_cents: listingShippingMode === "flat" ? dollarsToCents(listingShippingCost) : null,
       shipping_weight_oz: listingShippingMode === "weight" ? Number(listingShippingWeightOz) : null,

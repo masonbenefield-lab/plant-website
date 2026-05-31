@@ -217,6 +217,7 @@ export default function CreateInventoryPage() {
             price_cents: dollarsToCents(s.shopPrice),
             inventory_id: inventoryId,
             status: "active",
+            item_type: itemType,
             free_shipping: s.shippingMode === "free",
             shipping_cost_cents: s.shippingMode === "flat" && s.shippingCost ? dollarsToCents(s.shippingCost) : null,
             shipping_weight_oz: s.shippingMode === "weight" && s.weightOz ? Math.max(1, Math.round(parseFloat(s.weightOz))) : null,
