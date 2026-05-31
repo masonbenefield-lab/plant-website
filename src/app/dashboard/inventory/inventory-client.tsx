@@ -248,6 +248,23 @@ export default function InventoryClient({
   const [editingQtyId, setEditingQtyId] = useState<string | null>(null);
   const [editingQtyValue, setEditingQtyValue] = useState("");
 
+  // Sold-out banner dismiss — stores IDs that were acknowledged; re-shows if a new one appears
+  const [dismissedSoldOutIds, setDismissedSoldOutIds] = useState<Set<string>>(() => {
+    try {
+      const stored = typeof window !== "undefined" ? localStorage.getItem("plantet:dismissed-soldout-ids") : null;
+      return new Set(stored ? JSON.parse(stored) : []);
+    } catch { return new Set(); }
+  });
+  const soldOutRows = activeRows.filter(r => r.listing_status === "sold_out");
+  const undismissedSoldOut = soldOutRows.filter(r => !dismissedSoldOutIds.has(r.id));
+
+  function dismissSoldOutBanner() {
+    const ids = soldOutRows.map(r => r.id);
+    const next = new Set([...dismissedSoldOutIds, ...ids]);
+    setDismissedSoldOutIds(next);
+    try { localStorage.setItem("plantet:dismissed-soldout-ids", JSON.stringify([...next])); } catch { /* ignore */ }
+  }
+
   // Listing modal
   const [price, setPrice] = useState("");
   const [listQty, setListQty] = useState("");
@@ -1397,7 +1414,12 @@ export default function InventoryClient({
               )}
             </div>
             {row.listing_status === "sold_out" && (
-              <p className="text-xs text-amber-700 dark:text-amber-400">Add stock → relists automatically</p>
+              <button
+                onClick={() => { setEditingQtyId(row.id); setEditingQtyValue(String(row.quantity)); }}
+                className="text-xs text-amber-700 dark:text-amber-400 hover:underline font-medium text-left"
+              >
+                + Add stock to relist
+              </button>
             )}
           </div>
         ) : a > 0 ? (
@@ -1535,7 +1557,12 @@ export default function InventoryClient({
                 )}
               </div>
               {row.listing_status === "sold_out" && (
-                <p className="text-xs text-amber-700 dark:text-amber-400">Add stock → relists automatically</p>
+                <button
+                  onClick={() => { setEditingQtyId(row.id); setEditingQtyValue(String(row.quantity)); }}
+                  className="text-xs text-amber-700 dark:text-amber-400 hover:underline font-medium text-left"
+                >
+                  + Add stock to relist
+                </button>
               )}
               {row.free_shipping ? (
                 <span className="text-xs text-muted-foreground">Free shipping</span>
@@ -1819,10 +1846,19 @@ export default function InventoryClient({
         </div>
       )}
 
-      {activeRows.some(r => r.listing_status === "sold_out") && (
-        <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
-          <strong>{activeRows.filter(r => r.listing_status === "sold_out").length} item{activeRows.filter(r => r.listing_status === "sold_out").length !== 1 ? "s" : ""} sold out</strong>
-          {" "}— still visible on your storefront, but hidden from the public shop. Click a highlighted row&apos;s stock number to add inventory — the listing goes back live automatically.
+      {undismissedSoldOut.length > 0 && (
+        <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-300 flex items-start gap-3">
+          <div className="flex-1">
+            <strong>{undismissedSoldOut.length} item{undismissedSoldOut.length !== 1 ? "s" : ""} sold out</strong>
+            {" "}— still visible on your storefront, but hidden from the public shop. Click <strong>+ Add stock to relist</strong> on a highlighted row to bring it back live automatically.
+          </div>
+          <button
+            onClick={dismissSoldOutBanner}
+            className="shrink-0 text-amber-700 dark:text-amber-400 hover:text-amber-900 dark:hover:text-amber-200 transition-colors mt-0.5"
+            title="Dismiss"
+          >
+            <X size={16} />
+          </button>
         </div>
       )}
 
