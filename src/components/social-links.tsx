@@ -1,5 +1,3 @@
-import { ExternalLink } from "lucide-react";
-
 type SocialLinksData = {
   instagram?: string;
   tiktok?: string;
@@ -99,7 +97,7 @@ export default function SocialLinks({ links }: { links: SocialLinksData | null |
   if (active.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap items-center gap-2 mt-2">
+    <div className="flex flex-wrap items-center gap-1.5 mt-2">
       {active.map(({ key, label, buildUrl, icon }) => {
         const handle = links[key]!.trim().replace(/^@/, "");
         const url = buildUrl(handle);
@@ -110,11 +108,10 @@ export default function SocialLinks({ links }: { links: SocialLinksData | null |
             target="_blank"
             rel="noopener noreferrer"
             title={label}
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors bg-muted hover:bg-muted/80 px-2.5 py-1.5 rounded-full"
+            aria-label={label}
+            className="flex items-center justify-center w-8 h-8 rounded-full bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-colors"
           >
             {icon}
-            <span>{label}</span>
-            <ExternalLink size={10} className="opacity-50" />
           </a>
         );
       })}
