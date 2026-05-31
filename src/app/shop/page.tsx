@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { centsToDisplay } from "@/lib/stripe";
-import { PLANT_CATEGORIES } from "@/lib/categories";
+import { PLANT_CATEGORIES, SUPPLY_CATEGORIES } from "@/lib/categories";
 import ShopFilterBar from "@/components/shop-filter-bar";
 import WishlistButton from "@/components/wishlist-button";
 import RecentlyViewedStrip from "@/components/recently-viewed-strip";
@@ -17,9 +17,11 @@ const PAGE_SIZE = 24;
 export default async function ShopPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; sort?: string; min?: string; max?: string; category?: string; on_sale?: string; location?: string; pot_size?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; sort?: string; min?: string; max?: string; category?: string; on_sale?: string; location?: string; pot_size?: string; page?: string; tab?: string }>;
 }) {
-  const { q, sort, min, max, category, on_sale, location, pot_size, page: pageParam } = await searchParams;
+  const { q, sort, min, max, category, on_sale, location, pot_size, page: pageParam, tab: tabParam } = await searchParams;
+  const activeTab = tabParam === "supplies" ? "supplies" : "plants";
+  const supplyOnly = SUPPLY_CATEGORIES.filter(c => c !== "Other") as string[];
   const page = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
   const from = (page - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
@@ -52,6 +54,12 @@ export default async function ShopPage({
     .or("category.neq.Hidden,category.is.null")
     .in("seller_id", onboardedSellerIds.length ? onboardedSellerIds : ["00000000-0000-0000-0000-000000000000"]);
 
+  if (activeTab === "supplies") {
+    query = query.in("category", supplyOnly);
+  } else {
+    for (const cat of supplyOnly) query = query.neq("category", cat);
+  }
+
   if (q) query = query.or(`plant_name.ilike.%${q}%,variety.ilike.%${q}%,description.ilike.%${q}%,category.ilike.%${q}%`);
   if (category) query = query.eq("category", category);
   if (min) query = query.gte("price_cents", Math.round(Number(min) * 100));
@@ -77,6 +85,17 @@ export default async function ShopPage({
   const total = count ?? 0;
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
+  function buildTabHref(t: string) {
+    const p = new URLSearchParams();
+    if (q) p.set("q", q);
+    if (sort && sort !== "newest") p.set("sort", sort);
+    if (min) p.set("min", min);
+    if (max) p.set("max", max);
+    if (t !== "plants") p.set("tab", t);
+    const s = p.toString();
+    return s ? `/shop?${s}` : "/shop";
+  }
+
   function buildPageHref(p: number) {
     const params = new URLSearchParams();
     if (q) params.set("q", q);
@@ -84,9 +103,10 @@ export default async function ShopPage({
     if (min) params.set("min", min);
     if (max) params.set("max", max);
     if (category) params.set("category", category);
-if (on_sale === "1") params.set("on_sale", "1");
+    if (on_sale === "1") params.set("on_sale", "1");
     if (location) params.set("location", location);
     if (pot_size) params.set("pot_size", pot_size);
+    if (activeTab !== "plants") params.set("tab", activeTab);
     if (p > 1) params.set("page", String(p));
     const s = params.toString();
     return s ? `/shop?${s}` : "/shop";
@@ -144,10 +164,30 @@ if (on_sale === "1") params.set("on_sale", "1");
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-10">
-      <h1 className="text-2xl font-bold mb-6">Shop Plants</h1>
+      <h1 className="text-2xl font-bold mb-4">Shop</h1>
+
+      {/* Tab bar */}
+      <div className="flex border-b mb-6">
+        {([
+          { key: "plants", label: "Plants" },
+          { key: "supplies", label: "Garden Supplies" },
+        ] as const).map(({ key, label }) => (
+          <Link
+            key={key}
+            href={buildTabHref(key)}
+            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              activeTab === key
+                ? "border-leaf text-foreground"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {label}
+          </Link>
+        ))}
+      </div>
 
       <Suspense>
-        <ShopFilterBar />
+        <ShopFilterBar activeTab={activeTab} />
       </Suspense>
 
       <Suspense>
@@ -160,14 +200,18 @@ if (on_sale === "1") params.set("on_sale", "1");
           {hasFilters ? (
             <p className="text-sm text-muted-foreground mb-6">Try adjusting your filters or search term.</p>
           ) : (
-            <p className="text-sm text-muted-foreground mb-6">Check back soon — new plants are added regularly.</p>
+            <p className="text-sm text-muted-foreground mb-6">
+              {activeTab === "supplies"
+                ? "Check back soon — new garden supplies are added regularly."
+                : "Check back soon — new plants are added regularly."}
+            </p>
           )}
           <p className="text-sm font-medium text-muted-foreground mb-3">Browse by category</p>
           <div className="flex flex-wrap justify-center gap-2">
-            {PLANT_CATEGORIES.map((c) => (
+            {(activeTab === "supplies" ? SUPPLY_CATEGORIES : PLANT_CATEGORIES).map((c) => (
               <Link
                 key={c}
-                href={`/shop?category=${encodeURIComponent(c)}`}
+                href={`/shop?${activeTab === "supplies" ? "tab=supplies&" : ""}category=${encodeURIComponent(c)}`}
                 className="inline-flex items-center px-3 py-1.5 rounded-full border text-sm hover:bg-muted hover:border-leaf hover:text-leaf transition-colors"
               >
                 {c}

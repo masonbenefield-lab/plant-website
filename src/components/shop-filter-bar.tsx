@@ -5,7 +5,7 @@ import { useCallback, useTransition, useState, useEffect, useRef, Suspense } fro
 import { X, MapPin, Leaf, SlidersHorizontal } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { PLANT_CATEGORIES } from "@/lib/categories";
+import { PLANT_CATEGORIES, SUPPLY_CATEGORIES } from "@/lib/categories";
 import { POT_SIZES } from "@/lib/pot-sizes";
 import PlantInfoCard from "@/components/plant-info-card";
 
@@ -15,7 +15,7 @@ const SORT_OPTIONS = [
   { value: "price_desc", label: "Price: High to Low" },
 ];
 
-export default function ShopFilterBar() {
+export default function ShopFilterBar({ activeTab = "plants" }: { activeTab?: string }) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -111,7 +111,7 @@ export default function ShopFilterBar() {
           <label htmlFor="shop-search" className="sr-only">Search plants or varieties</label>
           <Input
             id="shop-search"
-            placeholder="Search plants or varieties…"
+            placeholder={activeTab === "supplies" ? "Search garden supplies…" : "Search plants or varieties…"}
             value={searchValue}
             onChange={(e) => {
               const val = e.target.value;
@@ -166,7 +166,7 @@ export default function ShopFilterBar() {
             className="h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           >
             <option value="">All Categories</option>
-            {PLANT_CATEGORIES.map((c) => (
+            {(activeTab === "supplies" ? SUPPLY_CATEGORIES : PLANT_CATEGORIES).map((c) => (
               <option key={c} value={c}>{c}</option>
             ))}
           </select>
@@ -230,20 +230,22 @@ export default function ShopFilterBar() {
           )}
         </button>
 
-        {/* Plant Guide toggle */}
-        <button
-          onClick={toggleGuide}
-          title={showGuide ? "Hide plant guide" : "Show plant guide"}
-          className={cn(
-            "h-10 px-3 rounded-md border text-sm font-medium transition-colors flex items-center gap-1.5 whitespace-nowrap",
-            showGuide
-              ? "bg-leaf text-white border-leaf"
-              : "border-input bg-background text-muted-foreground hover:text-foreground hover:border-foreground"
-          )}
-        >
-          <Leaf size={14} />
-          Plant Guide
-        </button>
+        {/* Plant Guide toggle — plants only */}
+        {activeTab !== "supplies" && (
+          <button
+            onClick={toggleGuide}
+            title={showGuide ? "Hide plant guide" : "Show plant guide"}
+            className={cn(
+              "h-10 px-3 rounded-md border text-sm font-medium transition-colors flex items-center gap-1.5 whitespace-nowrap",
+              showGuide
+                ? "bg-leaf text-white border-leaf"
+                : "border-input bg-background text-muted-foreground hover:text-foreground hover:border-foreground"
+            )}
+          >
+            <Leaf size={14} />
+            Plant Guide
+          </button>
+        )}
       </div>
 
       {/* More Filters panel */}
@@ -262,21 +264,23 @@ export default function ShopFilterBar() {
             />
           </div>
 
-          {/* Pot size */}
-          <div className="flex items-center gap-2">
-            <label htmlFor="shop-pot-size" className="text-sm text-muted-foreground whitespace-nowrap">Pot Size</label>
-            <select
-              id="shop-pot-size"
-              value={potSize}
-              onChange={(e) => update({ pot_size: e.target.value })}
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            >
-              <option value="">Any</option>
-              {POT_SIZES.map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
-          </div>
+          {/* Pot size — plants only */}
+          {activeTab !== "supplies" && (
+            <div className="flex items-center gap-2">
+              <label htmlFor="shop-pot-size" className="text-sm text-muted-foreground whitespace-nowrap">Pot Size</label>
+              <select
+                id="shop-pot-size"
+                value={potSize}
+                onChange={(e) => update({ pot_size: e.target.value })}
+                className="h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="">Any</option>
+                {POT_SIZES.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {hasMoreActive && (
             <button
