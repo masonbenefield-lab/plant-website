@@ -579,6 +579,10 @@ export default function InventoryClient({
     const val = parseInt(editingListingQtyValue, 10);
     setEditingListingQtyId(null);
     if (isNaN(val) || val < 0 || !row.listing_id) return;
+    if (val > row.quantity) {
+      toast.error(`Only ${row.quantity} in stock — can't list more than you have`);
+      return;
+    }
     const newQty = Math.max(0, val);
     const supabase = createClient();
     await Promise.all([
@@ -590,6 +594,11 @@ export default function InventoryClient({
       supabase.from("inventory").update({ listing_quantity: newQty }).eq("id", row.id),
     ]);
     if (row.listing_status === "sold_out" && newQty > 0) {
+      // Item is back — clear its dismiss so the banner re-alerts if it sells out again later
+      const next = new Set(dismissedSoldOutIds);
+      next.delete(row.id);
+      setDismissedSoldOutIds(next);
+      try { localStorage.setItem("plantet:dismissed-soldout-ids", JSON.stringify([...next])); } catch { /* ignore */ }
       toast.success(`${row.plant_name} is back in your shop!`);
     } else if (row.listing_status === "active" && newQty === 0) {
       toast.info(`${row.plant_name} marked as sold out`);
@@ -613,7 +622,13 @@ export default function InventoryClient({
         ? supabase.from("inventory").update({ quantity: stockVal, listing_quantity: newShopQty }).eq("id", row.id)
         : supabase.from("inventory").update({ listing_quantity: newShopQty }).eq("id", row.id),
     ]);
-    if (newShopQty > 0) toast.success(`${row.plant_name} is back in your shop!`);
+    if (newShopQty > 0) {
+      const next = new Set(dismissedSoldOutIds);
+      next.delete(row.id);
+      setDismissedSoldOutIds(next);
+      try { localStorage.setItem("plantet:dismissed-soldout-ids", JSON.stringify([...next])); } catch { /* ignore */ }
+      toast.success(`${row.plant_name} is back in your shop!`);
+    }
     router.refresh();
   }
 
@@ -1478,7 +1493,7 @@ export default function InventoryClient({
             {!!row.listing_id && (
               editingListingQtyId === row.id ? (
                 <input
-                  type="number" min={0} value={editingListingQtyValue}
+                  type="number" min={0} max={row.quantity} value={editingListingQtyValue}
                   onChange={e => setEditingListingQtyValue(e.target.value)}
                   onBlur={() => saveListingQtyEdit(row)}
                   onKeyDown={e => { if (e.key === "Enter") saveListingQtyEdit(row); if (e.key === "Escape") setEditingListingQtyId(null); }}
@@ -1674,7 +1689,7 @@ export default function InventoryClient({
               {!!row.listing_id && (
                 editingListingQtyId === row.id ? (
                   <input
-                    type="number" min={0} value={editingListingQtyValue}
+                    type="number" min={0} max={row.quantity} value={editingListingQtyValue}
                     onChange={e => setEditingListingQtyValue(e.target.value)}
                     onBlur={() => saveListingQtyEdit(row)}
                     onKeyDown={e => { if (e.key === "Enter") saveListingQtyEdit(row); if (e.key === "Escape") setEditingListingQtyId(null); }}
