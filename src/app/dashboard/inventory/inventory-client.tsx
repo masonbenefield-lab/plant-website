@@ -882,13 +882,12 @@ export default function InventoryClient({
     const supabase = createClient();
     const { error } = await supabase.from("inventory").update({ archived_at: new Date().toISOString() }).eq("id", id);
     if (!error) {
+      // Pause by direct listing_id reference (primary link)
       if (listingId) {
         await supabase.from("listings").update({ status: "paused" }).eq("id", listingId);
-      } else {
-        // fallback: find listing linked by inventory_id
-        const { data: linked } = await supabase.from("listings").select("id").eq("inventory_id", id).maybeSingle();
-        if (linked) await supabase.from("listings").update({ status: "paused" }).eq("id", linked.id);
       }
+      // Always also pause any listings that reference this inventory row (catches legacy/standalone listings)
+      await supabase.from("listings").update({ status: "paused" }).eq("inventory_id", id);
     }
     setLoadingId(null);
     if (error) { toast.error(error.message); return; }

@@ -66,9 +66,11 @@ export default async function SellerStorefront({
 
   const { data: { user } } = await supabase.auth.getUser();
 
+  const adminClient = createAdminClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
   const [{ data: listings }, { data: auctions }, { data: ratings }, { count: followerCount }, { data: gardenPlants }, { data: announcements }, { data: wishlistItems }] =
     await Promise.all([
-      supabase.from("listings").select("*").eq("seller_id", profile.id).in("status", ["active", "sold_out"]).or("category.neq.Hidden,category.is.null").order("created_at", { ascending: false }),
+      // Admin client bypasses RLS so sold_out listings are visible to all visitors, not just the seller
+      adminClient.from("listings").select("*").eq("seller_id", profile.id).in("status", ["active", "sold_out"]).or("category.neq.Hidden,category.is.null").order("created_at", { ascending: false }),
       profile.stripe_onboarded
         ? supabase.from("auctions").select("*").eq("seller_id", profile.id).eq("status", "active").or("category.neq.Hidden,category.is.null").order("created_at", { ascending: false })
         : Promise.resolve({ data: [] }),
