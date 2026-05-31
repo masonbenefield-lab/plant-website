@@ -88,6 +88,8 @@ export default function AccountForm({
   const [savingShipping, setSavingShipping] = useState(false);
   const [addressValidation, setAddressValidation] = useState<{ valid: boolean; messages: string[] } | null>(null);
   const [validatingAddress, setValidatingAddress] = useState(false);
+  const [missingAddressFields, setMissingAddressFields] = useState<Set<string>>(new Set());
+  const [highlightShipFrom, setHighlightShipFrom] = useState(false);
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState("");
@@ -361,16 +363,19 @@ export default function AccountForm({
     // If the seller has started filling in an address, all required fields must be present
     const anyAddressField = shipFrom.street1.trim() || shipFrom.city.trim() || shipFrom.state.trim() || shipFrom.zip.trim();
     if (anyAddressField) {
-      const missing: string[] = [];
-      if (!shipFrom.street1.trim()) missing.push("Street Address");
-      if (!shipFrom.city.trim()) missing.push("City");
-      if (!shipFrom.state.trim()) missing.push("State");
-      if (!shipFrom.zip.trim()) missing.push("ZIP Code");
-      if (missing.length) {
-        toast.error(`Complete your ship-from address: ${missing.join(", ")}`);
+      const missingKeys: string[] = [];
+      const missingLabels: string[] = [];
+      if (!shipFrom.street1.trim()) { missingKeys.push("street1"); missingLabels.push("Street Address"); }
+      if (!shipFrom.city.trim())    { missingKeys.push("city");    missingLabels.push("City"); }
+      if (!shipFrom.state.trim())   { missingKeys.push("state");   missingLabels.push("State"); }
+      if (!shipFrom.zip.trim())     { missingKeys.push("zip");     missingLabels.push("ZIP Code"); }
+      if (missingKeys.length) {
+        setMissingAddressFields(new Set(missingKeys));
+        toast.error(`Complete your ship-from address: ${missingLabels.join(", ")}`);
         return;
       }
     }
+    setMissingAddressFields(new Set());
 
     setSavingShipping(true);
     setAddressValidation(null);
@@ -402,6 +407,15 @@ export default function AccountForm({
         setAddressValidation(vData.error ? null : vData);
       } catch { /* non-blocking */ }
       setValidatingAddress(false);
+    }
+  }
+
+  function scrollToShipFrom() {
+    const el = document.getElementById("sf-street1");
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      setHighlightShipFrom(true);
+      setTimeout(() => setHighlightShipFrom(false), 2000);
     }
   }
 
@@ -886,29 +900,52 @@ export default function AccountForm({
           <form onSubmit={saveShipping} className="space-y-5">
             <div>
               <p className="text-sm font-medium mb-3">Ship-from address</p>
-              <div className="space-y-3">
+              <div className={cn("space-y-3 rounded-lg transition-all duration-300", highlightShipFrom && "ring-2 ring-destructive p-3")}>
                 <div className="space-y-1">
                   <Label htmlFor="sf-name">Full Name / Business Name</Label>
                   <Input id="sf-name" value={shipFrom.name} onChange={(e) => { setShipFrom({ ...shipFrom, name: e.target.value }); setAddressValidation(null); }} placeholder="Jane's Nursery" />
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="sf-street1">Street Address</Label>
-                  <Input id="sf-street1" value={shipFrom.street1} onChange={(e) => { setShipFrom({ ...shipFrom, street1: e.target.value }); setAddressValidation(null); }} placeholder="123 Main St" />
+                  <Input
+                    id="sf-street1"
+                    value={shipFrom.street1}
+                    onChange={(e) => { setShipFrom({ ...shipFrom, street1: e.target.value }); setAddressValidation(null); setMissingAddressFields(prev => { const n = new Set(prev); n.delete("street1"); return n; }); }}
+                    placeholder="123 Main St"
+                    className={cn(missingAddressFields.has("street1") && "ring-2 ring-destructive")}
+                  />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <Label htmlFor="sf-city">City</Label>
-                    <Input id="sf-city" value={shipFrom.city} onChange={(e) => setShipFrom({ ...shipFrom, city: e.target.value })} />
+                    <Input
+                      id="sf-city"
+                      value={shipFrom.city}
+                      onChange={(e) => { setShipFrom({ ...shipFrom, city: e.target.value }); setMissingAddressFields(prev => { const n = new Set(prev); n.delete("city"); return n; }); }}
+                      className={cn(missingAddressFields.has("city") && "ring-2 ring-destructive")}
+                    />
                   </div>
                   <div className="space-y-1">
                     <Label htmlFor="sf-state">State</Label>
-                    <Input id="sf-state" value={shipFrom.state} onChange={(e) => setShipFrom({ ...shipFrom, state: e.target.value })} maxLength={2} placeholder="TX" />
+                    <Input
+                      id="sf-state"
+                      value={shipFrom.state}
+                      onChange={(e) => { setShipFrom({ ...shipFrom, state: e.target.value }); setMissingAddressFields(prev => { const n = new Set(prev); n.delete("state"); return n; }); }}
+                      maxLength={2}
+                      placeholder="TX"
+                      className={cn(missingAddressFields.has("state") && "ring-2 ring-destructive")}
+                    />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <Label htmlFor="sf-zip">ZIP Code</Label>
-                    <Input id="sf-zip" value={shipFrom.zip} onChange={(e) => setShipFrom({ ...shipFrom, zip: e.target.value })} />
+                    <Input
+                      id="sf-zip"
+                      value={shipFrom.zip}
+                      onChange={(e) => { setShipFrom({ ...shipFrom, zip: e.target.value }); setMissingAddressFields(prev => { const n = new Set(prev); n.delete("zip"); return n; }); }}
+                      className={cn(missingAddressFields.has("zip") && "ring-2 ring-destructive")}
+                    />
                   </div>
                   <div className="space-y-1">
                     <Label htmlFor="sf-country">Country</Label>
@@ -977,22 +1014,38 @@ export default function AccountForm({
             </div>
 
             <div className="space-y-3">
-              <div className="flex items-center justify-between rounded-lg border p-4">
-                <div>
-                  <p className="text-sm font-medium">Calculated shipping rates</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Show real-time Shippo rates to buyers at checkout. Turn off if you prefer to set a flat shipping price or free shipping on each item individually.</p>
-                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">Each item must have a shipping weight set for rates to calculate correctly.</p>
-                </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={calculatedShippingEnabled}
-                  onClick={() => setCalculatedShippingEnabled((v) => !v)}
-                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ml-4 ${calculatedShippingEnabled ? "bg-leaf" : "bg-input"}`}
-                >
-                  <span className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition-transform ${calculatedShippingEnabled ? "translate-x-5" : "translate-x-0"}`} />
-                </button>
-              </div>
+              {(() => {
+                const hasAddress = !!(rawShipFrom?.street1?.trim() && rawShipFrom?.city?.trim() && rawShipFrom?.state?.trim() && rawShipFrom?.zip?.trim());
+                return (
+                  <div className={cn("flex items-center justify-between rounded-lg border p-4", !hasAddress && "opacity-60")}>
+                    <div>
+                      <p className="text-sm font-medium">Calculated shipping rates</p>
+                      {hasAddress ? (
+                        <>
+                          <p className="text-xs text-muted-foreground mt-0.5">Show real-time Shippo rates to buyers at checkout. Turn off to set a flat or free shipping price on each item individually.</p>
+                          <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">Each item must have a shipping weight set for rates to calculate correctly.</p>
+                        </>
+                      ) : (
+                        <p className="text-xs text-muted-foreground mt-0.5">Save a verified ship-from address above to enable calculated shipping rates.</p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={calculatedShippingEnabled}
+                      disabled={!hasAddress}
+                      onClick={() => hasAddress ? setCalculatedShippingEnabled((v) => !v) : scrollToShipFrom()}
+                      className={cn(
+                        "relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ml-4",
+                        hasAddress ? "cursor-pointer" : "cursor-not-allowed",
+                        calculatedShippingEnabled && hasAddress ? "bg-leaf" : "bg-input"
+                      )}
+                    >
+                      <span className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition-transform ${calculatedShippingEnabled && hasAddress ? "translate-x-5" : "translate-x-0"}`} />
+                    </button>
+                  </div>
+                );
+              })()}
 
               <div className="flex items-center justify-between rounded-lg border p-4">
                 <div>
