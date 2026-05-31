@@ -11,6 +11,7 @@ import FollowButton from "@/components/follow-button";
 import ShareButton from "@/components/share-button";
 import { MessageButton } from "@/components/message-button";
 import { StorefrontMoreMenu } from "@/components/storefront-more-menu";
+import { StorefrontBannerEditor, StorefrontAvatarEditor } from "@/components/storefront-photo-editor";
 import RateSellerForm from "@/app/orders/rate-seller-form";
 import { StorefrontListings, StorefrontAuctions, StorefrontGarden, StorefrontWishlist } from "./storefront-listings";
 import { ReturnPolicyBadge } from "@/components/return-policy-badge";
@@ -146,7 +147,9 @@ export default async function SellerStorefront({
       )}
 
       {/* Banner */}
-      {profile.banner_url && (
+      {user?.id === profile.id ? (
+        <StorefrontBannerEditor userId={profile.id} initialUrl={profile.banner_url} />
+      ) : profile.banner_url ? (
         <div className="relative w-full h-48 sm:h-56 md:h-64 lg:h-72 rounded-2xl overflow-hidden mb-6">
           <Image
             src={profile.banner_url}
@@ -156,16 +159,24 @@ export default async function SellerStorefront({
             priority
           />
         </div>
-      )}
+      ) : null}
 
       {/* Header */}
       <div className="flex items-start gap-6 mb-10">
-        <Avatar className="h-20 w-20">
-          <AvatarImage src={profile.avatar_url ?? undefined} />
-          <AvatarFallback className="bg-[#DFE7D4] text-leaf text-2xl font-bold">
-            {profile.username.slice(0, 1).toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
+        {user?.id === profile.id ? (
+          <StorefrontAvatarEditor
+            userId={profile.id}
+            initialUrl={profile.avatar_url}
+            fallback={profile.username.slice(0, 1).toUpperCase()}
+          />
+        ) : (
+          <Avatar className="h-20 w-20">
+            <AvatarImage src={profile.avatar_url ?? undefined} />
+            <AvatarFallback className="bg-[#DFE7D4] text-leaf text-2xl font-bold">
+              {profile.username.slice(0, 1).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+        )}
         <div className="flex-1">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div>
