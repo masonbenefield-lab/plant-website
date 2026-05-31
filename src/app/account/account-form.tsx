@@ -272,7 +272,7 @@ export default function AccountForm({
       : "text-muted-foreground bg-muted border-border";
 
     return (
-      <Card id="plan-billing">
+      <Card id="plan-billing" className="scroll-mt-24">
         <CardHeader>
           <CardTitle>Plan &amp; Billing</CardTitle>
         </CardHeader>
@@ -359,7 +359,7 @@ export default function AccountForm({
 
   return (
     <div className="space-y-6">
-      <Card>
+      <Card id="profile" className="scroll-mt-24">
         <CardHeader>
           <CardTitle>Profile</CardTitle>
         </CardHeader>
@@ -671,7 +671,7 @@ export default function AccountForm({
         </CardContent>
       </Card>
 
-      <Card>
+      <Card id="email-preferences" className="scroll-mt-24">
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><Mail size={18} /> Email Preferences</CardTitle>
         </CardHeader>
@@ -699,7 +699,7 @@ export default function AccountForm({
         </CardContent>
       </Card>
 
-      <Card>
+      <Card id="email-address" className="scroll-mt-24">
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><Mail size={18} /> Email Address</CardTitle>
         </CardHeader>
@@ -723,7 +723,7 @@ export default function AccountForm({
         </CardContent>
       </Card>
 
-      <Card>
+      <Card id="password" className="scroll-mt-24">
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><KeyRound size={18} /> Password</CardTitle>
         </CardHeader>
@@ -735,7 +735,7 @@ export default function AccountForm({
         </CardContent>
       </Card>
 
-      <Card id="seller-payments">
+      <Card id="seller-payments" className="scroll-mt-24">
         <CardHeader>
           <CardTitle>Seller Payments</CardTitle>
         </CardHeader>
@@ -872,7 +872,7 @@ export default function AccountForm({
 
       <PlanBillingCard profile={profile} />
 
-      <Card className="border-destructive/40">
+      <Card id="danger-zone" className="border-destructive/40 scroll-mt-24">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-destructive">
             <Trash2 size={18} /> Danger Zone
