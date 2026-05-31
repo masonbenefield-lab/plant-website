@@ -6,7 +6,7 @@ import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Star, MapPin } from "lucide-react";
+import { Star, MapPin, ArrowLeftRight } from "lucide-react";
 import FollowButton from "@/components/follow-button";
 import ReportButton from "@/components/report-button";
 import BlockButton from "@/components/block-button";
@@ -231,6 +231,12 @@ export default async function SellerStorefront({
                 type={(profile as { return_policy_type?: string | null }).return_policy_type!}
                 notes={(profile as { return_policy_notes?: string | null }).return_policy_notes}
               />
+            )}
+            {(profile as { open_to_trades?: boolean }).open_to_trades && (
+              <span className="flex items-center gap-1 text-xs font-medium text-leaf bg-[#DFE7D4] dark:bg-forest/40 dark:text-sage px-2.5 py-1 rounded-full">
+                <ArrowLeftRight size={11} />
+                Open to trades
+              </span>
             )}
           </div>
           {avgScore !== null && (
