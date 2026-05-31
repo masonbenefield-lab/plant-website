@@ -122,6 +122,8 @@ export default function OrdersClient({
   totalPages,
   total,
   pageSize,
+  prevHref,
+  nextHref,
   autoLabelsEnabled = true,
 }: {
   orders: OrderRow[];
