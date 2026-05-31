@@ -143,29 +143,35 @@ export default function CheckoutForm({ listingId, auctionId, offerId, priceCents
     }
     setFetchingRates(true);
 
-    const res = await fetch("/api/shipping/rates", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        listingId,
-        auctionId,
-        toAddress: {
-          name: address.name,
-          street1: address.line1,
-          street2: address.line2 || null,
-          city: address.city,
-          state: address.state,
-          zip: address.zip,
-          country: address.country,
-        },
-      }),
-    });
-
-    const data = await res.json();
+    let data: Record<string, unknown>;
+    try {
+      const res = await fetch("/api/shipping/rates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          listingId,
+          auctionId,
+          toAddress: {
+            name: address.name,
+            street1: address.line1,
+            street2: address.line2 || null,
+            city: address.city,
+            state: address.state,
+            zip: address.zip,
+            country: address.country,
+          },
+        }),
+      });
+      data = await res.json();
+    } catch {
+      setFetchingRates(false);
+      toast.error("Could not fetch shipping rates. Please try again.");
+      return;
+    }
     setFetchingRates(false);
 
     if (data.error) {
-      toast.error(data.error);
+      toast.error(data.error as string);
       return;
     }
 
@@ -191,9 +197,10 @@ export default function CheckoutForm({ listingId, auctionId, offerId, priceCents
       return;
     }
 
-    setRates(data.rates ?? []);
-    setSelectedRate(data.rates?.[0] ?? null);
-    const firstRateCents = data.rates?.[0] ? Math.round(parseFloat(data.rates[0].amount) * 100) : 0;
+    const rates = (data.rates ?? []) as ShippoRate[];
+    setRates(rates);
+    setSelectedRate(rates[0] ?? null);
+    const firstRateCents = rates[0] ? Math.round(parseFloat(rates[0].amount) * 100) : 0;
     setTotalCents(priceCents + firstRateCents);
     setStep("shipping");
   }
