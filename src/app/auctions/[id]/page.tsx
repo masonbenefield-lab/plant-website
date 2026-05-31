@@ -64,7 +64,7 @@ export default async function AuctionPage({
   if (!auction) notFound();
 
   const [{ data: seller }, { data: bids }, { data: { user } }, { data: invShipping }] = await Promise.all([
-    supabase.from("profiles").select("id, username, avatar_url, shipping_days, shipping_days_max, return_policy_type, return_policy_notes, calculated_shipping_enabled").eq("id", auction.seller_id).single(),
+    supabase.from("profiles").select("id, username, display_name, avatar_url, shipping_days, shipping_days_max, return_policy_type, return_policy_notes, calculated_shipping_enabled").eq("id", auction.seller_id).single(),
     supabase.from("bids").select("id, amount_cents, created_at, bidder_id").eq("auction_id", id).order("created_at", { ascending: false }).limit(10),
     supabase.auth.getUser(),
     auction.inventory_id
@@ -205,11 +205,11 @@ export default async function AuctionPage({
               <Avatar className="h-10 w-10">
                 <AvatarImage src={seller.avatar_url ?? undefined} />
                 <AvatarFallback className="bg-green-100 text-green-700">
-                  {seller.username.slice(0, 1).toUpperCase()}
+                  {(seller.display_name ?? seller.username).slice(0, 1).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               <div>
-                <p className="text-sm font-medium">{seller.username}</p>
+                <p className="text-sm font-medium">{seller.display_name ?? seller.username}</p>
                 <p className="text-xs text-muted-foreground">View storefront →</p>
               </div>
             </Link>

@@ -97,10 +97,10 @@ export default async function AuctionsPage({
   const sellerIds = [...new Set(auctions?.map((a) => a.seller_id) ?? [])];
   const [{ data: sellers }, { data: sellerRatings }] = await (sellerIds.length
     ? Promise.all([
-        supabase.from("profiles").select("id, username, plan").in("id", sellerIds),
+        supabase.from("profiles").select("id, username, display_name, plan").in("id", sellerIds),
         supabase.from("ratings").select("seller_id, score").in("seller_id", sellerIds),
       ])
-    : Promise.all([{ data: [] as { id: string; username: string; plan: string }[] }, { data: [] as { seller_id: string; score: number }[] }]));
+    : Promise.all([{ data: [] as { id: string; username: string; display_name: string | null; plan: string }[] }, { data: [] as { seller_id: string; score: number }[] }]));
 
   const sellerMap = Object.fromEntries((sellers ?? []).map((s) => [s.id, s]));
 
@@ -142,9 +142,9 @@ export default async function AuctionsPage({
 
   const soldSellerIds = [...new Set((soldAuctions ?? []).map((a) => a.seller_id))];
   const { data: soldSellers } = soldSellerIds.length
-    ? await supabase.from("profiles").select("id, username").in("id", soldSellerIds)
-    : { data: [] as { id: string; username: string }[] };
-  const soldSellerMap = Object.fromEntries((soldSellers ?? []).map((s) => [s.id, s.username]));
+    ? await supabase.from("profiles").select("id, username, display_name").in("id", soldSellerIds)
+    : { data: [] as { id: string; username: string; display_name: string | null }[] };
+  const soldSellerMap = Object.fromEntries((soldSellers ?? []).map((s) => [s.id, s.display_name ?? s.username]));
 
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -284,7 +284,7 @@ export default async function AuctionsPage({
                         href={`/sellers/${seller.username}`}
                         className="text-xs text-muted-foreground hover:text-green-700 hover:underline transition-colors"
                       >
-                        by {seller.username}
+                        by {seller.display_name ?? seller.username}
                       </Link>
                       {topSellerSet.has(auction.seller_id) && (
                         <span className="text-xs font-semibold text-amber-700 bg-amber-100 dark:bg-amber-900/40 dark:text-amber-400 px-1.5 py-0.5 rounded-full">

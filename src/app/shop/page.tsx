@@ -95,10 +95,10 @@ if (on_sale === "1") params.set("on_sale", "1");
   const sellerIds = [...new Set(listings?.map((l) => l.seller_id) ?? [])];
   const [{ data: sellers }, { data: sellerRatings }] = await (sellerIds.length
     ? Promise.all([
-        supabase.from("profiles").select("id, username, plan").in("id", sellerIds),
+        supabase.from("profiles").select("id, username, display_name, plan").in("id", sellerIds),
         supabase.from("ratings").select("seller_id, score").in("seller_id", sellerIds),
       ])
-    : Promise.all([{ data: [] as { id: string; username: string; plan: string }[] }, { data: [] as { seller_id: string; score: number }[] }]));
+    : Promise.all([{ data: [] as { id: string; username: string; display_name: string | null; plan: string }[] }, { data: [] as { seller_id: string; score: number }[] }]));
 
   const sellerMap = Object.fromEntries((sellers ?? []).map((s) => [s.id, s]));
 
@@ -251,7 +251,7 @@ if (on_sale === "1") params.set("on_sale", "1");
                         href={`/sellers/${seller.username}`}
                         className="text-xs text-muted-foreground hover:text-green-700 hover:underline transition-colors"
                       >
-                        by {seller.username}
+                        by {seller.display_name ?? seller.username}
                       </Link>
                       {topSellerSet.has(listing.seller_id) && (
                         <span

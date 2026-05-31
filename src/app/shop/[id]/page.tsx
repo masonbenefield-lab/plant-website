@@ -73,7 +73,7 @@ export default async function ListingPage({
   if (!listing) notFound();
 
   const [{ data: seller }, { data: { user } }, { data: invShipping }] = await Promise.all([
-    supabase.from("profiles").select("id, username, avatar_url, stripe_onboarded, shipping_days, shipping_days_max, return_policy_type, return_policy_notes, vacation_mode, vacation_until, offers_enabled, calculated_shipping_enabled").eq("id", listing.seller_id).single(),
+    supabase.from("profiles").select("id, username, display_name, avatar_url, stripe_onboarded, shipping_days, shipping_days_max, return_policy_type, return_policy_notes, vacation_mode, vacation_until, offers_enabled, calculated_shipping_enabled").eq("id", listing.seller_id).single(),
     supabase.auth.getUser(),
     listing.inventory_id
       ? supabase.from("inventory").select("free_shipping, shipping_cost_cents, shipping_weight_oz").eq("id", listing.inventory_id).single()
@@ -314,11 +314,11 @@ export default async function ListingPage({
               <Avatar className="h-10 w-10">
                 <AvatarImage src={seller.avatar_url ?? undefined} />
                 <AvatarFallback className="bg-green-100 text-green-700">
-                  {seller.username.slice(0, 1).toUpperCase()}
+                  {(seller.display_name ?? seller.username).slice(0, 1).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               <div>
-                <p className="text-sm font-medium">{seller.username}</p>
+                <p className="text-sm font-medium">{seller.display_name ?? seller.username}</p>
                 <p className="text-xs text-muted-foreground">View storefront →</p>
               </div>
             </Link>
@@ -338,7 +338,7 @@ export default async function ListingPage({
       {filteredRelated.length > 0 && (
         <div className="mt-16">
           <h2 className="text-lg font-semibold mb-4">
-            More from {seller?.username ?? "this seller"}
+            More from {seller ? (seller.display_name ?? seller.username) : "this seller"}
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {filteredRelated.map((item) => (
