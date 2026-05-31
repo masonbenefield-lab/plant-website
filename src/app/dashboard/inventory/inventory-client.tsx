@@ -541,7 +541,10 @@ export default function InventoryClient({
     if (error) { toast.error(error.message); return; }
     const row = activeRows.find(r => r.id === rowId);
     if (row?.listing_id && row.listing_status === "sold_out" && val > 0) {
-      await supabase.from("listings").update({ status: "active" }).eq("id", row.listing_id);
+      await Promise.all([
+        supabase.from("listings").update({ status: "active", quantity: val }).eq("id", row.listing_id),
+        supabase.from("inventory").update({ listing_quantity: val }).eq("id", rowId),
+      ]);
       toast.success(`${row.plant_name} is back in your shop!`);
     }
     router.refresh();

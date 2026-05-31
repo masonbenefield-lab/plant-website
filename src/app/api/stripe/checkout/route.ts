@@ -197,8 +197,6 @@ export async function POST(request: Request) {
         await admin.from("inventory").update({
           quantity: newInvQty,
           listing_quantity: newInvListingQty,
-          // Only unlink when the listing itself is sold out; keep the link if it still has stock
-          ...(soldOut ? { listing_id: null } : {}),
         }).eq("id", listing.inventory_id);
 
         // Low stock alert
