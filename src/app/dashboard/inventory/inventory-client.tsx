@@ -2104,8 +2104,11 @@ export default function InventoryClient({
             return (
               <div className="space-y-4 mt-1">
                 <div className="space-y-1">
-                  <Label htmlFor="modal-price">Price per item ($) *</Label>
-                  <Input id="modal-price" type="number" min={0.01} step={0.01} value={price} onChange={e => setPrice(e.target.value)} placeholder="0.00" autoFocus />
+                  <Label htmlFor="modal-price">Price per item *</Label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">$</span>
+                    <Input id="modal-price" type="number" min={0.01} step={0.01} value={price} onChange={e => setPrice(e.target.value)} placeholder="0.00" autoFocus className="max-w-[140px]" />
+                  </div>
                   <PriceSuggestion plantName={modal.row.plant_name} variety={modal.row.variety} label="price" />
                 </div>
                 <div className="space-y-1">
