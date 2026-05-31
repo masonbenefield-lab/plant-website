@@ -11,14 +11,15 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { PLANT_CATEGORIES } from "@/lib/categories";
+import { PLANT_CATEGORIES, SUPPLY_CATEGORIES } from "@/lib/categories";
 import { compressImage } from "@/lib/compress-image";
-import { AlertTriangle, Plus, X, Store } from "lucide-react";
+import { AlertTriangle, Plus, X, Store, Leaf, Package } from "lucide-react";
 import { dollarsToCents } from "@/lib/stripe";
 import PotSizePicker from "@/components/pot-size-picker";
 import { findProhibitedWord, censorWord, logViolation } from "@/lib/profanity";
 import { getPlanLimits, type PlanLimits } from "@/lib/plan-limits";
 
+type ItemType = "plant" | "supply";
 type SizeEntry = { id: number; potSize: string; quantity: string; weightOz: string; listInShop: boolean; shopPrice: string; shopQuantity: string };
 
 let nextId = 1;
@@ -33,14 +34,20 @@ export default function CreateInventoryPage() {
   const [profileWarning, setProfileWarning] = useState<"incomplete" | "unverified" | null>(null);
   const [planLimits, setPlanLimits] = useState<PlanLimits>({ listings: null, auctions: null, photos: null });
 
+  const [itemType, setItemType] = useState<ItemType>("plant");
   const [plantName, setPlantName] = useState("");
   const [variety, setVariety] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("Other");
   const [existingGroup, setExistingGroup] = useState<{ plant_name: string; count: number } | null>(null);
 
-  // Multiple sizes — each becomes its own inventory row
   const [sizes, setSizes] = useState<SizeEntry[]>([{ id: 0, potSize: "", quantity: "1", weightOz: "", listInShop: false, shopPrice: "", shopQuantity: "" }]);
+
+  function switchType(type: ItemType) {
+    setItemType(type);
+    setCategory("Other");
+    setExistingGroup(null);
+  }
 
   function addSize() {
     setSizes(prev => [...prev, { id: nextId++, potSize: "", quantity: "1", weightOz: "", listInShop: false, shopPrice: "", shopQuantity: "" }]);
@@ -83,13 +90,12 @@ export default function CreateInventoryPage() {
         .ilike("plant_name", plantName.trim())
         .is("archived_at", null);
       if (!data || data.length === 0) { setExistingGroup(null); return; }
-      const matches = data.filter(item =>
-        (item.variety ?? "").toLowerCase() === variety.trim().toLowerCase()
-      );
+      const compareVariety = itemType === "plant" ? variety.trim().toLowerCase() : "";
+      const matches = data.filter(item => (item.variety ?? "").toLowerCase() === compareVariety);
       setExistingGroup(matches.length > 0 ? { plant_name: data[0].plant_name, count: matches.length } : null);
     }, 500);
     return () => clearTimeout(timer);
-  }, [plantName, variety]);
+  }, [plantName, variety, itemType]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -125,7 +131,7 @@ export default function CreateInventoryPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const fields: [string, string][] = [
-      [plantName, "plant name"],
+      [plantName, "item name"],
       [variety, "variety"],
       [description, "description"],
     ];
@@ -146,16 +152,15 @@ export default function CreateInventoryPage() {
 
     const anyListing = sizes.some(s => s.listInShop && s.shopPrice);
 
-    // Insert all inventory rows and get IDs back
     const rows = sizes.map(s => ({
       seller_id: user.id,
       plant_name: plantName.trim(),
-      variety: variety.trim() || null,
+      variety: itemType === "plant" ? (variety.trim() || null) : (s.potSize.trim() || null),
       quantity: Math.max(1, Number(s.quantity) || 1),
       description: description.trim() || null,
       images: imageUrls,
       category: category || "Other",
-      pot_size: s.potSize || null,
+      pot_size: itemType === "plant" ? (s.potSize || null) : null,
       shipping_weight_oz: s.weightOz ? Math.max(1, Math.round(parseFloat(s.weightOz))) : null,
     }));
 
@@ -166,7 +171,6 @@ export default function CreateInventoryPage() {
 
     if (invErr || !invRows?.length) { toast.error(invErr?.message ?? "Failed to save"); setSaving(false); return; }
 
-    // For each size that should be listed, create a listing and link it
     if (anyListing) {
       for (let i = 0; i < sizes.length; i++) {
         const s = sizes[i];
@@ -180,12 +184,12 @@ export default function CreateInventoryPage() {
           .insert({
             seller_id: user.id,
             plant_name: plantName.trim(),
-            variety: variety.trim() || null,
+            variety: itemType === "plant" ? (variety.trim() || null) : (s.potSize.trim() || null),
             quantity: listedQty,
             description: description.trim() || null,
             images: imageUrls,
             category: category || "Other",
-            pot_size: s.potSize || null,
+            pot_size: itemType === "plant" ? (s.potSize || null) : null,
             price_cents: dollarsToCents(s.shopPrice),
             inventory_id: inventoryId,
             status: "active",
@@ -204,8 +208,9 @@ export default function CreateInventoryPage() {
 
     setSaving(false);
     const listedCount = sizes.filter(s => s.listInShop && s.shopPrice).length;
+    const unitWord = itemType === "plant" ? "size" : "variant";
     if (sizes.length > 1) {
-      toast.success(listedCount > 0 ? `${sizes.length} sizes saved — ${listedCount} listed in shop` : `${sizes.length} sizes added to inventory`);
+      toast.success(listedCount > 0 ? `${sizes.length} ${unitWord}s saved — ${listedCount} listed in shop` : `${sizes.length} ${unitWord}s added to inventory`);
     } else {
       toast.success(listedCount > 0 ? "Saved to inventory and listed in shop!" : "Saved to inventory!");
     }
@@ -214,12 +219,37 @@ export default function CreateInventoryPage() {
 
   const anyListing = sizes.some(s => s.listInShop && s.shopPrice);
   const canSubmit = plantName.trim() && sizes.every(s => Number(s.quantity) >= 1);
+  const isSupply = itemType === "supply";
+  const categories = isSupply ? SUPPLY_CATEGORIES : PLANT_CATEGORIES;
+  const unitWord = isSupply ? "variant" : "size";
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-10">
-      <div className="mb-8">
+      <div className="mb-6">
         <h1 className="text-2xl font-bold">Add to Inventory</h1>
-        <p className="text-muted-foreground mt-1">Add a plant to your inventory. You can list it in the shop or create an auction from your Inventory page.</p>
+        <p className="text-muted-foreground mt-1">
+          {isSupply
+            ? "Add a gardening supply to your inventory. You can list it in the shop from your Inventory page."
+            : "Add a plant to your inventory. You can list it in the shop or create an auction from your Inventory page."}
+        </p>
+      </div>
+
+      {/* Item type toggle */}
+      <div className="flex gap-1 p-1 bg-muted rounded-lg w-fit mb-6">
+        <button
+          type="button"
+          onClick={() => switchType("plant")}
+          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${!isSupply ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+        >
+          <Leaf size={14} /> Plant
+        </button>
+        <button
+          type="button"
+          onClick={() => switchType("supply")}
+          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${isSupply ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+        >
+          <Package size={14} /> Gardening Supply
+        </button>
       </div>
 
       {profileWarning === "unverified" && (
@@ -252,7 +282,7 @@ export default function CreateInventoryPage() {
               You already have {existingGroup.plant_name} in inventory
             </p>
             <p className="text-blue-700 dark:text-blue-500 mt-0.5">
-              Adding this will create a new size variant that groups with your existing {existingGroup.count === 1 ? "entry" : `${existingGroup.count} entries`}.
+              Adding this will create a new {unitWord} that groups with your existing {existingGroup.count === 1 ? "entry" : `${existingGroup.count} entries`}.
             </p>
           </div>
         </div>
@@ -264,26 +294,28 @@ export default function CreateInventoryPage() {
             <CardTitle className="text-base">Item Details</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className={isSupply ? "space-y-1" : "grid grid-cols-2 gap-4"}>
               <div className="space-y-1">
-                <Label htmlFor="plant_name">Plant Name *</Label>
+                <Label htmlFor="plant_name">{isSupply ? "Item Name" : "Plant Name"} *</Label>
                 <Input
                   id="plant_name"
                   value={plantName}
                   onChange={(e) => setPlantName(e.target.value)}
-                  placeholder="e.g. Monstera"
+                  placeholder={isSupply ? "e.g. Perlite, Pruning Shears" : "e.g. Monstera"}
                   required
                 />
               </div>
-              <div className="space-y-1">
-                <Label htmlFor="variety">Variety</Label>
-                <Input
-                  id="variety"
-                  value={variety}
-                  onChange={(e) => setVariety(e.target.value)}
-                  placeholder="e.g. Deliciosa"
-                />
-              </div>
+              {!isSupply && (
+                <div className="space-y-1">
+                  <Label htmlFor="variety">Variety</Label>
+                  <Input
+                    id="variety"
+                    value={variety}
+                    onChange={(e) => setVariety(e.target.value)}
+                    placeholder="e.g. Deliciosa"
+                  />
+                </div>
+              )}
             </div>
 
             <div className="space-y-1">
@@ -292,7 +324,7 @@ export default function CreateInventoryPage() {
                 id="description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Describe the plant, its condition, size, care notes…"
+                placeholder={isSupply ? "Describe the product, brand, condition…" : "Describe the plant, its condition, size, care notes…"}
                 rows={4}
                 maxLength={1000}
               />
@@ -307,7 +339,7 @@ export default function CreateInventoryPage() {
                 className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               >
                 <option value="">Select a category…</option>
-                {PLANT_CATEGORIES.map((c) => (
+                {categories.map((c) => (
                   <option key={c} value={c}>{c}</option>
                 ))}
               </select>
@@ -355,12 +387,12 @@ export default function CreateInventoryPage() {
           </CardContent>
         </Card>
 
-        {/* Sizes */}
+        {/* Sizes / Variants */}
         <Card className="mb-6">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base">Sizes & Quantities</CardTitle>
-              <p className="text-xs text-muted-foreground">Each size is saved as a separate inventory row</p>
+              <CardTitle className="text-base">{isSupply ? "Variants & Quantities" : "Sizes & Quantities"}</CardTitle>
+              <p className="text-xs text-muted-foreground">Each {unitWord} is saved as a separate inventory row</p>
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -369,8 +401,22 @@ export default function CreateInventoryPage() {
                 <div className="flex items-start gap-3">
                   <div className="flex-1 space-y-3">
                     <div className="space-y-1">
-                      <Label className="text-xs">Pot Size <span className="font-normal text-muted-foreground">(optional)</span></Label>
-                      <PotSizePicker value={size.potSize} onChange={(v) => updateSize(size.id, "potSize", v)} />
+                      {isSupply ? (
+                        <>
+                          <Label className="text-xs">Variant <span className="font-normal text-muted-foreground">(optional)</span></Label>
+                          <Input
+                            placeholder='e.g. "1 lb bag", "Small"'
+                            value={size.potSize}
+                            onChange={(e) => updateSize(size.id, "potSize", e.target.value)}
+                            className="max-w-[200px]"
+                          />
+                        </>
+                      ) : (
+                        <>
+                          <Label className="text-xs">Pot Size <span className="font-normal text-muted-foreground">(optional)</span></Label>
+                          <PotSizePicker value={size.potSize} onChange={(v) => updateSize(size.id, "potSize", v)} />
+                        </>
+                      )}
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs" htmlFor={`qty-${size.id}`}>Quantity *</Label>
@@ -389,7 +435,7 @@ export default function CreateInventoryPage() {
                       type="button"
                       onClick={() => removeSize(size.id)}
                       className="mt-1 p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                      aria-label={`Remove size ${idx + 1}`}
+                      aria-label={`Remove ${unitWord} ${idx + 1}`}
                     >
                       <X size={16} />
                     </button>
@@ -461,7 +507,7 @@ export default function CreateInventoryPage() {
               </div>
             ))}
             <Button type="button" variant="outline" size="sm" onClick={addSize} className="flex items-center gap-1.5 text-xs">
-              <Plus size={14} /> Add another size
+              <Plus size={14} /> Add another {unitWord}
             </Button>
           </CardContent>
         </Card>
@@ -471,13 +517,13 @@ export default function CreateInventoryPage() {
             {saving
               ? "Saving…"
               : anyListing
-              ? `Save & List in Shop`
+              ? "Save & List in Shop"
               : sizes.length > 1
-              ? `Save ${sizes.length} sizes to Inventory`
+              ? `Save ${sizes.length} ${unitWord}s to Inventory`
               : "Save to Inventory"}
           </Button>
           {!canSubmit && (
-            <p className="text-xs text-muted-foreground">Fill in plant name and all quantities to save.</p>
+            <p className="text-xs text-muted-foreground">Fill in {isSupply ? "item name" : "plant name"} and all quantities to save.</p>
           )}
         </div>
       </form>
