@@ -25,9 +25,10 @@ interface NavbarProps {
   username?: string | null;
   isAdmin?: boolean;
   unreadMessages?: number;
+  pendingReports?: number;
 }
 
-export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessages = 0 }: NavbarProps) {
+export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessages = 0, pendingReports = 0 }: NavbarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const headerRef = useRef<HTMLElement>(null);
@@ -189,13 +190,18 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
             )}
             {user ? (
               <DropdownMenu>
-                <DropdownMenuTrigger className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-leaf">
+                <DropdownMenuTrigger className="relative flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-leaf">
                   <Avatar className="h-8 w-8">
                     <AvatarImage src={avatarUrl ?? undefined} />
                     <AvatarFallback className="bg-[#DFE7D4] text-leaf text-xs">
                       {username?.slice(0, 2).toUpperCase() ?? "??"}
                     </AvatarFallback>
                   </Avatar>
+                  {isAdmin && pendingReports > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-red-600 text-white text-[8px] font-bold flex items-center justify-center ring-2 ring-background">
+                      {pendingReports > 9 ? "9+" : pendingReports}
+                    </span>
+                  )}
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
                   <DropdownMenuItem><Link href="/dashboard" className="block w-full">Dashboard</Link></DropdownMenuItem>
@@ -214,7 +220,16 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
                   {isAdmin && (
                     <>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem><Link href="/admin" className="block w-full font-medium text-orange-600">Admin Panel</Link></DropdownMenuItem>
+                      <DropdownMenuItem>
+                        <Link href="/admin/reports" className="flex items-center justify-between w-full font-medium text-orange-600">
+                          Admin Panel
+                          {pendingReports > 0 && (
+                            <span className="ml-2 min-w-[18px] h-[18px] rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center px-1">
+                              {pendingReports > 99 ? "99+" : pendingReports}
+                            </span>
+                          )}
+                        </Link>
+                      </DropdownMenuItem>
                     </>
                   )}
                   <DropdownMenuSeparator />

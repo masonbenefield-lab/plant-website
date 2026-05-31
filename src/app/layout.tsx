@@ -41,13 +41,18 @@ export default async function RootLayout({
 
   let profile = null;
   let unreadMessages = 0;
+  let pendingReports = 0;
   if (user) {
-    const [{ data }, { count }] = await Promise.all([
+    const [{ data }, { count: msgCount }] = await Promise.all([
       supabase.from("profiles").select("username, avatar_url, is_admin").eq("id", user.id).single(),
       supabase.from("messages").select("id", { count: "exact", head: true }).is("read_at", null).neq("sender_id", user.id),
     ]);
     profile = data;
-    unreadMessages = count ?? 0;
+    unreadMessages = msgCount ?? 0;
+    if (profile?.is_admin) {
+      const { count } = await supabase.from("reports").select("id", { count: "exact", head: true }).eq("status", "pending");
+      pendingReports = count ?? 0;
+    }
   }
 
   return (
@@ -64,6 +69,7 @@ export default async function RootLayout({
               username={profile?.username}
               isAdmin={profile?.is_admin ?? false}
               unreadMessages={unreadMessages}
+              pendingReports={pendingReports}
             />
             <main className="flex-1">{children}</main>
             <Footer />
