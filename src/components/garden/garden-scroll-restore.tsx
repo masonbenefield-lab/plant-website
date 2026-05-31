@@ -1,20 +1,23 @@
 "use client";
 
-import { useLayoutEffect, useEffect } from "react";
+import { useEffect } from "react";
 
 const KEY = "garden-scroll-y";
 
 export function GardenScrollRestore() {
-  // Restore before the browser paints to avoid a visible jump
-  useLayoutEffect(() => {
+  useEffect(() => {
     const saved = sessionStorage.getItem(KEY);
     if (saved) {
-      window.scrollTo({ top: parseInt(saved, 10), behavior: "instant" });
+      const pos = parseInt(saved, 10);
+      // Double rAF: first frame lets React finish committing, second lets
+      // Next.js apply its own scroll management — we then override it.
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          window.scrollTo({ top: pos, behavior: "instant" });
+        });
+      });
     }
-  }, []);
 
-  // Continuously save scroll position while on this page
-  useEffect(() => {
     const save = () => sessionStorage.setItem(KEY, String(Math.round(window.scrollY)));
     window.addEventListener("scroll", save, { passive: true });
     return () => window.removeEventListener("scroll", save);
