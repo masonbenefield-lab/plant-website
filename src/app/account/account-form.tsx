@@ -758,7 +758,7 @@ export default function AccountForm({
         </CardContent>
       </Card>
 
-      <Card id="shipping-settings">
+      <Card id="shipping-settings" className="scroll-mt-24">
         <CardHeader>
           <CardTitle>Shipping Settings</CardTitle>
         </CardHeader>

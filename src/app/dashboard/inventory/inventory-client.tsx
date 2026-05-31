@@ -391,7 +391,7 @@ export default function InventoryClient({
       if (!hasShipFrom) {
         toast.error("Ship-from address required", {
           description: "Add your ship-from address in Account Settings before listing items.",
-          action: { label: "Account Settings", onClick: () => window.location.href = "/account#shipping" },
+          action: { label: "Account Settings", onClick: () => window.location.href = "/account#shipping-settings" },
           duration: 6000,
         });
         return;
@@ -420,7 +420,7 @@ export default function InventoryClient({
       if (!hasShipFrom) {
         toast.error("Ship-from address required", {
           description: "Add your ship-from address in Account Settings before starting an auction.",
-          action: { label: "Account Settings", onClick: () => window.location.href = "/account#shipping" },
+          action: { label: "Account Settings", onClick: () => window.location.href = "/account#shipping-settings" },
           duration: 6000,
         });
         return;
@@ -548,7 +548,7 @@ export default function InventoryClient({
     if (!hasShipFrom) {
       toast.error("Ship-from address required", {
         description: "Add your ship-from address in Account Settings before creating a listing.",
-        action: { label: "Account Settings", onClick: () => router.push("/account#shipping") },
+        action: { label: "Account Settings", onClick: () => router.push("/account#shipping-settings") },
       });
       setSubmitting(false);
       return;
@@ -639,7 +639,7 @@ export default function InventoryClient({
     if (!hasShipFrom) {
       toast.error("Ship-from address required", {
         description: "Add your ship-from address in Account Settings before starting an auction.",
-        action: { label: "Account Settings", onClick: () => router.push("/account#shipping") },
+        action: { label: "Account Settings", onClick: () => router.push("/account#shipping-settings") },
       });
       setSubmitting(false);
       return;
@@ -1756,7 +1756,7 @@ export default function InventoryClient({
         <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
           <strong>Add a ship-from address before listing.</strong>{" "}
           Buyers can&apos;t see shipping rates until you set your shipping origin.{" "}
-          <a href="/account#shipping" className="underline font-medium hover:opacity-80">Add it now →</a>
+          <a href="/account#shipping-settings" className="underline font-medium hover:opacity-80">Add it now →</a>
         </div>
       )}
 

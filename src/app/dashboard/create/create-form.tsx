@@ -63,7 +63,7 @@ export default function CreateInventoryPage() {
     if (field === "listInShop" && value === true && !hasShipFrom) {
       toast.error("Ship-from address required", {
         description: "Add your ship-from address in Account Settings before listing items.",
-        action: { label: "Account Settings", onClick: () => window.location.href = "/account#shipping" },
+        action: { label: "Account Settings", onClick: () => window.location.href = "/account#shipping-settings" },
       });
       return;
     }
