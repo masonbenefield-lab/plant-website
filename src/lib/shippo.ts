@@ -17,6 +17,7 @@ export interface ShipFromAddress {
   zip: string;
   country: string;
   phone?: string;
+  email?: string;
 }
 
 export interface ShipToAddress {
@@ -57,6 +58,7 @@ export async function getShippingRates(params: {
       zip: from.zip,
       country: from.country,
       phone: from.phone ?? "",
+      email: from.email ?? "",
       isResidential: false,
     },
     addressTo: {

@@ -67,8 +67,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Add a ship-from address in Account Settings before purchasing labels." }, { status: 400 });
   }
 
-  const from = seller.ship_from_address as {
-    name: string; street1: string; city: string; state: string; zip: string; country: string; phone?: string;
+  const from = {
+    ...(seller.ship_from_address as { name: string; street1: string; city: string; state: string; zip: string; country: string; phone?: string }),
+    email: user.email ?? "",
   };
 
   const toAddress = {
