@@ -21,7 +21,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    await getStripe().paymentIntents.cancel(order.stripe_payment_intent_id);
+    await getStripe().paymentIntents.cancel(order.stripe_payment_intent_id!);
   } catch {
     // PI may already be canceled; that's fine
   }
