@@ -2,12 +2,21 @@ import Link from "next/link";
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
+import type { Database } from "@/lib/supabase/types";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { centsToDisplay } from "@/lib/stripe";
 import RateSellerForm from "./rate-seller-form";
 import DisputeButton from "./dispute-button";
 import OrdersClient from "@/app/dashboard/orders/orders-client";
+
+function adminClient() {
+  return createSupabaseAdmin<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 function detectCarrier(tracking: string): string {
   if (/^1Z[0-9A-Z]{16}$/i.test(tracking)) return "UPS";
@@ -26,7 +35,7 @@ function getCarrierUrl(tracking: string): string {
 
 const PURCHASE_STATUS_TABS = [
   { label: "All", value: "" },
-  { label: "Pending", value: "pending" },
+  { label: "Pending", value: "paid" },
   { label: "In Transit", value: "shipped" },
   { label: "Delivered", value: "delivered" },
 ] as const;
@@ -124,13 +133,14 @@ export default async function OrdersPage({
     });
     const allListingIds = [...new Set([...listingIds, ...cartListingIds])];
 
+    const admin = adminClient();
     const [{ data: listings }, { data: auctionItems }, { data: sellers }, { data: existingRatings }, { data: gardenPlants }] =
       await Promise.all([
         listingIds.length
-          ? supabase.from("listings").select("id, plant_name, variety, images, care_guide_pdf_url").in("id", listingIds)
+          ? admin.from("listings").select("id, plant_name, variety, images, care_guide_pdf_url").in("id", listingIds)
           : { data: [] },
         auctionIds.length
-          ? supabase.from("auctions").select("id, plant_name, variety, images").in("id", auctionIds)
+          ? admin.from("auctions").select("id, plant_name, variety, images").in("id", auctionIds)
           : { data: [] },
         supabase.from("profiles").select("id, username, display_name").in("id", sellerIds),
         supabase.from("ratings").select("order_id").eq("reviewer_id", user.id),
