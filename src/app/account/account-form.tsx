@@ -357,6 +357,21 @@ export default function AccountForm({
 
   async function saveShipping(e: React.FormEvent) {
     e.preventDefault();
+
+    // If the seller has started filling in an address, all required fields must be present
+    const anyAddressField = shipFrom.street1.trim() || shipFrom.city.trim() || shipFrom.state.trim() || shipFrom.zip.trim();
+    if (anyAddressField) {
+      const missing: string[] = [];
+      if (!shipFrom.street1.trim()) missing.push("Street Address");
+      if (!shipFrom.city.trim()) missing.push("City");
+      if (!shipFrom.state.trim()) missing.push("State");
+      if (!shipFrom.zip.trim()) missing.push("ZIP Code");
+      if (missing.length) {
+        toast.error(`Complete your ship-from address: ${missing.join(", ")}`);
+        return;
+      }
+    }
+
     setSavingShipping(true);
     setAddressValidation(null);
     const res = await fetch("/api/profile/update-shipping", {

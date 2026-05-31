@@ -18,6 +18,7 @@ import { dollarsToCents } from "@/lib/stripe";
 import PotSizePicker from "@/components/pot-size-picker";
 import { findProhibitedWord, censorWord, logViolation } from "@/lib/profanity";
 import { getPlanLimits, type PlanLimits } from "@/lib/plan-limits";
+import { cn } from "@/lib/utils";
 
 type ItemType = "plant" | "supply";
 type ShippingMode = "" | "free" | "flat" | "weight";
@@ -45,6 +46,7 @@ export default function CreateInventoryPage() {
   const [existingGroup, setExistingGroup] = useState<{ plant_name: string; count: number } | null>(null);
 
   const [sizes, setSizes] = useState<SizeEntry[]>([{ id: 0, potSize: "", quantity: "1", weightOz: "", listInShop: false, shopPrice: "", shopQuantity: "", shippingMode: "" as ShippingMode, shippingCost: "" }]);
+  const [highlightWeightId, setHighlightWeightId] = useState<number | null>(null);
 
   function switchType(type: ItemType) {
     setItemType(type);
@@ -172,6 +174,8 @@ export default function CreateInventoryPage() {
       }
       if (s.shippingMode === "weight" && (!s.weightOz || parseFloat(s.weightOz) <= 0)) {
         toast.error("Enter a weight greater than 0 oz for calculated shipping");
+        setHighlightWeightId(s.id);
+        setTimeout(() => setHighlightWeightId(null), 2000);
         setSaving(false);
         return;
       }
@@ -599,10 +603,15 @@ export default function CreateInventoryPage() {
                               step={0.1}
                               placeholder="oz"
                               value={size.weightOz}
-                              onChange={(e) => updateSize(size.id, "weightOz", e.target.value)}
-                              className="max-w-[90px]"
+                              onChange={(e) => { updateSize(size.id, "weightOz", e.target.value); if (highlightWeightId === size.id) setHighlightWeightId(null); }}
+                              className={cn(
+                                "max-w-[90px] transition-all",
+                                highlightWeightId === size.id && "ring-2 ring-destructive border-destructive"
+                              )}
                             />
-                            <span className="text-xs text-muted-foreground">oz — rate calculated at checkout</span>
+                            <span className={cn("text-xs", highlightWeightId === size.id ? "text-destructive font-medium" : "text-muted-foreground")}>
+                              oz — rate calculated at checkout
+                            </span>
                           </div>
                         )}
                         {!size.shippingMode && (
