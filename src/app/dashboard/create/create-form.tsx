@@ -35,6 +35,7 @@ export default function CreateInventoryPage() {
   const [profileWarning, setProfileWarning] = useState<"incomplete" | "unverified" | null>(null);
   const [planLimits, setPlanLimits] = useState<PlanLimits>({ listings: null, auctions: null, photos: null });
   const [hasShipFrom, setHasShipFrom] = useState(true);
+  const [calculatedShippingEnabled, setCalculatedShippingEnabled] = useState(true);
 
   const [itemType, setItemType] = useState<ItemType>("plant");
   const [plantName, setPlantName] = useState("");
@@ -77,11 +78,12 @@ export default function CreateInventoryPage() {
       if (!user) return;
       if (!user.email_confirmed_at) { setProfileWarning("unverified"); return; }
       const [{ data: profile }, { data: planProfile }] = await Promise.all([
-        supabase.from("profiles").select("bio, avatar_url, ship_from_address").eq("id", user.id).single(),
+        supabase.from("profiles").select("bio, avatar_url, ship_from_address, calculated_shipping_enabled").eq("id", user.id).single(),
         supabase.from("profiles").select("plan, is_admin").eq("id", user.id).single(),
       ]);
       if (!profile?.bio?.trim() || !profile?.avatar_url) setProfileWarning("incomplete");
       setHasShipFrom(!!(profile?.ship_from_address as { street1?: string } | null)?.street1);
+      setCalculatedShippingEnabled((profile as { calculated_shipping_enabled?: boolean | null } | null)?.calculated_shipping_enabled !== false);
       setPlanLimits(getPlanLimits(planProfile?.plan, !!planProfile?.is_admin));
     }
     checkProfile();
@@ -524,8 +526,11 @@ export default function CreateInventoryPage() {
                       </div>
                       <div className="space-y-2">
                         <Label className="text-xs">Shipping <span className="text-destructive">*</span></Label>
-                        <div className="grid grid-cols-3 gap-2">
-                          {(["free", "flat", "weight"] as const).map((mode) => (
+                        {(() => {
+                          const modes = calculatedShippingEnabled ? (["free", "flat", "weight"] as const) : (["free", "flat"] as const);
+                          return (
+                        <div className={`grid gap-2 ${modes.length === 2 ? "grid-cols-2" : "grid-cols-3"}`}>
+                          {modes.map((mode) => (
                             <button
                               key={mode}
                               type="button"
@@ -540,6 +545,8 @@ export default function CreateInventoryPage() {
                             </button>
                           ))}
                         </div>
+                          );
+                        })()}
                         {size.shippingMode === "flat" && (
                           <div className="flex items-center gap-2">
                             <span className="text-xs text-muted-foreground">$</span>

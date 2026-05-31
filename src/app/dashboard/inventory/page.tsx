@@ -21,7 +21,7 @@ export default async function InventoryPage({
     { data: activeInventory },
     { data: archivedInventory },
   ] = await Promise.all([
-    supabase.from("profiles").select("seller_terms_accepted_at, is_admin, stripe_onboarded, plan, return_policy_type, shipping_days, ship_from_address").eq("id", user.id).single(),
+    supabase.from("profiles").select("seller_terms_accepted_at, is_admin, stripe_onboarded, plan, return_policy_type, shipping_days, ship_from_address, calculated_shipping_enabled").eq("id", user.id).single(),
     supabase.from("inventory").select("*").eq("seller_id", user.id).is("archived_at", null).order("created_at", { ascending: false }),
     supabase.from("inventory").select("*").eq("seller_id", user.id).not("archived_at", "is", null).gte("archived_at", thirtyDaysAgo).order("archived_at", { ascending: false }),
   ]);
@@ -158,6 +158,7 @@ export default async function InventoryPage({
   const hasReturnPolicy = !!(profile as { return_policy_type?: string | null } | null)?.return_policy_type;
   const hasShippingTimeline = !!(profile as { shipping_days?: number | null } | null)?.shipping_days;
   const hasShipFrom = !!(profile as { ship_from_address?: { street1?: string } | null } | null)?.ship_from_address?.street1;
+  const calculatedShippingEnabled = (profile as { calculated_shipping_enabled?: boolean | null } | null)?.calculated_shipping_enabled !== false;
 
   const { getPlanLimits } = await import("@/lib/plan-limits");
   const planLimits = getPlanLimits((profile as { plan?: string } | null)?.plan as "seedling" | "grower" | "nursery" | null, isAdmin);
@@ -174,6 +175,7 @@ export default async function InventoryPage({
       hasReturnPolicy={hasReturnPolicy}
       hasShippingTimeline={hasShippingTimeline}
       hasShipFrom={hasShipFrom}
+      calculatedShippingEnabled={calculatedShippingEnabled}
       unlinkedListings={(unlinkedListings ?? []).map(l => ({
         id: l.id,
         plant_name: l.plant_name,

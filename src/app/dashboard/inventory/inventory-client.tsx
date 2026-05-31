@@ -206,6 +206,7 @@ export default function InventoryClient({
   hasReturnPolicy = true,
   hasShippingTimeline = true,
   hasShipFrom = true,
+  calculatedShippingEnabled = true,
   planLimits = { listings: null, auctions: 5, photos: 5 },
 }: {
   activeRows: Row[];
@@ -221,6 +222,7 @@ export default function InventoryClient({
   hasReturnPolicy?: boolean;
   hasShippingTimeline?: boolean;
   hasShipFrom?: boolean;
+  calculatedShippingEnabled?: boolean;
   planLimits?: PlanLimits;
 }) {
   const router = useRouter();
@@ -319,6 +321,9 @@ export default function InventoryClient({
   const [editCostPrice, setEditCostPrice] = useState("");
   const [viewMode, setViewMode] = useState<"grouped" | "flat">("grouped");
   const categories = isAdmin ? ADMIN_CATEGORIES : BASE_CATEGORIES;
+  const shippingModes = calculatedShippingEnabled
+    ? (["free", "flat", "weight"] as const)
+    : (["free", "flat"] as const);
   const [stockTab, setStockTab] = useState<"plants" | "supplies">("plants");
 
   useEffect(() => {
@@ -2083,8 +2088,8 @@ export default function InventoryClient({
                 </div>
                 <div className="space-y-2">
                   <Label>Shipping <span className="text-destructive">*</span></Label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {(["free", "flat", "weight"] as const).map((mode) => (
+                  <div className={`grid gap-2 ${shippingModes.length === 2 ? "grid-cols-2" : "grid-cols-3"}`}>
+                    {shippingModes.map((mode) => (
                       <button
                         key={mode}
                         type="button"
@@ -2197,8 +2202,8 @@ export default function InventoryClient({
                 </div>
                 <div className="space-y-2">
                   <Label>Shipping <span className="text-destructive">*</span></Label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {(["free", "flat", "weight"] as const).map((mode) => (
+                  <div className={`grid gap-2 ${shippingModes.length === 2 ? "grid-cols-2" : "grid-cols-3"}`}>
+                    {shippingModes.map((mode) => (
                       <button
                         key={mode}
                         type="button"
@@ -2456,8 +2461,8 @@ export default function InventoryClient({
                     </div>
                     <div className="space-y-1">
                       <Label>Shipping <span className="font-normal text-muted-foreground text-xs">(optional — required to list)</span></Label>
-                      <div className="grid grid-cols-3 gap-2">
-                        {(["free", "flat", "weight"] as const).map((mode) => (
+                      <div className={`grid gap-2 ${shippingModes.length === 2 ? "grid-cols-2" : "grid-cols-3"}`}>
+                        {shippingModes.map((mode) => (
                           <button key={mode} type="button" onClick={() => setEditShippingMode(editShippingMode === mode ? "" : mode)}
                             className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors ${editShippingMode === mode ? "border-leaf bg-[#EBF0E6] text-forest dark:bg-forest/40 dark:text-[#A8BF9A] dark:border-leaf" : "border-input hover:bg-muted"}`}
                           >
