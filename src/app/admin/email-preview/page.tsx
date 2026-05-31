@@ -20,6 +20,10 @@ import {
   buildReengagementHtml,
   buildGardenCareReminderHtml,
   buildConfirmationEmailHtml,
+  buildPasswordResetHtml,
+  buildChangeEmailHtml,
+  buildPasswordChangedHtml,
+  buildEmailChangedHtml,
 } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
@@ -107,6 +111,34 @@ export default async function EmailPreviewPage() {
       html: buildConfirmationEmailHtml({
         confirmUrl: `${PREVIEW_SITE}/auth/callback?code=preview-token`,
       }),
+    },
+    {
+      id: "password-reset",
+      label: "Reset Password",
+      category: "Auth",
+      html: buildPasswordResetHtml({
+        confirmUrl: `${PREVIEW_SITE}/auth/callback?type=recovery&token=preview-token`,
+      }),
+    },
+    {
+      id: "change-email",
+      label: "Change Email",
+      category: "Auth",
+      html: buildChangeEmailHtml({
+        confirmUrl: `${PREVIEW_SITE}/auth/callback?type=email_change&token=preview-token`,
+      }),
+    },
+    {
+      id: "password-changed",
+      label: "Password Changed",
+      category: "Auth",
+      html: buildPasswordChangedHtml(),
+    },
+    {
+      id: "email-changed",
+      label: "Email Changed",
+      category: "Auth",
+      html: buildEmailChangedHtml({ newEmail: "jane@example.com" }),
     },
     // ── Buyer transactional ──────────────────────────────────────────────────
     {

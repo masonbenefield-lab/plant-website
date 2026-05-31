@@ -132,6 +132,74 @@ export function buildConfirmationEmailHtml({ confirmUrl }: { confirmUrl: string 
   });
 }
 
+// ─── Password reset (Supabase auth) ─────────────────────────────────────────
+// confirmUrl: use "{{ .ConfirmationURL }}" when pasting into Supabase Auth → Email Templates
+
+export function buildPasswordResetHtml({ confirmUrl }: { confirmUrl: string }): string {
+  return emailBase({
+    title: "Reset your Plantet password",
+    heading: "Reset your password",
+    subheading: "We received a password reset request",
+    body: `
+      <p style="margin:0 0 20px;">Click the button below to choose a new password. This link expires in <strong>1 hour</strong>.</p>
+      ${ctaBtn("Reset my password", confirmUrl)}
+      <p style="margin:24px 0 0;font-size:13px;color:#6B7E72;text-align:center;">If you didn't request a password reset you can safely ignore this email — your password won't be changed.</p>
+    `,
+    footerNote: "You're receiving this because a password reset was requested for your Plantet account.",
+  });
+}
+
+// ─── Change email address (Supabase auth) ────────────────────────────────────
+// confirmUrl: use "{{ .ConfirmationURL }}" when pasting into Supabase Auth → Email Templates
+
+export function buildChangeEmailHtml({ confirmUrl }: { confirmUrl: string }): string {
+  return emailBase({
+    title: "Confirm your new Plantet email address",
+    heading: "Confirm your new email",
+    subheading: "One more step to update your account",
+    body: `
+      <p style="margin:0 0 20px;">You requested an email address change on your Plantet account. Click below to verify your new address and complete the update.</p>
+      ${ctaBtn("Confirm new email", confirmUrl)}
+      <p style="margin:24px 0 0;font-size:13px;color:#6B7E72;text-align:center;">If you didn't request this change, please ignore this email — your current email address will remain unchanged.</p>
+    `,
+    footerNote: "You're receiving this because an email address change was requested for your Plantet account.",
+  });
+}
+
+// ─── Password changed notification ───────────────────────────────────────────
+
+export function buildPasswordChangedHtml(): string {
+  const siteUrl = siteBase();
+  return emailBase({
+    title: "Your Plantet password was changed",
+    heading: "Password changed",
+    subheading: "Your account security has been updated",
+    body: `
+      <p style="margin:0 0 20px;">This is a confirmation that the password for your Plantet account was successfully changed.</p>
+      <p style="margin:0 0 20px;padding:16px 20px;background:#EFE7D6;border:1px solid #DED6C4;border-radius:10px;font-size:14px;color:#16201B;">If you made this change, no further action is needed. If you did <strong>not</strong> make this change, your account may be compromised — please reset your password immediately.</p>
+      ${ctaBtn("Reset my password", `${siteUrl}/forgot-password`)}
+    `,
+    footerNote: "You're receiving this because your Plantet account password was recently changed.",
+  });
+}
+
+// ─── Email address changed notification ──────────────────────────────────────
+
+export function buildEmailChangedHtml({ newEmail }: { newEmail: string }): string {
+  const siteUrl = siteBase();
+  return emailBase({
+    title: "Your Plantet email address was changed",
+    heading: "Email address updated",
+    subheading: "Your account email has been changed",
+    body: `
+      <p style="margin:0 0 20px;">This is a confirmation that the email address on your Plantet account was changed to <strong>${newEmail}</strong>.</p>
+      <p style="margin:0 0 20px;padding:16px 20px;background:#EFE7D6;border:1px solid #DED6C4;border-radius:10px;font-size:14px;color:#16201B;">If you made this change, no further action is needed. If you did <strong>not</strong> make this change, please contact support immediately.</p>
+      ${ctaBtn("Contact support", `${siteUrl}/support`)}
+    `,
+    footerNote: "You're receiving this because the email address on your Plantet account was recently changed.",
+  });
+}
+
 // ─── Order confirmation (buyer) ──────────────────────────────────────────────
 
 export function buildOrderConfirmationHtml({
