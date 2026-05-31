@@ -45,6 +45,7 @@ async function restoreListingStock(
         .update({
           quantity: inv.quantity + qty,
           listing_quantity: Math.max(0, (inv.listing_quantity ?? 0) + qty),
+          listing_id: listingId,
         })
         .eq("id", inventoryId);
     }
