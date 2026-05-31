@@ -1,5 +1,8 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import GardenTabs from "@/components/garden/garden-tabs";
 import { WishlistClient } from "@/components/garden/wishlist-client";
 import { WishlistVisibilityToggle } from "@/components/garden/wishlist-visibility-toggle";
@@ -30,10 +33,15 @@ export default async function WishlistPage() {
           <h1 className="text-2xl font-bold">My Garden</h1>
           <p className="text-muted-foreground text-sm mt-0.5">Plants you want to grow someday</p>
         </div>
-        <WishlistVisibilityToggle
-          initialPublic={profile?.wishlist_public ?? false}
-          username={profile?.username}
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          <WishlistVisibilityToggle
+            initialPublic={profile?.wishlist_public ?? false}
+            username={profile?.username}
+          />
+          <Link href="/garden/wishlist/import" className={cn(buttonVariants({ variant: "outline" }))}>
+            Bulk Upload
+          </Link>
+        </div>
       </div>
 
       <GardenTabs />
