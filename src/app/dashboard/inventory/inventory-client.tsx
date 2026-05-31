@@ -237,6 +237,9 @@ export default function InventoryClient({
   const [showArchived, setShowArchived] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
+  const [selectedArchivedIds, setSelectedArchivedIds] = useState<Set<string>>(new Set());
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
+  const [bulkOperating, setBulkOperating] = useState(false);
   const [search, setSearch] = useState(initialSearch);
   const [categoryFilter, setCategoryFilter] = useState(initialCategory);
   const [modal, setModal] = useState<ModalState>(null);
@@ -979,6 +982,50 @@ export default function InventoryClient({
     setConfirmDeleteId(null);
     if (error) { toast.error(error.message); return; }
     toast.success("Item permanently deleted");
+    router.refresh();
+  }
+
+  function toggleArchivedSelection(id: string) {
+    setSelectedArchivedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  async function bulkRestoreArchived() {
+    setBulkOperating(true);
+    const supabase = createClient();
+    const ids = [...selectedArchivedIds];
+    const rows = archivedRows.filter(r => ids.includes(r.id));
+    await Promise.all([
+      supabase.from("inventory").update({ archived_at: null }).in("id", ids),
+      ...rows.filter(r => r.listing_id).map(r =>
+        supabase.from("listings").update({ status: "active" }).eq("id", r.listing_id!)
+      ),
+    ]);
+    setBulkOperating(false);
+    setSelectedArchivedIds(new Set());
+    toast.success(`${ids.length} item${ids.length !== 1 ? "s" : ""} restored`);
+    router.refresh();
+  }
+
+  async function bulkDeleteArchived() {
+    setBulkOperating(true);
+    const supabase = createClient();
+    const ids = [...selectedArchivedIds];
+    const rows = archivedRows.filter(r => ids.includes(r.id));
+    const listingIds = rows.filter(r => r.listing_id).map(r => r.listing_id!);
+    await Promise.all([
+      ...(listingIds.length ? [supabase.from("listings").update({ status: "paused" }).in("id", listingIds)] : []),
+      supabase.from("listings").update({ status: "paused" }).in("inventory_id", ids),
+    ]);
+    const { error } = await supabase.from("inventory").delete().in("id", ids);
+    setBulkOperating(false);
+    setConfirmBulkDelete(false);
+    setSelectedArchivedIds(new Set());
+    if (error) { toast.error(error.message); return; }
+    toast.success(`${ids.length} item${ids.length !== 1 ? "s" : ""} permanently deleted`);
     router.refresh();
   }
 
@@ -2261,14 +2308,78 @@ export default function InventoryClient({
       {/* Archived */}
       {archivedRows.length > 0 && (
         <div className="mt-8 border-t pt-6">
-          <button
-            onClick={() => setShowArchived(v => !v)}
-            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-3"
-          >
-            {showArchived ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-            Archived ({archivedRows.length})
-            <span className="text-xs bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400 rounded-full px-2 py-0.5">Deleted in 30 days</span>
-          </button>
+          <div className="flex items-center gap-3 mb-3">
+            <button
+              onClick={() => setShowArchived(v => !v)}
+              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {showArchived ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              Archived ({archivedRows.length})
+              <span className="text-xs bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400 rounded-full px-2 py-0.5">Deleted in 30 days</span>
+            </button>
+            {showArchived && (
+              <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer ml-auto select-none">
+                <input
+                  type="checkbox"
+                  checked={selectedArchivedIds.size === archivedRows.length && archivedRows.length > 0}
+                  onChange={e => {
+                    if (e.target.checked) setSelectedArchivedIds(new Set(archivedRows.map(r => r.id)));
+                    else setSelectedArchivedIds(new Set());
+                  }}
+                  className="rounded"
+                />
+                Select all
+              </label>
+            )}
+          </div>
+
+          {/* Bulk action bar */}
+          {showArchived && selectedArchivedIds.size > 0 && (
+            <div className="mb-3 flex items-center gap-3 flex-wrap rounded-lg border bg-muted/30 px-4 py-2.5 text-sm">
+              <span className="font-medium">{selectedArchivedIds.size} selected</span>
+              {confirmBulkDelete ? (
+                <>
+                  <span className="text-destructive font-medium">Permanently delete {selectedArchivedIds.size} item{selectedArchivedIds.size !== 1 ? "s" : ""}? This cannot be undone.</span>
+                  <button
+                    onClick={bulkDeleteArchived}
+                    disabled={bulkOperating}
+                    className="text-xs bg-destructive hover:bg-destructive/90 text-destructive-foreground px-2.5 py-1 rounded disabled:opacity-50 transition-colors"
+                  >
+                    {bulkOperating ? "Deleting…" : "Yes, Delete"}
+                  </button>
+                  <button
+                    onClick={() => setConfirmBulkDelete(false)}
+                    className="text-xs border rounded px-2.5 py-1 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={bulkRestoreArchived}
+                    disabled={bulkOperating}
+                    className="text-xs text-leaf hover:underline disabled:opacity-50"
+                  >
+                    {bulkOperating ? "Restoring…" : "Restore"}
+                  </button>
+                  <button
+                    onClick={() => setConfirmBulkDelete(true)}
+                    className="text-xs text-destructive hover:underline"
+                  >
+                    Delete
+                  </button>
+                  <button
+                    onClick={() => setSelectedArchivedIds(new Set())}
+                    className="ml-auto text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    Clear
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+
           {showArchived && (
             <div className="space-y-2 opacity-80">
               {archivedGroups.map(group => (
@@ -2281,6 +2392,12 @@ export default function InventoryClient({
                   <div className="divide-y divide-border/40">
                     {group.variants.map(row => (
                       <div key={row.id} className="flex items-center gap-3 px-4 py-2.5 text-sm flex-wrap">
+                        <input
+                          type="checkbox"
+                          checked={selectedArchivedIds.has(row.id)}
+                          onChange={() => toggleArchivedSelection(row.id)}
+                          className="rounded shrink-0"
+                        />
                         <span className="text-muted-foreground">{row.pot_size ?? (isSupply(row) ? "No variant" : "No size")}</span>
                         <span>{row.quantity} in stock</span>
                         {row.archived_at && (
