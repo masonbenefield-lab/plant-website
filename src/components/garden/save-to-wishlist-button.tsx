@@ -33,6 +33,7 @@ interface Props {
 export function SaveToWishlistButton({ plantName, variety, overlay = false }: Props) {
   const [open, setOpen] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [savedItemId, setSavedItemId] = useState<string | null>(null);
   const [name, setName] = useState(plantName);
   const [varietyVal, setVarietyVal] = useState(variety ?? "");
   const [notes, setNotes] = useState("");
@@ -42,8 +43,26 @@ export function SaveToWishlistButton({ plantName, variety, overlay = false }: Pr
   function handleOpen(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    if (saved) return;
+    if (loading) return;
+    if (saved) {
+      handleUnsave(e);
+      return;
+    }
     setOpen(true);
+  }
+
+  async function handleUnsave(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!savedItemId) return;
+    setLoading(true);
+    const res = await fetch(`/api/garden/wishlist?id=${savedItemId}`, { method: "DELETE" });
+    const data = await res.json();
+    setLoading(false);
+    if (data.error) { toast.error(data.error); return; }
+    setSaved(false);
+    setSavedItemId(null);
+    toast.success("Removed from your wishlist");
   }
 
   async function handleSave(e: React.FormEvent) {
@@ -66,8 +85,14 @@ export function SaveToWishlistButton({ plantName, variety, overlay = false }: Pr
       return;
     }
     setSaved(true);
+    setSavedItemId(data.id);
     setOpen(false);
-    toast.success("Added to your wishlist!");
+    toast.success("Added to your wishlist!", {
+      action: {
+        label: "View Wishlist",
+        onClick: () => { window.location.href = "/garden/wishlist"; },
+      },
+    });
   }
 
   return (
@@ -76,11 +101,12 @@ export function SaveToWishlistButton({ plantName, variety, overlay = false }: Pr
         <button
           type="button"
           onClick={handleOpen}
-          aria-label={saved ? "Saved to wishlist" : "Save to my wishlist"}
+          disabled={loading}
+          aria-label={saved ? "Remove from wishlist" : "Save to my wishlist"}
           className={cn(
             "p-1.5 rounded-full transition-all shadow-sm",
             saved
-              ? "bg-leaf text-white"
+              ? "bg-leaf text-white hover:bg-red-500"
               : "bg-black/40 text-white hover:bg-black/60"
           )}
         >
@@ -90,11 +116,12 @@ export function SaveToWishlistButton({ plantName, variety, overlay = false }: Pr
         <button
           type="button"
           onClick={handleOpen}
-          aria-label={saved ? "Saved to wishlist" : "Save to my wishlist"}
+          disabled={loading}
+          aria-label={saved ? "Remove from wishlist" : "Save to my wishlist"}
           className={cn(
             "p-2 rounded-full border transition-all shrink-0",
             saved
-              ? "border-leaf text-leaf bg-[#EBF0E6] dark:bg-forest/20"
+              ? "border-leaf text-leaf bg-[#EBF0E6] dark:bg-forest/20 hover:border-red-300 hover:text-red-500 hover:bg-red-50 dark:hover:border-red-800 dark:hover:bg-red-950/30"
               : "border-input text-muted-foreground hover:text-leaf hover:border-leaf"
           )}
         >
