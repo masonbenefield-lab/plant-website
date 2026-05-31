@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
 import { loadStripe } from "@stripe/stripe-js";
 import {
   Elements,
@@ -106,6 +107,7 @@ const SAVED_ADDRESS_KEY = "checkout_saved_address";
 
 export default function CheckoutForm({ listingId, auctionId, offerId, priceCents, quantity = 1, savedAddress }: CheckoutFormProps) {
   const router = useRouter();
+  const { resolvedTheme } = useTheme();
   const [step, setStep] = useState<"address" | "shipping" | "payment">("address");
   const [clientSecret, setClientSecret] = useState("");
   const [orderId, setOrderId] = useState("");
@@ -263,7 +265,7 @@ export default function CheckoutForm({ listingId, auctionId, offerId, priceCents
           <CardTitle>Payment</CardTitle>
         </CardHeader>
         <CardContent>
-          <Elements stripe={stripePromise} options={{ clientSecret }}>
+          <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: resolvedTheme === "dark" ? "night" : "stripe" } }}>
             <PaymentStep
               clientSecret={clientSecret}
               totalCents={totalCents}

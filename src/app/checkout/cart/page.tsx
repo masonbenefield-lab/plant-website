@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
 import Image from "next/image";
 import Link from "next/link";
 import { loadStripe } from "@stripe/stripe-js";
@@ -66,6 +67,7 @@ function PaymentStep({ clientSecret, totalCents, onSuccess }: { clientSecret: st
 export default function CartCheckoutPage() {
   const { items, totalCents: itemsTotalCents, clearCart } = useCart();
   const router = useRouter();
+  const { resolvedTheme } = useTheme();
   const [step, setStep] = useState<"address" | "shipping" | "payment">("address");
   const [clientSecret, setClientSecret] = useState("");
   const [orderId, setOrderId] = useState("");
@@ -240,7 +242,7 @@ export default function CartCheckoutPage() {
             <Card>
               <CardHeader><CardTitle>Payment</CardTitle></CardHeader>
               <CardContent>
-                <Elements stripe={stripePromise} options={{ clientSecret }}>
+                <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: resolvedTheme === "dark" ? "night" : "stripe" } }}>
                   <PaymentStep clientSecret={clientSecret} totalCents={grandTotalCents} onSuccess={onPaymentSuccess} />
                 </Elements>
               </CardContent>
