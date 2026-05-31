@@ -77,6 +77,10 @@ export default async function GardenPlantDetailPage({
 
   if (!plant) notFound();
 
+  const { data: originProfile } = plant.from_user_id
+    ? await supabase.from("profiles").select("username").eq("id", plant.from_user_id).single()
+    : { data: null };
+
   const status = plant.status as GardenPlantStatus;
   const gardenPublic = profile?.garden_public ?? false;
   const username = profile?.username ?? null;
@@ -196,7 +200,16 @@ export default async function GardenPlantDetailPage({
                 <div className="flex justify-between gap-3 text-sm">
                   <span className="text-muted-foreground shrink-0">From</span>
                   <span className="font-medium text-right flex items-center gap-1">
-                    {plant.source_name}
+                    {plant.origin_verified && originProfile?.username ? (
+                      <Link
+                        href={`/sellers/${originProfile.username}`}
+                        className="text-leaf hover:underline font-medium"
+                      >
+                        {plant.source_name}
+                      </Link>
+                    ) : (
+                      plant.source_name
+                    )}
                     {plant.origin_verified && (
                       <span className="text-xs text-leaf font-normal ml-1">✓ verified</span>
                     )}
