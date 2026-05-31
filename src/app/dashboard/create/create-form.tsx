@@ -172,6 +172,14 @@ export default function CreateInventoryPage() {
         setSaving(false);
         return;
       }
+      if (s.shippingMode === "weight" && !hasShipFrom) {
+        toast.error("Ship-from address required for weight-based shipping", {
+          description: "Add your ship-from address in Shipping Settings before using calculated rates.",
+          action: { label: "Go to Shipping Settings", onClick: () => router.push("/account#shipping-settings") },
+        });
+        setSaving(false);
+        return;
+      }
       if (s.shippingMode === "weight" && (!s.weightOz || parseFloat(s.weightOz) <= 0)) {
         toast.error("Enter a weight greater than 0 oz for calculated shipping");
         setHighlightWeightId(s.id);
