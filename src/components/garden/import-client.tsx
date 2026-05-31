@@ -4,7 +4,7 @@ import { useState, useRef, useCallback } from "react";
 import Papa from "papaparse";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Upload, FileText, AlertTriangle, CheckCircle2, Loader2, List } from "lucide-react";
+import { Upload, FileText, AlertTriangle, CheckCircle2, Loader2, List, Camera } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PlantReviewCard } from "@/components/garden/plant-review-card";
 import { createClient } from "@/lib/supabase/client";
@@ -112,6 +112,7 @@ function downloadTemplate() {
 export function ImportClient() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const photoScanRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const [drafts, setDrafts] = useState<PlantDraft[] | null>(null);
   const [parseError, setParseError] = useState("");
@@ -119,6 +120,8 @@ export function ImportClient() {
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [pasteText, setPasteText] = useState("");
   const [pasteMode, setPasteMode] = useState<"variety" | "type">("variety");
+  const [scanning, setScanning] = useState(false);
+  const [scanPreview, setScanPreview] = useState<string | null>(null);
 
   function handleFile(file: File) {
     if (!file.name.endsWith(".csv")) {
@@ -181,6 +184,61 @@ export function ImportClient() {
         images: [],
       }))
     );
+  }
+
+  async function handlePhotoScan(file: File) {
+    if (!file.type.startsWith("image/")) {
+      setParseError("Please select an image file.");
+      return;
+    }
+    setParseError("");
+    setScanning(true);
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const dataUrl = reader.result as string;
+      setScanPreview(dataUrl);
+      const base64 = dataUrl.split(",")[1];
+      const mediaType = file.type;
+
+      try {
+        const res = await fetch("/api/garden/scan-list", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ image: base64, mediaType }),
+        });
+        const data = await res.json() as { names?: string[]; error?: string };
+        if (data.error || !data.names?.length) {
+          setParseError(data.error ?? "No plant names found in the image. Try a clearer photo.");
+          setScanning(false);
+          return;
+        }
+        // Build drafts directly from extracted names (as varieties by default)
+        const extracted = data.names.slice(0, MAX_BATCH);
+        setDrafts(
+          extracted.map((name, i) => ({
+            id: `draft-${i}-${Date.now()}`,
+            name: "",
+            variety: name.trim(),
+            status: "growing" as GardenPlantStatus,
+            statusInvalid: false,
+            location: "",
+            planted_at: "",
+            source_type: "",
+            source_name: "",
+            notes: "",
+            public_notes: "",
+            images: [],
+            _fromScan: true,
+          } as PlantDraft))
+        );
+      } catch {
+        setParseError("Something went wrong scanning the image. Please try again.");
+      } finally {
+        setScanning(false);
+      }
+    };
+    reader.readAsDataURL(file);
   }
 
   const onDrop = useCallback((e: React.DragEvent) => {
@@ -277,9 +335,16 @@ export function ImportClient() {
   if (drafts !== null) {
     const invalidCount = drafts.filter((d) => !d.name.trim()).length;
     const flaggedCount = drafts.filter((d) => d.statusInvalid).length;
+    const fromScan = (drafts[0] as PlantDraft & { _fromScan?: boolean })?._fromScan === true;
 
     return (
       <div className="space-y-6">
+        {fromScan && (
+          <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
+            <AlertTriangle size={15} className="shrink-0 mt-0.5" />
+            <p>These names were extracted by AI — please review each one before saving. Unusual variety names may need a typo fix.</p>
+          </div>
+        )}
         {/* Summary bar */}
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-muted/40 px-4 py-3">
           <div className="flex items-center gap-3 flex-wrap text-sm">
@@ -380,6 +445,61 @@ export function ImportClient() {
           {parseError}
         </p>
       )}
+
+      {/* Divider */}
+      <div className="flex items-center gap-3">
+        <div className="flex-1 border-t" />
+        <span className="text-xs text-muted-foreground">or</span>
+        <div className="flex-1 border-t" />
+      </div>
+
+      {/* Photo scan */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Camera size={16} className="text-muted-foreground" />
+          <p className="font-medium text-sm">Scan a photo of a list</p>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Upload a photo of a handwritten or printed plant list — AI will extract the names for you to review.
+        </p>
+        {scanPreview && (
+          <div className="relative w-24 h-24 rounded-lg overflow-hidden border">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={scanPreview} alt="Scan preview" className="w-full h-full object-cover" />
+          </div>
+        )}
+        <div className="flex items-center gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={scanning}
+            onClick={() => photoScanRef.current?.click()}
+            className="gap-2"
+          >
+            {scanning ? (
+              <>
+                <Loader2 size={14} className="animate-spin" />
+                Scanning…
+              </>
+            ) : (
+              <>
+                <Camera size={14} />
+                Choose photo
+              </>
+            )}
+          </Button>
+          {scanning && (
+            <p className="text-xs text-muted-foreground">Reading plant names with AI…</p>
+          )}
+        </div>
+        <input
+          ref={photoScanRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePhotoScan(f); e.target.value = ""; }}
+        />
+      </div>
 
       {/* Divider */}
       <div className="flex items-center gap-3">
