@@ -15,7 +15,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Search, Heart, Package, Rss, Sprout, MessageSquare, Users, UsersRound } from "lucide-react";
+import { Search, Heart, Package, Rss, Sprout, MessageSquare, Users } from "lucide-react";
 import { CartButton } from "@/components/cart-drawer";
 import type { User } from "@supabase/supabase-js";
 
@@ -174,7 +174,6 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
                 </Link>
                 <NavIcon href="/garden" label="Garden"><Sprout size={15} /></NavIcon>
                 <NavIcon href="/following" label="Following"><Users size={15} /></NavIcon>
-                <NavIcon href="/community" label="Community"><UsersRound size={15} /></NavIcon>
                 <Link href="/messages" className="relative flex flex-col items-center gap-0.5 px-1.5 py-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
                   <MessageSquare size={15} />
                   {liveUnread > 0 && (
