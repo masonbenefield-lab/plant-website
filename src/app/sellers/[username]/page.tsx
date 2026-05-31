@@ -68,9 +68,11 @@ export default async function SellerStorefront({
 
   const adminClient = createAdminClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
-  // Fetch active (non-archived) inventory IDs so we can exclude listings whose inventory was archived or permanently deleted
-  const { data: activeInv } = await adminClient.from("inventory").select("id").eq("seller_id", profile.id).is("archived_at", null);
+  // Fetch active (non-archived) inventory rows, including which listing each row currently points to as primary
+  const { data: activeInv } = await adminClient.from("inventory").select("id, listing_id").eq("seller_id", profile.id).is("archived_at", null);
   const activeInvIds = new Set(activeInv?.map(r => r.id) ?? []);
+  // Set of listing IDs that are the current primary listing for some active inventory row
+  const primaryListingIds = new Set(activeInv?.filter(r => r.listing_id).map(r => r.listing_id!) ?? []);
 
   const [{ data: rawListings }, { data: auctions }, { data: ratings }, { count: followerCount }, { data: gardenPlants }, { data: announcements }, { data: wishlistItems }] =
     await Promise.all([
@@ -90,11 +92,16 @@ export default async function SellerStorefront({
         : Promise.resolve({ data: [] }),
     ]);
 
-  // Only show listings with no inventory link (standalone), or whose inventory row still exists and is active
+  // Only show listings that are genuinely current:
+  //  - Standalone (no inventory_id): always show
+  //  - Linked to active inventory AND is that inventory row's current primary listing
+  //    (guards against orphaned old listing rows that still have inventory_id set but were
+  //     superseded when a new listing was created for the same inventory row)
   const listings = (rawListings ?? []).filter(l => {
     const invId = (l as { inventory_id?: string | null }).inventory_id;
-    if (!invId) return true;           // standalone listing — no inventory link, always show
-    return activeInvIds.has(invId);    // hide if inventory was archived or permanently deleted
+    if (!invId) return true;                        // standalone — no inventory link
+    if (!activeInvIds.has(invId)) return false;     // inventory deleted or archived
+    return primaryListingIds.has(l.id);             // must be the inventory's current primary listing
   });
 
   const reviewerIds = [...new Set(ratings?.map((r) => r.reviewer_id) ?? [])];
