@@ -112,6 +112,8 @@ export async function POST(request: Request) {
     const shippingCents = Math.max(0, Math.round(shippingCostCents ?? 0));
     const amountCents = itemAmountCents + shippingCents;
     const feeCents = Math.round(itemAmountCents * (feePercent / 100));
+    // Hold shipping in platform account when buyer paid a Shippo-calculated rate — used to cover label purchase
+    const applicationFeeCents = shippoRateId ? feeCents + shippingCents : feeCents;
 
     const admin = adminClient();
     const newListingQty = listing.quantity - quantity;
@@ -136,7 +138,7 @@ export async function POST(request: Request) {
     const paymentIntent = await getStripe().paymentIntents.create({
       amount: amountCents,
       currency: "usd",
-      application_fee_amount: feeCents,
+      application_fee_amount: applicationFeeCents,
       on_behalf_of: sellerProfile.stripe_account_id,
       transfer_data: { destination: sellerProfile.stripe_account_id },
       metadata: {
@@ -243,11 +245,12 @@ export async function POST(request: Request) {
     const auctionShippingCents = Math.max(0, Math.round(shippingCostCents ?? 0));
     const amountCents = auction.current_bid_cents + auctionShippingCents;
     const feeCents = Math.round(auction.current_bid_cents * (feePercent / 100));
+    const auctionApplicationFeeCents = shippoRateId ? feeCents + auctionShippingCents : feeCents;
 
     const paymentIntent = await getStripe().paymentIntents.create({
       amount: amountCents,
       currency: "usd",
-      application_fee_amount: feeCents,
+      application_fee_amount: auctionApplicationFeeCents,
       on_behalf_of: sellerProfile.stripe_account_id,
       transfer_data: { destination: sellerProfile.stripe_account_id },
     });

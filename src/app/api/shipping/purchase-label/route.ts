@@ -3,8 +3,6 @@ import { createClient } from "@/lib/supabase/server";
 import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import { purchaseLabel } from "@/lib/shippo";
-import { getStripe } from "@/lib/stripe";
-import type Stripe from "stripe";
 
 function adminClient() {
   return createSupabaseAdmin<Database>(
@@ -18,13 +16,13 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { orderId, rateId, rateAmountCents } = await request.json() as { orderId: string; rateId?: string; rateAmountCents?: number };
+  const { orderId, rateId } = await request.json() as { orderId: string; rateId?: string };
   if (!orderId) return NextResponse.json({ error: "orderId required" }, { status: 400 });
 
   // Confirm caller owns this order as seller
   const { data: order } = await supabase
     .from("orders")
-    .select("id, seller_id, shippo_rate_id, shippo_transaction_id, label_url, stripe_payment_intent_id")
+    .select("id, seller_id, shippo_rate_id, shippo_transaction_id, label_url")
     .eq("id", orderId)
     .eq("seller_id", user.id)
     .single();
@@ -50,26 +48,6 @@ export async function POST(request: Request) {
       label_url: labelUrl,
       status: "shipped",
     }).eq("id", orderId);
-
-    // Recover postage cost from seller's Stripe transfer (best-effort, never blocks label delivery)
-    if (rateAmountCents && order.stripe_payment_intent_id) {
-      try {
-        const stripe = getStripe();
-        const pi = await stripe.paymentIntents.retrieve(order.stripe_payment_intent_id, {
-          expand: ["latest_charge.transfer"],
-        });
-        const charge = pi.latest_charge as Stripe.Charge | null;
-        const transfer = charge?.transfer as Stripe.Transfer | null;
-        if (transfer?.id) {
-          await stripe.transfers.createReversal(transfer.id, {
-            amount: rateAmountCents,
-            description: `Postage for order ${orderId}`,
-          });
-        }
-      } catch (stripeErr) {
-        console.error("Postage reversal failed:", stripeErr);
-      }
-    }
 
     return NextResponse.json({ labelUrl, trackingNumber });
   } catch (err) {
