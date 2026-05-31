@@ -252,6 +252,7 @@ export default function InventoryClient({
   // Inline qty edit
   const [editingQtyId, setEditingQtyId] = useState<string | null>(null);
   const [editingQtyValue, setEditingQtyValue] = useState("");
+  const [highlightStockId, setHighlightStockId] = useState<string | null>(null);
   const [editingListingQtyId, setEditingListingQtyId] = useState<string | null>(null);
   const [editingListingQtyValue, setEditingListingQtyValue] = useState("");
   const [relistingId, setRelistingId] = useState<string | null>(null);
@@ -581,6 +582,8 @@ export default function InventoryClient({
     if (isNaN(val) || val < 0 || !row.listing_id) return;
     if (val > row.quantity) {
       toast.error(`Only ${row.quantity} in stock — can't list more than you have`);
+      setHighlightStockId(row.id);
+      setTimeout(() => setHighlightStockId(null), 2000);
       return;
     }
     const newQty = Math.max(0, val);
@@ -1478,7 +1481,10 @@ export default function InventoryClient({
           ) : (
             <button
               onClick={() => { setEditingQtyId(row.id); setEditingQtyValue(String(row.quantity)); }}
-              className="inline-flex items-center gap-1 text-sm font-medium tabular-nums hover:text-leaf group"
+              className={cn(
+                "inline-flex items-center gap-1 text-sm font-medium tabular-nums hover:text-leaf group rounded px-0.5 transition-all",
+                highlightStockId === row.id && "ring-2 ring-destructive ring-offset-1 text-destructive"
+              )}
               title="Click to edit total stock"
             >
               {row.quantity} <Pencil size={11} className="opacity-0 group-hover:opacity-50 transition-opacity" />
@@ -1677,7 +1683,10 @@ export default function InventoryClient({
           ) : (
             <button
               onClick={() => { setEditingQtyId(row.id); setEditingQtyValue(String(row.quantity)); }}
-              className="inline-flex items-center gap-1 font-medium tabular-nums hover:text-leaf group"
+              className={cn(
+                "inline-flex items-center gap-1 font-medium tabular-nums hover:text-leaf group rounded px-0.5 transition-all",
+                highlightStockId === row.id && "ring-2 ring-destructive ring-offset-1 text-destructive"
+              )}
               title="Click to edit total stock"
             >
               {row.quantity}
