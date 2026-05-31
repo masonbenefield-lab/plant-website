@@ -583,15 +583,15 @@ export default async function LandingPage() {
       </section>
 
       {/* ── How it works ──────────────────────────────────────────── */}
-      <section className="py-16 sm:py-20 px-4 bg-leaf text-white">
+      <section className="py-16 sm:py-20 px-4 bg-sand">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="text-2xl sm:text-3xl font-bold mb-3">How it works</h2>
-            <p className="text-[#DFE7D4] max-w-md mx-auto">Simple for buyers. Simple for sellers.</p>
+            <h2 className="text-2xl sm:text-3xl font-bold mb-3 text-forest">How it works</h2>
+            <p className="text-muted-foreground max-w-md mx-auto">Simple for buyers. Simple for sellers.</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8">
-            <div className="bg-white/10 rounded-2xl p-6 sm:p-8">
-              <p className="text-xs font-bold uppercase tracking-widest text-[#C5D4BC] mb-6">For Buyers</p>
+            <div className="bg-paper rounded-2xl p-6 sm:p-8 shadow-sm border border-rule">
+              <p className="text-xs font-bold uppercase tracking-widest text-leaf mb-6">For Buyers</p>
               <div className="space-y-6">
                 {([
                   { n: "1", title: "Browse the shop or auctions", desc: "Search by plant name, category, or price. Filter to in-stock only. Bid on live auctions in real time." },
@@ -599,22 +599,22 @@ export default async function LandingPage() {
                   { n: "3", title: "Track it in your garden log", desc: "Once it arrives, add it to My Garden. Log care events, set reminders, and share your collection." },
                 ] as const).map((s) => (
                   <div key={s.n} className="flex gap-4">
-                    <div className="w-9 h-9 rounded-full bg-white text-leaf flex items-center justify-center text-sm font-bold shrink-0 shadow">
+                    <div className="w-9 h-9 rounded-full bg-forest text-cream flex items-center justify-center text-sm font-bold shrink-0">
                       {s.n}
                     </div>
                     <div>
-                      <p className="font-semibold text-white mb-0.5">{s.title}</p>
-                      <p className="text-sm text-[#DFE7D4] leading-relaxed">{s.desc}</p>
+                      <p className="font-semibold text-ink mb-0.5">{s.title}</p>
+                      <p className="text-sm text-muted-foreground leading-relaxed">{s.desc}</p>
                     </div>
                   </div>
                 ))}
               </div>
-              <Link href="/shop" className="inline-block mt-7 text-sm font-medium text-white underline underline-offset-2 hover:text-[#C5D4BC]">
+              <Link href="/shop" className="inline-block mt-7 text-sm font-medium text-leaf hover:text-forest underline underline-offset-2">
                 Browse plants →
               </Link>
             </div>
-            <div className="bg-white/10 rounded-2xl p-6 sm:p-8">
-              <p className="text-xs font-bold uppercase tracking-widest text-[#C5D4BC] mb-6">For Sellers</p>
+            <div className="bg-paper rounded-2xl p-6 sm:p-8 shadow-sm border border-rule">
+              <p className="text-xs font-bold uppercase tracking-widest text-leaf mb-6">For Sellers</p>
               <div className="space-y-6">
                 {([
                   { n: "1", title: "Connect your bank account", desc: "Sign up free and link your bank via Stripe. Takes under 10 minutes — no monthly fees, ever." },
@@ -622,17 +622,17 @@ export default async function LandingPage() {
                   { n: "3", title: "Get paid when you sell", desc: "Funds deposit directly to your bank after each sale. Buyer's shipping address lands in your dashboard, ready to ship." },
                 ] as const).map((s) => (
                   <div key={s.n} className="flex gap-4">
-                    <div className="w-9 h-9 rounded-full bg-white text-leaf flex items-center justify-center text-sm font-bold shrink-0 shadow">
+                    <div className="w-9 h-9 rounded-full bg-forest text-cream flex items-center justify-center text-sm font-bold shrink-0">
                       {s.n}
                     </div>
                     <div>
-                      <p className="font-semibold text-white mb-0.5">{s.title}</p>
-                      <p className="text-sm text-[#DFE7D4] leading-relaxed">{s.desc}</p>
+                      <p className="font-semibold text-ink mb-0.5">{s.title}</p>
+                      <p className="text-sm text-muted-foreground leading-relaxed">{s.desc}</p>
                     </div>
                   </div>
                 ))}
               </div>
-              <Link href="/signup" className="inline-block mt-7 text-sm font-medium text-white underline underline-offset-2 hover:text-[#C5D4BC]">
+              <Link href="/signup" className="inline-block mt-7 text-sm font-medium text-leaf hover:text-forest underline underline-offset-2">
                 Start selling free →
               </Link>
             </div>
@@ -666,11 +666,11 @@ export default async function LandingPage() {
       </section>
 
       {/* ── CTA ───────────────────────────────────────────────────── */}
-      <section className="py-20 px-4 bg-gradient-to-br from-forest to-emerald-600 text-white text-center">
+      <section className="py-20 px-4 text-white text-center" style={{ background: "linear-gradient(160deg, #235140, #19392B)" }}>
         <div className="max-w-xl mx-auto">
           <span className="text-4xl mb-6 block">🌱</span>
           <h2 className="text-3xl sm:text-4xl font-bold mb-4">Ready to grow your plant business?</h2>
-          <p className="text-[#DFE7D4] mb-8 text-base sm:text-lg">
+          <p className="text-cream/80 mb-8 text-base sm:text-lg">
             Join hundreds of nurseries and hobbyists already buying and selling on Plantet.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
