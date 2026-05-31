@@ -274,9 +274,9 @@ export function StorefrontGarden({ plants, username }: { plants: GardenPlant[]; 
                   )}
                 </div>
                 <CardContent className="p-3 space-y-1">
-                  <p className="font-semibold text-sm leading-tight">{plant.name}</p>
+                  <p className="font-semibold text-sm leading-tight">{plant.variety || plant.name}</p>
                   {plant.variety && (
-                    <p className="text-xs text-muted-foreground">{plant.variety}</p>
+                    <p className="text-xs text-muted-foreground">{plant.name}</p>
                   )}
                   <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
                     <span className={cn("text-xs px-1.5 py-0.5 rounded-full font-medium", GARDEN_STATUS_COLOR[plant.status] ?? "bg-muted text-muted-foreground")}>
