@@ -14,8 +14,8 @@ export async function GET(req: Request) {
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, username, avatar_url")
-    .ilike("username", `%${q}%`)
+    .select("id, username, display_name, avatar_url")
+    .or(`username.ilike.%${q}%,display_name.ilike.%${q}%`)
     .order("username")
     .limit(10);
 

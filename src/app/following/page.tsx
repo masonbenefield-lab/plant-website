@@ -22,7 +22,7 @@ export default async function FollowingPage() {
   const allIds = [...new Set([...followingIds, ...followerIds, ...blockedIds])];
 
   const { data: profiles } = allIds.length
-    ? await supabase.from("profiles").select("id, username, avatar_url").in("id", allIds)
+    ? await supabase.from("profiles").select("id, username, display_name, avatar_url").in("id", allIds)
     : { data: [] };
 
   const profileMap = Object.fromEntries((profiles ?? []).map((p) => [p.id, p]));

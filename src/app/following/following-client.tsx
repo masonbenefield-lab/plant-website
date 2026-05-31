@@ -13,7 +13,7 @@ import FollowButton from "@/components/follow-button";
 import { toast } from "sonner";
 import { MoreHorizontal, ShieldOff, Search, X, Loader2 } from "lucide-react";
 
-type Profile = { id: string; username: string; avatar_url: string | null };
+type Profile = { id: string; username: string; display_name: string | null; avatar_url: string | null };
 
 interface Props {
   currentUserId: string;
@@ -138,7 +138,7 @@ export default function FollowingClient({ currentUserId, followingIds, followerI
               autoFocus
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by username…"
+              placeholder="Search by username or shop name…"
               className="pl-9 pr-9"
             />
             {searchQuery && (
@@ -254,8 +254,11 @@ function UserCard({
           href={`/sellers/${profile.username}`}
           className="font-medium text-sm hover:text-green-700 hover:underline block truncate"
         >
-          {profile.username}
+          {profile.display_name ?? profile.username}
         </Link>
+        {profile.display_name && (
+          <span className="text-xs text-muted-foreground block truncate">@{profile.username}</span>
+        )}
         {tab === "followers" && (
           <span className="text-xs text-muted-foreground">
             {following.has(profile.id) ? "Follows you back" : "Follows you"}
