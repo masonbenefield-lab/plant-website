@@ -272,7 +272,7 @@ export default async function LandingPage() {
       </section>
 
       {/* ── Trust bar ─────────────────────────────────────────────── */}
-      <section className="border-b bg-muted/40 py-5 px-4">
+      <section className="border-b bg-[#DDD3BE] dark:bg-muted py-5 px-4">
         <div className="max-w-4xl mx-auto">
           <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-muted-foreground">
             <span className="flex items-center gap-2"><span className="text-leaf font-bold text-base">2,400+</span> plants listed</span>
@@ -390,7 +390,7 @@ export default async function LandingPage() {
 
       {/* ── Featured sellers (Nursery plan) ──────────────────────── */}
       {featuredListings.length > 0 && (
-        <section className="py-14 sm:py-16 px-4 bg-muted/40">
+        <section className="py-14 sm:py-16 px-4 bg-[#DDD3BE] dark:bg-muted">
           <div className="max-w-5xl mx-auto">
             <div className="flex items-center justify-between mb-6">
               <div>
@@ -442,7 +442,7 @@ export default async function LandingPage() {
       )}
 
       {/* ── Who it's for ──────────────────────────────────────────── */}
-      <section className="py-16 sm:py-20 px-4 bg-muted">
+      <section className="py-16 sm:py-20 px-4 bg-background">
         <div className="max-w-5xl mx-auto">
           <h2 className="text-2xl sm:text-3xl font-bold text-center mb-3">Who it&apos;s for</h2>
           <p className="text-muted-foreground text-center mb-10 max-w-xl mx-auto">Whether you&apos;re moving nursery stock or trading rare cuttings, Plantet was built for you.</p>
@@ -459,7 +459,7 @@ export default async function LandingPage() {
       </section>
 
       {/* ── Features ──────────────────────────────────────────────── */}
-      <section className="py-16 sm:py-20 px-4 bg-background">
+      <section className="py-16 sm:py-20 px-4 bg-[#DDD3BE] dark:bg-muted">
         <div className="max-w-5xl mx-auto">
           <h2 className="text-2xl sm:text-3xl font-bold text-center mb-3">Everything you need</h2>
           <p className="text-muted-foreground text-center mb-10 max-w-xl mx-auto">One platform handles your storefront, payments, orders, and reputation — so you can focus on growing.</p>
@@ -553,7 +553,7 @@ export default async function LandingPage() {
       </section>
 
       {/* ── Transparent pricing ───────────────────────────────────── */}
-      <section className="py-16 sm:py-20 px-4 bg-muted">
+      <section className="py-16 sm:py-20 px-4 bg-[#DDD3BE] dark:bg-muted">
         <div className="max-w-3xl mx-auto text-center">
           <h2 className="text-2xl sm:text-3xl font-bold mb-3">Simple, honest pricing</h2>
           <p className="text-muted-foreground mb-10 max-w-md mx-auto">
@@ -583,7 +583,7 @@ export default async function LandingPage() {
       </section>
 
       {/* ── How it works ──────────────────────────────────────────── */}
-      <section className="py-16 sm:py-20 px-4 bg-sand dark:bg-muted">
+      <section className="py-16 sm:py-20 px-4 bg-background">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-2xl sm:text-3xl font-bold mb-3 text-foreground">How it works</h2>
@@ -641,7 +641,7 @@ export default async function LandingPage() {
       </section>
 
       {/* ── Testimonials ──────────────────────────────────────────── */}
-      <section className="py-16 sm:py-20 px-4 bg-background">
+      <section className="py-16 sm:py-20 px-4 bg-[#DDD3BE] dark:bg-muted">
         <div className="max-w-5xl mx-auto">
           <h2 className="text-2xl sm:text-3xl font-bold text-center mb-3">Sellers love it</h2>
           <p className="text-muted-foreground text-center mb-10 max-w-xl mx-auto">Real stories from nurseries and hobbyists who&apos;ve found their plant community.</p>
