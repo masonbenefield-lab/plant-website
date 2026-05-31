@@ -1369,6 +1369,13 @@ export default function InventoryClient({
             {row.listing_sale_price_cents && row.listing_sale_ends_at && new Date(row.listing_sale_ends_at) > new Date() && (
               <span className="text-xs text-orange-600 font-medium">✦ Sale</span>
             )}
+            {row.free_shipping ? (
+              <span className="text-xs text-muted-foreground">Free shipping</span>
+            ) : row.shipping_cost_cents ? (
+              <span className="text-xs text-muted-foreground">{centsToDisplay(row.shipping_cost_cents)} shipping</span>
+            ) : row.shipping_weight_oz ? (
+              <span className="text-xs text-muted-foreground">Calculated shipping</span>
+            ) : null}
             <button
               onClick={() => openManageListing(row)}
               className={cn("text-xs hover:underline", managingListingId === row.id ? "text-foreground font-medium" : "text-blue-600")}
@@ -1510,6 +1517,13 @@ export default function InventoryClient({
                   <span className="text-xs text-orange-600 font-medium">✦ Sale</span>
                 )}
               </div>
+              {row.free_shipping ? (
+                <span className="text-xs text-muted-foreground">Free shipping</span>
+              ) : row.shipping_cost_cents ? (
+                <span className="text-xs text-muted-foreground">{centsToDisplay(row.shipping_cost_cents)} shipping</span>
+              ) : row.shipping_weight_oz ? (
+                <span className="text-xs text-muted-foreground">Calculated shipping</span>
+              ) : null}
               <button
                 onClick={() => openManageListing(row)}
                 className={cn("text-xs hover:underline", managingListingId === row.id ? "text-foreground font-medium" : "text-blue-600")}
