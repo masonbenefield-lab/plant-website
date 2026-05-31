@@ -168,12 +168,24 @@ function isSupply(row: Row): boolean {
 function groupRows(rows: Row[]): PlantGroup[] {
   const map = new Map<string, PlantGroup>();
   for (const row of rows) {
-    const key = `${row.plant_name.toLowerCase()}|||${(row.variety ?? "").toLowerCase()}`;
-    if (!map.has(key)) map.set(key, { key, plant_name: row.plant_name, variety: row.variety, variants: [] });
+    const supply = isSupply(row);
+    // Supplies: group by item name only — variety is the per-row variant label
+    // Plants: group by name + variety — pot_size is the per-row size
+    const key = supply
+      ? row.plant_name.toLowerCase()
+      : `${row.plant_name.toLowerCase()}|||${(row.variety ?? "").toLowerCase()}`;
+    if (!map.has(key)) {
+      map.set(key, { key, plant_name: row.plant_name, variety: supply ? "" : row.variety, variants: [] });
+    }
     map.get(key)!.variants.push(row);
   }
   for (const g of map.values()) {
-    g.variants.sort((a, b) => (a.pot_size ?? "zzz").localeCompare(b.pot_size ?? "zzz"));
+    const firstIsSupply = g.variants[0] ? isSupply(g.variants[0]) : false;
+    g.variants.sort((a, b) =>
+      firstIsSupply
+        ? (a.variety ?? "zzz").localeCompare(b.variety ?? "zzz")
+        : (a.pot_size ?? "zzz").localeCompare(b.pot_size ?? "zzz")
+    );
   }
   return Array.from(map.values()).sort((a, b) =>
     a.plant_name.localeCompare(b.plant_name) || a.variety.localeCompare(b.variety)
@@ -1258,11 +1270,14 @@ export default function InventoryClient({
 
     return (
       <div key={row.id} className="border-t border-border/40 px-4 py-3 space-y-2">
-        {/* Size + qty + actions */}
+        {/* Size / Variant + qty + actions */}
         <div className="flex items-center gap-2">
-          {row.pot_size
-            ? <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium">{row.pot_size}</span>
-            : <span className="text-xs text-muted-foreground italic">{isSupply(row) ? "No variant" : "No size"}</span>}
+          {(() => {
+            const label = isSupply(row) ? row.variety : row.pot_size;
+            return label
+              ? <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium">{label}</span>
+              : <span className="text-xs text-muted-foreground italic">{isSupply(row) ? "No variant" : "No size"}</span>;
+          })()}
           {row.notes && (
             <div className="relative group/note shrink-0">
               <StickyNote size={13} className="text-muted-foreground cursor-help" />
@@ -1381,14 +1396,15 @@ export default function InventoryClient({
     return (
       <>
       <tr key={row.id} className="border-t border-border/40 hover:bg-muted/20 transition-colors">
-        {/* Size */}
+        {/* Size / Variant */}
         <td className="py-3 pl-12 pr-3 w-28">
           <div className="flex items-center gap-1.5">
-            {row.pot_size ? (
-              <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium">{row.pot_size}</span>
-            ) : (
-              <span className="text-xs text-muted-foreground italic">{isSupply(row) ? "No variant" : "No size"}</span>
-            )}
+            {(() => {
+              const label = isSupply(row) ? row.variety : row.pot_size;
+              return label
+                ? <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium">{label}</span>
+                : <span className="text-xs text-muted-foreground italic">{isSupply(row) ? "No variant" : "No size"}</span>;
+            })()}
             {row.notes && (
               <div className="relative group/note">
                 <StickyNote size={12} className="text-muted-foreground cursor-help shrink-0" />

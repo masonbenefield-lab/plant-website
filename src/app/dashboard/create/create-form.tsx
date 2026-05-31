@@ -245,7 +245,8 @@ export default function CreateInventoryPage() {
   }
 
   const anyListing = sizes.some(s => s.listInShop && s.shopPrice);
-  const canSubmit = plantName.trim() && sizes.every(s => Number(s.quantity) >= 1);
+  const hasIncompleteListings = sizes.some(s => s.listInShop && (!s.shopPrice || !s.shippingMode));
+  const canSubmit = !!plantName.trim() && sizes.every(s => Number(s.quantity) >= 1) && !hasIncompleteListings;
   const isSupply = itemType === "supply";
   const categories = isSupply ? SUPPLY_CATEGORIES : PLANT_CATEGORIES;
   const unitWord = isSupply ? "variant" : "size";
@@ -585,7 +586,11 @@ export default function CreateInventoryPage() {
               : "Save to Inventory"}
           </Button>
           {!canSubmit && (
-            <p className="text-xs text-muted-foreground">Fill in {isSupply ? "item name" : "plant name"} and all quantities to save.</p>
+            <p className="text-xs text-muted-foreground">
+              {hasIncompleteListings
+                ? "Add a price and shipping option for each item listed in shop."
+                : `Fill in ${isSupply ? "item name" : "plant name"} and all quantities to save.`}
+            </p>
           )}
         </div>
       </form>
