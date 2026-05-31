@@ -241,7 +241,7 @@ export default function OrdersClient({
                   </div>
                 </div>
                 <div className="mt-3 ml-7 space-y-2">
-                  {order.shipping_cost_cents && (
+                  {order.shipping_cost_cents != null && order.shipping_cost_cents > 0 && (
                     <p className="text-xs text-muted-foreground">
                       Shipping: {centsToDisplay(order.shipping_cost_cents)}{order.shipping_service ? ` · ${order.shipping_service}` : ""}
                     </p>

@@ -63,22 +63,33 @@ export default async function OrdersPage({
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  const { count: pendingSalesCount } = await supabase
+    .from("orders")
+    .select("*", { count: "exact", head: true })
+    .eq("seller_id", user.id)
+    .eq("status", "paid");
+
   const tabBar = (
     <div className="flex border-b mb-6">
       {([
-        { key: "purchases", label: "My Purchases", href: "/orders" },
-        { key: "sales", label: "My Sales", href: "/orders?tab=sales" },
-      ] as const).map(({ key, label, href }) => (
+        { key: "purchases", label: "My Purchases", href: "/orders", badge: null },
+        { key: "sales", label: "My Sales", href: "/orders?tab=sales", badge: pendingSalesCount ?? 0 },
+      ] as const).map(({ key, label, href, badge }) => (
         <Link
           key={key}
           href={href}
-          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+          className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
             activeTab === key
               ? "border-leaf text-foreground"
               : "border-transparent text-muted-foreground hover:text-foreground"
           }`}
         >
           {label}
+          {badge != null && badge > 0 && (
+            <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full text-xs font-semibold bg-blue-500 text-white">
+              {badge}
+            </span>
+          )}
         </Link>
       ))}
     </div>
