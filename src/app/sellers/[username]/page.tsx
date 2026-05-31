@@ -6,33 +6,16 @@ import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Star, MapPin, Sprout, Heart } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Star, MapPin } from "lucide-react";
 import FollowButton from "@/components/follow-button";
 import ReportButton from "@/components/report-button";
 import BlockButton from "@/components/block-button";
 import ShareButton from "@/components/share-button";
 import { MessageButton } from "@/components/message-button";
 import RateSellerForm from "@/app/orders/rate-seller-form";
-import { StorefrontListings, StorefrontAuctions } from "./storefront-listings";
+import { StorefrontListings, StorefrontAuctions, StorefrontGarden, StorefrontWishlist } from "./storefront-listings";
 import { ReturnPolicyBadge } from "@/components/return-policy-badge";
-import type { GardenPlantStatus, Database } from "@/lib/supabase/types";
-
-const GARDEN_STATUS_LABEL: Record<GardenPlantStatus, string> = {
-  thriving: "Thriving",
-  growing: "Growing",
-  dormant: "Dormant",
-  struggling: "Struggling",
-  dead: "Dead",
-};
-
-const GARDEN_STATUS_COLOR: Record<GardenPlantStatus, string> = {
-  thriving: "bg-[#DFE7D4] text-leaf",
-  growing: "bg-emerald-100 text-emerald-700",
-  dormant: "bg-yellow-100 text-yellow-700",
-  struggling: "bg-orange-100 text-orange-700",
-  dead: "bg-gray-100 text-gray-500",
-};
+import type { Database } from "@/lib/supabase/types";
 
 export async function generateMetadata({
   params,
@@ -414,94 +397,15 @@ export default async function SellerStorefront({
         </TabsContent>
         {profile.garden_public && (
           <TabsContent value="garden" className="mt-6">
-            {!gardenPlants?.length ? (
-              <Card>
-                <CardContent className="py-16 text-center space-y-3">
-                  <Sprout className="mx-auto text-muted-foreground" size={36} />
-                  <p className="font-medium">No plants added yet</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                {gardenPlants.map((plant) => (
-                  <Card key={plant.id} className="overflow-hidden h-full">
-                    <div className="aspect-square relative bg-muted">
-                      {(plant.images as string[])?.[0] ? (
-                        <Image src={(plant.images as string[])[0]} alt={plant.name} fill className="object-cover" />
-                      ) : (
-                        <div className="flex items-center justify-center h-full text-4xl">🪴</div>
-                      )}
-                    </div>
-                    <CardContent className="p-3 space-y-1">
-                      <p className="font-semibold text-sm leading-tight">{plant.name}</p>
-                      {plant.variety && (
-                        <p className="text-xs text-muted-foreground">{plant.variety}</p>
-                      )}
-                      <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
-                        <span className={cn("text-xs px-1.5 py-0.5 rounded-full font-medium", GARDEN_STATUS_COLOR[plant.status as GardenPlantStatus])}>
-                          {GARDEN_STATUS_LABEL[plant.status as GardenPlantStatus]}
-                        </span>
-                        {plant.location && (
-                          <span className="text-xs text-muted-foreground truncate">{plant.location}</span>
-                        )}
-                      </div>
-                      {plant.planted_at && (
-                        <p className="text-xs text-muted-foreground">
-                          Planted {new Date(plant.planted_at).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
-                        </p>
-                      )}
-                      {(plant as { public_notes?: string | null }).public_notes && (
-                        <p className="text-xs text-muted-foreground leading-snug line-clamp-3 pt-0.5 border-t mt-1">
-                          {(plant as { public_notes?: string | null }).public_notes}
-                        </p>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
+            <StorefrontGarden
+              plants={(gardenPlants ?? []).map((p) => ({ ...p, images: p.images as string[] | null }))}
+              username={username}
+            />
           </TabsContent>
         )}
         {profile.wishlist_public && (
           <TabsContent value="wishlist" className="mt-6">
-            {!wishlistItems?.length ? (
-              <Card>
-                <CardContent className="py-16 text-center space-y-3">
-                  <Heart className="mx-auto text-muted-foreground" size={36} />
-                  <p className="font-medium">No wishlist items yet</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-2">
-                {wishlistItems.map((item) => (
-                  <div key={item.id} className="flex items-start gap-3 rounded-lg border bg-card px-4 py-3">
-                    <Heart size={16} className="mt-0.5 shrink-0 text-rose-400" />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium text-sm">{item.name}</span>
-                        {item.variety && (
-                          <span className="text-xs text-muted-foreground">· {item.variety}</span>
-                        )}
-                        {item.priority && (
-                          <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium ${
-                            item.priority === "must"
-                              ? "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300"
-                              : item.priority === "want"
-                              ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400"
-                              : "bg-muted text-muted-foreground"
-                          }`}>
-                            {item.priority === "must" ? "Must have" : item.priority === "want" ? "Want it" : "Nice to have"}
-                          </span>
-                        )}
-                      </div>
-                      {item.notes && (
-                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{item.notes}</p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            <StorefrontWishlist items={wishlistItems ?? []} />
           </TabsContent>
         )}
       </Tabs>
