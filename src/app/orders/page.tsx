@@ -105,7 +105,7 @@ export default async function MyOrdersPage({
       auctionIds.length
         ? supabase.from("auctions").select("id, plant_name, variety, images").in("id", auctionIds)
         : { data: [] },
-      supabase.from("profiles").select("id, username").in("id", sellerIds),
+      supabase.from("profiles").select("id, username, display_name").in("id", sellerIds),
       supabase.from("ratings").select("order_id").eq("reviewer_id", user.id),
       allListingIds.length
         ? supabase.from("garden_plants").select("source_listing_id").eq("user_id", user.id).in("source_listing_id", allListingIds)
@@ -178,7 +178,7 @@ export default async function MyOrdersPage({
                           Seller:{" "}
                           {seller?.username ? (
                             <Link href={`/sellers/${seller.username}`} className="text-leaf hover:underline">
-                              {seller.username}
+                              {seller.display_name ?? seller.username}
                             </Link>
                           ) : "—"}
                           {" "}· {centsToDisplay(order.amount_cents)}

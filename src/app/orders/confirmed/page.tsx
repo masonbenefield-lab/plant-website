@@ -35,7 +35,7 @@ export default async function OrderConfirmedPage({
     order.auction_id
       ? supabase.from("auctions").select("plant_name, variety, images").eq("id", order.auction_id).single()
       : { data: null },
-    supabase.from("profiles").select("id, username").eq("id", order.seller_id).single(),
+    supabase.from("profiles").select("id, username, display_name").eq("id", order.seller_id).single(),
     supabase.from("follows").select("id").eq("follower_id", user.id).eq("seller_id", order.seller_id).maybeSingle(),
     supabase.from("follows").select("*", { count: "exact", head: true }).eq("seller_id", order.seller_id),
   ]);
@@ -92,7 +92,7 @@ export default async function OrderConfirmedPage({
             <div className="border-t pt-4 text-sm">
               <span className="text-muted-foreground">Seller: </span>
               <Link href={`/sellers/${seller.username}`} className="font-medium text-leaf hover:underline">
-                {seller.username}
+                {seller.display_name ?? seller.username}
               </Link>
             </div>
           )}
@@ -107,7 +107,7 @@ export default async function OrderConfirmedPage({
       {seller && seller.id !== user.id && !alreadyFollows && (
         <div className="mb-6 border rounded-xl p-4 flex items-center justify-between gap-4 text-left bg-[#EBF0E6] dark:bg-forest/20 border-[#C5D4BC] dark:border-forest">
           <div>
-            <p className="font-medium text-sm">Follow {seller.username}</p>
+            <p className="font-medium text-sm">Follow {seller.display_name ?? seller.username}</p>
             <p className="text-xs text-muted-foreground">Get notified when they list new plants</p>
           </div>
           <FollowButton
