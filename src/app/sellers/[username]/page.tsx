@@ -10,6 +10,7 @@ import { Star, MapPin, Sprout, Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import FollowButton from "@/components/follow-button";
 import ReportButton from "@/components/report-button";
+import BlockButton from "@/components/block-button";
 import ShareButton from "@/components/share-button";
 import { MessageButton } from "@/components/message-button";
 import RateSellerForm from "@/app/orders/rate-seller-form";
@@ -108,6 +109,11 @@ export default async function SellerStorefront({
     ? !!(await supabase.from("reports").select("id").eq("reporter_id", user.id).eq("reported_user_id", profile.id).maybeSingle()).data
     : false;
 
+  const isBlockedUser = user && user.id !== profile.id
+    ? !!(await createAdminClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+        .from("blocks").select("id").eq("blocker_id", user.id).eq("blocked_id", profile.id).maybeSingle()).data
+    : false;
+
   // Find an unrated delivered order the viewer placed with this seller
   let orderToRate: string | null = null;
   if (user && user.id !== profile.id) {
@@ -195,6 +201,13 @@ export default async function SellerStorefront({
                   reportedUserId={profile.id}
                   targetName={profile.username}
                   initialReported={isReportedUser}
+                />
+              )}
+              {user && user.id !== profile.id && (
+                <BlockButton
+                  userId={user.id}
+                  blockedId={profile.id}
+                  initialBlocked={isBlockedUser}
                 />
               )}
             </div>

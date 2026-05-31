@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
 import { containsSlur, findProhibitedWord, censorWord } from "@/lib/profanity";
+import { isBlocked } from "@/lib/blocks";
 
 function adminClient() {
   return createSupabaseAdmin(
@@ -49,6 +50,11 @@ export async function POST(req: Request) {
   if (!conversation) return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
   if (conversation.participant_a !== user.id && conversation.participant_b !== user.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const otherId = conversation.participant_a === user.id ? conversation.participant_b : conversation.participant_a;
+  if (await isBlocked(user.id, otherId)) {
+    return NextResponse.json({ error: "Unable to send message." }, { status: 403 });
   }
 
   const trimmedBody = body.trim();

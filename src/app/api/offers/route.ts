@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { sendOfferReceived } from "@/lib/email";
+import { isBlocked } from "@/lib/blocks";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -40,6 +41,10 @@ export async function POST(request: Request) {
 
   if (listing.seller_id === user.id) {
     return NextResponse.json({ error: "You cannot make an offer on your own listing" }, { status: 400 });
+  }
+
+  if (await isBlocked(user.id, listing.seller_id)) {
+    return NextResponse.json({ error: "Unable to submit offer." }, { status: 403 });
   }
 
   if (amountCents >= listing.price_cents) {

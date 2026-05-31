@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
+import { isBlocked } from "@/lib/blocks";
 
 function adminClient() {
   return createSupabaseAdmin<Database>(
@@ -50,6 +51,7 @@ export async function POST(request: Request) {
   if (auction.status !== "active") return NextResponse.json({ error: "Auction is not active" }, { status: 400 });
   if (new Date(auction.ends_at) <= new Date()) return NextResponse.json({ error: "Auction has ended" }, { status: 400 });
   if (auction.seller_id === user.id) return NextResponse.json({ error: "You can't bid on your own auction" }, { status: 400 });
+  if (await isBlocked(user.id, auction.seller_id)) return NextResponse.json({ error: "Unable to place bid." }, { status: 403 });
 
   const minIncrement = getMinIncrement(auction.current_bid_cents);
   const minBid = auction.current_bid_cents + minIncrement;

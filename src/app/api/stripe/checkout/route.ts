@@ -6,6 +6,7 @@ import { getStripe } from "@/lib/stripe";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { planFeePercent } from "@/lib/plan-limits";
 import { sendLowStockAlert } from "@/lib/email";
+import { isBlocked } from "@/lib/blocks";
 
 function adminClient() {
   return createSupabaseAdmin<Database>(
@@ -70,6 +71,10 @@ export async function POST(request: Request) {
 
     if (listing.seller_id === user.id) {
       return NextResponse.json({ error: "You cannot purchase your own listing" }, { status: 400 });
+    }
+
+    if (await isBlocked(user.id, listing.seller_id)) {
+      return NextResponse.json({ error: "This listing is unavailable." }, { status: 403 });
     }
 
     if (quantity > listing.quantity) {
@@ -219,6 +224,10 @@ export async function POST(request: Request) {
 
     if (error || !auction) {
       return NextResponse.json({ error: "Auction not found or not eligible" }, { status: 404 });
+    }
+
+    if (await isBlocked(user.id, auction.seller_id)) {
+      return NextResponse.json({ error: "This auction is unavailable." }, { status: 403 });
     }
 
     const [{ data: sellerProfile }, { data: sellerPlan }] = await Promise.all([
