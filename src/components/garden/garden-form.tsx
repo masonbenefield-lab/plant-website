@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { X, Upload, Loader2, CheckCircle2 } from "lucide-react";
+import { DeletePlantButton } from "@/components/garden/delete-plant-button";
 import type { GardenPlantStatus } from "@/lib/supabase/types";
 
 const STATUS_OPTIONS: { value: GardenPlantStatus; label: string }[] = [
@@ -554,6 +555,12 @@ export function GardenForm({ mode, plant, initialValues, returnTo }: GardenFormP
           Cancel
         </Button>
       </div>
+
+      {mode === "edit" && plant && (
+        <div className="border-t pt-4">
+          <DeletePlantButton plantId={plant.id} plantName={plant.name} />
+        </div>
+      )}
     </form>
   );
 }
