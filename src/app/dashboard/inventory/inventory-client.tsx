@@ -247,6 +247,11 @@ export default function InventoryClient({
   // Inline qty edit
   const [editingQtyId, setEditingQtyId] = useState<string | null>(null);
   const [editingQtyValue, setEditingQtyValue] = useState("");
+  const [editingListingQtyId, setEditingListingQtyId] = useState<string | null>(null);
+  const [editingListingQtyValue, setEditingListingQtyValue] = useState("");
+  const [relistingId, setRelistingId] = useState<string | null>(null);
+  const [relistStock, setRelistStock] = useState("");
+  const [relistShopQty, setRelistShopQty] = useState("");
 
   // Sold-out banner dismiss — stores IDs that were acknowledged; re-shows if a new one appears
   const [dismissedSoldOutIds, setDismissedSoldOutIds] = useState<Set<string>>(() => {
@@ -556,14 +561,45 @@ export default function InventoryClient({
     const supabase = createClient();
     const { error } = await supabase.from("inventory").update({ quantity: val }).eq("id", rowId);
     if (error) { toast.error(error.message); return; }
-    const row = activeRows.find(r => r.id === rowId);
-    if (row?.listing_id && row.listing_status === "sold_out" && val > 0) {
-      await Promise.all([
-        supabase.from("listings").update({ status: "active", quantity: val }).eq("id", row.listing_id),
-        supabase.from("inventory").update({ listing_quantity: val }).eq("id", rowId),
-      ]);
+    router.refresh();
+  }
+
+  async function saveListingQtyEdit(row: Row) {
+    const val = parseInt(editingListingQtyValue, 10);
+    setEditingListingQtyId(null);
+    if (isNaN(val) || val < 0 || !row.listing_id) return;
+    const newQty = Math.max(0, val);
+    const supabase = createClient();
+    await Promise.all([
+      supabase.from("listings").update({
+        quantity: newQty,
+        ...(row.listing_status === "sold_out" && newQty > 0 ? { status: "active" } : {}),
+      }).eq("id", row.listing_id),
+      supabase.from("inventory").update({ listing_quantity: newQty }).eq("id", row.id),
+    ]);
+    if (row.listing_status === "sold_out" && newQty > 0) {
       toast.success(`${row.plant_name} is back in your shop!`);
     }
+    router.refresh();
+  }
+
+  async function saveRelist(row: Row) {
+    const stockVal = parseInt(relistStock, 10);
+    const shopVal = parseInt(relistShopQty, 10);
+    setRelistingId(null);
+    if (isNaN(shopVal) || shopVal < 0 || !row.listing_id) return;
+    const newShopQty = Math.max(0, shopVal);
+    const supabase = createClient();
+    await Promise.all([
+      supabase.from("listings").update({
+        quantity: newShopQty,
+        ...(newShopQty > 0 ? { status: "active" } : {}),
+      }).eq("id", row.listing_id),
+      !isNaN(stockVal) && stockVal >= 0
+        ? supabase.from("inventory").update({ quantity: stockVal, listing_quantity: newShopQty }).eq("id", row.id)
+        : supabase.from("inventory").update({ listing_quantity: newShopQty }).eq("id", row.id),
+    ]);
+    if (newShopQty > 0) toast.success(`${row.plant_name} is back in your shop!`);
     router.refresh();
   }
 
@@ -1364,11 +1400,25 @@ export default function InventoryClient({
 
         {/* Stock breakdown */}
         {(!!row.listing_id || totalAuctionQty > 0) && (
-          <div className="flex gap-3 text-xs">
+          <div className="flex gap-3 text-xs flex-wrap">
             {!!row.listing_id && (
-              <span className={(row.listing_quantity ?? 0) === 0 ? "text-amber-600 tabular-nums" : "text-leaf tabular-nums"}>
-                {row.listing_quantity ?? 0} in shop
-              </span>
+              editingListingQtyId === row.id ? (
+                <input
+                  type="number" min={0} value={editingListingQtyValue}
+                  onChange={e => setEditingListingQtyValue(e.target.value)}
+                  onBlur={() => saveListingQtyEdit(row)}
+                  onKeyDown={e => { if (e.key === "Enter") saveListingQtyEdit(row); if (e.key === "Escape") setEditingListingQtyId(null); }}
+                  autoFocus
+                  className="w-14 px-1.5 py-0.5 text-xs border rounded focus:outline-none focus:ring-1 focus:ring-leaf bg-background"
+                />
+              ) : (
+                <button
+                  onClick={() => { setEditingListingQtyId(row.id); setEditingListingQtyValue(String(row.listing_quantity ?? 0)); }}
+                  className={(row.listing_quantity ?? 0) === 0 ? "text-amber-600 tabular-nums hover:underline" : "text-leaf tabular-nums hover:underline"}
+                >
+                  {row.listing_quantity ?? 0} in shop
+                </button>
+              )
             )}
             {totalAuctionQty > 0 && <span className="text-blue-600">{totalAuctionQty} in auction</span>}
             <span className={cn(
@@ -1413,12 +1463,30 @@ export default function InventoryClient({
               )}
             </div>
             {row.listing_status === "sold_out" && (
-              <button
-                onClick={() => { setEditingQtyId(row.id); setEditingQtyValue(String(row.quantity)); }}
-                className="text-xs text-amber-700 dark:text-amber-400 hover:underline font-medium text-left"
-              >
-                + Add stock to relist
-              </button>
+              relistingId === row.id ? (
+                <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                  <div className="flex items-center gap-1">
+                    <label className="text-xs text-muted-foreground">Stock</label>
+                    <input type="number" min={0} value={relistStock} onChange={e => setRelistStock(e.target.value)} autoFocus
+                      className="w-14 px-1.5 py-0.5 text-xs border rounded focus:outline-none focus:ring-1 focus:ring-amber-500 bg-background" />
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <label className="text-xs text-muted-foreground">In shop</label>
+                    <input type="number" min={0} value={relistShopQty} onChange={e => setRelistShopQty(e.target.value)}
+                      onKeyDown={e => { if (e.key === "Enter") saveRelist(row); if (e.key === "Escape") setRelistingId(null); }}
+                      className="w-14 px-1.5 py-0.5 text-xs border rounded focus:outline-none focus:ring-1 focus:ring-amber-500 bg-background" />
+                  </div>
+                  <button onClick={() => saveRelist(row)} className="text-xs bg-leaf hover:bg-forest text-white px-2 py-0.5 rounded transition-colors">Relist</button>
+                  <button onClick={() => setRelistingId(null)} className="text-xs text-muted-foreground hover:text-foreground">Cancel</button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => { setRelistingId(row.id); setRelistStock(String(row.quantity)); setRelistShopQty(String(row.listing_quantity ?? 0)); }}
+                  className="text-xs text-amber-700 dark:text-amber-400 hover:underline font-medium text-left"
+                >
+                  + Add stock to relist
+                </button>
+              )
             )}
           </div>
         ) : a > 0 ? (
@@ -1521,9 +1589,24 @@ export default function InventoryClient({
           {(!!row.listing_id || totalAuctionQty > 0) && (
             <div className="text-xs mt-0.5 space-y-0.5">
               {!!row.listing_id && (
-                <div className={(row.listing_quantity ?? 0) === 0 ? "text-amber-600 tabular-nums" : "text-leaf tabular-nums"}>
-                  {row.listing_quantity ?? 0} in shop
-                </div>
+                editingListingQtyId === row.id ? (
+                  <input
+                    type="number" min={0} value={editingListingQtyValue}
+                    onChange={e => setEditingListingQtyValue(e.target.value)}
+                    onBlur={() => saveListingQtyEdit(row)}
+                    onKeyDown={e => { if (e.key === "Enter") saveListingQtyEdit(row); if (e.key === "Escape") setEditingListingQtyId(null); }}
+                    autoFocus
+                    className="w-16 px-1.5 py-0.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-leaf bg-background"
+                  />
+                ) : (
+                  <button
+                    onClick={() => { setEditingListingQtyId(row.id); setEditingListingQtyValue(String(row.listing_quantity ?? 0)); }}
+                    className={(row.listing_quantity ?? 0) === 0 ? "text-amber-600 tabular-nums hover:underline" : "text-leaf tabular-nums hover:underline"}
+                    title="Click to edit shop quantity"
+                  >
+                    {row.listing_quantity ?? 0} in shop
+                  </button>
+                )
               )}
               {totalAuctionQty > 0 && <div className="text-blue-600">{totalAuctionQty} in auction</div>}
               <div className={cn(
@@ -1556,12 +1639,30 @@ export default function InventoryClient({
                 )}
               </div>
               {row.listing_status === "sold_out" && (
-                <button
-                  onClick={() => { setEditingQtyId(row.id); setEditingQtyValue(String(row.quantity)); }}
-                  className="text-xs text-amber-700 dark:text-amber-400 hover:underline font-medium text-left"
-                >
-                  + Add stock to relist
-                </button>
+                relistingId === row.id ? (
+                  <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                    <div className="flex items-center gap-1">
+                      <label className="text-xs text-muted-foreground">Stock</label>
+                      <input type="number" min={0} value={relistStock} onChange={e => setRelistStock(e.target.value)} autoFocus
+                        className="w-14 px-1.5 py-0.5 text-xs border rounded focus:outline-none focus:ring-1 focus:ring-amber-500 bg-background" />
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <label className="text-xs text-muted-foreground">In shop</label>
+                      <input type="number" min={0} value={relistShopQty} onChange={e => setRelistShopQty(e.target.value)}
+                        onKeyDown={e => { if (e.key === "Enter") saveRelist(row); if (e.key === "Escape") setRelistingId(null); }}
+                        className="w-14 px-1.5 py-0.5 text-xs border rounded focus:outline-none focus:ring-1 focus:ring-amber-500 bg-background" />
+                    </div>
+                    <button onClick={() => saveRelist(row)} className="text-xs bg-leaf hover:bg-forest text-white px-2 py-0.5 rounded transition-colors">Relist</button>
+                    <button onClick={() => setRelistingId(null)} className="text-xs text-muted-foreground hover:text-foreground">Cancel</button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => { setRelistingId(row.id); setRelistStock(String(row.quantity)); setRelistShopQty(String(row.listing_quantity ?? 0)); }}
+                    className="text-xs text-amber-700 dark:text-amber-400 hover:underline font-medium text-left"
+                  >
+                    + Add stock to relist
+                  </button>
+                )
               )}
               {row.free_shipping ? (
                 <span className="text-xs text-muted-foreground">Free shipping</span>
