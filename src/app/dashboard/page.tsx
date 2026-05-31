@@ -227,7 +227,7 @@ export default async function DashboardPage() {
           trend={revenueChangePct}
           href="/dashboard/analytics"
         />
-        <StatCard label="Followers" value={followerCount ?? 0} href={profile?.username ? `/sellers/${profile.username}` : undefined} />
+        <StatCard label="Followers" value={followerCount ?? 0} href="/following?tab=followers" />
       </div>
 
       {/* Main content: recent orders + quick nav */}

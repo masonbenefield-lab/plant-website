@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import FollowingClient from "./following-client";
 
@@ -28,12 +29,14 @@ export default async function FollowingPage() {
   const profileMap = Object.fromEntries((profiles ?? []).map((p) => [p.id, p]));
 
   return (
-    <FollowingClient
-      currentUserId={user.id}
-      followingIds={followingIds}
-      followerIds={followerIds}
-      blockedIds={blockedIds}
-      profileMap={profileMap}
-    />
+    <Suspense>
+      <FollowingClient
+        currentUserId={user.id}
+        followingIds={followingIds}
+        followerIds={followerIds}
+        blockedIds={blockedIds}
+        profileMap={profileMap}
+      />
+    </Suspense>
   );
 }

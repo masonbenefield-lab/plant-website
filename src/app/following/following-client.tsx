@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -40,7 +41,9 @@ const EMPTY_MSG: Record<Exclude<Tab, "find_people">, string> = {
 };
 
 export default function FollowingClient({ currentUserId, followingIds, followerIds, blockedIds, profileMap }: Props) {
-  const [tab, setTab] = useState<Tab>("following");
+  const searchParams = useSearchParams();
+  const initialTab = (searchParams.get("tab") ?? "following") as Tab;
+  const [tab, setTab] = useState<Tab>(TABS.includes(initialTab) ? initialTab : "following");
   const [query, setQuery] = useState("");
   const [following, setFollowing] = useState(() => new Set(followingIds));
   const [followers, setFollowers] = useState(() => new Set(followerIds));
