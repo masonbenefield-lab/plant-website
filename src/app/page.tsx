@@ -84,7 +84,7 @@ export default async function LandingPage() {
   );
   const { data: activeGiveaway } = await admin
     .from("giveaway_months")
-    .select("id")
+    .select("month")
     .eq("month", currentMonth)
     .maybeSingle();
 
