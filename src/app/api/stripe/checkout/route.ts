@@ -188,34 +188,34 @@ export async function POST(request: Request) {
       await supabase.from("offers").update({ status: "withdrawn" }).eq("id", offerId);
     }
 
-    if (listing.inventory_id) {
-      const { data: inv } = await admin
-        .from("inventory")
-        .select("quantity, listing_quantity, low_stock_threshold, plant_name, variety")
-        .eq("id", listing.inventory_id)
-        .single();
-      if (inv) {
-        const newInvListingQty = Math.max(0, (inv.listing_quantity ?? 0) - quantity);
-        const newInvQty = Math.max(0, inv.quantity - quantity);
-        await admin.from("inventory").update({
-          quantity: newInvQty,
-          listing_quantity: newInvListingQty,
-        }).eq("id", listing.inventory_id);
+    // Look up inventory by inventory_id (preferred) or by listing_id (fallback for older listings)
+    const invQuery = listing.inventory_id
+      ? admin.from("inventory").select("id, quantity, listing_quantity, low_stock_threshold, plant_name, variety").eq("id", listing.inventory_id).single()
+      : admin.from("inventory").select("id, quantity, listing_quantity, low_stock_threshold, plant_name, variety").eq("listing_id", listingId).maybeSingle();
 
-        // Low stock alert
-        const threshold = (inv as { low_stock_threshold?: number | null }).low_stock_threshold;
-        if (threshold && newInvQty <= threshold && newInvQty > 0) {
-          const { data: sellerAuth } = await admin.auth.admin.getUserById(listing.seller_id);
-          const sellerEmail = sellerAuth?.user?.email;
-          if (sellerEmail) {
-            sendLowStockAlert({
-              sellerEmail,
-              plantName: inv.plant_name,
-              variety: inv.variety ?? null,
-              quantity: newInvQty,
-              inventoryId: listing.inventory_id,
-            }).catch(() => {});
-          }
+    const { data: inv } = await invQuery;
+    if (inv) {
+      const invId: string = (inv as { id: string }).id;
+      const newInvListingQty = Math.max(0, (inv.listing_quantity ?? 0) - quantity);
+      const newInvQty = Math.max(0, inv.quantity - quantity);
+      await admin.from("inventory").update({
+        quantity: newInvQty,
+        listing_quantity: newInvListingQty,
+      }).eq("id", invId);
+
+      // Low stock alert
+      const threshold = (inv as { low_stock_threshold?: number | null }).low_stock_threshold;
+      if (threshold && newInvQty <= threshold && newInvQty > 0) {
+        const { data: sellerAuth } = await admin.auth.admin.getUserById(listing.seller_id);
+        const sellerEmail = sellerAuth?.user?.email;
+        if (sellerEmail) {
+          sendLowStockAlert({
+            sellerEmail,
+            plantName: inv.plant_name,
+            variety: inv.variety ?? null,
+            quantity: newInvQty,
+            inventoryId: invId,
+          }).catch(() => {});
         }
       }
     }
