@@ -26,9 +26,10 @@ interface Props {
   planLimit: number | null;
   currentCount: number;
   photoLimit: number | null;
+  calculatedShippingEnabled: boolean;
 }
 
-export default function NewAuctionDialog({ sellerId, planLimit, currentCount, photoLimit }: Props) {
+export default function NewAuctionDialog({ sellerId, planLimit, currentCount, photoLimit, calculatedShippingEnabled }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -49,6 +50,7 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
       return;
     }
     setUploading(true);
+    if (fileRef.current) fileRef.current.value = "";
     const supabase = createClient();
     const remaining = photoLimit !== null ? photoLimit - imageUrls.length : Infinity;
     const toUpload = Array.from(files).slice(0, remaining);
@@ -56,9 +58,11 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
     for (const rawFile of toUpload) {
       const file = await compressImage(rawFile);
       const path = `${sellerId}/${Date.now()}-${file.name}`;
-      const { error } = await supabase.storage.from("auctions").upload(path, file, { upsert: true });
-      if (!error) {
-        const { data } = supabase.storage.from("auctions").getPublicUrl(path);
+      const { error } = await supabase.storage.from("listings").upload(path, file, { upsert: true });
+      if (error) {
+        toast.error(`Failed to upload ${file.name}: ${error.message}`);
+      } else {
+        const { data } = supabase.storage.from("listings").getPublicUrl(path);
         urls.push(data.publicUrl);
       }
     }
@@ -265,7 +269,7 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
               >
                 {uploading ? "Uploading…" : "Add photos"}
               </Button>
-              {imageUrls.length > 0 && photoLimit === null && (
+              {imageUrls.length > 0 && (
                 <span className="text-sm text-muted-foreground">{imageUrls.length} uploaded</span>
               )}
               {atPhotoLimit && (
@@ -315,7 +319,15 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
                 <span className="text-xs text-muted-foreground">flat rate charged to buyer</span>
               </div>
             )}
-            {shippingMode === "weight" && (
+            {shippingMode === "weight" && !calculatedShippingEnabled && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 px-3 py-2.5 text-xs text-amber-800 dark:text-amber-300">
+                <strong>Ship-from address required.</strong> Weight-based rates need a verified address and calculated shipping enabled.{" "}
+                <a href="/account#shipping-settings" className="underline font-medium hover:opacity-80" onClick={() => setOpen(false)}>
+                  Set it up in Account Settings →
+                </a>
+              </div>
+            )}
+            {shippingMode === "weight" && calculatedShippingEnabled && (
               <div className="flex items-center gap-2">
                 <Input
                   name="shipping_weight_oz"
@@ -335,7 +347,7 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
           )}
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={saving || atAuctionLimit || !shippingMode} className="bg-leaf hover:bg-forest">
+            <Button type="submit" disabled={saving || atAuctionLimit || !shippingMode || (shippingMode === "weight" && !calculatedShippingEnabled)} className="bg-leaf hover:bg-forest">
               {saving ? "Saving…" : "Create auction"}
             </Button>
           </div>
