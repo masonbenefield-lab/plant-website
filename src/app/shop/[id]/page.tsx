@@ -1,4 +1,3 @@
-import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
@@ -67,10 +66,26 @@ export default async function ListingPage({
     .from("listings")
     .select("*")
     .eq("id", id)
-    .in("status", ["active", "sold_out"])
     .single();
 
-  if (!listing) notFound();
+  if (!listing) {
+    return (
+      <div className="max-w-5xl mx-auto px-4 py-10">
+        <Link href="/shop" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+          Back to Shop
+        </Link>
+        <div className="text-center py-24">
+          <p className="text-5xl mb-4">🌿</p>
+          <h1 className="text-2xl font-bold mb-2">Listing no longer available</h1>
+          <p className="text-muted-foreground mb-6">This listing may have been removed by the seller.</p>
+          <Link href="/shop" className="inline-block bg-leaf text-white font-semibold px-6 py-2.5 rounded-lg hover:bg-forest transition-colors">
+            Browse the Shop →
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   const [{ data: seller }, { data: { user } }, { data: invShipping }] = await Promise.all([
     supabase.from("profiles").select("id, username, display_name, avatar_url, stripe_onboarded, shipping_days, shipping_days_max, return_policy_type, return_policy_notes, vacation_mode, vacation_until, offers_enabled, calculated_shipping_enabled").eq("id", listing.seller_id).single(),
@@ -122,7 +137,8 @@ export default async function ListingPage({
   const existingOffer = offerRow.data as { id: string; status: "pending" | "accepted" | "declined" | "withdrawn" } | null;
   const alreadySubscribedRestock = !!restockRow.data;
   const sellerOffersEnabled = (seller as { offers_enabled?: boolean } | null)?.offers_enabled !== false;
-  const isSoldOut = listing.status === "sold_out" || listing.quantity <= 0;
+  const isSoldOut = listing.status === "sold_out" || (listing.status !== "paused" && listing.quantity <= 0);
+  const isPaused = listing.status === "paused";
 
   const filteredRelated = (relatedListings ?? []).filter((r) => !siblingIds.has(r.id)).slice(0, 4);
 
@@ -243,7 +259,9 @@ export default async function ListingPage({
           )}
 
           <div className="mt-6 space-y-3">
-            {!seller?.stripe_onboarded ? (
+            {isPaused ? (
+              <p className="text-sm font-medium text-muted-foreground">This item is not currently available.</p>
+            ) : !seller?.stripe_onboarded ? (
               <p className="text-sm text-muted-foreground">
                 This seller has not set up payments yet.
               </p>
