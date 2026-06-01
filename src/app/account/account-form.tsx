@@ -422,6 +422,27 @@ export default function AccountForm({
     }
   }
 
+  async function clearShipFromAddress() {
+    setSavingShipping(true);
+    const res = await fetch("/api/profile/update-shipping", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ship_from_address: null,
+        shipping_services: shippingServices.length ? shippingServices : null,
+        calculated_shipping_enabled: false,
+        auto_labels_enabled: autoLabelsEnabled,
+      }),
+    });
+    const data = await res.json();
+    setSavingShipping(false);
+    if (data.error) { toast.error(data.error); return; }
+    setShipFrom({ name: "", street1: "", city: "", state: "", zip: "", country: "US", phone: "" });
+    setCalculatedShippingEnabled(false);
+    setAddressValidation(null);
+    toast.success("Ship-from address removed");
+  }
+
   function toggleService(token: string) {
     setShippingServices((prev) =>
       prev.includes(token) ? prev.filter((s) => s !== token) : [...prev, token]
@@ -902,7 +923,19 @@ export default function AccountForm({
         <CardContent>
           <form onSubmit={saveShipping} className="space-y-5">
             <div>
-              <p className="text-sm font-medium mb-3">Ship-from address</p>
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm font-medium">Ship-from address</p>
+                {shipFrom.street1.trim() && (
+                  <button
+                    type="button"
+                    onClick={clearShipFromAddress}
+                    disabled={savingShipping}
+                    className="text-xs text-muted-foreground hover:text-destructive transition-colors flex items-center gap-1"
+                  >
+                    <Trash2 size={12} /> Remove address
+                  </button>
+                )}
+              </div>
               <div className={cn("space-y-3 rounded-lg transition-all duration-300", highlightShipFrom && "ring-2 ring-destructive p-3")}>
                 <div className="space-y-1">
                   <Label htmlFor="sf-name">Full Name / Business Name</Label>
