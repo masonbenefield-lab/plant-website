@@ -107,7 +107,7 @@ export async function POST(request: Request) {
   const grandTotalCents = totalCents + shippingCents + taxCents;
   const feeCents = Math.round(totalCents * (feePercent / 100));
   const stripeFeeCents = Math.round(grandTotalCents * 0.029) + 30;
-  const applicationFeeCents = feeCents + stripeFeeCents;
+  const applicationFeeCents = feeCents + stripeFeeCents + taxCents;
 
   // Atomically decrement stock for each item before creating PaymentIntent — prevents overselling
   const admin = adminClient();
