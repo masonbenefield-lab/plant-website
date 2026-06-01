@@ -71,9 +71,9 @@ function ExpiredOrderRow({ order }: { order: ExpiredOrder }) {
           ) : (
             <span className="text-xs text-muted-foreground italic">No other bidders</span>
           )}
-          <Button size="sm" variant="outline" className="h-8 text-xs" asChild>
-            <Link href="/dashboard/auctions">Relist</Link>
-          </Button>
+          <Link href="/dashboard/auctions" className="inline-flex items-center justify-center h-8 px-3 text-xs font-medium rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors">
+            Relist
+          </Link>
         </div>
       </div>
       {order.hasSecondBidder && (
