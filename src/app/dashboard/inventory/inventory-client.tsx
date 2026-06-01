@@ -2585,7 +2585,7 @@ export default function InventoryClient({
                 )}
                 <div className="space-y-2">
                   <Label>Shipping <span className="text-destructive">*</span></Label>
-                  <div className={`grid gap-2 ${shippingModes.length === 2 ? "grid-cols-2" : "grid-cols-3"}`}>
+                  <div className={`grid gap-2 grid-cols-3`}>
                     {shippingModes.map((mode) => (
                       <button
                         key={mode}
@@ -2705,7 +2705,7 @@ export default function InventoryClient({
                 </div>
                 <div className="space-y-2">
                   <Label>Shipping <span className="text-destructive">*</span></Label>
-                  <div className={`grid gap-2 ${shippingModes.length === 2 ? "grid-cols-2" : "grid-cols-3"}`}>
+                  <div className={`grid gap-2 grid-cols-3`}>
                     {shippingModes.map((mode) => (
                       <button
                         key={mode}
@@ -2971,7 +2971,7 @@ export default function InventoryClient({
                     </div>
                     <div className="space-y-1">
                       <Label>Shipping <span className="font-normal text-muted-foreground text-xs">(optional — required to list)</span></Label>
-                      <div className={`grid gap-2 ${shippingModes.length === 2 ? "grid-cols-2" : "grid-cols-3"}`}>
+                      <div className={`grid gap-2 grid-cols-3`}>
                         {shippingModes.map((mode) => (
                           <button key={mode} type="button" onClick={() => setEditShippingMode(editShippingMode === mode ? "" : mode)}
                             className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors ${editShippingMode === mode ? "border-leaf bg-[#EBF0E6] text-forest dark:bg-forest/40 dark:text-[#A8BF9A] dark:border-leaf" : "border-input hover:bg-muted"}`}
