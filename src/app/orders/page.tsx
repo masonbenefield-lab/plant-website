@@ -368,12 +368,18 @@ export default async function OrdersPage({
   const from = (page - 1) * PAGE_SIZE_SALES;
   const to = from + PAGE_SIZE_SALES - 1;
 
-  const { data: salesOrders, count } = await supabase
+  const validStatuses = ["paid", "shipped", "delivered", "pending"];
+  const activeStatus = validStatuses.includes(status) ? status : "";
+
+  let salesQuery = supabase
     .from("orders")
     .select("*", { count: "exact" })
     .eq("seller_id", user.id)
-    .order("created_at", { ascending: false })
-    .range(from, to);
+    .order("created_at", { ascending: false });
+
+  if (activeStatus) salesQuery = salesQuery.eq("status", activeStatus as import("@/lib/supabase/types").OrderStatus);
+
+  const { data: salesOrders, count } = await salesQuery.range(from, to);
 
   const total = count ?? 0;
   const totalPages = Math.ceil(total / PAGE_SIZE_SALES);
@@ -419,10 +425,40 @@ export default async function OrdersPage({
   const buyerMap = Object.fromEntries((buyers ?? []).map((b) => [b.id, b]));
   const autoLabelsEnabled = (sellerProfile as { auto_labels_enabled?: boolean } | null)?.auto_labels_enabled !== false;
 
+  const statusFilters = [
+    { label: "All", value: "" },
+    { label: "Paid", value: "paid" },
+    { label: "Shipped", value: "shipped" },
+    { label: "Delivered", value: "delivered" },
+  ];
+
+  const statusParam = activeStatus ? `&status=${activeStatus}` : "";
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-10">
       <h1 className="text-2xl font-bold mb-4">Orders</h1>
       {tabBar}
+
+      {/* Status filter pills */}
+      <div className="flex items-center gap-2 mb-5 flex-wrap">
+        {statusFilters.map(({ label, value }) => {
+          const isActive = activeStatus === value;
+          return (
+            <Link
+              key={value}
+              href={`/orders?tab=sales${value ? `&status=${value}` : ""}`}
+              className={`text-sm px-3 py-1 rounded-full border transition-colors ${
+                isActive
+                  ? "bg-forest text-white border-forest"
+                  : "bg-transparent text-muted-foreground border-border hover:border-forest hover:text-foreground"
+              }`}
+            >
+              {label}
+            </Link>
+          );
+        })}
+      </div>
+
       <OrdersClient
         orders={salesOrders}
         listingMap={listingMap}
@@ -432,8 +468,8 @@ export default async function OrdersPage({
         totalPages={totalPages}
         total={total}
         pageSize={PAGE_SIZE_SALES}
-        prevHref={page > 1 ? `/orders?tab=sales&page=${page - 1}` : null}
-        nextHref={page < totalPages ? `/orders?tab=sales&page=${page + 1}` : null}
+        prevHref={page > 1 ? `/orders?tab=sales&page=${page - 1}${statusParam}` : null}
+        nextHref={page < totalPages ? `/orders?tab=sales&page=${page + 1}${statusParam}` : null}
         autoLabelsEnabled={autoLabelsEnabled}
       />
     </div>

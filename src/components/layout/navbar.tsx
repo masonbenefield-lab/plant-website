@@ -26,9 +26,10 @@ interface NavbarProps {
   isAdmin?: boolean;
   unreadMessages?: number;
   pendingReports?: number;
+  pendingSalesOrders?: number;
 }
 
-export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessages = 0, pendingReports = 0 }: NavbarProps) {
+export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessages = 0, pendingReports = 0, pendingSalesOrders = 0 }: NavbarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const headerRef = useRef<HTMLElement>(null);
@@ -167,7 +168,15 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
               <div className="flex items-center gap-0.5 mr-1">
                 <NavIcon href="/search" label="Search"><Search size={15} /></NavIcon>
                 <NavIcon href="/wishlist" label="Saved"><Heart size={15} /></NavIcon>
-                <NavIcon href="/orders" label="Orders"><Package size={15} /></NavIcon>
+                <Link href="/orders" className="relative flex flex-col items-center gap-0.5 px-1.5 py-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+                  <Package size={15} />
+                  {pendingSalesOrders > 0 && (
+                    <span className="absolute top-0.5 right-0.5 w-3.5 h-3.5 rounded-full bg-leaf text-white text-[9px] font-bold flex items-center justify-center">
+                      {pendingSalesOrders > 9 ? "9+" : pendingSalesOrders}
+                    </span>
+                  )}
+                  <span className="text-[9px] leading-none font-medium">Orders</span>
+                </Link>
                 <Link href="/feed" className="relative flex flex-col items-center gap-0.5 px-1.5 py-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
                   <Rss size={15} />
                   {hasNewFeed && (
