@@ -97,7 +97,8 @@ export function CartDrawer() {
                       <span className="text-sm w-5 text-center">{item.quantity}</span>
                       <button
                         onClick={() => updateQty(item.listingId, item.quantity + 1)}
-                        className="w-6 h-6 rounded border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-foreground transition-colors"
+                        disabled={item.maxQty !== undefined && item.quantity >= item.maxQty}
+                        className="w-6 h-6 rounded border flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-muted-foreground hover:text-foreground hover:border-foreground"
                       >
                         <Plus size={12} />
                       </button>
