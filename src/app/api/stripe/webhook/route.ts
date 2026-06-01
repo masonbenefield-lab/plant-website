@@ -79,6 +79,15 @@ export async function POST(request: Request) {
       .single();
 
     if (order) {
+      // Record the Stripe Tax transaction so it appears in Tax → Transactions
+      const taxCalculationId = pi.metadata?.tax_calculation_id;
+      if (taxCalculationId) {
+        getStripe().tax.transactions.createFromCalculation({
+          calculation: taxCalculationId,
+          reference: order.id,
+        }).catch((err) => console.error("[StripeTax] Failed to record transaction:", err));
+      }
+
       // Delete any other pending orders from the same buyer for the same item (ghost duplicates)
       await supabase
         .from("orders")

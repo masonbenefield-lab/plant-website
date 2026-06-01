@@ -6,7 +6,7 @@ import { getStripe } from "@/lib/stripe";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { planFeePercent } from "@/lib/plan-limits";
 import { sendLowStockAlert } from "@/lib/email";
-import { calcTaxCents } from "@/lib/tax";
+import { createStripeTaxCalculation } from "@/lib/tax";
 
 function adminClient() {
   return createSupabaseAdmin<Database>(
@@ -103,7 +103,12 @@ export async function POST(request: Request) {
 
   const feePercent = planFeePercent(sellerPlan?.plan, !!sellerPlan?.is_admin);
   const shippingCents = Math.max(0, Math.round(shippingCostCents ?? 0));
-  const taxCents = calcTaxCents(totalCents, shippingAddress.state);
+  const { taxCents, calculationId } = await createStripeTaxCalculation(
+    totalCents,
+    shippingCents,
+    shippingAddress,
+    `cart-${sellerId}`
+  );
   const grandTotalCents = totalCents + shippingCents + taxCents;
   const feeCents = Math.round(totalCents * (feePercent / 100));
   const stripeFeeCents = Math.round(grandTotalCents * 0.029) + 30;
@@ -151,6 +156,8 @@ export async function POST(request: Request) {
       cart_checkout: "true",
       platform_fee_cents: String(feeCents),
       stripe_fee_cents: String(stripeFeeCents),
+      tax_cents: String(taxCents),
+      ...(calculationId ? { tax_calculation_id: calculationId } : {}),
     },
   }).catch(async (err) => {
     await Promise.all(
