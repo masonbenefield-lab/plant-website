@@ -6,19 +6,18 @@ import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import { centsToDisplay } from "@/lib/stripe";
-import { PLANT_CATEGORIES } from "@/lib/categories";
 import { GROUNDBREAKER_CAP } from "@/lib/plan-limits";
 import HeroSearch from "@/components/hero-search";
 import LiveAuctionCard from "@/components/live-auction-card";
 import { HeroCategoryCarousel } from "@/components/hero-category-carousel";
 
 const features = [
-  { icon: "🌿", title: "Build Your Storefront",       desc: "Create a personal shop page with your bio, profile photo, and all your listings in one place." },
-  { icon: "🛒", title: "Sell at Fixed Price",          desc: "List plants with photos, variety details, and inventory count. Buyers purchase instantly." },
-  { icon: "⚡", title: "Run Live Auctions",            desc: "Set a starting bid and end time. Watch live bids roll in — highest bidder wins when the clock hits zero." },
-  { icon: "👥", title: "Follow Growers You Love",      desc: "Follow your favorite sellers and get their new listings, restocks, and updates straight in your feed." },
-  { icon: "💳", title: "Secure Payments",              desc: "Powered by Stripe. Buyers pay on-site; funds route directly to your bank minus a small platform fee." },
-  { icon: "🪴", title: "Your Personal Garden Log",     desc: "Track every plant you own — care schedules, growth photos, source history, and event logs all in one place." },
+  { icon: "🌿", title: "Build Your Storefront",       desc: "Create a personal shop page with your bio, profile photo, and all your listings in one place.",    href: "/signup" },
+  { icon: "🛒", title: "Sell at Fixed Price",          desc: "List plants with photos, variety details, and inventory count. Buyers purchase instantly.",          href: "/shop" },
+  { icon: "⚡", title: "Run Live Auctions",            desc: "Set a starting bid and end time. Watch live bids roll in — highest bidder wins when the clock hits zero.", href: "/auctions" },
+  { icon: "👥", title: "Follow Growers You Love",      desc: "Follow your favorite sellers and get their new listings, restocks, and updates straight in your feed.", href: "/shop" },
+  { icon: "💳", title: "Secure Payments",              desc: "Powered by Stripe. Buyers pay on-site; funds route directly to your bank minus a small platform fee.", href: "/pricing" },
+  { icon: "🪴", title: "Your Personal Garden Log",     desc: "Track every plant you own — care schedules, growth photos, source history, and event logs all in one place.", href: "/garden" },
 ];
 
 const audiences = [
@@ -201,23 +200,6 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ── Category quick-links ──────────────────────────────────── */}
-      <section className="bg-background border-b py-5 px-4">
-        <div className="max-w-5xl mx-auto">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground text-center mb-3">Browse by category</p>
-          <div className="flex flex-wrap justify-center gap-2">
-            {PLANT_CATEGORIES.map((c) => (
-              <Link
-                key={c}
-                href={`/shop?category=${encodeURIComponent(c)}`}
-                className="inline-flex items-center px-3.5 py-1.5 rounded-full border text-sm font-medium hover:border-leaf hover:text-leaf hover:bg-[#EBF0E6] dark:hover:bg-forest/20 transition-colors"
-              >
-                {c}
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* ── Trust bar ─────────────────────────────────────────────── */}
       <section className="border-b bg-[#DDD3BE] dark:bg-muted py-5 px-4">
@@ -348,7 +330,7 @@ export default async function LandingPage() {
                 <h2 className="text-2xl sm:text-3xl font-bold">From top nurseries</h2>
                 <p className="text-muted-foreground mt-1 text-sm">Hand-picked from our highest-rated professional sellers.</p>
               </div>
-              <Link href="/shop" className="text-sm font-medium text-leaf hover:underline">
+              <Link href="/shop" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
                 Browse all →
               </Link>
             </div>
@@ -397,7 +379,9 @@ export default async function LandingPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {audiences.map((a) => (
               <div key={a.label} className="bg-card rounded-2xl border p-6 shadow-sm hover:shadow-md transition-shadow">
-                <span className="text-3xl mb-4 block">{a.emoji}</span>
+                <div className="w-12 h-12 rounded-xl bg-[#EBF0E6] dark:bg-forest/30 flex items-center justify-center text-2xl mb-4">
+                  {a.emoji}
+                </div>
                 <p className="font-bold text-foreground mb-2">{a.label}</p>
                 <p className="text-sm text-muted-foreground leading-relaxed">{a.desc}</p>
               </div>
@@ -413,13 +397,13 @@ export default async function LandingPage() {
           <p className="text-muted-foreground text-center mb-10 max-w-xl mx-auto">One platform handles your storefront, payments, orders, and reputation — so you can focus on growing.</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {features.map((f) => (
-              <div key={f.title} className="group rounded-2xl border bg-card p-6 hover:border-[#A8BF9A] hover:shadow-md transition-all">
+              <Link key={f.title} href={f.href} className="group rounded-2xl border bg-card p-6 hover:border-[#A8BF9A] hover:shadow-md transition-all">
                 <div className="w-11 h-11 rounded-xl bg-[#EBF0E6] dark:bg-forest/30 flex items-center justify-center text-2xl mb-4 group-hover:bg-[#DFE7D4] dark:group-hover:bg-forest/50 transition-colors">
                   {f.icon}
                 </div>
                 <p className="font-semibold text-foreground mb-1.5">{f.title}</p>
                 <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
-              </div>
+              </Link>
             ))}
           </div>
         </div>
@@ -439,7 +423,7 @@ export default async function LandingPage() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             <div className="bg-card rounded-2xl border p-6 shadow-sm flex flex-col gap-3">
-              <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center text-2xl">
+              <div className="w-12 h-12 rounded-xl bg-[#EBF0E6] dark:bg-forest/30 flex items-center justify-center text-2xl">
                 💬
               </div>
               <p className="font-bold text-foreground">Ask the Community</p>
@@ -616,16 +600,24 @@ export default async function LandingPage() {
       {/* ── CTA ───────────────────────────────────────────────────── */}
       <section className="py-20 px-4 text-white text-center" style={{ background: "linear-gradient(160deg, #235140, #19392B)" }}>
         <div className="max-w-xl mx-auto">
-          <span className="text-4xl mb-6 block">🌱</span>
+          <div className="flex justify-center mb-6">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" fill="none" width="52" height="52">
+              <g transform="translate(8 4)">
+                <path d="M40 82 C 40 66 40 56 40 46" stroke="#F6F2E9" strokeWidth="6" strokeLinecap="round"/>
+                <g transform="translate(40 58) rotate(38)"><path d="M0 0 C -15 -8 -15 -30 0 -44 C 15 -30 15 -8 0 0 Z" fill="#A8C19A"/></g>
+                <g transform="translate(40 50) rotate(-38)"><path d="M0 0 C -15 -8 -15 -30 0 -44 C 15 -30 15 -8 0 0 Z" fill="#F6F2E9"/></g>
+              </g>
+            </svg>
+          </div>
           <h2 className="text-3xl sm:text-4xl font-bold mb-4">Ready to grow your plant business?</h2>
           <p className="text-cream/80 mb-8 text-base sm:text-lg">
             Join hundreds of nurseries and hobbyists already buying and selling on Plantet.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link href="/signup" className={cn(buttonVariants({ size: "lg" }), "bg-terra text-white hover:bg-[#B05A39] font-semibold px-10 text-base border-0")}>
+            <Link href="/signup" className={cn(buttonVariants({ size: "lg" }), "bg-terra text-white hover:bg-[#B05A39] font-semibold px-10 text-base border-0 min-w-[200px]")}>
               Create Free Account
             </Link>
-            <Link href="/shop" className={cn(buttonVariants({ variant: "outline", size: "lg" }), "bg-transparent border-cream/50 text-cream hover:bg-cream/10 font-semibold px-10 text-base")}>
+            <Link href="/shop" className={cn(buttonVariants({ size: "lg" }), "bg-transparent border-2 border-cream text-cream hover:bg-cream/10 font-semibold px-10 text-base min-w-[200px]")}>
               Browse Plants
             </Link>
           </div>

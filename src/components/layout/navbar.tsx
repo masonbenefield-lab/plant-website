@@ -133,7 +133,8 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
         {/* Left: logo + desktop nav */}
         <div className="flex items-center gap-8">
           <Link href="/" className="flex items-center gap-2 shrink-0" onClick={closeMenu}>
-            <img src="/plantet-mark-color.svg" alt="" width={28} height={28} />
+            <img src="/plantet-mark-color.svg" alt="" width={28} height={28} className="block dark:hidden" />
+            <img src="/plantet-mark-white.svg" alt="" width={28} height={28} className="hidden dark:block" />
             <span className="font-bold text-[21px] tracking-[-0.02em] text-forest dark:text-cream" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>Plantet</span>
           </Link>
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
