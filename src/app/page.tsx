@@ -10,13 +10,7 @@ import { PLANT_CATEGORIES } from "@/lib/categories";
 import { GROUNDBREAKER_CAP } from "@/lib/plan-limits";
 import HeroSearch from "@/components/hero-search";
 import LiveAuctionCard from "@/components/live-auction-card";
-
-const fallbackListings = [
-  { emoji: "🌿", name: "Monstera Deliciosa", price: "$24", regularPrice: null, onSale: false, tag: "In Shop", bg: "bg-[#DFE7D4]",   href: "/shop" },
-  { emoji: "🌸", name: "Pink Princess",      price: "$85", regularPrice: null, onSale: false, tag: "Auction", bg: "bg-pink-100",    href: "/auctions" },
-  { emoji: "🌵", name: "Blue Torch Cactus",  price: "$18", regularPrice: null, onSale: false, tag: "In Shop", bg: "bg-amber-100",   href: "/shop" },
-  { emoji: "🪴", name: "Golden Pothos",       price: "$12", regularPrice: null, onSale: false, tag: "In Shop", bg: "bg-emerald-100", href: "/shop" },
-];
+import { HeroCategoryCarousel } from "@/components/hero-category-carousel";
 
 const features = [
   { icon: "🌿", title: "Build Your Storefront",       desc: "Create a personal shop page with your bio, profile photo, and all your listings in one place." },
@@ -58,14 +52,14 @@ const steps = [
 export default async function LandingPage() {
   const supabase = await createClient();
 
-  const [{ data: liveListings }, { data: liveAuctions }, { data: nurseryProfiles }, { count: groundbreakerCount }, { data: recentCommunityPosts }] = await Promise.all([
+  const currentMonth = new Date().toISOString().slice(0, 7);
+
+  const [{ data: activeGiveaway }, { data: liveAuctions }, { data: nurseryProfiles }, { count: groundbreakerCount }, { data: recentCommunityPosts }] = await Promise.all([
     supabase
-      .from("listings")
-      .select("id, plant_name, variety, price_cents, sale_price_cents, sale_ends_at, images")
-      .eq("status", "active")
-      .or("category.neq.Hidden,category.is.null")
-      .order("created_at", { ascending: false })
-      .limit(4),
+      .from("giveaway_months")
+      .select("id")
+      .eq("month", currentMonth)
+      .maybeSingle(),
     supabase
       .from("auctions")
       .select("id, plant_name, variety, current_bid_cents, images, ends_at")
@@ -138,27 +132,6 @@ export default async function LandingPage() {
     featuredListings = data ?? [];
   }
 
-  const bgCycle = ["bg-[#DFE7D4]", "bg-pink-100", "bg-amber-100", "bg-emerald-100"];
-  const emojiCycle = ["🌿", "🌸", "🌵", "🪴"];
-
-  const heroCards = liveListings && liveListings.length >= 2
-    ? liveListings.map((l, i) => {
-        const onSale = !!(l.sale_price_cents && l.sale_ends_at && new Date(l.sale_ends_at) > new Date());
-        return {
-          id: l.id,
-          name: l.plant_name + (l.variety ? ` ${l.variety}` : ""),
-          price: centsToDisplay(onSale ? l.sale_price_cents! : l.price_cents),
-          regularPrice: onSale ? centsToDisplay(l.price_cents) : null,
-          onSale,
-          tag: "In Shop",
-          bg: bgCycle[i % bgCycle.length],
-          emoji: emojiCycle[i % emojiCycle.length],
-          image: l.images?.[0] ?? null,
-          href: `/shop/${l.id}`,
-        };
-      })
-    : fallbackListings;
-
   const groundbreakersLeft = GROUNDBREAKER_CAP - (groundbreakerCount ?? 0);
 
   return (
@@ -218,36 +191,9 @@ export default async function LandingPage() {
               <HeroSearch />
             </div>
 
-            {/* Right: live listing cards */}
-            <div className="grid grid-cols-2 gap-3 sm:gap-4 max-w-sm mx-auto lg:max-w-none">
-              {heroCards.map((l, i) => (
-                <Link key={"id" in l ? l.id : `fallback-${i}`} href={l.href} className="bg-card rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
-                  <div className={cn("relative flex items-center justify-center h-24 sm:h-28 overflow-hidden", "image" in l && l.image ? "" : l.bg)}>
-                    {"image" in l && l.image ? (
-                      <Image src={l.image as string} alt={l.name} fill className="object-cover" priority />
-                    ) : (
-                      <span className="text-4xl sm:text-5xl">{l.emoji}</span>
-                    )}
-                  </div>
-                  <div className="p-3">
-                    <p className="font-semibold text-card-foreground text-sm leading-tight truncate">{l.name}</p>
-                    <div className="flex items-center justify-between mt-1.5 gap-1">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        {l.onSale && (
-                          <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-red-600 text-white">SALE</span>
-                        )}
-                        <span className="text-leaf dark:text-sage font-bold text-sm">{l.price}</span>
-                        {l.regularPrice && (
-                          <span className="text-muted-foreground text-xs line-through">{l.regularPrice}</span>
-                        )}
-                      </div>
-                      <span className={cn("shrink-0 text-xs px-2 py-0.5 rounded-full font-medium", l.tag === "Auction" ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300" : "bg-[#DFE7D4] text-leaf dark:bg-forest/40 dark:text-[#A8BF9A]")}>
-                        {l.tag}
-                      </span>
-                    </div>
-                  </div>
-                </Link>
-              ))}
+            {/* Right: category carousel */}
+            <div className="max-w-sm mx-auto lg:max-w-none w-full">
+              <HeroCategoryCarousel hasActiveGiveaway={!!activeGiveaway} />
             </div>
 
           </div>
