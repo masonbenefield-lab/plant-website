@@ -155,7 +155,7 @@ export default async function OrdersPage({
           ? admin.from("listings").select("id, plant_name, variety, images, care_guide_pdf_url").in("id", listingIds)
           : { data: [] },
         auctionIds.length
-          ? admin.from("auctions").select("id, plant_name, variety, images").in("id", auctionIds)
+          ? admin.from("auctions").select("id, plant_name, variety, images, current_bidder_id").in("id", auctionIds)
           : { data: [] },
         supabase.from("profiles").select("id, username, display_name").in("id", sellerIds),
         supabase.from("ratings").select("order_id").eq("reviewer_id", user.id),
@@ -273,6 +273,33 @@ export default async function OrdersPage({
                     </p>
                   )}
 
+
+                  {order.status === "pending" && order.auction_id && (() => {
+                    const auctionForOrder = auctionMap[order.auction_id] as { id: string; current_bidder_id?: string | null } | undefined;
+                    const isWinner = auctionForOrder?.current_bidder_id === user.id;
+                    const deadline = (order as { payment_deadline_at?: string | null }).payment_deadline_at;
+                    const deadlineDate = deadline ? new Date(deadline) : null;
+                    const isExpired = deadlineDate ? deadlineDate < new Date() : false;
+                    const checkoutHref = isWinner
+                      ? `/checkout?auction=${order.auction_id}`
+                      : `/checkout?auction=${order.auction_id}&offer=${order.id}`;
+                    return (
+                      <div className="mt-3 pt-3 border-t">
+                        {deadlineDate && !isExpired && (
+                          <p className="text-xs text-amber-600 mb-2">
+                            Payment due by {deadlineDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} at {deadlineDate.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+                          </p>
+                        )}
+                        {isExpired ? (
+                          <p className="text-xs text-muted-foreground">Payment deadline passed — the seller has been notified.</p>
+                        ) : (
+                          <Link href={checkoutHref} className="inline-flex items-center justify-center h-8 px-3 text-xs font-medium rounded-md bg-leaf text-white hover:bg-forest transition-colors">
+                            Complete payment →
+                          </Link>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   {(order.status === "paid" || order.status === "shipped" || order.status === "delivered") && (
                     <div className="mt-3 pt-3 border-t">

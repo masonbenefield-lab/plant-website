@@ -236,7 +236,12 @@ export async function POST(request: Request) {
       // Cart checkout: stock is only decremented on payment_intent.succeeded,
       // so nothing to restore here for failed/abandoned cart checkouts.
 
-      await supabase.from("orders").delete().eq("id", order.id);
+      // Auction orders: keep the pending order alive so the cron can mark it
+      // expired after the payment deadline. The checkout route handles a canceled
+      // PI by creating a new one if the winner retries.
+      if (!order.auction_id) {
+        await supabase.from("orders").delete().eq("id", order.id);
+      }
     }
   }
 
