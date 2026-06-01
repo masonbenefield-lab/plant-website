@@ -95,6 +95,8 @@ export default function AccountForm({
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [deleting, setDeleting] = useState(false);
 
+  const [removeAddressDialog, setRemoveAddressDialog] = useState<{ listingIds: string[] } | null>(null);
+
   const canUseBanner = profile?.is_admin || (profile?.plan && profile.plan !== "seedling");
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -440,7 +442,52 @@ export default function AccountForm({
   }
 
   async function clearShipFromAddress() {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Active weight-based auctions block removal entirely
+    const { data: weightAuctions } = await supabase
+      .from("auctions")
+      .select("id")
+      .eq("seller_id", user.id)
+      .eq("status", "active")
+      .not("shipping_weight_oz", "is", null)
+      .gt("shipping_weight_oz", 0);
+
+    if (weightAuctions?.length) {
+      const n = weightAuctions.length;
+      toast.error(`${n} active auction${n > 1 ? "s" : ""} use weight-based shipping`, {
+        description: "Wait for those auctions to end before removing your ship-from address.",
+      });
+      return;
+    }
+
+    // Active weight-based listings can be paused — confirm first
+    const { data: weightListings } = await supabase
+      .from("listings")
+      .select("id")
+      .eq("seller_id", user.id)
+      .eq("status", "active")
+      .not("shipping_weight_oz", "is", null)
+      .gt("shipping_weight_oz", 0);
+
+    if (weightListings?.length) {
+      setRemoveAddressDialog({ listingIds: weightListings.map((l) => l.id) });
+      return;
+    }
+
+    await doRemoveAddress([]);
+  }
+
+  async function doRemoveAddress(listingIdsToPause: string[]) {
     setSavingShipping(true);
+
+    if (listingIdsToPause.length) {
+      const supabase = createClient();
+      await supabase.from("listings").update({ status: "paused" }).in("id", listingIdsToPause);
+    }
+
     const res = await fetch("/api/profile/update-shipping", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -454,10 +501,17 @@ export default function AccountForm({
     const data = await res.json();
     setSavingShipping(false);
     if (data.error) { toast.error(data.error); return; }
+
     setShipFrom({ name: "", street1: "", city: "", state: "", zip: "", country: "US", phone: "" });
     setCalculatedShippingEnabled(false);
     setAddressValidation(null);
-    toast.success("Ship-from address removed");
+    setRemoveAddressDialog(null);
+
+    const n = listingIdsToPause.length;
+    toast.success(n > 0
+      ? `Address removed — ${n} listing${n > 1 ? "s" : ""} paused`
+      : "Ship-from address removed"
+    );
   }
 
   function toggleService(token: string) {
@@ -1175,6 +1229,27 @@ export default function AccountForm({
               onClick={handleDeleteAccount}
             >
               {deleting ? "Deleting…" : "Delete Account"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!removeAddressDialog} onOpenChange={(open) => { if (!open) setRemoveAddressDialog(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Pause weight-based listings?</DialogTitle>
+            <DialogDescription>
+              You have {removeAddressDialog?.listingIds.length} active listing{(removeAddressDialog?.listingIds.length ?? 0) > 1 ? "s" : ""} using weight-based shipping. Buyers can&apos;t check out without a ship-from address, so those listings will be paused until you add a new address.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRemoveAddressDialog(null)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              disabled={savingShipping}
+              onClick={() => doRemoveAddress(removeAddressDialog?.listingIds ?? [])}
+            >
+              {savingShipping ? "Removing…" : `Pause ${removeAddressDialog?.listingIds.length} listing${(removeAddressDialog?.listingIds.length ?? 0) > 1 ? "s" : ""} & remove address`}
             </Button>
           </DialogFooter>
         </DialogContent>
