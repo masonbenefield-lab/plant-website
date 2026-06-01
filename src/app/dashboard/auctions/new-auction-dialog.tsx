@@ -56,14 +56,19 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
     const toUpload = Array.from(files).slice(0, remaining);
     const urls: string[] = [];
     for (const rawFile of toUpload) {
-      const file = await compressImage(rawFile);
-      const path = `${sellerId}/${Date.now()}-${file.name}`;
-      const { error } = await supabase.storage.from("listings").upload(path, file, { upsert: true });
-      if (error) {
-        toast.error(`Failed to upload ${file.name}: ${error.message}`);
-      } else {
-        const { data } = supabase.storage.from("listings").getPublicUrl(path);
-        urls.push(data.publicUrl);
+      try {
+        const file = await compressImage(rawFile);
+        const ext = file.name.match(/\.[^.]+$/)?.[0] ?? ".jpg";
+        const path = `${sellerId}/${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
+        const { error } = await supabase.storage.from("listings").upload(path, file, { upsert: true });
+        if (error) {
+          toast.error(`Failed to upload ${rawFile.name}: ${error.message}`);
+        } else {
+          const { data } = supabase.storage.from("listings").getPublicUrl(path);
+          urls.push(data.publicUrl);
+        }
+      } catch (err) {
+        toast.error(`Failed to upload ${rawFile.name}: ${err instanceof Error ? err.message : "Unknown error"}`);
       }
     }
     setImageUrls((prev) => [...prev, ...urls]);
