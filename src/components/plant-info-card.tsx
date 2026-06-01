@@ -2,16 +2,26 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useSearchParams } from "next/navigation";
-import { Leaf } from "lucide-react";
+import { Leaf, X } from "lucide-react";
+import { toast } from "sonner";
+
+const STORAGE_KEY = "plantet_plant_guide_enabled";
 
 export default function PlantInfoCard() {
   const searchParams = useSearchParams();
   const q = searchParams.get("q") ?? "";
+  const [enabled, setEnabled] = useState(true);
   const [description, setDescription] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored === "false") setEnabled(false);
+  }, []);
+
+  useEffect(() => {
+    if (!enabled) return;
     if (!q || q.trim().length < 3) {
       setDescription(null);
       return;
@@ -35,16 +45,25 @@ export default function PlantInfoCard() {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [q]);
+  }, [q, enabled]);
 
+  function dismiss() {
+    setEnabled(false);
+    localStorage.setItem(STORAGE_KEY, "false");
+    toast("Plant Guide hidden", {
+      description: "You can turn it back on in Account Settings.",
+    });
+  }
+
+  if (!enabled) return null;
   if (!loading && !description) return null;
 
   return (
-    <div className="rounded-xl border border-[#C5D4BC] bg-[#EBF0E6] dark:bg-forest/20 dark:border-forest px-4 py-3 flex gap-3 items-start mb-6">
+    <div className="relative rounded-xl border border-[#C5D4BC] bg-[#EBF0E6] dark:bg-forest/20 dark:border-forest px-4 py-3 flex gap-3 items-start mb-6">
       <div className="mt-0.5 text-leaf dark:text-sage shrink-0">
         <Leaf size={16} />
       </div>
-      <div className="flex-1">
+      <div className="flex-1 pr-6">
         <p className="text-xs font-semibold text-forest dark:text-[#A8BF9A] mb-1 uppercase tracking-wide">
           Plant Guide
         </p>
@@ -57,6 +76,13 @@ export default function PlantInfoCard() {
           <p className="text-sm text-forest dark:text-[#DFE7D4] leading-relaxed">{description}</p>
         )}
       </div>
+      <button
+        onClick={dismiss}
+        aria-label="Hide plant guide"
+        className="absolute top-2.5 right-3 text-forest/40 hover:text-forest dark:text-sage/40 dark:hover:text-sage transition-colors"
+      >
+        <X size={15} />
+      </button>
     </div>
   );
 }

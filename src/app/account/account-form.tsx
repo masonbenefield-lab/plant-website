@@ -1076,6 +1076,8 @@ export default function AccountForm({
 
       <PlanBillingCard profile={profile} />
 
+      <PlantGuidePreference />
+
       <Card id="danger-zone" className="border-destructive/40 scroll-mt-24">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-destructive">
@@ -1128,6 +1130,59 @@ export default function AccountForm({
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+const PLANT_GUIDE_KEY = "plantet_plant_guide_enabled";
+
+function PlantGuidePreference() {
+  const [enabled, setEnabled] = useState(true);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    const stored = localStorage.getItem(PLANT_GUIDE_KEY);
+    if (stored === "false") setEnabled(false);
+  }, []);
+
+  function toggle() {
+    const next = !enabled;
+    setEnabled(next);
+    localStorage.setItem(PLANT_GUIDE_KEY, String(next));
+  }
+
+  if (!mounted) return null;
+
+  return (
+    <Card id="display-preferences" className="scroll-mt-24">
+      <CardHeader>
+        <CardTitle className="text-base">Display Preferences</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <label className="flex items-center justify-between gap-4 cursor-pointer select-none">
+          <div>
+            <p className="text-sm font-medium">Show plant care tips when searching</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Displays a brief plant guide card below the search bar when you search by plant name.
+            </p>
+          </div>
+          <button
+            role="switch"
+            aria-checked={enabled}
+            onClick={toggle}
+            className={`relative shrink-0 inline-flex h-6 w-11 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-leaf ${
+              enabled ? "bg-leaf" : "bg-muted-foreground/30"
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
+                enabled ? "translate-x-6" : "translate-x-1"
+              }`}
+            />
+          </button>
+        </label>
+      </CardContent>
+    </Card>
   );
 }
 

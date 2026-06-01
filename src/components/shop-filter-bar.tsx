@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useCallback, useTransition, useState, useEffect, useRef, Suspense } from "react";
-import { X, MapPin, Leaf, SlidersHorizontal } from "lucide-react";
+import { X, MapPin, SlidersHorizontal } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { PLANT_CATEGORIES, SUPPLY_CATEGORIES } from "@/lib/categories";
@@ -20,18 +20,12 @@ export default function ShopFilterBar({ activeTab = "plants" }: { activeTab?: st
   const pathname = usePathname();
   const params = useSearchParams();
   const [, startTransition] = useTransition();
-  const [showGuide, setShowGuide] = useState(true);
   const [showMore, setShowMore] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [searchValue, setSearchValue] = useState(() => params.get("q") ?? "");
   const searchRef = useRef<HTMLDivElement>(null);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    const stored = localStorage.getItem("plant-guide-visible");
-    if (stored === "false") setShowGuide(false);
-  }, []);
 
   // Auto-open More Filters panel if those params are active on load
   useEffect(() => {
@@ -48,13 +42,6 @@ export default function ShopFilterBar({ activeTab = "plants" }: { activeTab?: st
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
-
-  function toggleGuide() {
-    setShowGuide((v) => {
-      localStorage.setItem("plant-guide-visible", String(!v));
-      return !v;
-    });
-  }
 
   const q        = params.get("q") ?? "";
   const sort     = params.get("sort") ?? "newest";
@@ -230,22 +217,6 @@ export default function ShopFilterBar({ activeTab = "plants" }: { activeTab?: st
           )}
         </button>
 
-        {/* Plant Guide toggle — plants only */}
-        {activeTab !== "supplies" && (
-          <button
-            onClick={toggleGuide}
-            title={showGuide ? "Hide plant guide" : "Show plant guide"}
-            className={cn(
-              "h-10 px-3 rounded-md border text-sm font-medium transition-colors flex items-center gap-1.5 whitespace-nowrap",
-              showGuide
-                ? "bg-leaf text-white border-leaf"
-                : "border-input bg-background text-muted-foreground hover:text-foreground hover:border-foreground"
-            )}
-          >
-            <Leaf size={14} />
-            Plant Guide
-          </button>
-        )}
       </div>
 
       {/* More Filters panel */}
@@ -293,7 +264,7 @@ export default function ShopFilterBar({ activeTab = "plants" }: { activeTab?: st
         </div>
       )}
 
-      {showGuide && (
+      {activeTab !== "supplies" && (
         <Suspense>
           <PlantInfoCard />
         </Suspense>
