@@ -409,18 +409,21 @@ export default function AccountForm({
         const vData = await vRes.json();
         setAddressValidation(vData.error ? null : vData);
         // Auto-enable calculated shipping when address is verified
-        if (vData?.valid && !calculatedShippingEnabled) {
+        if (vData?.valid) {
           setCalculatedShippingEnabled(true);
-          await fetch("/api/profile/update-shipping", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              ship_from_address: shipFrom.street1.trim() ? shipFrom : null,
-              shipping_services: shippingServices.length ? shippingServices : null,
-              calculated_shipping_enabled: true,
-              auto_labels_enabled: autoLabelsEnabled,
-            }),
-          });
+          if (!calculatedShippingEnabled) {
+            await fetch("/api/profile/update-shipping", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                ship_from_address: shipFrom.street1.trim() ? shipFrom : null,
+                shipping_services: shippingServices.length ? shippingServices : null,
+                calculated_shipping_enabled: true,
+                auto_labels_enabled: autoLabelsEnabled,
+              }),
+            });
+          }
+          router.refresh();
         }
       } catch { /* non-blocking */ }
       setValidatingAddress(false);
