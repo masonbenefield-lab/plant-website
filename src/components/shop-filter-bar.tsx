@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useCallback, useTransition, useState, useEffect, useRef, Suspense } from "react";
-import { X, MapPin, SlidersHorizontal } from "lucide-react";
+import { X, MapPin, SlidersHorizontal, Leaf } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { PLANT_CATEGORIES, SUPPLY_CATEGORIES } from "@/lib/categories";
@@ -21,6 +21,7 @@ export default function ShopFilterBar({ activeTab = "plants" }: { activeTab?: st
   const params = useSearchParams();
   const [, startTransition] = useTransition();
   const [showMore, setShowMore] = useState(false);
+  const [plantGuideEnabled, setPlantGuideEnabled] = useState(true);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [searchValue, setSearchValue] = useState(() => params.get("q") ?? "");
@@ -31,6 +32,16 @@ export default function ShopFilterBar({ activeTab = "plants" }: { activeTab?: st
   useEffect(() => {
     if (params.get("location") || params.get("pot_size")) setShowMore(true);
   }, [params]);
+
+  // Sync plant guide toggle with localStorage
+  useEffect(() => {
+    setPlantGuideEnabled(localStorage.getItem("plantet_plant_guide_enabled") !== "false");
+    function sync() {
+      setPlantGuideEnabled(localStorage.getItem("plantet_plant_guide_enabled") !== "false");
+    }
+    window.addEventListener("plantet:plant-guide-change", sync);
+    return () => window.removeEventListener("plantet:plant-guide-change", sync);
+  }, []);
 
   // Close suggestions when clicking outside
   useEffect(() => {
@@ -223,6 +234,21 @@ export default function ShopFilterBar({ activeTab = "plants" }: { activeTab?: st
             </span>
           )}
         </button>
+
+        {/* Plant Guide re-enable button (only visible when disabled) */}
+        {activeTab !== "supplies" && !plantGuideEnabled && (
+          <button
+            onClick={() => {
+              localStorage.removeItem("plantet_plant_guide_enabled");
+              setPlantGuideEnabled(true);
+              window.dispatchEvent(new Event("plantet:plant-guide-change"));
+            }}
+            title="Turn Plant Guide back on"
+            className="h-10 w-10 flex items-center justify-center rounded-md border border-input bg-background text-muted-foreground hover:text-leaf hover:border-leaf transition-colors"
+          >
+            <Leaf size={16} />
+          </button>
+        )}
 
       </div>
 
