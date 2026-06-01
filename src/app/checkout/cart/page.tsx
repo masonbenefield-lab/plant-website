@@ -71,7 +71,7 @@ function PaymentStep({ clientSecret, totalCents, onSuccess }: { clientSecret: st
 }
 
 export default function CartCheckoutPage() {
-  const { items, totalCents: itemsTotalCents, clearCart, removeItem } = useCart();
+  const { items, totalCents: itemsTotalCents, clearCart, removeItem, updateQty } = useCart();
   const router = useRouter();
   const { resolvedTheme } = useTheme();
   const [step, setStep] = useState<"address" | "shipping" | "payment">("address");
@@ -158,6 +158,32 @@ export default function CartCheckoutPage() {
         return;
       }
     }
+
+    // Validate quantities against current stock before fetching rates
+    const stockRes = await fetch("/api/cart/stock", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ listingIds: items.map((i) => i.listingId) }),
+    }).then((r) => r.json()).catch(() => null);
+
+    if (stockRes?.stock) {
+      let invalid = false;
+      for (const item of items) {
+        const available = stockRes.stock[item.listingId] ?? 0;
+        if (item.quantity > available) {
+          if (available === 0) {
+            removeItem(item.listingId);
+            toast.error(`${item.plantName} is sold out and was removed from your cart`);
+          } else {
+            updateQty(item.listingId, available);
+            toast.warning(`${item.plantName} quantity adjusted to ${available} (max available)`);
+          }
+          invalid = true;
+        }
+      }
+      if (invalid) return;
+    }
+
     setFetchingRates(true);
 
     const res = await fetch("/api/shipping/rates", {

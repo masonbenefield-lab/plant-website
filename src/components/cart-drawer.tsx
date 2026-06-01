@@ -7,7 +7,7 @@ import { X, Minus, Plus, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { centsToDisplay } from "@/lib/stripe";
 import { useCart, effectivePrice } from "@/lib/cart";
-import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
 
 export function CartButton() {
   const { count, openCart } = useCart();
@@ -33,15 +33,29 @@ export function CartDrawer() {
 
   useEffect(() => {
     if (!isOpen || !items.length) return;
-    const supabase = createClient();
-    supabase
-      .from("listings")
-      .select("id, quantity")
-      .in("id", items.map((i) => i.listingId))
-      .then(({ data }) => {
-        if (data) setStockMap(Object.fromEntries(data.map((l) => [l.id, l.quantity])));
-      });
-  }, [isOpen, items]);
+    fetch("/api/cart/stock", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ listingIds: items.map((i) => i.listingId) }),
+    })
+      .then((r) => r.json())
+      .then(({ stock }: { stock: Record<string, number> }) => {
+        setStockMap(stock);
+        // Auto-cap any items that exceed current stock
+        items.forEach((item) => {
+          const available = stock[item.listingId];
+          if (available !== undefined && item.quantity > available) {
+            updateQty(item.listingId, Math.max(available, 0));
+            if (available === 0) {
+              toast.error(`${item.plantName} is sold out and was removed from your cart`);
+            } else {
+              toast.warning(`${item.plantName} quantity adjusted to ${available} (max available)`);
+            }
+          }
+        });
+      })
+      .catch(() => {}); // fail silently — server still validates at checkout
+  }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!isOpen) return null;
 
