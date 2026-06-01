@@ -252,6 +252,22 @@ export default function CartCheckoutPage() {
     });
 
     const data = await res.json();
+
+    // Server detected quantity > available stock — auto-adjust cart and bail
+    if (data.error === "stock_exceeded" && Array.isArray(data.adjustments)) {
+      for (const adj of data.adjustments as { listingId: string; plantName: string; available: number }[]) {
+        if (adj.available === 0) {
+          removeItem(adj.listingId);
+          toast.error(`${adj.plantName} is sold out and was removed from your cart`);
+        } else {
+          updateQty(adj.listingId, adj.available);
+          toast.warning(`${adj.plantName} quantity adjusted to ${adj.available} (max available)`);
+        }
+      }
+      setLoading(false);
+      return;
+    }
+
     if (data.error) { toast.error(data.error); setLoading(false); return; }
 
     const tax = data.taxCents ?? 0;

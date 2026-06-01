@@ -68,12 +68,16 @@ export async function POST(request: Request) {
   const cartItemsForOrder: { listing_id: string; plant_name: string; variety: string | null; quantity: number; price_cents: number }[] = [];
   let totalCents = 0;
 
+  // Collect all stock violations before returning so the client can fix every item at once
+  const stockAdjustments: { listingId: string; plantName: string; available: number }[] = [];
+
   for (const cartItem of items) {
     const listing = listings.find((l) => l.id === cartItem.listingId);
     if (!listing) return NextResponse.json({ error: "Item not found" }, { status: 400 });
     if (cartItem.quantity < 1) return NextResponse.json({ error: "Invalid quantity" }, { status: 400 });
     if (cartItem.quantity > listing.quantity) {
-      return NextResponse.json({ error: `Only ${listing.quantity} of ${listing.plant_name} available` }, { status: 400 });
+      stockAdjustments.push({ listingId: listing.id, plantName: listing.plant_name, available: listing.quantity });
+      continue;
     }
     const onSale = !!(listing.sale_price_cents && listing.sale_ends_at && new Date(listing.sale_ends_at) > new Date());
     const basePriceCents = onSale ? listing.sale_price_cents! : listing.price_cents;
@@ -89,6 +93,10 @@ export async function POST(request: Request) {
       quantity: cartItem.quantity,
       price_cents: priceCents,
     });
+  }
+
+  if (stockAdjustments.length > 0) {
+    return NextResponse.json({ error: "stock_exceeded", adjustments: stockAdjustments }, { status: 400 });
   }
 
   const [{ data: sellerProfile }, { data: sellerPlan }] = await Promise.all([
