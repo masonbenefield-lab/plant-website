@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import { isBlocked } from "@/lib/blocks";
+import { sendOutbidNotification } from "@/lib/email";
 
 function adminClient() {
   return createSupabaseAdmin<Database>(
@@ -16,6 +17,24 @@ function getMinIncrement(currentBidCents: number): number {
   if (currentBidCents < 5000)  return 200;   // $10–$49     → +$2
   if (currentBidCents < 20000) return 500;   // $50–$199    → +$5
   return 1000;                                // $200+       → +$10
+}
+
+async function notifyOutbid(
+  admin: ReturnType<typeof adminClient>,
+  bidderId: string,
+  plantName: string,
+  auctionId: string,
+  newBidCents: number
+) {
+  try {
+    const { data: auth } = await admin.auth.admin.getUserById(bidderId);
+    const email = auth?.user?.email;
+    if (email) {
+      await sendOutbidNotification({ bidderEmail: email, plantName, auctionId, newBidCents });
+    }
+  } catch {
+    // Email failure is non-fatal
+  }
 }
 
 export async function POST(request: Request) {
@@ -43,7 +62,7 @@ export async function POST(request: Request) {
 
   const { data: auction, error: auctionErr } = await admin
     .from("auctions")
-    .select("id, seller_id, current_bid_cents, current_bidder_id, status, ends_at")
+    .select("id, seller_id, plant_name, current_bid_cents, current_bidder_id, status, ends_at")
     .eq("id", auctionId)
     .single();
 
@@ -109,11 +128,13 @@ export async function POST(request: Request) {
           ...(extended ? { ends_at: newEndsAt } : {}),
         }).eq("id", auctionId);
 
+        // The incoming bidder was outbid by proxy — notify them server-side
+        notifyOutbid(admin, user.id, auction.plant_name, auctionId, counterCents);
+
         return NextResponse.json({
           ok: true,
           outbidByProxy: true,
           proxyBid: counterCents,
-          previousBidderId: null, // current leader still leads — don't notify them
         });
       }
     }
@@ -137,9 +158,10 @@ export async function POST(request: Request) {
 
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
 
-  return NextResponse.json({
-    ok: true,
-    extended,
-    previousBidderId: auction.current_bidder_id,
-  });
+  // Notify the displaced leader server-side
+  if (auction.current_bidder_id && auction.current_bidder_id !== user.id) {
+    notifyOutbid(admin, auction.current_bidder_id, auction.plant_name, auctionId, amountCents);
+  }
+
+  return NextResponse.json({ ok: true, extended });
 }

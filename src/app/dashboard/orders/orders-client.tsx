@@ -35,6 +35,8 @@ const statusColors: Record<string, string> = {
   shipped: "bg-purple-100 text-purple-800",
   delivered: "bg-[#DFE7D4] text-forest",
   refunded: "bg-red-100 text-red-700",
+  expired: "bg-amber-100 text-amber-700",
+  offered_down: "bg-gray-100 text-gray-500",
 };
 
 type OrderRow = {

@@ -248,6 +248,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "This auction is unavailable." }, { status: 403 });
     }
 
+    // Guard: if the winner already has a pending order + PaymentIntent, reuse it
+    // to prevent duplicate charges from double-taps or multiple tabs.
+    const { data: existingOrder } = await supabase
+      .from("orders")
+      .select("id, stripe_payment_intent_id")
+      .eq("auction_id", auctionId)
+      .eq("buyer_id", user.id)
+      .eq("status", "pending")
+      .maybeSingle();
+
+    if (existingOrder?.stripe_payment_intent_id) {
+      const existingPi = await getStripe().paymentIntents.retrieve(existingOrder.stripe_payment_intent_id);
+      if (existingPi.status !== "canceled") {
+        return NextResponse.json({ clientSecret: existingPi.client_secret, orderId: existingOrder.id, taxCents: 0 });
+      }
+    }
+
     const [{ data: sellerProfile }, { data: sellerPlan }] = await Promise.all([
       supabase.from("profiles").select("stripe_account_id, stripe_onboarded").eq("id", auction.seller_id).single(),
       supabase.from("profiles").select("plan, is_admin, groundbreaker").eq("id", auction.seller_id).single(),
@@ -271,6 +288,8 @@ export async function POST(request: Request) {
     const auctionApplicationFeeCents = shippoRateId
       ? feeCents + auctionShippingCents + stripeFeeCents + auctionTaxCents
       : feeCents + stripeFeeCents + auctionTaxCents;
+
+    const paymentDeadline = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
 
     const paymentIntent = await getStripe().paymentIntents.create({
       amount: amountCents,
@@ -301,27 +320,12 @@ export async function POST(request: Request) {
         shippo_rate_id: shippoRateId ?? null,
         platform_fee_cents: feeCents,
         tax_cents: auctionTaxCents,
+        payment_deadline_at: paymentDeadline,
       })
       .select()
       .single();
 
     if (orderError) return NextResponse.json({ error: orderError.message }, { status: 500 });
-
-    if (auction.inventory_id) {
-      const admin = adminClient();
-      const { data: inv } = await admin
-        .from("inventory")
-        .select("quantity")
-        .eq("id", auction.inventory_id)
-        .single();
-      if (inv) {
-        await admin.from("inventory").update({
-          quantity: Math.max(0, inv.quantity - (auction.quantity ?? 1)),
-          auction_id: null,
-          auction_quantity: null,
-        }).eq("id", auction.inventory_id);
-      }
-    }
 
     return NextResponse.json({ clientSecret: paymentIntent.client_secret, orderId: order.id, taxCents: auctionTaxCents });
   }

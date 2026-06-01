@@ -738,7 +738,6 @@ export async function sendOutbidNotification({
 
 export function buildAuctionCancelledHtml({
   plantName,
-  auctionId,
 }: {
   plantName: string;
   auctionId: string;
@@ -750,7 +749,7 @@ export function buildAuctionCancelledHtml({
     subheading: "Your bid has been voided",
     body: `
       <p style="margin:0 0 20px;">The auction for <strong>${plantName}</strong> has been cancelled by the seller. Your bid has been voided and you will not be charged.</p>
-      ${ctaBtn("Browse Other Auctions", `${siteUrl}/auctions/${auctionId}`)}
+      ${ctaBtn("Browse Other Auctions", `${siteUrl}/auctions`)}
     `,
   });
 }
@@ -770,6 +769,179 @@ export async function sendAuctionCancelled({
     to: bidderEmail,
     subject: `Auction cancelled: ${plantName}`,
     html: buildAuctionCancelledHtml({ plantName, auctionId }),
+  });
+}
+
+// ─── Auction ended — seller notification ─────────────────────────────────────
+
+export async function sendAuctionEndedSeller({
+  sellerEmail,
+  plantName,
+  winnerFound,
+  winnerUsername,
+  amountCents,
+  ordersUrl,
+}: {
+  sellerEmail: string;
+  plantName: string;
+  winnerFound: boolean;
+  winnerUsername?: string;
+  amountCents?: number;
+  ordersUrl: string;
+}) {
+  const siteUrl = siteBase();
+  const resend = getResend();
+  const html = winnerFound
+    ? emailBase({
+        title: `Your auction for ${plantName} ended`,
+        heading: "Your auction ended — buyer is checking out",
+        subheading: `${plantName}`,
+        body: `
+          <p style="margin:0 0 4px;"><strong>${winnerUsername}</strong> won your auction and has been sent a checkout link.</p>
+          ${infoCard([
+            { label: "Item", value: plantName },
+            { label: "Winning bid", value: centsToDisplay(amountCents ?? 0) },
+            { label: "Payment deadline", value: "48 hours from auction close" },
+          ])}
+          <p style="margin:16px 0 0;font-size:14px;color:#6b7280;">You'll receive another notification once payment is confirmed. If the buyer doesn't pay within 48 hours you'll be able to offer to the next bidder or relist.</p>
+          ${ctaBtn("View Your Orders", `${siteUrl}/orders?tab=sales`)}
+        `,
+      })
+    : emailBase({
+        title: `Your auction for ${plantName} ended with no bids`,
+        heading: "Auction ended — no bids",
+        subheading: `${plantName}`,
+        body: `
+          <p style="margin:0 0 20px;">Your auction for <strong>${plantName}</strong> ended without receiving any bids${amountCents ? ` that met the reserve price` : ""}. You can create a new auction or list it at a fixed price.</p>
+          ${ctaBtn("Create New Auction", `${siteUrl}/dashboard/auctions`)}
+        `,
+      });
+  await resend.emails.send({
+    from: FROM,
+    to: sellerEmail,
+    subject: winnerFound ? `Your ${plantName} auction ended — buyer is checking out` : `Your ${plantName} auction ended with no bids`,
+    html,
+  });
+}
+
+// ─── Auction payment reminder (winner, 4 hours before deadline) ───────────────
+
+export async function sendAuctionPaymentReminder({
+  winnerEmail,
+  plantName,
+  checkoutUrl,
+  deadlineAt,
+}: {
+  winnerEmail: string;
+  plantName: string;
+  checkoutUrl: string;
+  deadlineAt: string;
+}) {
+  const resend = getResend();
+  const deadline = new Date(deadlineAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short" });
+  await resend.emails.send({
+    from: FROM,
+    to: winnerEmail,
+    subject: `Reminder: complete your purchase of ${plantName} before it expires`,
+    html: emailBase({
+      title: `Payment reminder: ${plantName}`,
+      heading: "Don't forget to complete your purchase",
+      subheading: `Your checkout link expires soon`,
+      body: `
+        <p style="margin:0 0 4px;">You won the auction for <strong>${plantName}</strong>! Your payment deadline is approaching.</p>
+        ${infoCard([
+          { label: "Item", value: plantName },
+          { label: "Payment deadline", value: deadline },
+        ])}
+        <p style="margin:16px 0 0;font-size:14px;color:#6b7280;">If you don't complete checkout by the deadline, the seller may offer the item to the next bidder.</p>
+        ${ctaBtn("Complete Purchase Now", checkoutUrl)}
+      `,
+    }),
+  });
+}
+
+// ─── Auction payment expired — seller notification ────────────────────────────
+
+export async function sendAuctionPaymentExpired({
+  sellerEmail,
+  plantName,
+  winnerUsername,
+  winningBidCents,
+  hasSecondBidder,
+  offerUrl,
+  auctionId,
+}: {
+  sellerEmail: string;
+  plantName: string;
+  winnerUsername: string;
+  winningBidCents: number;
+  hasSecondBidder: boolean;
+  offerUrl: string;
+  auctionId: string;
+}) {
+  const siteUrl = siteBase();
+  const resend = getResend();
+  await resend.emails.send({
+    from: FROM,
+    to: sellerEmail,
+    subject: `Action needed: ${winnerUsername} didn't complete payment for ${plantName}`,
+    html: emailBase({
+      title: `Buyer didn't pay — ${plantName}`,
+      heading: "Your buyer didn't complete payment",
+      subheading: plantName,
+      body: `
+        <p style="margin:0 0 4px;"><strong>${winnerUsername}</strong> won your auction for <strong>${plantName}</strong> but did not complete payment within 48 hours.</p>
+        ${infoCard([
+          { label: "Item", value: plantName },
+          { label: "Winning bid", value: centsToDisplay(winningBidCents) },
+        ])}
+        ${hasSecondBidder
+          ? `<p style="margin:16px 0 8px;font-size:14px;">You can offer the item to the next highest bidder at <strong>their bid price</strong> (which may be lower than the winning bid), or relist the auction.</p>
+             ${ctaBtn("View Options", offerUrl)}`
+          : `<p style="margin:16px 0 8px;font-size:14px;">There were no other bidders. You can relist the auction when you're ready.</p>
+             ${ctaBtn("Go to My Auctions", `${siteUrl}/dashboard/auctions`)}`
+        }
+      `,
+    }),
+  });
+}
+
+// ─── Second bidder offer ──────────────────────────────────────────────────────
+
+export async function sendSecondBidderOffer({
+  bidderEmail,
+  plantName,
+  bidCents,
+  checkoutUrl,
+  expiresAt,
+}: {
+  bidderEmail: string;
+  plantName: string;
+  bidCents: number;
+  checkoutUrl: string;
+  expiresAt: string;
+}) {
+  const resend = getResend();
+  const deadline = new Date(expiresAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short" });
+  await resend.emails.send({
+    from: FROM,
+    to: bidderEmail,
+    subject: `Special offer: ${plantName} is available at your bid price`,
+    html: emailBase({
+      title: `${plantName} is available for you`,
+      heading: "Good news — this plant is yours if you want it",
+      subheading: plantName,
+      body: `
+        <p style="margin:0 0 4px;">The original auction winner didn't complete payment, and the seller has chosen to offer <strong>${plantName}</strong> to you at your bid price.</p>
+        ${infoCard([
+          { label: "Item", value: plantName },
+          { label: "Your price", value: centsToDisplay(bidCents) },
+          { label: "Offer expires", value: deadline },
+        ])}
+        <p style="margin:16px 0 0;font-size:14px;color:#6b7280;">This offer is only available to you and expires in 24 hours. Complete checkout to secure your plant.</p>
+        ${ctaBtn("Complete Purchase", checkoutUrl)}
+      `,
+    }),
   });
 }
 

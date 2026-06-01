@@ -10,6 +10,7 @@ import { centsToDisplay } from "@/lib/stripe";
 import RateSellerForm from "./rate-seller-form";
 import DisputeButton from "./dispute-button";
 import OrdersClient from "@/app/dashboard/orders/orders-client";
+import { ExpiredAuctionBanner } from "./expired-auction-banner";
 
 function adminClient() {
   return createSupabaseAdmin<Database>(
@@ -46,6 +47,8 @@ const statusColors: Record<string, string> = {
   shipped: "bg-purple-100 text-purple-800",
   delivered: "bg-[#DFE7D4] text-forest",
   refunded: "bg-red-100 text-red-700",
+  expired: "bg-amber-100 text-amber-700",
+  offered_down: "bg-gray-100 text-gray-500",
 };
 
 const PAGE_SIZE_SALES = 25;
@@ -410,6 +413,32 @@ export default async function OrdersPage({
     );
   }
 
+  // Fetch expired auction orders (winner didn't pay) for the action banner
+  const { data: expiredAuctionOrders } = await supabase
+    .from("orders")
+    .select("id, buyer_id, auction_id, amount_cents")
+    .eq("seller_id", user.id)
+    .eq("status", "expired")
+    .not("auction_id", "is", null);
+
+  const expiredBannerData = await Promise.all(
+    (expiredAuctionOrders ?? []).map(async (o) => {
+      const [{ data: auction }, { data: winnerProfile }, { data: secondBid }] = await Promise.all([
+        supabase.from("auctions").select("plant_name").eq("id", o.auction_id!).single(),
+        supabase.from("profiles").select("username").eq("id", o.buyer_id).single(),
+        supabase.from("bids").select("bidder_id").eq("auction_id", o.auction_id!).neq("bidder_id", o.buyer_id).order("amount_cents", { ascending: false }).limit(1).maybeSingle(),
+      ]);
+      return {
+        id: o.id,
+        auctionId: o.auction_id!,
+        plantName: auction?.plant_name ?? "Unknown plant",
+        winningBidCents: o.amount_cents,
+        winnerUsername: winnerProfile?.username ?? "Unknown buyer",
+        hasSecondBidder: !!secondBid,
+      };
+    })
+  );
+
   const listingIds = salesOrders.filter((o) => o.listing_id).map((o) => o.listing_id!);
   const auctionIds = salesOrders.filter((o) => o.auction_id).map((o) => o.auction_id!);
   const buyerIds = [...new Set(salesOrders.map((o) => o.buyer_id))];
@@ -463,6 +492,8 @@ export default async function OrdersPage({
           );
         })}
       </div>
+
+      <ExpiredAuctionBanner orders={expiredBannerData} />
 
       <OrdersClient
         orders={salesOrders}

@@ -323,7 +323,7 @@ export default async function DashboardAuctionsPage({
                 if (won) { badgeLabel = "Won"; badgeClass = "bg-[#DFE7D4] text-leaf dark:bg-forest/40 dark:text-sage"; }
                 else if (noWinner) { badgeLabel = "No winner"; }
                 return (
-                  <Link key={a.id} href={`/auctions/${a.id}`}>
+                  <Link key={a.id} href={won ? `/checkout?auction=${a.id}` : `/auctions/${a.id}`}>
                     <Card className="hover:shadow-md transition-shadow">
                       <CardContent className="p-4 flex items-center gap-4">
                         <div className="w-14 h-14 rounded-lg bg-muted overflow-hidden shrink-0 relative">
