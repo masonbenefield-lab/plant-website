@@ -50,10 +50,10 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
       return;
     }
     setUploading(true);
-    if (fileRef.current) fileRef.current.value = "";
     const supabase = createClient();
     const remaining = photoLimit !== null ? photoLimit - imageUrls.length : Infinity;
     const toUpload = Array.from(files).slice(0, remaining);
+    if (fileRef.current) fileRef.current.value = "";
     const urls: string[] = [];
     for (const rawFile of toUpload) {
       try {
