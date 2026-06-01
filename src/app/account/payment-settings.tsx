@@ -62,11 +62,15 @@ function CardSection({
     setRedirecting(true);
     try {
       const res = await fetch("/api/stripe/setup-session", { method: "POST" });
-      const { url, error } = await res.json();
-      if (error) { toast.error(error); return; }
-      window.location.href = url;
-    } catch {
-      toast.error("Failed to start card setup. Please try again.");
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        toast.error(data.error ?? `Server error (${res.status})`);
+        setRedirecting(false);
+        return;
+      }
+      window.location.href = data.url;
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to start card setup. Please try again.");
       setRedirecting(false);
     }
   }

@@ -37,13 +37,19 @@ export async function POST() {
 
   const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://plantet.shop").replace(/\/$/, "");
 
-  const session = await getStripe().checkout.sessions.create({
-    mode: "setup",
-    customer: customerId,
-    payment_method_types: ["card"],
-    success_url: `${appUrl}/api/stripe/setup-session/complete?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${appUrl}/account#bidding`,
-  });
+  try {
+    const session = await getStripe().checkout.sessions.create({
+      mode: "setup",
+      customer: customerId,
+      currency: "usd",
+      success_url: `${appUrl}/api/stripe/setup-session/complete?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${appUrl}/account#bidding`,
+    });
 
-  return NextResponse.json({ url: session.url });
+    return NextResponse.json({ url: session.url });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Failed to create setup session";
+    console.error("[setup-session]", msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
 }
