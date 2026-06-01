@@ -113,13 +113,13 @@ const INTERVAL_MS = 4000;
 
 export function HeroCategoryCarousel({ hasActiveGiveaway }: { hasActiveGiveaway: boolean }) {
   const slides: Slide[] = [
-    CATEGORY_SLIDES[0],
-    CATEGORY_SLIDES[1],
+    CATEGORY_SLIDES[0],       // Aroids
+    PROMO_SLIDES[0],          // Garden Log
+    CATEGORY_SLIDES[1],       // Rare & Exotic
     ...(hasActiveGiveaway ? [GIVEAWAY_SLIDE] : []),
-    CATEGORY_SLIDES[2],
-    CATEGORY_SLIDES[3],
-    PROMO_SLIDES[0],
-    PROMO_SLIDES[1],
+    CATEGORY_SLIDES[2],       // Orchids
+    PROMO_SLIDES[1],          // List Your Plants
+    CATEGORY_SLIDES[3],       // Succulents & Cacti
   ];
 
   const [current, setCurrent] = useState(0);
