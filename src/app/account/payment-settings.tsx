@@ -1,15 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { loadStripe } from "@stripe/stripe-js";
-import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { CreditCard, MapPin } from "lucide-react";
-
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+import { CreditCard, MapPin, ExternalLink } from "lucide-react";
 
 interface CardInfo {
   brand: string;
@@ -46,68 +42,40 @@ export default function PaymentSettings() {
   if (loading) return <div className="h-32 animate-pulse rounded-xl bg-muted" />;
 
   return (
-    <div id="payment" className="space-y-6">
-      <Elements stripe={stripePromise}>
-        <CardSection card={card} onSaved={setCard} />
-      </Elements>
+    <div className="space-y-6">
+      <CardSection card={card} onRemoved={() => setCard(null)} />
       <ShippingSection address={shippingAddress} onSaved={setShippingAddress} />
     </div>
   );
 }
 
-function CardSection({ card, onSaved }: { card: CardInfo | null; onSaved: (c: CardInfo) => void }) {
-  const stripe = useStripe();
-  const elements = useElements();
-  const [adding, setAdding] = useState(false);
-  const [saving, setSaving] = useState(false);
+function CardSection({
+  card,
+  onRemoved,
+}: {
+  card: CardInfo | null;
+  onRemoved: () => void;
+}) {
+  const [redirecting, setRedirecting] = useState(false);
 
-  async function handleSave() {
-    if (!stripe || !elements) return;
-    setSaving(true);
+  async function handleSetupCard() {
+    setRedirecting(true);
     try {
-      const res = await fetch("/api/stripe/setup-intent", { method: "POST" });
-      const { clientSecret } = await res.json();
-
-      const cardEl = elements.getElement(CardElement);
-      if (!cardEl) throw new Error("Card element not found");
-
-      const { setupIntent, error } = await stripe.confirmCardSetup(clientSecret, {
-        payment_method: { card: cardEl },
-      });
-
-      if (error) throw new Error(error.message);
-      if (!setupIntent?.payment_method) throw new Error("Setup failed");
-
-      const pmId = typeof setupIntent.payment_method === "string"
-        ? setupIntent.payment_method
-        : setupIntent.payment_method.id;
-
-      const patchRes = await fetch("/api/stripe/buyer-profile", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paymentMethodId: pmId }),
-      });
-      if (!patchRes.ok) throw new Error("Failed to save card");
-
-      // Refresh card info
-      const profileRes = await fetch("/api/stripe/buyer-profile");
-      const data = await profileRes.json();
-      if (data.card) onSaved(data.card);
-
-      toast.success("Card saved");
-      setAdding(false);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to save card");
-    } finally {
-      setSaving(false);
+      const res = await fetch("/api/stripe/setup-session", { method: "POST" });
+      const { url, error } = await res.json();
+      if (error) { toast.error(error); return; }
+      window.location.href = url;
+    } catch {
+      toast.error("Failed to start card setup. Please try again.");
+      setRedirecting(false);
     }
   }
 
   async function handleRemove() {
     if (!confirm("Remove your saved card?")) return;
     await fetch("/api/stripe/buyer-profile", { method: "DELETE" });
+    onRemoved();
     toast.success("Card removed");
-    window.location.reload();
   }
 
   return (
@@ -117,7 +85,7 @@ function CardSection({ card, onSaved }: { card: CardInfo | null; onSaved: (c: Ca
         <h3 className="font-semibold text-sm">Payment Method</h3>
       </div>
 
-      {card && !adding ? (
+      {card ? (
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-medium capitalize">
@@ -126,37 +94,32 @@ function CardSection({ card, onSaved }: { card: CardInfo | null; onSaved: (c: Ca
             <p className="text-xs text-muted-foreground">Expires {card.expMonth}/{card.expYear}</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setAdding(true)}>Update</Button>
-            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={handleRemove}>Remove</Button>
+            <Button variant="outline" size="sm" onClick={handleSetupCard} disabled={redirecting}>
+              {redirecting ? "Redirecting…" : "Update"}
+            </Button>
+            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={handleRemove}>
+              Remove
+            </Button>
           </div>
         </div>
       ) : (
         <div className="space-y-3">
-          {!adding ? (
-            <p className="text-sm text-muted-foreground">No payment method saved. Add a card to bid on auctions.</p>
-          ) : null}
-          {adding && (
-            <div className="rounded-md border border-input bg-background px-3 py-2.5">
-              <CardElement options={{ style: { base: { fontSize: "14px" } } }} />
-            </div>
-          )}
-          <p className="text-xs text-muted-foreground">
-            Your card will be charged automatically if you win an auction.
+          <p className="text-sm text-muted-foreground">
+            No payment method saved. Add a card to bid on auctions.
           </p>
-          <div className="flex gap-2">
-            {adding ? (
-              <>
-                <Button size="sm" onClick={handleSave} disabled={saving} className="bg-leaf hover:bg-forest">
-                  {saving ? "Saving…" : "Save card"}
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => setAdding(false)}>Cancel</Button>
-              </>
-            ) : (
-              <Button size="sm" onClick={() => setAdding(true)} className="bg-leaf hover:bg-forest">
-                Add card
-              </Button>
-            )}
-          </div>
+          <p className="text-xs text-muted-foreground">
+            Your card will be charged automatically if you win an auction. Card details are entered
+            securely on Stripe&apos;s site — we never see your card number.
+          </p>
+          <Button
+            size="sm"
+            onClick={handleSetupCard}
+            disabled={redirecting}
+            className="bg-leaf hover:bg-forest gap-1.5"
+          >
+            <ExternalLink size={13} />
+            {redirecting ? "Redirecting to Stripe…" : "Save card securely via Stripe"}
+          </Button>
         </div>
       )}
     </div>
@@ -194,7 +157,7 @@ function ShippingSection({
       });
       if (!res.ok) throw new Error("Failed to save address");
       onSaved(form);
-      toast.success("Shipping address saved");
+      toast.success("Delivery address saved");
       setEditing(false);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to save address");
