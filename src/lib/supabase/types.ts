@@ -1,7 +1,7 @@
 export type Json = string | number | boolean | null | { [key: string]: Json } | Json[];
 
 export type ListingStatus = "active" | "paused" | "sold_out";
-export type AuctionStatus = "active" | "ended" | "cancelled" | "scheduled";
+export type AuctionStatus = "active" | "ended" | "cancelled" | "scheduled" | "expired";
 export type OrderStatus = "pending" | "paid" | "shipped" | "delivered" | "refunded" | "expired" | "offered_down";
 export type GardenPlantStatus = "thriving" | "growing" | "dormant" | "struggling" | "dead";
 export type GardenEventType = "watered" | "fertilized" | "repotted" | "pruned" | "treated" | "harvested" | "note";

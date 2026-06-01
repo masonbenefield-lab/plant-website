@@ -14,7 +14,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { dollarsToCents } from "@/lib/stripe";
@@ -114,10 +113,11 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button className="bg-leaf hover:bg-forest" />}>
+    <>
+      <Button className="bg-leaf hover:bg-forest" onClick={() => setOpen(true)}>
         + New Auction
-      </DialogTrigger>
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Create an Auction</DialogTitle>
@@ -290,5 +290,6 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
         </form>
       </DialogContent>
     </Dialog>
+    </>
   );
 }

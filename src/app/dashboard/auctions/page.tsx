@@ -10,7 +10,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { centsToDisplay } from "@/lib/stripe";
 import { Pagination } from "@/components/pagination";
 import DashboardSearch from "@/components/dashboard-search";
-import { DeleteScheduledAuctionButton } from "./auction-actions";
+import { DeleteScheduledAuctionButton, DeleteEndedAuctionButton } from "./auction-actions";
+import AuctionActions from "./auction-actions";
+import NewAuctionDialog from "./new-auction-dialog";
 import { LocalDate } from "@/components/local-date";
 import type { Database } from "@/lib/supabase/types";
 
@@ -43,7 +45,7 @@ export default async function DashboardAuctionsPage({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("seller_terms_accepted_at, stripe_onboarded")
+    .select("seller_terms_accepted_at, stripe_onboarded, plan, is_admin")
     .eq("id", user.id)
     .single();
 
@@ -52,13 +54,18 @@ export default async function DashboardAuctionsPage({
   }
 
   const stripeOnboarded = !!profile?.stripe_onboarded;
+  const isAdmin = !!(profile as { is_admin?: boolean } | null)?.is_admin;
   const admin = adminClient();
+
+  const { getPlanLimits } = await import("@/lib/plan-limits");
+  const planLimits = getPlanLimits((profile as { plan?: string } | null)?.plan as "seedling" | "grower" | "nursery" | null, isAdmin);
 
   // ── Selling tab ──────────────────────────────────────────────────────────
   type AuctionRow = Database["public"]["Tables"]["auctions"]["Row"];
   let sellingAuctions: AuctionRow[] = [];
   let sellingTotal = 0;
   let sellingTotalPages = 0;
+  let activeAuctionCount = 0;
 
   if (tab === "selling") {
     let auctionsQuery = supabase
@@ -68,10 +75,14 @@ export default async function DashboardAuctionsPage({
       .order("created_at", { ascending: false });
 
     if (q) auctionsQuery = auctionsQuery.or(`plant_name.ilike.%${q}%,variety.ilike.%${q}%`);
-    const { data: auctions, count } = await auctionsQuery.range(from, to);
+    const [{ data: auctions, count }, { count: activeCount }] = await Promise.all([
+      auctionsQuery.range(from, to),
+      supabase.from("auctions").select("id", { count: "exact", head: true }).eq("seller_id", user.id).in("status", ["active", "scheduled"]),
+    ]);
     sellingAuctions = (auctions ?? []) as AuctionRow[];
     sellingTotal = count ?? 0;
     sellingTotalPages = Math.ceil(sellingTotal / PAGE_SIZE);
+    activeAuctionCount = activeCount ?? 0;
   }
 
   // ── Bidding tabs ──────────────────────────────────────────────────────────
@@ -139,12 +150,12 @@ export default async function DashboardAuctionsPage({
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Auctions</h1>
         {tab === "selling" && (
-          <Link
-            href="/dashboard/inventory"
-            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors"
-          >
-            Create from My Stock →
-          </Link>
+          <NewAuctionDialog
+            sellerId={user.id}
+            planLimit={planLimits.auctions}
+            currentCount={activeAuctionCount}
+            photoLimit={planLimits.photos}
+          />
         )}
       </div>
 
@@ -169,21 +180,13 @@ export default async function DashboardAuctionsPage({
               <a href="/account#seller-payments" className="underline font-medium hover:opacity-80">connect your Stripe account</a>.
             </div>
           )}
-          <p className="text-sm text-muted-foreground mb-6">To create a new auction, open a stock item in <a href="/dashboard/inventory" className="underline hover:opacity-80">My Stock</a> and click &quot;Auction&quot;.</p>
-
           {sellingAuctions.length === 0 ? (
             <div className="flex flex-col items-center justify-center text-center py-16 px-4 rounded-lg border border-dashed">
               <div className="text-4xl mb-3">🔨</div>
               <h2 className="text-lg font-semibold mb-1">No auctions yet</h2>
               <p className="text-sm text-muted-foreground max-w-sm mb-5">
-                Auctions are created from My Stock. Open any stock item and click <strong>Auction</strong> to set a starting bid, optional Buy Now price, and an end time.
+                Click <strong>+ New Auction</strong> above to set a starting bid, optional Buy Now price, and an end time.
               </p>
-              <Link
-                href="/dashboard/inventory"
-                className="inline-flex items-center justify-center rounded-md bg-leaf hover:bg-forest text-white px-4 py-2 text-sm font-medium transition-colors"
-              >
-                Go to My Stock →
-              </Link>
             </div>
           ) : (
             <div className="space-y-3">
@@ -214,12 +217,18 @@ export default async function DashboardAuctionsPage({
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       {auction.status === "active" && (
-                        <Link href={`/auctions/${auction.id}`} className="text-sm text-muted-foreground hover:underline">
-                          View →
-                        </Link>
+                        <>
+                          <Link href={`/auctions/${auction.id}`} className="text-sm text-muted-foreground hover:underline">
+                            View →
+                          </Link>
+                          <AuctionActions auctionId={auction.id} />
+                        </>
                       )}
                       {auction.status === "scheduled" && (
                         <DeleteScheduledAuctionButton auctionId={auction.id} />
+                      )}
+                      {(auction.status === "ended" || auction.status === "cancelled" || auction.status === "expired") && (
+                        <DeleteEndedAuctionButton auctionId={auction.id} />
                       )}
                     </div>
                   </CardContent>
