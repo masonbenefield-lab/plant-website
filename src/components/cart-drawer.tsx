@@ -1,11 +1,13 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { X, Minus, Plus, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { centsToDisplay } from "@/lib/stripe";
 import { useCart, effectivePrice } from "@/lib/cart";
+import { createClient } from "@/lib/supabase/client";
 
 export function CartButton() {
   const { count, openCart } = useCart();
@@ -27,6 +29,19 @@ export function CartButton() {
 
 export function CartDrawer() {
   const { items, isOpen, closeCart, removeItem, updateQty, clearCart, totalCents, sellerUsername, sellerDisplayName } = useCart();
+  const [stockMap, setStockMap] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    if (!isOpen || !items.length) return;
+    const supabase = createClient();
+    supabase
+      .from("listings")
+      .select("id, quantity")
+      .in("id", items.map((i) => i.listingId))
+      .then(({ data }) => {
+        if (data) setStockMap(Object.fromEntries(data.map((l) => [l.id, l.quantity])));
+      });
+  }, [isOpen, items]);
 
   if (!isOpen) return null;
 
@@ -64,7 +79,10 @@ export function CartDrawer() {
             )}
 
             <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-              {items.map((item) => (
+              {items.map((item) => {
+                const stockLimit = stockMap[item.listingId] ?? item.maxQty;
+                const atMax = stockLimit !== undefined && item.quantity >= stockLimit;
+                return (
                 <div key={item.listingId} className="flex gap-3 items-start">
                   {item.imageUrl ? (
                     <Image
@@ -97,7 +115,7 @@ export function CartDrawer() {
                       <span className="text-sm w-5 text-center">{item.quantity}</span>
                       <button
                         onClick={() => updateQty(item.listingId, item.quantity + 1)}
-                        disabled={item.maxQty !== undefined && item.quantity >= item.maxQty}
+                        disabled={atMax}
                         className="w-6 h-6 rounded border flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-muted-foreground hover:text-foreground hover:border-foreground"
                       >
                         <Plus size={12} />
@@ -111,7 +129,8 @@ export function CartDrawer() {
                     </div>
                   </div>
                 </div>
-              ))}
+              );
+              })}
             </div>
 
             <div className="px-5 py-4 border-t space-y-3">
