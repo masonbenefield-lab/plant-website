@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Printer, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +24,7 @@ export default function GetLabelModal({
   orderId: string;
   initialLabelUrl: string | null;
 }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<Step>("weight");
   const [weightOz, setWeightOz] = useState("");
@@ -87,10 +89,11 @@ export default function GetLabelModal({
     setStep("done");
     setOpen(false);
     toast.success("Label purchased!", {
-      description: "Tracking number added. Click 'View label' to print.",
+      description: "Tracking number saved. Click 'View label' to print.",
       action: { label: "View label", onClick: () => window.open(data.labelUrl, "_blank") },
     });
     if (data.labelUrl) window.open(data.labelUrl, "_blank");
+    router.refresh();
   }
 
   function handleOpen() {

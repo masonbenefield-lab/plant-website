@@ -200,6 +200,51 @@ export function buildEmailChangedHtml({ newEmail }: { newEmail: string }): strin
   });
 }
 
+// ─── Order delivered notification (buyer) ────────────────────────────────────
+
+export function buildOrderDeliveredHtml({
+  items,
+  orderId,
+}: {
+  items: { name: string; quantity: number }[];
+  orderId: string;
+}): string {
+  const siteUrl = siteBase();
+  const infoRows = items.map((item, i) => ({
+    label: items.length > 1 ? `Item ${i + 1}` : "Plant",
+    value: item.quantity > 1 ? `${item.name} ×${item.quantity}` : item.name,
+  }));
+  return emailBase({
+    title: "Your order has arrived — Plantet",
+    heading: "Your order has arrived!",
+    subheading: "We hope everything looks great",
+    body: `
+      <p style="margin:0 0 16px;">Your seller has marked your order as delivered. We hope your plant${items.length !== 1 ? "s arrived" : " arrived"} in perfect shape!</p>
+      ${infoCard(infoRows)}
+      <p style="margin:0 0 24px;font-size:14px;color:#6b7280;">You have 14 days to leave a review. Your feedback helps other buyers and supports great sellers.</p>
+      ${ctaBtn("Leave a Review", `${siteUrl}/orders`)}
+    `,
+  });
+}
+
+export async function sendOrderDelivered({
+  buyerEmail,
+  items,
+  orderId,
+}: {
+  buyerEmail: string;
+  items: { name: string; quantity: number }[];
+  orderId: string;
+}) {
+  const resend = getResend();
+  await resend.emails.send({
+    from: FROM,
+    to: buyerEmail,
+    subject: "Your order has arrived — Plantet",
+    html: buildOrderDeliveredHtml({ items, orderId }),
+  });
+}
+
 // ─── Oversell refund notification (buyer) ────────────────────────────────────
 
 export function buildOversellRefundHtml({

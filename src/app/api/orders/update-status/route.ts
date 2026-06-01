@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
 import type { Database, OrderStatus } from "@/lib/supabase/types";
+import { sendOrderDelivered } from "@/lib/email";
 
 function adminClient() {
   return createSupabaseAdmin<Database>(
@@ -21,7 +22,7 @@ export async function POST(request: Request) {
 
   const { data: order } = await admin
     .from("orders")
-    .select("id, seller_id, status, tracking_number")
+    .select("id, seller_id, buyer_id, status, tracking_number, listing_id, auction_id, cart_items")
     .eq("id", orderId)
     .eq("seller_id", user.id)
     .single();
@@ -47,6 +48,30 @@ export async function POST(request: Request) {
 
   const { error } = await admin.from("orders").update(update).eq("id", orderId);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Notify buyer when seller marks order delivered
+  if (status === "delivered") {
+    const { data: { user: buyer } } = await admin.auth.admin.getUserById(order.buyer_id);
+    if (buyer?.email) {
+      let emailItems: { name: string; quantity: number }[] = [];
+      const cartItems = order.cart_items as { plant_name: string; variety: string | null; quantity: number }[] | null;
+      if (cartItems?.length) {
+        emailItems = cartItems.map((ci) => ({
+          name: ci.variety ? `${ci.plant_name} — ${ci.variety}` : ci.plant_name,
+          quantity: ci.quantity,
+        }));
+      } else if (order.listing_id) {
+        const { data: listing } = await admin.from("listings").select("plant_name, variety").eq("id", order.listing_id).single();
+        if (listing) emailItems = [{ name: listing.variety ? `${listing.plant_name} — ${listing.variety}` : listing.plant_name, quantity: 1 }];
+      } else if (order.auction_id) {
+        const { data: auction } = await admin.from("auctions").select("plant_name, variety").eq("id", order.auction_id).single();
+        if (auction) emailItems = [{ name: auction.variety ? `${auction.plant_name} — ${auction.variety}` : auction.plant_name, quantity: 1 }];
+      }
+      if (emailItems.length) {
+        sendOrderDelivered({ buyerEmail: buyer.email, items: emailItems, orderId: order.id }).catch(() => {});
+      }
+    }
+  }
 
   return NextResponse.json({ ok: true });
 }

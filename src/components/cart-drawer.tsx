@@ -119,6 +119,7 @@ export function CartDrawer() {
                 <Link href={`/sellers/${sellerUsername}`} onClick={closeCart} className="text-leaf hover:underline font-medium">
                   {sellerDisplayName ?? sellerUsername}
                 </Link>
+                <span className="ml-1 text-muted-foreground/60">· one seller per order</span>
               </p>
             )}
 

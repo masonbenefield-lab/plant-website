@@ -445,9 +445,19 @@ export default function CartCheckoutPage() {
                           <Package size={18} className="text-muted-foreground shrink-0" />
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-semibold">{rate.provider} — {rate.servicelevelName}</p>
-                            {rate.estimatedDays != null && (
-                              <p className="text-xs text-muted-foreground">Est. {rate.estimatedDays} business day{rate.estimatedDays !== 1 ? "s" : ""}</p>
-                            )}
+                            {rate.estimatedDays != null && (() => {
+                              const arrival = new Date();
+                              let added = 0;
+                              while (added < rate.estimatedDays!) {
+                                arrival.setDate(arrival.getDate() + 1);
+                                if (arrival.getDay() !== 0 && arrival.getDay() !== 6) added++;
+                              }
+                              return (
+                                <p className="text-xs text-muted-foreground">
+                                  {rate.estimatedDays} business day{rate.estimatedDays !== 1 ? "s" : ""} — est. by {arrival.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                                </p>
+                              );
+                            })()}
                           </div>
                           <span className="text-sm font-semibold shrink-0">{centsToDisplay(totalShippingCents)}</span>
                         </label>
