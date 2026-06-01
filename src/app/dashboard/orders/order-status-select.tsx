@@ -12,22 +12,29 @@ import {
 import { toast } from "sonner";
 import type { OrderStatus } from "@/lib/supabase/types";
 
-// Statuses sellers can manually advance to (pending/paid are set by Stripe)
 const SELLER_STATUSES: OrderStatus[] = ["shipped", "delivered"];
 const STATUS_RANK: Record<string, number> = { pending: 0, paid: 1, shipped: 2, delivered: 3 };
 
 export default function OrderStatusSelect({
   orderId,
   currentStatus,
+  trackingNumber,
 }: {
   orderId: string;
   currentStatus: OrderStatus;
+  trackingNumber?: string | null;
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
 
   async function handleChange(value: string | null) {
     if (!value) return;
+
+    if ((value === "shipped" || value === "delivered") && !trackingNumber) {
+      toast.error("Add a tracking number before marking as shipped");
+      return;
+    }
+
     const res = await fetch("/api/orders/update-status", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -45,7 +52,6 @@ export default function OrderStatusSelect({
     (s) => STATUS_RANK[s] > STATUS_RANK[currentStatus]
   );
 
-  // Nothing to advance to — show a read-only badge instead of an empty dropdown
   if (forwardStatuses.length === 0) {
     return (
       <span className="text-xs text-muted-foreground px-2 py-1 rounded border border-border bg-muted">
@@ -62,7 +68,7 @@ export default function OrderStatusSelect({
       <SelectContent>
         {forwardStatuses.map((s) => (
           <SelectItem key={s} value={s} className="text-xs">
-            {s}
+            {s === "shipped" && !trackingNumber ? `${s} (add tracking first)` : s}
           </SelectItem>
         ))}
       </SelectContent>

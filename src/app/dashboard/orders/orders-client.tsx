@@ -12,7 +12,22 @@ import TrackingInput from "./tracking-input";
 import { BulkOrderActions, OrderCheckbox } from "./bulk-order-actions";
 import type { OrderStatus } from "@/lib/supabase/types";
 import { toast } from "sonner";
-import { Printer } from "lucide-react";
+import { Printer, ExternalLink } from "lucide-react";
+
+function detectCarrier(tracking: string): string {
+  if (/^1Z[0-9A-Z]{16}$/i.test(tracking)) return "UPS";
+  if (/^[0-9]{20,22}$/.test(tracking) || /^9[2345][0-9]{18,}$/.test(tracking)) return "USPS";
+  if (/^[0-9]{12}$/.test(tracking) || /^[0-9]{15}$/.test(tracking)) return "FedEx";
+  if (/^[A-Z]{2}[0-9]{9}[A-Z]{2}$/.test(tracking)) return "USPS";
+  return "Carrier";
+}
+
+function getCarrierUrl(tracking: string): string {
+  const carrier = detectCarrier(tracking);
+  if (carrier === "UPS") return `https://www.ups.com/track?tracknum=${tracking}`;
+  if (carrier === "FedEx") return `https://www.fedex.com/apps/fedextrack/?tracknumbers=${tracking}`;
+  return `https://tools.usps.com/go/TrackConfirmAction?tLabels=${tracking}`;
+}
 
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-100 text-yellow-800",
@@ -236,7 +251,7 @@ export default function OrdersClient({
                       <Badge className={statusColors[order.status] ?? ""} variant="secondary">
                         {order.status}
                       </Badge>
-                      <OrderStatusSelect orderId={order.id} currentStatus={order.status as OrderStatus} />
+                      <OrderStatusSelect orderId={order.id} currentStatus={order.status as OrderStatus} trackingNumber={order.tracking_number} />
                     </div>
                   </div>
                 </div>
@@ -252,6 +267,17 @@ export default function OrdersClient({
                       <BuyLabelButton orderId={order.id} labelUrl={order.label_url} createdAt={order.created_at} />
                     )}
                   </div>
+                  {order.tracking_number && (
+                    <a
+                      href={getCarrierUrl(order.tracking_number)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs text-leaf hover:text-forest hover:underline mt-1"
+                    >
+                      <ExternalLink size={11} />
+                      Track with {detectCarrier(order.tracking_number)}
+                    </a>
+                  )}
                 </div>
               </CardContent>
             </Card>
