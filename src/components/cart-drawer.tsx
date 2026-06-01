@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { X, Minus, Plus, ShoppingCart } from "lucide-react";
+import { X, Minus, Plus, ShoppingCart, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { centsToDisplay } from "@/lib/stripe";
 import { useCart, effectivePrice } from "@/lib/cart";
@@ -30,6 +30,35 @@ export function CartButton() {
 export function CartDrawer() {
   const { items, isOpen, closeCart, removeItem, updateQty, clearCart, totalCents, sellerUsername, sellerDisplayName } = useCart();
   const [stockMap, setStockMap] = useState<Record<string, number>>({});
+  const [checkingId, setCheckingId] = useState<string | null>(null);
+
+  const handleIncrement = useCallback(async (listingId: string, currentQty: number) => {
+    const cached = stockMap[listingId];
+    if (cached !== undefined && currentQty >= cached) {
+      toast.error("That's all the available stock");
+      return;
+    }
+    setCheckingId(listingId);
+    try {
+      const res = await fetch("/api/cart/stock", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ listingIds: [listingId] }),
+      });
+      const { stock } = await res.json() as { stock: Record<string, number> };
+      const available = stock?.[listingId];
+      if (available !== undefined) setStockMap((prev) => ({ ...prev, [listingId]: available }));
+      if (available !== undefined && currentQty >= available) {
+        toast.error("That's all the available stock");
+      } else {
+        updateQty(listingId, currentQty + 1);
+      }
+    } catch {
+      updateQty(listingId, currentQty + 1); // allow if check fails; server validates at checkout
+    } finally {
+      setCheckingId(null);
+    }
+  }, [stockMap, updateQty]);
 
   useEffect(() => {
     if (!isOpen || !items.length) return;
@@ -128,11 +157,11 @@ export function CartDrawer() {
                       </button>
                       <span className="text-sm w-5 text-center">{item.quantity}</span>
                       <button
-                        onClick={() => updateQty(item.listingId, item.quantity + 1)}
-                        disabled={atMax}
+                        onClick={() => handleIncrement(item.listingId, item.quantity)}
+                        disabled={atMax || checkingId === item.listingId}
                         className="w-6 h-6 rounded border flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-muted-foreground hover:text-foreground hover:border-foreground"
                       >
-                        <Plus size={12} />
+                        {checkingId === item.listingId ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
                       </button>
                       <button
                         onClick={() => removeItem(item.listingId)}
