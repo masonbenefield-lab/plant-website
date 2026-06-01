@@ -20,6 +20,7 @@ export async function POST(request: Request) {
 
   let sellerId: string;
   let weightOz: number;
+  let extraFlatCents = 0; // flat-rate portion to add on top of Shippo rates (cart mixed-mode)
 
   if (listingIds?.length) {
     // Cart: multiple listings from one seller — resolve shipping per listing
@@ -71,7 +72,8 @@ export async function POST(request: Request) {
       if (totalFlatCents === 0) return NextResponse.json({ rates: [], freeShipping: true });
       return NextResponse.json({ rates: [], flatRate: true, flatRateCents: totalFlatCents });
     }
-    // Mixed flat+Shippo: use Shippo for full weight, flat-rate costs absorbed into the calculated rate
+    // Mixed flat+Shippo: Shippo calculates weight-based rates; pass flat surplus so client can add it on top
+    extraFlatCents = totalFlatCents;
   } else if (listingId) {
     const { data: listing } = await supabase
       .from("listings")
@@ -155,7 +157,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No shipping rates available for this destination" }, { status: 400 });
     }
 
-    return NextResponse.json({ rates });
+    return NextResponse.json({ rates, ...(extraFlatCents > 0 ? { extraFlatCents } : {}) });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed to fetch shipping rates";
     console.error("[ShippingRates] Error:", msg);

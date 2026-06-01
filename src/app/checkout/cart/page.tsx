@@ -81,6 +81,8 @@ export default function CartCheckoutPage() {
   const [selectedRate, setSelectedRate] = useState<ShippoRate | null>(null);
   const [grandTotalCents, setGrandTotalCents] = useState(itemsTotalCents);
   const [flatShippingCents, setFlatShippingCents] = useState<number | null>(null);
+  const [extraFlatCents, setExtraFlatCents] = useState(0);
+  const [taxCents, setTaxCents] = useState(0);
 
   useEffect(() => {
     setGrandTotalCents(itemsTotalCents);
@@ -154,11 +156,13 @@ export default function CartCheckoutPage() {
       return;
     }
 
+    const extra = data.extraFlatCents ?? 0;
+    setExtraFlatCents(extra);
     setRates(data.rates ?? []);
     const first = data.rates?.[0] ?? null;
     setSelectedRate(first);
     const firstCents = first ? Math.round(parseFloat(first.amount) * 100) : 0;
-    setGrandTotalCents(itemsTotalCents + firstCents);
+    setGrandTotalCents(itemsTotalCents + firstCents + extra);
     setStep("shipping");
   }
 
@@ -179,9 +183,11 @@ export default function CartCheckoutPage() {
     const data = await res.json();
     if (data.error) { toast.error(data.error); setLoading(false); return; }
 
+    const tax = data.taxCents ?? 0;
     setClientSecret(data.clientSecret);
     setOrderId(data.orderId ?? "");
-    setGrandTotalCents(itemsTotalCents + shippingCostCents);
+    setTaxCents(tax);
+    setGrandTotalCents(itemsTotalCents + shippingCostCents + tax);
     setStep("payment");
     setLoading(false);
   }
@@ -190,7 +196,7 @@ export default function CartCheckoutPage() {
     e.preventDefault();
     if (!selectedRate) return;
     await createCartOrder({
-      shippingCostCents: Math.round(parseFloat(selectedRate.amount) * 100),
+      shippingCostCents: Math.round(parseFloat(selectedRate.amount) * 100) + extraFlatCents,
       shippoRateId: selectedRate.objectId,
       shippingService: selectedRate.servicelevelName,
     });
@@ -226,14 +232,20 @@ export default function CartCheckoutPage() {
         {selectedRate ? (
           <div className="flex justify-between text-muted-foreground">
             <span>Shipping</span>
-            <span>{centsToDisplay(Math.round(parseFloat(selectedRate.amount) * 100))}</span>
+            <span>{centsToDisplay(Math.round(parseFloat(selectedRate.amount) * 100) + extraFlatCents)}</span>
           </div>
-        ) : flatShippingCents ? (
+        ) : flatShippingCents !== null ? (
           <div className="flex justify-between text-muted-foreground">
             <span>Shipping</span>
             <span>{centsToDisplay(flatShippingCents)}</span>
           </div>
         ) : null}
+        {taxCents > 0 && (
+          <div className="flex justify-between text-muted-foreground">
+            <span>Tax</span>
+            <span>{centsToDisplay(taxCents)}</span>
+          </div>
+        )}
         <div className="flex justify-between font-semibold pt-1 border-t">
           <span>Total</span>
           <span className="text-leaf">{centsToDisplay(grandTotalCents)}</span>
@@ -268,6 +280,7 @@ export default function CartCheckoutPage() {
                   <div className="space-y-2">
                     {rates.map((rate) => {
                       const rateCents = Math.round(parseFloat(rate.amount) * 100);
+                      const totalShippingCents = rateCents + extraFlatCents;
                       const isSelected = selectedRate?.objectId === rate.objectId;
                       return (
                         <label
@@ -278,7 +291,7 @@ export default function CartCheckoutPage() {
                           )}
                           onClick={() => {
                             setSelectedRate(rate);
-                            setGrandTotalCents(itemsTotalCents + rateCents);
+                            setGrandTotalCents(itemsTotalCents + totalShippingCents);
                           }}
                         >
                           <input
@@ -288,7 +301,7 @@ export default function CartCheckoutPage() {
                             checked={isSelected}
                             onChange={() => {
                               setSelectedRate(rate);
-                              setGrandTotalCents(itemsTotalCents + rateCents);
+                              setGrandTotalCents(itemsTotalCents + totalShippingCents);
                             }}
                             className="accent-leaf"
                           />
@@ -299,7 +312,7 @@ export default function CartCheckoutPage() {
                               <p className="text-xs text-muted-foreground">Est. {rate.estimatedDays} business day{rate.estimatedDays !== 1 ? "s" : ""}</p>
                             )}
                           </div>
-                          <span className="text-sm font-semibold shrink-0">{centsToDisplay(rateCents)}</span>
+                          <span className="text-sm font-semibold shrink-0">{centsToDisplay(totalShippingCents)}</span>
                         </label>
                       );
                     })}
