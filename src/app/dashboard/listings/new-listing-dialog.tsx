@@ -183,9 +183,6 @@ export default function NewListingDialog({ sellerId, planLimit, currentCount, ph
               >
                 {uploading ? "Uploading…" : "Add photos"}
               </Button>
-              {imageUrls.length > 0 && photoLimit === null && (
-                <span className="text-sm text-muted-foreground">{imageUrls.length} uploaded</span>
-              )}
               {atPhotoLimit && (
                 <span className="text-xs text-amber-600">Photo limit reached</span>
               )}
@@ -198,6 +195,23 @@ export default function NewListingDialog({ sellerId, planLimit, currentCount, ph
               className="hidden"
               onChange={(e) => { if (e.target.files) uploadImages(e.target.files); }}
             />
+            {imageUrls.length > 0 && (
+              <div className="grid grid-cols-4 gap-2 mt-2">
+                {imageUrls.map((url, i) => (
+                  <div key={url} className="relative group aspect-square">
+                    <img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover rounded-md border border-border" />
+                    <button
+                      type="button"
+                      onClick={() => setImageUrls((prev) => prev.filter((_, idx) => idx !== i))}
+                      className="absolute top-0.5 right-0.5 flex items-center justify-center w-5 h-5 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                      aria-label="Remove photo"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           <div className="space-y-2">
             <Label>Shipping <span className="text-destructive">*</span></Label>
