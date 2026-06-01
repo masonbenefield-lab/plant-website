@@ -84,7 +84,7 @@ export function CartDrawer() {
           }
         });
       })
-      .catch(() => {}); // fail silently — server still validates at checkout
+      .catch(() => { toast.error("Couldn't verify stock — please refresh before checking out"); });
   }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!isOpen) return null;
