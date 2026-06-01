@@ -35,8 +35,8 @@ export default function CreateInventoryPage() {
   const [dragging, setDragging] = useState(false);
   const [profileWarning, setProfileWarning] = useState<"incomplete" | "unverified" | null>(null);
   const [planLimits, setPlanLimits] = useState<PlanLimits>({ listings: null, auctions: null, photos: null });
-  const [hasShipFrom, setHasShipFrom] = useState(true);
-  const [calculatedShippingEnabled, setCalculatedShippingEnabled] = useState(true);
+  const [hasShipFrom, setHasShipFrom] = useState(false);
+  const [calculatedShippingEnabled, setCalculatedShippingEnabled] = useState(false);
 
   const [itemType, setItemType] = useState<ItemType>("plant");
   const [plantName, setPlantName] = useState("");
