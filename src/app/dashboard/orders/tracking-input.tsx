@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ export default function TrackingInput({
   initialValue: string | null;
 }) {
   const router = useRouter();
+  const [, startTransition] = useTransition();
   const [value, setValue] = useState(initialValue ?? "");
   const [saving, setSaving] = useState(false);
 
@@ -32,7 +33,7 @@ export default function TrackingInput({
     } else {
       const { notified } = await res.json().catch(() => ({ notified: false }));
       toast.success(notified ? "Tracking saved — buyer notified" : "Tracking saved");
-      router.refresh();
+      startTransition(() => router.refresh());
     }
   }
 

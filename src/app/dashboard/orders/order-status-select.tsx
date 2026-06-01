@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useTransition } from "react";
 import {
   Select,
   SelectContent,
@@ -23,6 +24,7 @@ export default function OrderStatusSelect({
   currentStatus: OrderStatus;
 }) {
   const router = useRouter();
+  const [, startTransition] = useTransition();
 
   async function handleChange(value: string | null) {
     if (!value) return;
@@ -35,7 +37,7 @@ export default function OrderStatusSelect({
     if (!res.ok) toast.error(data.error ?? "Failed to update order");
     else {
       toast.success("Order updated");
-      router.refresh();
+      startTransition(() => router.refresh());
     }
   }
 
