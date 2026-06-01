@@ -1791,6 +1791,72 @@ export function buildGardenCareReminderHtml({
 </html>`;
 }
 
+// ─── Auction auto-charged (buyer) ───────────────────────────────────────────
+
+export async function sendAuctionAutoCharged({
+  winnerEmail,
+  plantName,
+  amountCents,
+  orderId,
+  appUrl,
+}: {
+  winnerEmail: string;
+  plantName: string;
+  amountCents: number;
+  orderId: string;
+  appUrl: string;
+}) {
+  const resend = getResend();
+  await resend.emails.send({
+    from: FROM,
+    to: winnerEmail,
+    subject: `You won ${plantName} — payment confirmed!`,
+    html: emailBase({
+      title: `You won ${plantName}!`,
+      heading: "Congratulations — you won!",
+      subheading: "Your payment has been processed automatically",
+      body: `
+        <p style="margin:0 0 4px;">You won the auction for <strong>${plantName}</strong>. Your saved card has been charged and your order is confirmed.</p>
+        ${infoCard([{ label: "Total charged", value: centsToDisplay(amountCents) }])}
+        <p style="margin:0 0 24px;font-size:14px;color:#6b7280;">The seller will be in touch with tracking information once your order ships.</p>
+        ${ctaBtn("View Order", `${appUrl}/orders`)}
+      `,
+    }),
+  });
+}
+
+// ─── Auction auto-charge failed (buyer) ──────────────────────────────────────
+
+export async function sendAuctionPaymentFailed({
+  winnerEmail,
+  plantName,
+  amountCents,
+  checkoutUrl,
+}: {
+  winnerEmail: string;
+  plantName: string;
+  amountCents: number;
+  checkoutUrl: string;
+}) {
+  const resend = getResend();
+  await resend.emails.send({
+    from: FROM,
+    to: winnerEmail,
+    subject: `Action required — payment failed for ${plantName}`,
+    html: emailBase({
+      title: `Payment failed for ${plantName}`,
+      heading: "You won, but payment failed",
+      subheading: "Please complete your purchase within 24 hours",
+      body: `
+        <p style="margin:0 0 4px;">You won the auction for <strong>${plantName}</strong>, but we were unable to charge your saved card automatically.</p>
+        ${infoCard([{ label: "Amount due", value: centsToDisplay(amountCents) }])}
+        <p style="margin:0 0 24px;font-size:14px;color:#6b7280;">Please complete checkout within <strong>24 hours</strong> to claim your plant. If payment is not received, the auction may be offered to the next bidder.</p>
+        ${ctaBtn("Complete Purchase", checkoutUrl)}
+      `,
+    }),
+  });
+}
+
 export async function sendGardenCareReminder({
   recipientEmail,
   username,

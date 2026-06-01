@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { centsToDisplay, dollarsToCents } from "@/lib/stripe";
-import { ChevronDown, ChevronUp, AlertTriangle } from "lucide-react";
+import { ChevronDown, ChevronUp, AlertTriangle, CreditCard } from "lucide-react";
 import type { AuctionStatus } from "@/lib/supabase/types";
 
 interface AuctionData {
@@ -23,6 +23,17 @@ interface AuctionData {
   ends_at: string;
   seller_id: string;
   current_bidder_id: string | null;
+  shipping_weight_oz: number | null;
+}
+
+interface ShippingRate {
+  objectId: string;
+  provider: string;
+  servicelevelName: string;
+  servicelevelToken: string;
+  amount: string;
+  currency: string;
+  estimatedDays: number | null;
 }
 
 interface Bid {
@@ -40,12 +51,14 @@ interface PendingConfirm {
 export default function AuctionBidPanel({
   auction: initialAuction,
   userId,
-  buyerStripeOnboarded,
+  buyerHasPaymentMethod,
+  buyerHasShippingAddress,
   recentBids: initialBids,
 }: {
   auction: AuctionData;
   userId: string | null;
-  buyerStripeOnboarded: boolean;
+  buyerHasPaymentMethod: boolean;
+  buyerHasShippingAddress: boolean;
   recentBids: Bid[];
 }) {
   const router = useRouter();
@@ -62,6 +75,10 @@ export default function AuctionBidPanel({
   const [loadingAllBids, setLoadingAllBids] = useState(false);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
+  const [shippingRates, setShippingRates] = useState<ShippingRate[]>([]);
+  const [selectedRateId, setSelectedRateId] = useState<string | null>(null);
+  const [loadingRates, setLoadingRates] = useState(false);
+  const [savedCard, setSavedCard] = useState<{ brand: string; last4: string } | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -141,6 +158,31 @@ export default function AuctionBidPanel({
     return () => clearInterval(id);
   }, [auction.ends_at]);
 
+  useEffect(() => {
+    if (!userId) return;
+    fetch("/api/stripe/buyer-profile")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.card) setSavedCard({ brand: data.card.brand, last4: data.card.last4 });
+      })
+      .catch(() => {});
+  }, [userId]);
+
+  useEffect(() => {
+    const ended = auction.status !== "active" || new Date(auction.ends_at) <= new Date();
+    if (ended || !userId || !auction.shipping_weight_oz || !buyerHasPaymentMethod || !buyerHasShippingAddress) return;
+    setLoadingRates(true);
+    fetch(`/api/shipping/auction-rates?auctionId=${auction.id}`)
+      .then((r) => r.json())
+      .then((data) => {
+        const rates: ShippingRate[] = data.rates ?? [];
+        setShippingRates(rates);
+        if (rates.length > 0) setSelectedRateId(rates[0].objectId);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingRates(false));
+  }, [auction.id, auction.status, auction.ends_at, auction.shipping_weight_oz, userId, buyerHasPaymentMethod, buyerHasShippingAddress]);
+
   function getMinIncrement(currentBidCents: number): number {
     if (currentBidCents < 1000)  return 100;
     if (currentBidCents < 5000)  return 200;
@@ -159,6 +201,9 @@ export default function AuctionBidPanel({
     e.preventDefault();
     if (!userId) return toast.error("Sign in to bid");
     if (userId === auction.seller_id) return toast.error("You can't bid on your own auction");
+    if (auction.shipping_weight_oz && !selectedRateId) {
+      return toast.error("Please select a shipping option");
+    }
     const cents = dollarsToCents(bidAmount);
     const minIncrement = getMinIncrement(auction.current_bid_cents);
     const minBid = auction.current_bid_cents + minIncrement;
@@ -182,10 +227,20 @@ export default function AuctionBidPanel({
     const { cents, maxCents } = pendingConfirm;
     setPendingConfirm(null);
     setPlacing(true);
+
+    const selectedRate = shippingRates.find((r) => r.objectId === selectedRateId);
+    const shippingPayload = selectedRate && auction.shipping_weight_oz ? {
+      shippingRateId: selectedRate.objectId,
+      shippingService: selectedRate.servicelevelName,
+      shippingCarrier: selectedRate.provider,
+      shippingCostCents: Math.round(parseFloat(selectedRate.amount) * 100),
+      estimatedDays: selectedRate.estimatedDays,
+    } : {};
+
     const res = await fetch("/api/bids/place", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ auctionId: auction.id, amountCents: cents, maxBidCents: maxCents }),
+      body: JSON.stringify({ auctionId: auction.id, amountCents: cents, maxBidCents: maxCents, ...shippingPayload }),
     });
     const data = await res.json();
     setPlacing(false);
@@ -244,7 +299,13 @@ export default function AuctionBidPanel({
         body: JSON.stringify({ auctionId: auction.id, previousBidderId: data.previousBidderId, newBidCents: data.buyNowCents }),
       }).catch(() => {});
     }
-    router.push(`/checkout?auction=${auction.id}`);
+
+    if (data.autoCharged) {
+      toast.success("Purchase complete — your card has been charged!");
+      router.refresh();
+    } else {
+      router.push(`/checkout?auction=${auction.id}`);
+    }
   }
 
   const isEnded = auction.status !== "active" || new Date(auction.ends_at) <= new Date();
@@ -276,7 +337,7 @@ export default function AuctionBidPanel({
             <p><strong className="text-foreground">Buy Now</strong> — if the seller set a Buy Now price, you can skip bidding and purchase immediately at that price.</p>
             <p><strong className="text-foreground">Sniping protection</strong> — bids placed in the last 2 minutes extend the auction by 2 minutes, giving everyone a fair chance.</p>
             <p><strong className="text-foreground">No bids = no charge</strong> — if the auction ends with no bids, nothing happens. No payment, no obligation.</p>
-            <p><strong className="text-foreground">Winning</strong> — if you win, you&apos;ll see a &quot;Complete Purchase&quot; button to check out with your shipping address.</p>
+            <p><strong className="text-foreground">Winning</strong> — if you win, your saved payment method is automatically charged for the bid amount plus shipping and taxes. No further action required.</p>
           </div>
         )}
       </div>
@@ -334,17 +395,27 @@ export default function AuctionBidPanel({
         </a>
       )}
 
-      {!isEnded && userId && userId !== auction.seller_id && !buyerStripeOnboarded && (
+      {!isEnded && userId && userId !== auction.seller_id && !buyerHasPaymentMethod && (
         <div className="rounded-md border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
           <p className="font-medium">Payment method required to bid</p>
-          <p className="text-xs mt-0.5">You need a connected payment account before you can bid or buy.</p>
-          <a href="/account#seller-payments" className="text-xs font-semibold underline underline-offset-2 mt-1 inline-block">
-            Set up payments →
+          <p className="text-xs mt-0.5">Save a card in your account settings — your card is charged automatically if you win.</p>
+          <a href="/account#payment" className="text-xs font-semibold underline underline-offset-2 mt-1 inline-block">
+            Add a payment method →
           </a>
         </div>
       )}
 
-      {!isEnded && auction.buy_now_price_cents && userId && userId !== auction.seller_id && buyerStripeOnboarded && (
+      {!isEnded && userId && userId !== auction.seller_id && buyerHasPaymentMethod && auction.shipping_weight_oz && !buyerHasShippingAddress && (
+        <div className="rounded-md border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
+          <p className="font-medium">Shipping address required to bid</p>
+          <p className="text-xs mt-0.5">This auction uses calculated shipping — add your address so we can calculate rates.</p>
+          <a href="/account#payment" className="text-xs font-semibold underline underline-offset-2 mt-1 inline-block">
+            Add shipping address →
+          </a>
+        </div>
+      )}
+
+      {!isEnded && auction.buy_now_price_cents && userId && userId !== auction.seller_id && buyerHasPaymentMethod && (
         <div className="rounded-lg border border-orange-200 bg-orange-50 dark:bg-orange-900/10 dark:border-orange-800 p-3 flex items-center justify-between gap-3">
           <div>
             <p className="text-sm font-medium">Buy Now</p>
@@ -360,8 +431,37 @@ export default function AuctionBidPanel({
         </div>
       )}
 
-      {!isEnded && userId && userId !== auction.seller_id && buyerStripeOnboarded && (
+      {!isEnded && userId && userId !== auction.seller_id && buyerHasPaymentMethod && (!auction.shipping_weight_oz || buyerHasShippingAddress) && (
         <div className="space-y-2">
+          {/* Shipping rate picker for weight-based auctions */}
+          {auction.shipping_weight_oz && (
+            <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
+              <p className="text-xs font-medium">Select shipping method</p>
+              {loadingRates && <p className="text-xs text-muted-foreground">Loading shipping rates…</p>}
+              {!loadingRates && shippingRates.length === 0 && (
+                <p className="text-xs text-muted-foreground">No rates available — contact the seller.</p>
+              )}
+              {shippingRates.map((rate) => (
+                <label key={rate.objectId} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="shippingRate"
+                    value={rate.objectId}
+                    checked={selectedRateId === rate.objectId}
+                    onChange={() => setSelectedRateId(rate.objectId)}
+                    className="accent-leaf"
+                  />
+                  <span className="text-xs">
+                    <span className="font-medium">{rate.provider} {rate.servicelevelName}</span>
+                    {" — "}
+                    <span className="text-leaf font-semibold">${rate.amount}</span>
+                    {rate.estimatedDays ? <span className="text-muted-foreground"> ({rate.estimatedDays} day{rate.estimatedDays !== 1 ? "s" : ""})</span> : null}
+                  </span>
+                </label>
+              ))}
+            </div>
+          )}
+
           {/* Quick bid buttons */}
           <div className="flex gap-2">
             {getQuickBidOptions(auction.current_bid_cents).map((inc) => (
@@ -434,6 +534,16 @@ export default function AuctionBidPanel({
               </div>
             )}
           </form>
+
+          {/* Saved card reminder */}
+          {savedCard && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1">
+              <CreditCard size={12} className="shrink-0" />
+              <span>
+                <span className="capitalize">{savedCard.brand}</span> ••••{savedCard.last4} — charged automatically if you win
+              </span>
+            </div>
+          )}
 
           {/* Confirmation step */}
           {pendingConfirm !== null && (

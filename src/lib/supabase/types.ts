@@ -24,6 +24,7 @@ export interface Database {
           stripe_onboarded: boolean;
           stripe_customer_id: string | null;
           stripe_subscription_id: string | null;
+          default_payment_method_id: string | null;
           is_admin: boolean;
           plan: "seedling" | "grower" | "nursery";
           show_follower_count: boolean;
@@ -72,6 +73,7 @@ export interface Database {
           stripe_onboarded?: boolean;
           stripe_customer_id?: string | null;
           stripe_subscription_id?: string | null;
+          default_payment_method_id?: string | null;
           is_admin?: boolean;
           plan?: "seedling" | "grower" | "nursery";
           show_follower_count?: boolean;
@@ -121,6 +123,7 @@ export interface Database {
           stripe_onboarded?: boolean;
           stripe_customer_id?: string | null;
           stripe_subscription_id?: string | null;
+          default_payment_method_id?: string | null;
           is_admin?: boolean;
           plan?: "seedling" | "grower" | "nursery";
           show_follower_count?: boolean;
@@ -155,6 +158,40 @@ export interface Database {
           country?: string | null;
           wishlist_public?: boolean;
           social_links?: Json | null;
+        };
+        Relationships: [];
+      };
+
+      auction_shipping_selections: {
+        Row: {
+          id: string;
+          auction_id: string;
+          bidder_id: string;
+          rate_id: string | null;
+          service: string | null;
+          carrier: string | null;
+          cost_cents: number;
+          estimated_days: number | null;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          auction_id: string;
+          bidder_id: string;
+          rate_id?: string | null;
+          service?: string | null;
+          carrier?: string | null;
+          cost_cents: number;
+          estimated_days?: number | null;
+          updated_at?: string;
+        };
+        Update: {
+          rate_id?: string | null;
+          service?: string | null;
+          carrier?: string | null;
+          cost_cents?: number;
+          estimated_days?: number | null;
+          updated_at?: string;
         };
         Relationships: [];
       };
@@ -427,7 +464,7 @@ export interface Database {
           listing_id?: string | null;
           auction_id?: string | null;
           stripe_payment_intent_id?: string | null;
-          shipping_address: {
+          shipping_address?: {
             name: string;
             line1: string;
             line2?: string | null;
@@ -435,7 +472,7 @@ export interface Database {
             state: string;
             zip: string;
             country: string;
-          };
+          } | null;
           status?: OrderStatus;
           amount_cents: number;
           cart_items?: { listing_id: string; plant_name: string; variety: string | null; quantity: number; price_cents: number }[] | null;

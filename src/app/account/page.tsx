@@ -5,6 +5,7 @@ import type { Database } from "@/lib/supabase/types";
 import AccountForm from "./account-form";
 import BlockedUsers from "@/components/account/blocked-users";
 import AccountSettingsSidebar from "@/components/account/account-settings-sidebar";
+import PaymentSettings from "./payment-settings";
 
 export default async function AccountPage() {
   const supabase = await createClient();
@@ -43,6 +44,10 @@ export default async function AccountPage() {
         <AccountSettingsSidebar />
         <div className="flex-1 min-w-0 space-y-6">
           <AccountForm profile={profile} userId={user.id} />
+          <div id="payment" className="border-t pt-6 scroll-mt-24">
+            <h2 className="text-lg font-semibold mb-4">Payment & Shipping</h2>
+            <PaymentSettings />
+          </div>
           <div id="blocked-users" className="border-t pt-6 scroll-mt-24">
             <BlockedUsers initialBlocked={blockedProfiles} />
           </div>

@@ -84,7 +84,7 @@ export default async function AuctionPage({
   const [wishlistRow, reportRow, buyerProfile] = await Promise.all([
     user ? supabase.from("wishlists").select("id").eq("user_id", user.id).eq("auction_id", auction.id).maybeSingle() : Promise.resolve({ data: null }),
     user ? supabase.from("reports").select("id").eq("reporter_id", user.id).eq("auction_id", auction.id).maybeSingle() : Promise.resolve({ data: null }),
-    user ? supabase.from("profiles").select("stripe_onboarded").eq("id", user.id).single() : Promise.resolve({ data: null }),
+    user ? supabase.from("profiles").select("default_payment_method_id, saved_shipping_address").eq("id", user.id).single() : Promise.resolve({ data: null }),
   ]);
   const isWishlisted = !!wishlistRow.data;
   const isReported = !!reportRow.data;
@@ -177,9 +177,11 @@ export default async function AuctionPage({
               ends_at: auction.ends_at,
               seller_id: auction.seller_id,
               current_bidder_id: auction.current_bidder_id,
+              shipping_weight_oz: invShipping?.shipping_weight_oz ?? auction.shipping_weight_oz ?? null,
             }}
             userId={user?.id ?? null}
-            buyerStripeOnboarded={!!buyerProfile?.data?.stripe_onboarded}
+            buyerHasPaymentMethod={!!buyerProfile?.data?.default_payment_method_id}
+            buyerHasShippingAddress={!!buyerProfile?.data?.saved_shipping_address}
             recentBids={
               (bids ?? []).map((b) => ({
                 id: b.id,
