@@ -7,6 +7,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { planFeePercent } from "@/lib/plan-limits";
 import { sendLowStockAlert } from "@/lib/email";
 import { isBlocked } from "@/lib/blocks";
+import { calcTaxCents } from "@/lib/tax";
 
 function adminClient() {
   return createSupabaseAdmin<Database>(
@@ -110,7 +111,8 @@ export async function POST(request: Request) {
     }
     const itemAmountCents = effectivePriceCents * quantity;
     const shippingCents = Math.max(0, Math.round(shippingCostCents ?? 0));
-    const amountCents = itemAmountCents + shippingCents;
+    const taxCents = calcTaxCents(itemAmountCents, shippingAddress.state);
+    const amountCents = itemAmountCents + shippingCents + taxCents;
     const feeCents = Math.round(itemAmountCents * (feePercent / 100));
     // Stripe processing fee estimate (2.9% + $0.30) — passed through to seller via application fee
     const stripeFeeCents = Math.round(amountCents * 0.029) + 30;
@@ -170,6 +172,7 @@ export async function POST(request: Request) {
         shipping_service: shippingService ?? null,
         shippo_rate_id: shippoRateId ?? null,
         platform_fee_cents: feeCents,
+        tax_cents: taxCents,
       })
       .select()
       .single();
@@ -217,7 +220,7 @@ export async function POST(request: Request) {
       }
     }
 
-    return NextResponse.json({ clientSecret: paymentIntent.client_secret, orderId: order.id });
+    return NextResponse.json({ clientSecret: paymentIntent.client_secret, orderId: order.id, taxCents });
   }
 
   if (auctionId) {
@@ -248,7 +251,8 @@ export async function POST(request: Request) {
 
     const feePercent = planFeePercent(sellerPlan?.plan, !!sellerPlan?.is_admin, !!sellerPlan?.groundbreaker);
     const auctionShippingCents = Math.max(0, Math.round(shippingCostCents ?? 0));
-    const amountCents = auction.current_bid_cents + auctionShippingCents;
+    const auctionTaxCents = calcTaxCents(auction.current_bid_cents, shippingAddress.state);
+    const amountCents = auction.current_bid_cents + auctionShippingCents + auctionTaxCents;
     const feeCents = Math.round(auction.current_bid_cents * (feePercent / 100));
     const stripeFeeCents = Math.round(amountCents * 0.029) + 30;
     const auctionApplicationFeeCents = shippoRateId
@@ -281,6 +285,7 @@ export async function POST(request: Request) {
         shipping_service: shippingService ?? null,
         shippo_rate_id: shippoRateId ?? null,
         platform_fee_cents: feeCents,
+        tax_cents: auctionTaxCents,
       })
       .select()
       .single();
@@ -303,6 +308,6 @@ export async function POST(request: Request) {
       }
     }
 
-    return NextResponse.json({ clientSecret: paymentIntent.client_secret, orderId: order.id });
+    return NextResponse.json({ clientSecret: paymentIntent.client_secret, orderId: order.id, taxCents: auctionTaxCents });
   }
 }

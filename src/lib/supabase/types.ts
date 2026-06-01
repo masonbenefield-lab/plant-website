@@ -415,6 +415,7 @@ export interface Database {
           shippo_transaction_id: string | null;
           label_url: string | null;
           platform_fee_cents: number | null;
+          tax_cents: number;
           created_at: string;
         };
         Insert: {
@@ -440,6 +441,7 @@ export interface Database {
           shipping_service?: string | null;
           shippo_rate_id?: string | null;
           platform_fee_cents?: number | null;
+          tax_cents?: number;
           created_at?: string;
         };
         Update: {

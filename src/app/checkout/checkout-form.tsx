@@ -17,6 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { centsToDisplay } from "@/lib/stripe";
+import { STATE_TAX_RATES } from "@/lib/tax";
 import { findProhibitedWord, censorWord, logViolation } from "@/lib/profanity";
 import { Loader2, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -147,6 +148,13 @@ export default function CheckoutForm({ listingId, auctionId, offerId, priceCents
   const [rates, setRates] = useState<ShippoRate[]>([]);
   const [selectedRate, setSelectedRate] = useState<ShippoRate | null>(null);
   const [totalCents, setTotalCents] = useState(priceCents);
+  const [taxCents, setTaxCents] = useState(0);
+  const [paidShippingCents, setPaidShippingCents] = useState(0);
+
+  function previewTaxCents(itemCents: number): number {
+    const rate = STATE_TAX_RATES[address.state.trim().toUpperCase()] ?? 0;
+    return Math.round(itemCents * rate);
+  }
 
   // Fall back to localStorage if no server-side saved address
   useEffect(() => {
@@ -227,7 +235,9 @@ export default function CheckoutForm({ listingId, auctionId, offerId, priceCents
     setRates(rates);
     setSelectedRate(rates[0] ?? null);
     const firstRateCents = rates[0] ? Math.round(parseFloat(rates[0].amount) * 100) : 0;
-    setTotalCents(priceCents + firstRateCents);
+    const tax = previewTaxCents(priceCents);
+    setTaxCents(tax);
+    setTotalCents(priceCents + firstRateCents + tax);
     setStep("shipping");
   }
 
@@ -261,9 +271,12 @@ export default function CheckoutForm({ listingId, auctionId, offerId, priceCents
       return;
     }
 
+    const serverTax = data.taxCents ?? 0;
     setClientSecret(data.clientSecret);
     setOrderId(data.orderId ?? "");
-    setTotalCents(priceCents + shippingCostCents);
+    setTaxCents(serverTax);
+    setPaidShippingCents(shippingCostCents);
+    setTotalCents(priceCents + shippingCostCents + serverTax);
     setStep("payment");
     setLoading(false);
   }
@@ -288,7 +301,27 @@ export default function CheckoutForm({ listingId, auctionId, offerId, priceCents
         <CardHeader>
           <CardTitle>Payment</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          <div className="rounded-lg border bg-muted/50 p-3 text-sm space-y-1">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Item{quantity > 1 ? `s (×${quantity})` : ""}</span>
+              <span>{centsToDisplay(priceCents)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Shipping</span>
+              <span>{paidShippingCents > 0 ? centsToDisplay(paidShippingCents) : "Free"}</span>
+            </div>
+            {taxCents > 0 && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Tax</span>
+                <span>{centsToDisplay(taxCents)}</span>
+              </div>
+            )}
+            <div className="flex justify-between font-semibold border-t pt-1 mt-1">
+              <span>Total</span>
+              <span>{centsToDisplay(totalCents)}</span>
+            </div>
+          </div>
           <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: resolvedTheme === "dark" ? "night" : "stripe" } }}>
             <PaymentStep
               clientSecret={clientSecret}
@@ -324,7 +357,7 @@ export default function CheckoutForm({ listingId, auctionId, offerId, priceCents
                     )}
                     onClick={() => {
                       setSelectedRate(rate);
-                      setTotalCents(priceCents + rateCents);
+                      setTotalCents(priceCents + rateCents + taxCents);
                     }}
                   >
                     <input
@@ -334,7 +367,7 @@ export default function CheckoutForm({ listingId, auctionId, offerId, priceCents
                       checked={isSelected}
                       onChange={() => {
                         setSelectedRate(rate);
-                        setTotalCents(priceCents + rateCents);
+                        setTotalCents(priceCents + rateCents + taxCents);
                       }}
                       className="accent-leaf"
                     />
@@ -360,6 +393,12 @@ export default function CheckoutForm({ listingId, auctionId, offerId, priceCents
                 <span className="text-muted-foreground">Shipping</span>
                 <span>{selectedRate ? centsToDisplay(Math.round(parseFloat(selectedRate.amount) * 100)) : "—"}</span>
               </div>
+              {taxCents > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Tax</span>
+                  <span>{centsToDisplay(taxCents)}</span>
+                </div>
+              )}
               <div className="flex justify-between font-semibold border-t pt-1 mt-1">
                 <span>Total</span>
                 <span>{centsToDisplay(totalCents)}</span>

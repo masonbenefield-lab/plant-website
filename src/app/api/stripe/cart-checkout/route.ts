@@ -6,6 +6,7 @@ import { getStripe } from "@/lib/stripe";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { planFeePercent } from "@/lib/plan-limits";
 import { sendLowStockAlert } from "@/lib/email";
+import { calcTaxCents } from "@/lib/tax";
 
 function adminClient() {
   return createSupabaseAdmin<Database>(
@@ -102,7 +103,8 @@ export async function POST(request: Request) {
 
   const feePercent = planFeePercent(sellerPlan?.plan, !!sellerPlan?.is_admin);
   const shippingCents = Math.max(0, Math.round(shippingCostCents ?? 0));
-  const grandTotalCents = totalCents + shippingCents;
+  const taxCents = calcTaxCents(totalCents, shippingAddress.state);
+  const grandTotalCents = totalCents + shippingCents + taxCents;
   const feeCents = Math.round(totalCents * (feePercent / 100));
   const stripeFeeCents = Math.round(grandTotalCents * 0.029) + 30;
   const applicationFeeCents = feeCents + stripeFeeCents;
@@ -172,6 +174,7 @@ export async function POST(request: Request) {
       shipping_service: shippingService ?? null,
       shippo_rate_id: shippoRateId ?? null,
       platform_fee_cents: feeCents,
+      tax_cents: taxCents,
     })
     .select()
     .single();
@@ -220,5 +223,5 @@ export async function POST(request: Request) {
     }
   }
 
-  return NextResponse.json({ clientSecret: paymentIntent.client_secret, orderId: order.id });
+  return NextResponse.json({ clientSecret: paymentIntent.client_secret, orderId: order.id, taxCents });
 }
