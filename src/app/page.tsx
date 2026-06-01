@@ -612,7 +612,7 @@ export default async function LandingPage() {
               <span className="text-[11px] font-normal text-white/70 leading-none mb-1">Free to join</span>
               Create your account
             </Link>
-            <Link href="/shop" className={cn(buttonVariants({ size: "lg" }), "bg-transparent border border-cream/50 text-cream hover:bg-cream/10 font-semibold px-10 text-base min-w-[200px]")}>
+            <Link href="/shop" className={cn(buttonVariants({ size: "lg" }), "bg-transparent border border-cream/50 text-cream hover:bg-cream/10 font-semibold px-10 text-base min-w-[200px] h-auto py-3")}>
               Browse the shop
             </Link>
           </div>
