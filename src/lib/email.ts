@@ -200,6 +200,54 @@ export function buildEmailChangedHtml({ newEmail }: { newEmail: string }): strin
   });
 }
 
+// ─── Oversell refund notification (buyer) ────────────────────────────────────
+
+export function buildOversellRefundHtml({
+  amountCents,
+  items,
+}: {
+  amountCents: number;
+  items: { name: string; quantity: number }[];
+}): string {
+  const siteUrl = siteBase();
+  const infoRows = [
+    ...items.map((item, i) => ({
+      label: items.length > 1 ? `Item ${i + 1}` : "Plant",
+      value: item.quantity > 1 ? `${item.name} ×${item.quantity}` : item.name,
+    })),
+    { label: "Refund amount", value: centsToDisplay(amountCents) },
+  ];
+  return emailBase({
+    title: "Your order has been refunded — Plantet",
+    heading: "We're sorry — order refunded",
+    subheading: "An item sold out just before your payment processed",
+    body: `
+      <p style="margin:0 0 16px;">We're really sorry about this. Due to two buyers purchasing the last available item at the same time, we weren't able to fulfill your order. Your payment has been <strong>fully refunded</strong> and you won't be charged anything.</p>
+      ${infoCard(infoRows)}
+      <p style="margin:0 0 24px;font-size:14px;color:#6b7280;">Refunds typically appear within 5–10 business days depending on your bank. We're sorry for the inconvenience — please check back as the seller may restock.</p>
+      ${ctaBtn("Browse the Shop", `${siteUrl}/shop`)}
+    `,
+  });
+}
+
+export async function sendOversellRefund({
+  buyerEmail,
+  amountCents,
+  items,
+}: {
+  buyerEmail: string;
+  amountCents: number;
+  items: { name: string; quantity: number }[];
+}) {
+  const resend = getResend();
+  await resend.emails.send({
+    from: FROM,
+    to: buyerEmail,
+    subject: "Your order has been refunded — Plantet",
+    html: buildOversellRefundHtml({ amountCents, items }),
+  });
+}
+
 // ─── Order confirmation (buyer) ──────────────────────────────────────────────
 
 export function buildOrderConfirmationHtml({

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
 import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
-import { sendOrderConfirmation, sendNewOrderAlert, sendLowStockAlert } from "@/lib/email";
+import { sendOrderConfirmation, sendNewOrderAlert, sendLowStockAlert, sendOversellRefund } from "@/lib/email";
 
 function adminClient() {
   return createSupabaseAdmin<Database>(
@@ -141,46 +141,71 @@ export async function POST(request: Request) {
       // Cart checkout: decrement listing stock and inventory now that payment is confirmed
       if (pi.metadata?.cart_checkout === "true" && order.cart_items) {
         const cartItems = order.cart_items as { listing_id: string; quantity: number }[];
-        for (const cartItem of cartItems) {
-          const { data: listing } = await supabase
-            .from("listings")
-            .select("id, quantity, status, inventory_id, sold_out_behavior, seller_id")
-            .eq("id", cartItem.listing_id)
-            .single();
-          if (!listing) continue;
 
-          const newQty = Math.max(0, listing.quantity - cartItem.quantity);
-          const soldOut = newQty <= 0;
-          const soldOutBehavior = (listing as { sold_out_behavior?: string }).sold_out_behavior ?? "mark_sold_out";
-          await supabase
-            .from("listings")
-            .update({
-              quantity: newQty,
-              status: soldOut ? (soldOutBehavior === "auto_pause" ? "paused" : "sold_out") : "active",
-            })
-            .eq("id", listing.id);
+        // Batch-fetch all listings upfront so we can pre-check for oversells
+        // before touching any stock. Two buyers racing on a last-in-stock item
+        // can both reach this point; the one whose webhook runs second will find
+        // quantity already at 0 and trigger a full refund.
+        const { data: allListings } = await supabase
+          .from("listings")
+          .select("id, quantity, status, inventory_id, sold_out_behavior, seller_id")
+          .in("id", cartItems.map((ci) => ci.listing_id));
 
-          // Update linked inventory
-          const invQuery = listing.inventory_id
-            ? supabase.from("inventory").select("id, quantity, listing_quantity, low_stock_threshold, plant_name, variety").eq("id", listing.inventory_id).single()
-            : supabase.from("inventory").select("id, quantity, listing_quantity, low_stock_threshold, plant_name, variety").eq("listing_id", listing.id).maybeSingle();
-          const { data: inv } = await invQuery;
-          if (inv) {
-            const newInvQty = Math.max(0, inv.quantity - cartItem.quantity);
-            const newListingQty = Math.max(0, (inv.listing_quantity ?? 0) - cartItem.quantity);
-            await supabase.from("inventory").update({ quantity: newInvQty, listing_quantity: newListingQty }).eq("id", inv.id);
+        const listingById = Object.fromEntries((allListings ?? []).map((l) => [l.id, l]));
+        const oversoldItem = cartItems.find((ci) => {
+          const l = listingById[ci.listing_id];
+          return !l || l.quantity < ci.quantity;
+        });
 
-            const threshold = (inv as { low_stock_threshold?: number | null }).low_stock_threshold;
-            if (threshold && newInvQty <= threshold && newInvQty > 0) {
-              const { data: { user: sellerUser } } = await supabase.auth.admin.getUserById(listing.seller_id);
-              if (sellerUser?.email) {
-                sendLowStockAlert({
-                  sellerEmail: sellerUser.email,
-                  plantName: inv.plant_name,
-                  variety: inv.variety ?? null,
-                  quantity: newInvQty,
-                  inventoryId: inv.id,
-                }).catch(() => {});
+        if (oversoldItem) {
+          // Someone else bought the last unit — refund this buyer in full
+          console.error(`[Webhook] Oversell detected on order ${order.id}, issuing refund`);
+          await getStripe().refunds.create({ payment_intent: pi.id }).catch((err) =>
+            console.error("[Webhook] Refund failed:", err)
+          );
+          await supabase.from("orders").update({ status: "refunded" }).eq("id", order.id);
+          const { data: { user: buyerUser } } = await supabase.auth.admin.getUserById(order.buyer_id);
+          if (buyerUser?.email && emailItems?.length) {
+            sendOversellRefund({ buyerEmail: buyerUser.email, amountCents: order.amount_cents, items: emailItems }).catch(() => {});
+          }
+        } else {
+          for (const cartItem of cartItems) {
+            const listing = listingById[cartItem.listing_id];
+            if (!listing) continue;
+
+            const newQty = listing.quantity - cartItem.quantity;
+            const soldOut = newQty <= 0;
+            const soldOutBehavior = (listing as { sold_out_behavior?: string }).sold_out_behavior ?? "mark_sold_out";
+            await supabase
+              .from("listings")
+              .update({
+                quantity: newQty,
+                status: soldOut ? (soldOutBehavior === "auto_pause" ? "paused" : "sold_out") : "active",
+              })
+              .eq("id", listing.id);
+
+            // Update linked inventory
+            const invQuery = listing.inventory_id
+              ? supabase.from("inventory").select("id, quantity, listing_quantity, low_stock_threshold, plant_name, variety").eq("id", listing.inventory_id).single()
+              : supabase.from("inventory").select("id, quantity, listing_quantity, low_stock_threshold, plant_name, variety").eq("listing_id", listing.id).maybeSingle();
+            const { data: inv } = await invQuery;
+            if (inv) {
+              const newInvQty = Math.max(0, inv.quantity - cartItem.quantity);
+              const newListingQty = Math.max(0, (inv.listing_quantity ?? 0) - cartItem.quantity);
+              await supabase.from("inventory").update({ quantity: newInvQty, listing_quantity: newListingQty }).eq("id", inv.id);
+
+              const threshold = (inv as { low_stock_threshold?: number | null }).low_stock_threshold;
+              if (threshold && newInvQty <= threshold && newInvQty > 0) {
+                const { data: { user: sellerUser } } = await supabase.auth.admin.getUserById(listing.seller_id);
+                if (sellerUser?.email) {
+                  sendLowStockAlert({
+                    sellerEmail: sellerUser.email,
+                    plantName: inv.plant_name,
+                    variety: inv.variety ?? null,
+                    quantity: newInvQty,
+                    inventoryId: inv.id,
+                  }).catch(() => {});
+                }
               }
             }
           }
