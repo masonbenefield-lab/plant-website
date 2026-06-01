@@ -357,9 +357,7 @@ export default function InventoryClient({
   const [editCostPrice, setEditCostPrice] = useState("");
   const [viewMode, setViewMode] = useState<"grouped" | "flat">("grouped");
   const categories = isAdmin ? ADMIN_CATEGORIES : BASE_CATEGORIES;
-  const shippingModes = calculatedShippingEnabled
-    ? (["free", "flat", "weight"] as const)
-    : (["free", "flat"] as const);
+  const shippingModes = ["free", "flat", "weight"] as const;
   const [stockTab, setStockTab] = useState<"plants" | "supplies">("plants");
 
   useEffect(() => {
@@ -2603,9 +2601,6 @@ export default function InventoryClient({
                       </button>
                     ))}
                   </div>
-                  {!calculatedShippingEnabled && (
-                    <p className="text-xs text-muted-foreground">Want weight-based rates? <a href="/account#shipping-settings" className="underline hover:text-foreground">Enable calculated shipping →</a></p>
-                  )}
                   {listingShippingMode === "flat" && (
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-muted-foreground">$</span>
@@ -2621,18 +2616,25 @@ export default function InventoryClient({
                     </div>
                   )}
                   {listingShippingMode === "weight" && (
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="number"
-                        min={0.1}
-                        step={0.1}
-                        placeholder="oz"
-                        value={listingShippingWeightOz}
-                        onChange={e => setListingShippingWeightOz(e.target.value)}
-                        className="max-w-[90px]"
-                      />
-                      <span className="text-xs text-muted-foreground">oz — rate calculated at checkout</span>
-                    </div>
+                    calculatedShippingEnabled ? (
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          min={0.1}
+                          step={0.1}
+                          placeholder="oz"
+                          value={listingShippingWeightOz}
+                          onChange={e => setListingShippingWeightOz(e.target.value)}
+                          className="max-w-[90px]"
+                        />
+                        <span className="text-xs text-muted-foreground">oz — rate calculated at checkout</span>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-amber-700 dark:text-amber-400">
+                        To use weight-based rates, complete your ship-from address and enable calculated shipping in{" "}
+                        <a href="/account/shipping" className="underline hover:text-foreground font-medium">Shipping Settings →</a>
+                      </p>
+                    )
                   )}
                 </div>
                 {!listingShippingMode && (
@@ -2719,9 +2721,6 @@ export default function InventoryClient({
                       </button>
                     ))}
                   </div>
-                  {!calculatedShippingEnabled && (
-                    <p className="text-xs text-muted-foreground">Want weight-based rates? <a href="/account#shipping-settings" className="underline hover:text-foreground">Enable calculated shipping →</a></p>
-                  )}
                   {auctionShippingMode === "flat" && (
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-muted-foreground">$</span>
@@ -2738,18 +2737,25 @@ export default function InventoryClient({
                     </div>
                   )}
                   {auctionShippingMode === "weight" && (
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="number"
-                        min={0.1}
-                        step={0.1}
-                        placeholder="oz"
-                        value={auctionShippingWeightOz}
-                        onChange={e => setAuctionShippingWeightOz(e.target.value)}
-                        className="max-w-[90px]"
-                      />
-                      <span className="text-xs text-muted-foreground">oz — rate calculated at checkout</span>
-                    </div>
+                    calculatedShippingEnabled ? (
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          min={0.1}
+                          step={0.1}
+                          placeholder="oz"
+                          value={auctionShippingWeightOz}
+                          onChange={e => setAuctionShippingWeightOz(e.target.value)}
+                          className="max-w-[90px]"
+                        />
+                        <span className="text-xs text-muted-foreground">oz — rate calculated at checkout</span>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-amber-700 dark:text-amber-400">
+                        To use weight-based rates, complete your ship-from address and enable calculated shipping in{" "}
+                        <a href="/account/shipping" className="underline hover:text-foreground font-medium">Shipping Settings →</a>
+                      </p>
+                    )
                   )}
                 </div>
                 {!auctionShippingMode && (
@@ -2974,9 +2980,6 @@ export default function InventoryClient({
                           </button>
                         ))}
                       </div>
-                      {!calculatedShippingEnabled && (
-                        <p className="text-xs text-muted-foreground">Want weight-based rates? <a href="/account#shipping-settings" className="underline hover:text-foreground">Enable calculated shipping →</a></p>
-                      )}
                       {editShippingMode === "flat" && (
                         <div className="flex items-center gap-2 pt-1">
                           <span className="text-sm text-muted-foreground">$</span>
@@ -2985,10 +2988,17 @@ export default function InventoryClient({
                         </div>
                       )}
                       {editShippingMode === "weight" && (
-                        <div className="flex items-center gap-2 pt-1">
-                          <Input type="number" min={0.1} step={0.1} placeholder="e.g. 16" value={editWeightOz} onChange={e => setEditWeightOz(e.target.value)} className="max-w-[100px]" />
-                          <span className="text-xs text-muted-foreground">oz — rate calculated at checkout</span>
-                        </div>
+                        calculatedShippingEnabled ? (
+                          <div className="flex items-center gap-2 pt-1">
+                            <Input type="number" min={0.1} step={0.1} placeholder="e.g. 16" value={editWeightOz} onChange={e => setEditWeightOz(e.target.value)} className="max-w-[100px]" />
+                            <span className="text-xs text-muted-foreground">oz — rate calculated at checkout</span>
+                          </div>
+                        ) : (
+                          <p className="text-xs text-amber-700 dark:text-amber-400 pt-1">
+                            To use weight-based rates, complete your ship-from address and enable calculated shipping in{" "}
+                            <a href="/account/shipping" className="underline hover:text-foreground font-medium">Shipping Settings →</a>
+                          </p>
+                        )
                       )}
                     </div>
                     {/* Templates */}
