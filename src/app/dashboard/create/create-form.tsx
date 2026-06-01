@@ -280,7 +280,8 @@ export default function CreateInventoryPage() {
   const anyListing = sizes.some(s => s.listInShop && s.shopPrice);
   const hasIncompleteListings = sizes.some(s => s.listInShop && (!s.shopPrice || !s.shippingMode));
   const hasOverQty = sizes.some(s => s.listInShop && s.shopQuantity !== "" && Number(s.shopQuantity) > (Number(s.quantity) || 1));
-  const canSubmit = !!plantName.trim() && sizes.every(s => Number(s.quantity) >= 1) && !hasIncompleteListings && !hasOverQty;
+  const hasWeightWithoutSetup = sizes.some(s => s.listInShop && s.shippingMode === "weight" && !calculatedShippingEnabled);
+  const canSubmit = !!plantName.trim() && sizes.every(s => Number(s.quantity) >= 1) && !hasIncompleteListings && !hasOverQty && !hasWeightWithoutSetup;
   const isSupply = itemType === "supply";
   const categories = isSupply ? SUPPLY_CATEGORIES : PLANT_CATEGORIES;
   const unitWord = isSupply ? "variant" : "size";
@@ -652,7 +653,9 @@ export default function CreateInventoryPage() {
           </Button>
           {!canSubmit && (
             <p className="text-xs text-muted-foreground">
-              {hasOverQty
+              {hasWeightWithoutSetup
+                ? <>Complete your <a href="/account#shipping-settings" className="underline">shipping setup</a> before using weight-based rates.</>
+                : hasOverQty
                 ? "Listed qty can't exceed stock quantity."
                 : hasIncompleteListings
                 ? "Add a price and shipping option for each item listed in shop."
