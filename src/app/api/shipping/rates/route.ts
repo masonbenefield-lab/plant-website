@@ -136,6 +136,10 @@ export async function POST(request: Request) {
     name: string; street1: string; city: string; state: string; zip: string; country: string; phone?: string;
   };
 
+  if (!from.city?.trim() || !from.zip?.trim()) {
+    return NextResponse.json({ error: "Seller's ship-from address is incomplete — city and ZIP are required" }, { status: 400 });
+  }
+
   // Domestic-only enforcement
   if (from.country !== toAddress.country) {
     return NextResponse.json({ error: `This seller only ships within ${from.country}` }, { status: 400 });

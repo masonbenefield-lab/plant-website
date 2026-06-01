@@ -16,6 +16,22 @@ export async function POST(request: Request) {
     auto_labels_enabled?: boolean;
   };
 
+  // Validate ship-from address has all required fields if provided
+  if (ship_from_address) {
+    const { name, street1, city, state, zip, country } = ship_from_address;
+    if (!name?.trim() || !street1?.trim() || !city?.trim() || !state?.trim() || !zip?.trim() || !country?.trim()) {
+      return NextResponse.json({ error: "Ship-from address is missing required fields (name, street, city, state, ZIP, country)" }, { status: 400 });
+    }
+  }
+
+  // Can't enable calculated shipping without a complete address
+  if (calculated_shipping_enabled) {
+    const addr = ship_from_address;
+    if (!addr?.city?.trim() || !addr?.zip?.trim()) {
+      return NextResponse.json({ error: "A complete ship-from address is required before enabling calculated shipping rates" }, { status: 400 });
+    }
+  }
+
   const updatePayload: ProfileUpdate = {
     ship_from_address: ship_from_address ?? null,
     shipping_services: shipping_services ?? null,
