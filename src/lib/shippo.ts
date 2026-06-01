@@ -84,7 +84,10 @@ export async function getShippingRates(params: {
     async: false,
   });
 
-  const rates = (shipment.rates ?? [])
+  const rawRates = shipment.rates ?? [];
+  console.log("[Shippo] Raw rates returned:", rawRates.length, "| tokens:", rawRates.map((r) => r.servicelevel?.token).join(", "));
+
+  const rates = rawRates
     .filter((r) => {
       if (!enabledServices?.length) return true;
       return enabledServices.includes(r.servicelevel?.token ?? "");

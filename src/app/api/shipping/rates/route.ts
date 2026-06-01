@@ -141,21 +141,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: `This seller only ships within ${from.country}` }, { status: 400 });
   }
 
+  const enabledServices = (seller.shipping_services as string[] | null) ?? undefined;
+
   try {
-    const rates = await getShippingRates({
-      from,
-      to: toAddress,
-      weightOz,
-      enabledServices: (seller.shipping_services as string[] | null) ?? undefined,
-    });
+    const rates = await getShippingRates({ from, to: toAddress, weightOz, enabledServices });
 
     if (!rates.length) {
+      console.error("[ShippingRates] No rates returned. weightOz:", weightOz, "enabledServices:", enabledServices, "from:", from.zip, "to:", toAddress.zip);
       return NextResponse.json({ error: "No shipping rates available for this destination" }, { status: 400 });
     }
 
     return NextResponse.json({ rates });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed to fetch shipping rates";
+    console.error("[ShippingRates] Error:", msg);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
