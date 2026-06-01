@@ -454,6 +454,16 @@ export interface Database {
           status?: OrderStatus;
           tracking_number?: string | null;
           delivered_at?: string | null;
+          shipping_address?: {
+            name: string;
+            line1: string;
+            line2?: string | null;
+            city: string;
+            state: string;
+            zip: string;
+            country: string;
+          };
+          amount_cents?: number;
           cart_items?: { listing_id: string; plant_name: string; variety: string | null; quantity: number; price_cents: number }[] | null;
           shipping_cost_cents?: number | null;
           shipping_service?: string | null;
@@ -461,6 +471,7 @@ export interface Database {
           shippo_transaction_id?: string | null;
           label_url?: string | null;
           platform_fee_cents?: number | null;
+          tax_cents?: number;
           payment_deadline_at?: string | null;
           payment_reminder_sent?: boolean;
         };
