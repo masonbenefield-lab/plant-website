@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { centsToDisplay } from "@/lib/stripe";
 import { useCart } from "@/lib/cart";
 import { findProhibitedWord, censorWord, logViolation } from "@/lib/profanity";
-import { Loader2, Package } from "lucide-react";
+import { Loader2, Package, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
@@ -71,7 +71,7 @@ function PaymentStep({ clientSecret, totalCents, onSuccess }: { clientSecret: st
 }
 
 export default function CartCheckoutPage() {
-  const { items, totalCents: itemsTotalCents, clearCart } = useCart();
+  const { items, totalCents: itemsTotalCents, clearCart, removeItem } = useCart();
   const router = useRouter();
   const { resolvedTheme } = useTheme();
   const [step, setStep] = useState<"address" | "shipping" | "payment">("address");
@@ -109,6 +109,20 @@ export default function CartCheckoutPage() {
         <Link href="/shop" className="text-leaf hover:underline">Browse the shop →</Link>
       </div>
     );
+  }
+
+  function handleRemoveItem(listingId: string) {
+    removeItem(listingId);
+    if (step !== "address") {
+      setStep("address");
+      setRates([]);
+      setSelectedRate(null);
+      setClientSecret("");
+      setOrderId("");
+      setExtraFlatCents(0);
+      setItemBreakdown([]);
+      setFlatShippingCents(null);
+    }
   }
 
   async function handleAddressSubmit(e: React.FormEvent) {
@@ -230,6 +244,13 @@ export default function CartCheckoutPage() {
             <p className="text-sm font-medium leading-tight">{item.plantName}{item.variety ? ` — ${item.variety}` : ""}</p>
             <p className="text-xs text-muted-foreground">Qty {item.quantity} · {centsToDisplay(item.priceCents)}</p>
           </div>
+          <button
+            onClick={() => handleRemoveItem(item.listingId)}
+            className="text-muted-foreground hover:text-destructive transition-colors shrink-0"
+            aria-label={`Remove ${item.plantName}`}
+          >
+            <X size={14} />
+          </button>
         </div>
       ))}
       <div className="border-t pt-3 space-y-1 text-sm">
