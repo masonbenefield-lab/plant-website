@@ -91,10 +91,6 @@ export default function AccountForm({
   const [missingAddressFields, setMissingAddressFields] = useState<Set<string>>(new Set());
   const [highlightShipFrom, setHighlightShipFrom] = useState(false);
 
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState("");
-  const [deleting, setDeleting] = useState(false);
-
   const [removeAddressDialog, setRemoveAddressDialog] = useState<{ listingIds: string[] } | null>(null);
 
   const canUseBanner = profile?.is_admin || (profile?.plan && profile.plan !== "seedling");
@@ -342,21 +338,6 @@ export default function AccountForm({
         </CardContent>
       </Card>
     );
-  }
-
-  async function handleDeleteAccount() {
-    setDeleting(true);
-    const res = await fetch("/api/account/delete", { method: "POST" });
-    const data = await res.json();
-    if (data.error) {
-      toast.error(data.error);
-      setDeleting(false);
-      setDeleteDialogOpen(false);
-      return;
-    }
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/");
   }
 
   async function saveShipping(e: React.FormEvent) {
@@ -1182,58 +1163,6 @@ export default function AccountForm({
       <PlanBillingCard profile={profile} />
 
       <PlantGuidePreference />
-
-      <Card id="danger-zone" className="border-destructive/40 scroll-mt-24">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-destructive">
-            <Trash2 size={18} /> Danger Zone
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-sm text-muted-foreground">
-            Permanently delete your account and all associated data. This cannot be undone.
-            You must fulfill any pending orders and end all active auctions first.
-          </p>
-          <Button
-            variant="destructive"
-            onClick={() => { setDeleteConfirm(""); setDeleteDialogOpen(true); }}
-          >
-            Delete Account
-          </Button>
-        </CardContent>
-      </Card>
-
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete your account?</DialogTitle>
-            <DialogDescription>
-              This permanently removes your profile, listings, and all data. This cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2 py-2">
-            <p className="text-sm text-muted-foreground">
-              Type <span className="font-mono font-semibold">DELETE</span> to confirm.
-            </p>
-            <Input
-              value={deleteConfirm}
-              onChange={(e) => setDeleteConfirm(e.target.value)}
-              placeholder="DELETE"
-              autoComplete="off"
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-            <Button
-              variant="destructive"
-              disabled={deleteConfirm !== "DELETE" || deleting}
-              onClick={handleDeleteAccount}
-            >
-              {deleting ? "Deleting…" : "Delete Account"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={!!removeAddressDialog} onOpenChange={(open) => { if (!open) setRemoveAddressDialog(null); }}>
         <DialogContent>

@@ -6,6 +6,7 @@ import AccountForm from "./account-form";
 import BlockedUsers from "@/components/account/blocked-users";
 import AccountSettingsSidebar from "@/components/account/account-settings-sidebar";
 import PaymentSettings from "./payment-settings";
+import DangerZone from "./danger-zone";
 
 export default async function AccountPage() {
   const supabase = await createClient();
@@ -51,6 +52,9 @@ export default async function AccountPage() {
           </div>
           <div id="blocked-users" className="border-t pt-6 scroll-mt-24">
             <BlockedUsers initialBlocked={blockedProfiles} />
+          </div>
+          <div className="border-t pt-6">
+            <DangerZone />
           </div>
         </div>
       </div>
