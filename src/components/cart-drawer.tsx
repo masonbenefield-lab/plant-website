@@ -45,16 +45,17 @@ export function CartDrawer() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ listingIds: [listingId] }),
       });
+      if (!res.ok) { toast.error("Couldn't verify stock — please try again"); return; }
       const { stock } = await res.json() as { stock: Record<string, number> };
       const available = stock?.[listingId];
       if (available !== undefined) setStockMap((prev) => ({ ...prev, [listingId]: available }));
-      if (available !== undefined && currentQty >= available) {
+      if (available === undefined || currentQty >= available) {
         toast.error("That's all the available stock");
       } else {
         updateQty(listingId, currentQty + 1);
       }
     } catch {
-      updateQty(listingId, currentQty + 1); // allow if check fails; server validates at checkout
+      toast.error("Couldn't verify stock — please try again");
     } finally {
       setCheckingId(null);
     }

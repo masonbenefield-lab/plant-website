@@ -254,15 +254,20 @@ export default function CartCheckoutPage() {
     const data = await res.json();
 
     // Server detected quantity > available stock — auto-adjust cart and bail
-    if (data.error === "stock_exceeded" && Array.isArray(data.adjustments)) {
-      for (const adj of data.adjustments as { listingId: string; plantName: string; available: number }[]) {
-        if (adj.available === 0) {
-          removeItem(adj.listingId);
-          toast.error(`${adj.plantName} is sold out and was removed from your cart`);
-        } else {
-          updateQty(adj.listingId, adj.available);
-          toast.warning(`${adj.plantName} quantity adjusted to ${adj.available} (max available)`);
+    if (data.error === "stock_exceeded") {
+      const adjustments: { listingId: string; plantName: string; available: number }[] = data.adjustments ?? [];
+      if (adjustments.length > 0) {
+        for (const adj of adjustments) {
+          if (adj.available === 0) {
+            removeItem(adj.listingId);
+            toast.error(`${adj.plantName} is sold out and was removed from your cart`);
+          } else {
+            updateQty(adj.listingId, adj.available);
+            toast.warning(`${adj.plantName} quantity adjusted to ${adj.available} (max available)`);
+          }
         }
+      } else {
+        toast.error("Some items exceed available stock. Your cart has been updated.");
       }
       setLoading(false);
       return;

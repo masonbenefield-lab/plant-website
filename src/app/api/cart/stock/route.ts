@@ -1,20 +1,19 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-import type { Database } from "@/lib/supabase/types";
+import { createClient } from "@/lib/supabase/server";
 
 export async function POST(req: Request) {
   const { listingIds } = await req.json() as { listingIds: string[] };
   if (!listingIds?.length) return NextResponse.json({ stock: {} });
 
-  const supabase = createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-
-  const { data } = await supabase
+  const supabase = await createClient();
+  const { data, error } = await supabase
     .from("listings")
     .select("id, quantity, status")
     .in("id", listingIds);
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
 
   // Default every requested ID to 0 — if a listing isn't returned (RLS hides
   // sold_out/paused rows, or it was deleted) we treat it as no stock available.
