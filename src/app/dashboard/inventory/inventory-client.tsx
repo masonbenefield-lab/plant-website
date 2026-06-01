@@ -858,11 +858,13 @@ export default function InventoryClient({
   async function deleteArchivedItem(row: Row) {
     setDeletingItemId(row.id);
     const supabase = createClient();
-    // Pause linked listings (don't delete — they may have order history)
+    // Delete linked listings before removing the inventory row. The ON DELETE SET NULL
+    // constraint would otherwise null out inventory_id, causing the listing to
+    // reappear in "Not yet in inventory".
     if (row.listing_id) {
-      await supabase.from("listings").update({ status: "paused" }).eq("id", row.listing_id);
+      await supabase.from("listings").delete().eq("id", row.listing_id);
     }
-    await supabase.from("listings").update({ status: "paused" }).eq("inventory_id", row.id);
+    await supabase.from("listings").delete().eq("inventory_id", row.id);
     const { error } = await supabase.from("inventory").delete().eq("id", row.id);
     setDeletingItemId(null);
     setConfirmDeleteId(null);
