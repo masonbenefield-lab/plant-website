@@ -408,6 +408,20 @@ export default function AccountForm({
         });
         const vData = await vRes.json();
         setAddressValidation(vData.error ? null : vData);
+        // Auto-enable calculated shipping when address is verified
+        if (vData?.valid && !calculatedShippingEnabled) {
+          setCalculatedShippingEnabled(true);
+          await fetch("/api/profile/update-shipping", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              ship_from_address: shipFrom.street1.trim() ? shipFrom : null,
+              shipping_services: shippingServices.length ? shippingServices : null,
+              calculated_shipping_enabled: true,
+              auto_labels_enabled: autoLabelsEnabled,
+            }),
+          });
+        }
       } catch { /* non-blocking */ }
       setValidatingAddress(false);
     }
@@ -1051,7 +1065,7 @@ export default function AccountForm({
 
             <div className="space-y-3">
               {(() => {
-                const hasAddress = !!(rawShipFrom?.street1?.trim() && rawShipFrom?.city?.trim() && rawShipFrom?.state?.trim() && rawShipFrom?.zip?.trim());
+                const hasAddress = !!(shipFrom.street1?.trim() && shipFrom.city?.trim() && shipFrom.state?.trim() && shipFrom.zip?.trim());
                 return (
                   <div className={cn("flex items-center justify-between rounded-lg border p-4", !hasAddress && "opacity-60")}>
                     <div>
