@@ -158,6 +158,16 @@ export default function CreateInventoryPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { toast.error("Not logged in"); setSaving(false); return; }
 
+    // Always fetch fresh from DB — never trust state for security checks
+    const { data: freshProfile } = await supabase
+      .from("profiles")
+      .select("ship_from_address, calculated_shipping_enabled")
+      .eq("id", user.id)
+      .single();
+    const freshAddr = freshProfile?.ship_from_address as { street1?: string; city?: string; zip?: string } | null;
+    const freshCalcOk = (freshProfile as { calculated_shipping_enabled?: boolean | null } | null)?.calculated_shipping_enabled === true
+      && !!(freshAddr?.street1?.trim() && freshAddr?.city?.trim() && freshAddr?.zip?.trim());
+
     const anyListing = sizes.some(s => s.listInShop && s.shopPrice);
 
     for (const s of sizes) {
@@ -166,7 +176,7 @@ export default function CreateInventoryPage() {
         setSaving(false);
         return;
       }
-      if (s.shippingMode === "weight" && !calculatedShippingEnabled) {
+      if (s.shippingMode === "weight" && !freshCalcOk) {
         toast.error("Complete your shipping setup first", {
           description: "Add a verified ship-from address and enable calculated shipping in Shipping Settings.",
           action: { label: "Go to Shipping Settings", onClick: () => router.push("/account#shipping-settings") },
