@@ -158,31 +158,29 @@ export default async function LandingPage() {
                 Built for plant people
               </span>
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight mb-6 tracking-[-0.02em]" style={{ fontFamily: "var(--font-bricolage), sans-serif" }}>
-                The marketplace<br className="hidden sm:block" /> for plant lovers
+                Your plants.<br />Your people.<br />Your garden.
               </h1>
               <p className="text-base sm:text-lg text-cream/80 mb-8 max-w-lg mx-auto lg:mx-0">
-                Track your collection, connect with fellow growers, and buy or sell plants — all in one place.
+                Track every plant you own, connect with fellow growers, and buy or sell — all in one place built for the plant-obsessed.
               </p>
 
               {/* Dual CTA */}
               <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start mb-6">
                 <Link href="/signup" className={cn(buttonVariants({ size: "lg" }), "bg-terra text-white hover:bg-[#B05A39] font-semibold px-8 text-base flex flex-col items-center gap-0 h-auto py-3 border-0")}>
-                  <span className="text-[11px] font-normal text-white/70 leading-none mb-1">For sellers</span>
-                  Start Selling Free
+                  <span className="text-[11px] font-normal text-white/70 leading-none mb-1">Free to join</span>
+                  Start your garden log
                 </Link>
-                <Link href="/shop" className={cn(buttonVariants({ size: "lg" }), "bg-transparent text-cream border border-cream/50 hover:bg-cream/10 font-semibold px-8 text-base flex flex-col items-center gap-0 h-auto py-3")}>
-                  <span className="text-[11px] font-normal text-cream/60 leading-none mb-1">For buyers</span>
-                  Browse Plants
+                <Link href="/shop" className={cn(buttonVariants({ size: "lg" }), "bg-transparent text-cream border border-cream/50 hover:bg-cream/10 font-semibold px-8 text-base")}>
+                  Browse the shop
                 </Link>
               </div>
               <p className="text-xs text-cream/40 text-center lg:text-left">
-                or{" "}
                 <Link href="/auctions" className="hover:text-cream/70 transition-colors">
                   browse live auctions
                 </Link>
                 {" · "}
-                <Link href="/garden" className="hover:text-cream/70 transition-colors">
-                  start your garden log →
+                <Link href="/community" className="hover:text-cream/70 transition-colors">
+                  explore the community →
                 </Link>
               </p>
             </div>
