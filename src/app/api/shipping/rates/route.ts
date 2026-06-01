@@ -21,12 +21,14 @@ export async function POST(request: Request) {
   let sellerId: string;
   let weightOz: number;
   let extraFlatCents = 0; // flat-rate portion to add on top of Shippo rates (cart mixed-mode)
+  type ItemBreakdown = { listingId: string; mode: "free" | "flat" | "calculated"; flatCents?: number };
+  let itemBreakdown: ItemBreakdown[] | undefined;
 
   if (listingIds?.length) {
     // Cart: multiple listings from one seller — resolve shipping per listing
     const { data: listings } = await supabase
       .from("listings")
-      .select("seller_id, inventory_id, free_shipping, shipping_cost_cents")
+      .select("id, seller_id, inventory_id, free_shipping, shipping_cost_cents")
       .in("id", listingIds);
 
     if (!listings?.length) return NextResponse.json({ error: "Listings not found" }, { status: 404 });
@@ -50,6 +52,7 @@ export async function POST(request: Request) {
     let totalFlatCents = 0;
     let needsCalculated = false;
     weightOz = 0;
+    itemBreakdown = [];
 
     for (const listing of listings) {
       const inv = listing.inventory_id ? invMap[listing.inventory_id] : null;
@@ -59,21 +62,24 @@ export async function POST(request: Request) {
 
       weightOz += itemWeight; // always accumulate weight in case Shippo is needed
       if (isFree) {
-        // contributes $0
+        itemBreakdown.push({ listingId: listing.id, mode: "free" });
       } else if (flatCents) {
         totalFlatCents += flatCents;
+        itemBreakdown.push({ listingId: listing.id, mode: "flat", flatCents });
       } else {
         needsCalculated = true;
+        itemBreakdown.push({ listingId: listing.id, mode: "calculated" });
       }
     }
 
     // free+free → freeShipping, free+flat → flatRate, flat+flat → flatRate, any+Shippo → Shippo
     if (!needsCalculated) {
-      if (totalFlatCents === 0) return NextResponse.json({ rates: [], freeShipping: true });
-      return NextResponse.json({ rates: [], flatRate: true, flatRateCents: totalFlatCents });
+      if (totalFlatCents === 0) return NextResponse.json({ rates: [], freeShipping: true, itemBreakdown });
+      return NextResponse.json({ rates: [], flatRate: true, flatRateCents: totalFlatCents, itemBreakdown });
     }
     // Mixed flat+Shippo: Shippo calculates weight-based rates; pass flat surplus so client can add it on top
     extraFlatCents = totalFlatCents;
+    // itemBreakdown is returned below alongside rates
   } else if (listingId) {
     const { data: listing } = await supabase
       .from("listings")
@@ -157,7 +163,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No shipping rates available for this destination" }, { status: 400 });
     }
 
-    return NextResponse.json({ rates, ...(extraFlatCents > 0 ? { extraFlatCents } : {}) });
+    return NextResponse.json({
+      rates,
+      ...(extraFlatCents > 0 ? { extraFlatCents } : {}),
+      ...(itemBreakdown ? { itemBreakdown } : {}),
+    });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed to fetch shipping rates";
     console.error("[ShippingRates] Error:", msg);

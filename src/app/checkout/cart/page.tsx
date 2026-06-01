@@ -36,6 +36,12 @@ interface ShippoRate {
   estimatedDays: number | null;
 }
 
+interface ItemBreakdown {
+  listingId: string;
+  mode: "free" | "flat" | "calculated";
+  flatCents?: number;
+}
+
 function PaymentStep({ clientSecret, totalCents, onSuccess }: { clientSecret: string; totalCents: number; onSuccess: () => void }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -83,6 +89,7 @@ export default function CartCheckoutPage() {
   const [flatShippingCents, setFlatShippingCents] = useState<number | null>(null);
   const [extraFlatCents, setExtraFlatCents] = useState(0);
   const [taxCents, setTaxCents] = useState(0);
+  const [itemBreakdown, setItemBreakdown] = useState<ItemBreakdown[]>([]);
 
   useEffect(() => {
     setGrandTotalCents(itemsTotalCents);
@@ -158,6 +165,7 @@ export default function CartCheckoutPage() {
 
     const extra = data.extraFlatCents ?? 0;
     setExtraFlatCents(extra);
+    setItemBreakdown(data.itemBreakdown ?? []);
     setRates(data.rates ?? []);
     const first = data.rates?.[0] ?? null;
     setSelectedRate(first);
@@ -229,17 +237,55 @@ export default function CartCheckoutPage() {
           <span>Items</span>
           <span>{centsToDisplay(itemsTotalCents)}</span>
         </div>
-        {selectedRate ? (
-          <div className="flex justify-between text-muted-foreground">
-            <span>Shipping</span>
-            <span>{centsToDisplay(Math.round(parseFloat(selectedRate.amount) * 100) + extraFlatCents)}</span>
-          </div>
-        ) : flatShippingCents !== null ? (
-          <div className="flex justify-between text-muted-foreground">
-            <span>Shipping</span>
-            <span>{centsToDisplay(flatShippingCents)}</span>
-          </div>
-        ) : null}
+        {/* Shipping — show per-item breakdown when modes differ, otherwise a single line */}
+        {(() => {
+          const modes = new Set(itemBreakdown.map((b) => b.mode));
+          const isMixed = modes.size > 1;
+          const carrierCents = selectedRate ? Math.round(parseFloat(selectedRate.amount) * 100) : null;
+          const totalShippingCents = carrierCents !== null ? carrierCents + extraFlatCents : flatShippingCents;
+
+          if (isMixed && (carrierCents !== null)) {
+            // Expanded per-item breakdown
+            return (
+              <div className="text-muted-foreground">
+                <p className="text-xs font-medium mb-1">Shipping</p>
+                {itemBreakdown.map((b) => {
+                  const cartItem = items.find((i) => i.listingId === b.listingId);
+                  if (!cartItem) return null;
+                  const label = cartItem.plantName + (cartItem.variety ? ` — ${cartItem.variety}` : "");
+                  return (
+                    <div key={b.listingId} className="flex justify-between text-xs pl-2 py-0.5">
+                      <span className="truncate mr-2 max-w-[120px]">{label}</span>
+                      <span className="shrink-0">
+                        {b.mode === "free" ? (
+                          <span className="text-leaf">Free</span>
+                        ) : b.mode === "flat" ? (
+                          centsToDisplay(b.flatCents!)
+                        ) : (
+                          centsToDisplay(carrierCents!)
+                        )}
+                      </span>
+                    </div>
+                  );
+                })}
+                <div className="flex justify-between text-xs font-medium pl-2 pt-1 border-t border-dashed mt-1">
+                  <span>Total shipping</span>
+                  <span>{totalShippingCents !== null ? centsToDisplay(totalShippingCents) : "—"}</span>
+                </div>
+              </div>
+            );
+          }
+
+          if (totalShippingCents !== null) {
+            return (
+              <div className="flex justify-between text-muted-foreground">
+                <span>Shipping</span>
+                <span>{centsToDisplay(totalShippingCents)}</span>
+              </div>
+            );
+          }
+          return null;
+        })()}
         {taxCents > 0 && (
           <div className="flex justify-between text-muted-foreground">
             <span>Tax</span>
