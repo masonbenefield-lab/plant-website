@@ -25,8 +25,9 @@ export async function GET(request: Request) {
         .eq("id", session.user.id)
         .single();
 
-      // Send welcome email on first confirmed signup
-      if (!profile?.groundbreaker && session.user.email && profile?.username) {
+      // Send welcome email on first confirmed signup (within 10 min of account creation)
+      const isNewUser = Date.now() - new Date(session.user.created_at).getTime() < 10 * 60 * 1000;
+      if (isNewUser && session.user.email && profile?.username) {
         sendWelcomeEmail({ recipientEmail: session.user.email, username: profile.username }).catch(() => {});
       }
 
