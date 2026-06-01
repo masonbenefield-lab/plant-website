@@ -1594,17 +1594,15 @@ export default function InventoryClient({
               {row.listing_sale_price_cents && row.listing_sale_ends_at && new Date(row.listing_sale_ends_at) > new Date() && (
                 <span className="text-xs text-orange-600 font-medium">✦ Sale</span>
               )}
-              {row.free_shipping ? (
-                <span className="text-xs text-muted-foreground">Free shipping</span>
-              ) : row.shipping_cost_cents ? (
-                <span className="text-xs text-muted-foreground">{centsToDisplay(row.shipping_cost_cents)} shipping</span>
-              ) : row.shipping_weight_oz ? (
-                <span className="text-xs text-muted-foreground">Calculated shipping</span>
-              ) : null}
+            </div>
+            <div className="flex items-center justify-between gap-2 pl-5">
+              <span className="text-xs text-muted-foreground">
+                {row.free_shipping ? "Free shipping" : row.shipping_cost_cents ? `${centsToDisplay(row.shipping_cost_cents)} shipping` : row.shipping_weight_oz ? "Calculated shipping" : ""}
+              </span>
               {row.listing_status !== "sold_out" && (
                 <button
                   onClick={() => openManageListing(row)}
-                  className={cn("text-xs hover:underline", managingListingId === row.id ? "text-foreground font-medium" : "text-blue-600")}
+                  className={cn("text-xs hover:underline shrink-0", managingListingId === row.id ? "text-foreground font-medium" : "text-blue-600")}
                 >
                   {managingListingId === row.id ? "Hide ↑" : "Manage ↓"}
                 </button>
@@ -1824,21 +1822,19 @@ export default function InventoryClient({
                   </button>
                 )
               )}
-              {row.free_shipping ? (
-                <span className="text-xs text-muted-foreground">Free shipping</span>
-              ) : row.shipping_cost_cents ? (
-                <span className="text-xs text-muted-foreground">{centsToDisplay(row.shipping_cost_cents)} shipping</span>
-              ) : row.shipping_weight_oz ? (
-                <span className="text-xs text-muted-foreground">Calculated shipping</span>
-              ) : null}
-              {row.listing_status !== "sold_out" && (
-                <button
-                  onClick={() => openManageListing(row)}
-                  className={cn("text-xs hover:underline", managingListingId === row.id ? "text-foreground font-medium" : "text-blue-600")}
-                >
-                  {managingListingId === row.id ? "Hide ↑" : "Manage listing ↓"}
-                </button>
-              )}
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs text-muted-foreground">
+                  {row.free_shipping ? "Free shipping" : row.shipping_cost_cents ? `${centsToDisplay(row.shipping_cost_cents)} shipping` : row.shipping_weight_oz ? "Calculated shipping" : ""}
+                </span>
+                {row.listing_status !== "sold_out" && (
+                  <button
+                    onClick={() => openManageListing(row)}
+                    className={cn("text-xs hover:underline shrink-0", managingListingId === row.id ? "text-foreground font-medium" : "text-blue-600")}
+                  >
+                    {managingListingId === row.id ? "Hide ↑" : "Manage ↓"}
+                  </button>
+                )}
+              </div>
             </div>
           ) : a > 0 ? (
             <button
