@@ -11,6 +11,7 @@ const SECTIONS = [
   { id: "seller-payments", label: "Seller Payments" },
   { id: "shipping-settings", label: "Shipping Settings" },
   { id: "plan-billing", label: "Plan & Billing" },
+  { id: "bidding", label: "Bidding" },
   { id: "blocked-users", label: "Blocked Users" },
   { id: "danger-zone", label: "Danger Zone" },
 ];

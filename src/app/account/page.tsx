@@ -44,8 +44,9 @@ export default async function AccountPage() {
         <AccountSettingsSidebar />
         <div className="flex-1 min-w-0 space-y-6">
           <AccountForm profile={profile} userId={user.id} />
-          <div id="payment" className="border-t pt-6 scroll-mt-24">
-            <h2 className="text-lg font-semibold mb-4">Payment & Shipping</h2>
+          <div id="bidding" className="border-t pt-6 scroll-mt-24">
+            <h2 className="text-lg font-semibold mb-1">Bidding</h2>
+            <p className="text-sm text-muted-foreground mb-4">Your saved card and delivery address for auction purchases. Separate from your seller payments above.</p>
             <PaymentSettings />
           </div>
           <div id="blocked-users" className="border-t pt-6 scroll-mt-24">

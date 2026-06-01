@@ -220,10 +220,10 @@ function ShippingSection({
     <div className="rounded-xl border bg-card p-5 space-y-4">
       <div className="flex items-center gap-2">
         <MapPin size={16} className="text-muted-foreground" />
-        <h3 className="font-semibold text-sm">Default Shipping Address</h3>
+        <h3 className="font-semibold text-sm">Delivery Address</h3>
       </div>
       <p className="text-xs text-muted-foreground">
-        Required to bid on weight-based shipping auctions and used for auto-checkout when you win.
+        Where your winnings ship to. Required for weight-based shipping auctions and used for automatic checkout.
       </p>
 
       {address && !editing ? (

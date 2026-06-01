@@ -399,7 +399,7 @@ export default function AuctionBidPanel({
         <div className="rounded-md border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
           <p className="font-medium">Payment method required to bid</p>
           <p className="text-xs mt-0.5">Save a card in your account settings — your card is charged automatically if you win.</p>
-          <a href="/account#payment" className="text-xs font-semibold underline underline-offset-2 mt-1 inline-block">
+          <a href="/account#bidding" className="text-xs font-semibold underline underline-offset-2 mt-1 inline-block">
             Add a payment method →
           </a>
         </div>
@@ -409,7 +409,7 @@ export default function AuctionBidPanel({
         <div className="rounded-md border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
           <p className="font-medium">Shipping address required to bid</p>
           <p className="text-xs mt-0.5">This auction uses calculated shipping — add your address so we can calculate rates.</p>
-          <a href="/account#payment" className="text-xs font-semibold underline underline-offset-2 mt-1 inline-block">
+          <a href="/account#bidding" className="text-xs font-semibold underline underline-offset-2 mt-1 inline-block">
             Add shipping address →
           </a>
         </div>
