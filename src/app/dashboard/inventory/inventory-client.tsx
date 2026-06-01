@@ -25,7 +25,7 @@ import { toast } from "sonner";
 import { dollarsToCents, centsToDisplay } from "@/lib/stripe";
 import {
   ChevronRight, ChevronDown, MoreHorizontal, Plus,
-  ImagePlus, X, Store, Gavel, Pencil, HelpCircle,
+  ImagePlus, X, Store, Pencil, HelpCircle,
   AlertTriangle, GripVertical, Copy, StickyNote, ArrowUpDown,
   LayoutList, LayoutGrid, Upload,
 } from "lucide-react";
@@ -44,14 +44,6 @@ const BASE_CATEGORIES = [
 ];
 const ADMIN_CATEGORIES = [...BASE_CATEGORIES, "Hidden"];
 
-type AuctionSummary = {
-  id: string;
-  quantity: number;
-  current_bid_cents: number;
-  ends_at: string;
-  status: string;
-};
-
 type Row = {
   id: string;
   plant_name: string;
@@ -68,7 +60,6 @@ type Row = {
   listing_sold_out_behavior: "mark_sold_out" | "auto_pause";
   listing_care_guide_pdf_url: string | null;
   listing_last_activated_at: string | null;
-  auctions: AuctionSummary[];
   shipping_weight_oz: number | null;
   shipping_cost_cents: number | null;
   free_shipping: boolean;
@@ -105,39 +96,19 @@ type UnlinkedListing = {
   description: string;
 };
 
-type UnlinkedAuction = {
-  id: string;
-  plant_name: string;
-  variety: string;
-  quantity: number;
-  current_bid_cents: number;
-  ends_at: string;
-  status: string;
-  images: string[];
-  category: string | null;
-  pot_size: string | null;
-  description: string;
-};
-
 type UnlinkedGroup = {
   key: string;
   plant_name: string;
   variety: string;
   listings: UnlinkedListing[];
-  auctions: UnlinkedAuction[];
 };
 
-function groupUnlinked(listings: UnlinkedListing[], auctions: UnlinkedAuction[]): UnlinkedGroup[] {
+function groupUnlinked(listings: UnlinkedListing[]): UnlinkedGroup[] {
   const map = new Map<string, UnlinkedGroup>();
   for (const l of listings) {
     const key = `${l.plant_name.toLowerCase()}|||${l.variety.toLowerCase()}`;
-    if (!map.has(key)) map.set(key, { key, plant_name: l.plant_name, variety: l.variety, listings: [], auctions: [] });
+    if (!map.has(key)) map.set(key, { key, plant_name: l.plant_name, variety: l.variety, listings: [] });
     map.get(key)!.listings.push(l);
-  }
-  for (const a of auctions) {
-    const key = `${a.plant_name.toLowerCase()}|||${a.variety.toLowerCase()}`;
-    if (!map.has(key)) map.set(key, { key, plant_name: a.plant_name, variety: a.variety, listings: [], auctions: [] });
-    map.get(key)!.auctions.push(a);
   }
   return Array.from(map.values()).sort((a, b) =>
     a.plant_name.localeCompare(b.plant_name) || a.variety.localeCompare(b.variety)
@@ -147,7 +118,6 @@ function groupUnlinked(listings: UnlinkedListing[], auctions: UnlinkedAuction[])
 
 type ModalState =
   | { type: "listing"; row: Row }
-  | { type: "auction"; row: Row }
   | { type: "edit"; row: Row }
   | { type: "sold"; row: Row }
   | { type: "add-variant"; plant_name: string; variety: string; category: string | null }
@@ -197,7 +167,6 @@ export default function InventoryClient({
   archivedRows,
   termsAccepted,
   unlinkedListings,
-  unlinkedAuctions,
   initialSearch = "",
   initialCategory = "",
   isAdmin = false,
@@ -213,7 +182,6 @@ export default function InventoryClient({
   archivedRows: Row[];
   termsAccepted: boolean;
   unlinkedListings: UnlinkedListing[];
-  unlinkedAuctions: UnlinkedAuction[];
   initialSearch?: string;
   initialCategory?: string;
   isAdmin?: boolean;
@@ -296,18 +264,6 @@ export default function InventoryClient({
   const [saveTemplateName, setSaveTemplateName] = useState("");
   const [savingTemplate, setSavingTemplate] = useState(false);
 
-  // Auction modal
-  const [startingBid, setStartingBid] = useState("");
-  const [buyNowPrice, setBuyNowPrice] = useState("");
-  const [endsAt, setEndsAt] = useState("");
-  const [startsAt, setStartsAt] = useState("");
-  const [reservePrice, setReservePrice] = useState("");
-  const [auctionQty, setAuctionQty] = useState("");
-  const [auctionAck, setAuctionAck] = useState(false);
-  const [auctionShippingMode, setAuctionShippingMode] = useState<"" | "free" | "flat" | "weight">("");
-  const [auctionShippingCost, setAuctionShippingCost] = useState("");
-  const [auctionShippingWeightOz, setAuctionShippingWeightOz] = useState("");
-
   // Edit item modal
   const [editPlantName, setEditPlantName] = useState("");
   const [editVariety, setEditVariety] = useState("");
@@ -349,7 +305,6 @@ export default function InventoryClient({
   const [inlineDeleteConfirm, setInlineDeleteConfirm] = useState<string | null>(null);
   const [inlineDeleting, setInlineDeleting] = useState(false);
 
-  const [confirmDeleteAuctionId, setConfirmDeleteAuctionId] = useState<string | null>(null);
   const [importingId, setImportingId] = useState<string | null>(null);
   const [importingAll, setImportingAll] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
@@ -413,15 +368,12 @@ export default function InventoryClient({
   }
 
   function avail(row: Row) {
-    const auctionQty = row.auctions
-      .filter(a => a.status === "active")
-      .reduce((sum, a) => sum + a.quantity, 0);
-    return row.quantity - (row.listing_quantity ?? 0) - auctionQty;
+    return row.quantity - (row.listing_quantity ?? 0);
   }
 
   function openModal(m: ModalState) {
     if (!m) { setModal(null); return; }
-    if ((m.type === "listing" || m.type === "auction") && !localTermsAccepted) {
+    if (m.type === "listing" && !localTermsAccepted) {
       setPendingModal(m);
       setAgreementDialogOpen(true);
       return;
@@ -454,43 +406,6 @@ export default function InventoryClient({
         setListingShippingMode("");
         setListingShippingCost("");
         setListingShippingWeightOz("");
-      }
-    }
-    if (m.type === "auction") {
-      if (!hasShipFrom) {
-        toast.error("Ship-from address required", {
-          description: "Add your ship-from address in Account Settings before starting an auction.",
-          action: { label: "Account Settings", onClick: () => window.location.href = "/account#shipping-settings" },
-          duration: 6000,
-        });
-        return;
-      }
-      if (!stripeOnboarded) {
-        toast.error("Connect your bank account before creating an auction.", {
-          description: "Go to Account Settings → Seller Payments to set up Stripe.",
-          action: { label: "Go to Settings", onClick: () => window.location.href = "/account#seller-payments" },
-          duration: 6000,
-        });
-        return;
-      }
-      setStartingBid(""); setBuyNowPrice(""); setEndsAt(""); setStartsAt(""); setReservePrice("");
-      setAuctionQty(String(Math.max(1, avail(m.row))));
-      if (m.row.free_shipping) {
-        setAuctionShippingMode("free");
-        setAuctionShippingCost("");
-        setAuctionShippingWeightOz("");
-      } else if (m.row.shipping_cost_cents) {
-        setAuctionShippingMode("flat");
-        setAuctionShippingCost(String(m.row.shipping_cost_cents / 100));
-        setAuctionShippingWeightOz("");
-      } else if (m.row.shipping_weight_oz) {
-        setAuctionShippingMode("weight");
-        setAuctionShippingWeightOz(String(m.row.shipping_weight_oz));
-        setAuctionShippingCost("");
-      } else {
-        setAuctionShippingMode("");
-        setAuctionShippingCost("");
-        setAuctionShippingWeightOz("");
       }
     }
     if (m.type === "edit") {
@@ -677,9 +592,6 @@ export default function InventoryClient({
 
     const modalStockVal = parseInt(listModalStockQty, 10);
     const newTotalStock = !isNaN(modalStockVal) && modalStockVal >= 0 ? modalStockVal : modal.row.quantity;
-    // Re-derive available using possibly-updated stock (other allocations remain the same)
-    const otherAllocs = (modal.row.listing_quantity ?? 0) + modal.row.auctions.filter(a => a.status === "active").reduce((s, a) => s + a.quantity, 0);
-    const a = Math.max(0, newTotalStock - otherAllocs);
     const qty = Math.max(1, Math.min(Number(listQty) || 1, newTotalStock));
     if (qty < 1) { toast.error("No stock available to list"); setSubmitting(false); return; }
     if (qty > newTotalStock) {
@@ -740,85 +652,6 @@ export default function InventoryClient({
     await supabase.from("inventory").update({ listing_id: null, listing_quantity: null }).eq("id", row.id);
     setModal(null);
     toast.success("Removed from shop");
-    router.refresh();
-  }
-
-  async function unlinkAuction(row: Row, auctionId: string) {
-    const supabase = createClient();
-    await supabase.from("auctions").update({ inventory_id: null }).eq("id", auctionId);
-    toast.success("Auction unlinked");
-    router.refresh();
-  }
-
-  async function submitAuction() {
-    if (!modal || modal.type !== "auction") return;
-    setSubmitting(true);
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { toast.error("Not logged in"); setSubmitting(false); return; }
-
-    const { data: profile } = await supabase.from("profiles").select("ship_from_address, calculated_shipping_enabled").eq("id", user.id).single();
-    const addr2 = profile?.ship_from_address as { street1?: string; city?: string; zip?: string } | null;
-    const hasShipFrom2 = !!(addr2?.street1?.trim() && addr2?.city?.trim() && addr2?.zip?.trim());
-    const calcShippingOk2 = (profile as { calculated_shipping_enabled?: boolean | null } | null)?.calculated_shipping_enabled === true;
-
-    if (!hasShipFrom2) {
-      toast.error("Ship-from address required", {
-        description: "Add your ship-from address in Account Settings before starting an auction.",
-        action: { label: "Account Settings", onClick: () => router.push("/account#shipping-settings") },
-      });
-      setSubmitting(false);
-      return;
-    }
-
-    if (auctionShippingMode === "weight" && !calcShippingOk2) {
-      toast.error("Enable calculated shipping first", {
-        description: "Complete your ship-from address and turn on calculated shipping in Shipping Settings.",
-        action: { label: "Shipping Settings", onClick: () => router.push("/account#shipping-settings") },
-      });
-      setSubmitting(false);
-      return;
-    }
-
-    if (planLimits.auctions !== null) {
-      const { count } = await supabase.from("auctions").select("id", { count: "exact", head: true }).eq("seller_id", user.id).eq("status", "active");
-      if ((count ?? 0) >= planLimits.auctions) {
-        toast.error(`You've reached your ${planLimits.auctions}-auction limit. Upgrade your plan to add more.`);
-        setSubmitting(false);
-        return;
-      }
-    }
-
-    const a = avail(modal.row);
-    const qty = Math.min(Math.max(1, Number(auctionQty) || a), a);
-    if (qty < 1) { toast.error("No stock available for auction"); setSubmitting(false); return; }
-    const scheduledStart = startsAt ? new Date(startsAt) : null;
-    const isScheduled = scheduledStart && scheduledStart > new Date();
-    const { data: newAuction, error } = await supabase.from("auctions").insert({
-      seller_id: user.id,
-      plant_name: modal.row.plant_name,
-      variety: modal.row.variety || null,
-      quantity: qty,
-      description: modal.row.description || null,
-      starting_bid_cents: dollarsToCents(startingBid),
-      current_bid_cents: dollarsToCents(startingBid),
-      buy_now_price_cents: buyNowPrice ? dollarsToCents(buyNowPrice) : null,
-      ends_at: new Date(endsAt).toISOString(),
-      starts_at: scheduledStart ? scheduledStart.toISOString() : null,
-      status: isScheduled ? "scheduled" : "active",
-      reserve_price_cents: reservePrice ? dollarsToCents(reservePrice) : null,
-      images: modal.row.images,
-      category: modal.row.category || null,
-      pot_size: modal.row.pot_size || null,
-      inventory_id: modal.row.id,
-      free_shipping: auctionShippingMode === "free",
-      shipping_cost_cents: auctionShippingMode === "flat" ? dollarsToCents(auctionShippingCost) : null,
-      shipping_weight_oz: auctionShippingMode === "weight" ? Number(auctionShippingWeightOz) : null,
-    }).select("id").single();
-    if (error) { toast.error(error.message); setSubmitting(false); return; }
-    setSubmitting(false);
-    toast.success(isScheduled ? `Auction scheduled for ${modal.row.plant_name}!` : `Auction started for ${modal.row.plant_name}!`);
-    setModal(null);
     router.refresh();
   }
 
@@ -980,15 +813,6 @@ export default function InventoryClient({
     router.refresh();
   }
 
-  async function deleteUnlinkedAuction(id: string) {
-    const supabase = createClient();
-    // Cancel rather than hard-delete to preserve any order/bid history
-    const { error } = await supabase.from("auctions").update({ status: "cancelled" }).eq("id", id);
-    if (error) { toast.error(error.message); return; }
-    toast.success("Auction removed");
-    router.refresh();
-  }
-
   async function archiveItem(id: string, listingId: string | null) {
     setLoadingId(id);
     const supabase = createClient();
@@ -1135,28 +959,6 @@ export default function InventoryClient({
     router.refresh();
   }
 
-  async function importAuction(a: UnlinkedAuction) {
-    setImportingId(a.id);
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setImportingId(null); return; }
-    const { data: inv, error } = await supabase.from("inventory").insert({
-      seller_id: user.id,
-      plant_name: a.plant_name,
-      variety: a.variety || null,
-      quantity: a.quantity,
-      description: a.description || null,
-      images: a.images,
-      category: a.category || null,
-      pot_size: a.pot_size || null,
-    }).select("id").single();
-    if (error) { toast.error(error.message); setImportingId(null); return; }
-    await supabase.from("auctions").update({ inventory_id: inv.id }).eq("id", a.id);
-    setImportingId(null);
-    toast.success(`${a.plant_name} imported to inventory!`);
-    router.refresh();
-  }
-
   async function importAll() {
     setImportingAll(true);
     const supabase = createClient();
@@ -1171,16 +973,8 @@ export default function InventoryClient({
       }).select("id").single();
       if (!error && inv) await supabase.from("listings").update({ inventory_id: inv.id }).eq("id", l.id);
     }
-    for (const a of unlinkedAuctions) {
-      const { data: inv, error } = await supabase.from("inventory").insert({
-        seller_id: user.id, plant_name: a.plant_name, variety: a.variety || null,
-        quantity: a.quantity, description: a.description || null, images: a.images,
-        category: a.category || null, pot_size: a.pot_size || null,
-      }).select("id").single();
-      if (!error && inv) await supabase.from("auctions").update({ inventory_id: inv.id }).eq("id", a.id);
-    }
     setImportingAll(false);
-    const total = unlinkedListings.length + unlinkedAuctions.length;
+    const total = unlinkedListings.length;
     toast.success(`${total} item${total !== 1 ? "s" : ""} imported to inventory!`);
     router.refresh();
   }
@@ -1382,7 +1176,7 @@ export default function InventoryClient({
     const data = activeRows.map(r => ({
       "Plant Name": r.plant_name, "Variety": r.variety, "Pot Size": r.pot_size ?? "",
       "Category": r.category ?? "", "Total Stock": r.quantity,
-      "In Shop": r.listing_quantity ?? 0, "In Auction": r.auctions.filter(a => a.status === "active").reduce((s, a) => s + a.quantity, 0),
+      "In Shop": r.listing_quantity ?? 0,
       "Available": avail(r),
       "Shop Price": r.listing_price_cents ? (r.listing_price_cents / 100).toFixed(2) : "",
       "Status": r.status, "Date Added": new Date(r.created_at).toLocaleDateString(),
@@ -1398,8 +1192,6 @@ export default function InventoryClient({
   function renderFlatRow(row: Row, plantName: string) {
     const a = avail(row);
     const hasListing = !!row.listing_id;
-    const activeAuctions = row.auctions.filter(au => au.status === "active");
-    const totalAuctionQty = activeAuctions.reduce((sum, au) => sum + au.quantity, 0);
     return (
       <tr
         key={row.id}
@@ -1416,13 +1208,11 @@ export default function InventoryClient({
           <span className="font-medium">{row.quantity}</span>
           {a !== row.quantity && <span className="text-xs text-muted-foreground ml-1">({a} avail)</span>}
           {(row.listing_quantity ?? 0) > 0 && <span className="text-xs text-leaf block">{row.listing_quantity} in shop</span>}
-          {totalAuctionQty > 0 && <span className="text-xs text-blue-600 block">{totalAuctionQty} in auction</span>}
         </td>
         <td className="px-2 py-2.5 text-sm">
           <span className={cn(
             "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
-            row.status === "In Shop" || row.status === "Shop + Auction" ? "bg-[#DFE7D4] text-leaf dark:bg-forest/40 dark:text-sage" :
-            row.status.includes("Auction") ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400" :
+            row.status === "In Shop" ? "bg-[#DFE7D4] text-leaf dark:bg-forest/40 dark:text-sage" :
             row.status === "Paused" ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400" :
             "bg-muted text-muted-foreground"
           )}>
@@ -1446,9 +1236,6 @@ export default function InventoryClient({
               {a > 0 && !hasListing && (
                 <DropdownMenuItem onClick={() => openModal({ type: "listing", row })}><Store size={13} className="mr-1.5" /> List in Shop</DropdownMenuItem>
               )}
-              {a > 0 && (
-                <DropdownMenuItem onClick={() => openModal({ type: "auction", row })}><Gavel size={13} className="mr-1.5" /> {activeAuctions.length > 0 ? "Add Auction" : "Auction"}</DropdownMenuItem>
-              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => archiveItem(row.id, row.listing_id)} disabled={loadingId === row.id} className="text-destructive focus:text-destructive">Archive</DropdownMenuItem>
             </DropdownMenuContent>
@@ -1462,9 +1249,6 @@ export default function InventoryClient({
   function renderVariantCard(row: Row) {
     const a = avail(row);
     const hasListing = !!row.listing_id;
-    const activeAuctions = row.auctions.filter(au => au.status === "active");
-    const endedAuctions = row.auctions.filter(au => au.status !== "active");
-    const totalAuctionQty = activeAuctions.reduce((sum, au) => sum + au.quantity, 0);
     const dropdownMenu = (
       <DropdownMenu>
         <DropdownMenuTrigger className="inline-flex items-center justify-center w-7 h-7 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
@@ -1538,7 +1322,7 @@ export default function InventoryClient({
         </div>
 
         {/* Stock breakdown */}
-        {(!!row.listing_id || totalAuctionQty > 0) && (
+        {!!row.listing_id && (
           <div className="flex gap-3 text-xs flex-wrap">
             {!!row.listing_id && (
               editingListingQtyId === row.id ? (
@@ -1559,7 +1343,6 @@ export default function InventoryClient({
                 </button>
               )
             )}
-            {totalAuctionQty > 0 && <span className="text-blue-600">{totalAuctionQty} in auction</span>}
             <span className={cn(
               "flex items-center gap-0.5",
               row.low_stock_threshold != null && a <= row.low_stock_threshold ? "text-amber-600 font-semibold" : "text-muted-foreground"
@@ -1642,32 +1425,6 @@ export default function InventoryClient({
         ) : null}
 
         {managingListingId === row.id && renderInlineManagePanel(row)}
-
-        {/* Auctions */}
-        <div className="space-y-1.5">
-          {activeAuctions.map(au => (
-            <div key={au.id} className="flex items-center gap-2 flex-wrap text-sm">
-              <Gavel size={12} className="text-blue-600 shrink-0" />
-              <span className="font-medium">{centsToDisplay(au.current_bid_cents)}</span>
-              <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400 rounded-full px-2 py-0.5">live · {au.quantity} qty</span>
-              <span className="text-xs text-muted-foreground">Ends {new Date(au.ends_at).toLocaleDateString()}</span>
-              <Link href={`/auctions/${au.id}`} target="_blank" className="text-xs hover:underline">View</Link>
-            </div>
-          ))}
-          {endedAuctions.map(au => (
-            <div key={au.id} className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Gavel size={11} className="shrink-0" />
-              <span className="capitalize">{au.status}</span>
-              <Link href={`/auctions/${au.id}`} target="_blank" className="hover:underline">View</Link>
-              <button onClick={() => unlinkAuction(row, au.id)} className="hover:underline hover:text-foreground">Unlink</button>
-            </div>
-          ))}
-          {a > 0 && (
-            <button onClick={() => openModal({ type: "auction", row })} className="inline-flex items-center gap-1.5 text-sm text-purple-700 hover:underline font-medium">
-              <Gavel size={13} /> {activeAuctions.length > 0 ? "Add Auction" : "Auction"}
-            </button>
-          )}
-        </div>
       </div>
     );
   }
@@ -1676,9 +1433,6 @@ export default function InventoryClient({
   function renderVariantRow(row: Row) {
     const a = avail(row);
     const hasListing = !!row.listing_id;
-    const activeAuctions = row.auctions.filter(au => au.status === "active");
-    const endedAuctions = row.auctions.filter(au => au.status !== "active");
-    const totalAuctionQty = activeAuctions.reduce((sum, au) => sum + au.quantity, 0);
 
     return (
       <>
@@ -1735,7 +1489,7 @@ export default function InventoryClient({
               <Pencil size={11} className="opacity-0 group-hover:opacity-50 transition-opacity" />
             </button>
           )}
-          {(!!row.listing_id || totalAuctionQty > 0) && (
+          {!!row.listing_id && (
             <div className="text-xs mt-0.5 space-y-0.5">
               {!!row.listing_id && (
                 editingListingQtyId === row.id ? (
@@ -1757,7 +1511,6 @@ export default function InventoryClient({
                   </button>
                 )
               )}
-              {totalAuctionQty > 0 && <div className="text-blue-600">{totalAuctionQty} in auction</div>}
               <div className={cn(
                 "flex items-center gap-0.5",
                 row.low_stock_threshold != null && a <= row.low_stock_threshold ? "text-amber-600 font-semibold" : "text-muted-foreground"
@@ -1848,41 +1601,6 @@ export default function InventoryClient({
           )}
         </td>
 
-        {/* Auction */}
-        <td className="px-3 py-3">
-          <div className="space-y-1.5">
-            {activeAuctions.map(au => (
-              <div key={au.id} className="space-y-0.5">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="font-medium text-sm">{centsToDisplay(au.current_bid_cents)}</span>
-                  <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400 rounded-full px-2 py-0.5">live · {au.quantity} qty</span>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span>Ends {new Date(au.ends_at).toLocaleDateString()}</span>
-                  <Link href={`/auctions/${au.id}`} target="_blank" className="hover:underline">View</Link>
-                </div>
-              </div>
-            ))}
-            {endedAuctions.map(au => (
-              <div key={au.id} className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span className="capitalize">{au.status}</span>
-                <Link href={`/auctions/${au.id}`} target="_blank" className="hover:underline">View</Link>
-                <button onClick={() => unlinkAuction(row, au.id)} className="hover:underline hover:text-foreground">Unlink</button>
-              </div>
-            ))}
-            {a > 0 ? (
-              <button
-                onClick={() => openModal({ type: "auction", row })}
-                className="inline-flex items-center gap-1.5 text-sm text-purple-700 hover:underline font-medium"
-              >
-                <Gavel size={13} /> {activeAuctions.length > 0 ? "Add Auction" : "Auction"}
-              </button>
-            ) : row.auctions.length === 0 ? (
-              <span className="text-xs text-muted-foreground">—</span>
-            ) : null}
-          </div>
-        </td>
-
         {/* Actions */}
         <td className="px-3 py-3 text-right w-12">
           <DropdownMenu>
@@ -1900,11 +1618,6 @@ export default function InventoryClient({
                   <Store size={13} className="mr-1.5" /> List in Shop
                 </DropdownMenuItem>
               )}
-              {a > 0 && (
-                <DropdownMenuItem onClick={() => openModal({ type: "auction", row })}>
-                  <Gavel size={13} className="mr-1.5" /> {activeAuctions.length > 0 ? "Add Auction" : "Auction"}
-                </DropdownMenuItem>
-              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={() => archiveItem(row.id, row.listing_id)}
@@ -1919,7 +1632,7 @@ export default function InventoryClient({
       </tr>
       {managingListingId === row.id && (
         <tr key={`${row.id}-manage`}>
-          <td colSpan={5} className="p-0">
+          <td colSpan={4} className="p-0">
             {renderInlineManagePanel(row)}
           </td>
         </tr>
@@ -1935,7 +1648,6 @@ export default function InventoryClient({
     const totalAvail = group.variants.reduce((sum, v) => sum + avail(v), 0);
     const hasShop = group.variants.some(v => v.listing_id && v.listing_status === "active");
     const hasSoldOut = group.variants.some(v => v.listing_status === "sold_out");
-    const hasLiveAuction = group.variants.some(v => v.auctions.some(au => au.status === "active"));
     const first = group.variants[0];
 
     return (
@@ -1963,11 +1675,6 @@ export default function InventoryClient({
             {hasSoldOut && (
               <span className="hidden sm:inline-flex items-center gap-1 text-xs text-amber-700 bg-amber-100 dark:bg-amber-900/40 dark:text-amber-400 rounded-full px-2 py-0.5">
                 Sold out
-              </span>
-            )}
-            {hasLiveAuction && (
-              <span className="hidden sm:inline-flex items-center gap-1 text-xs text-blue-700 bg-blue-100 dark:bg-blue-900/40 dark:text-blue-400 rounded-full px-2 py-0.5">
-                <Gavel size={10} /> Live
               </span>
             )}
             <span className="text-sm text-muted-foreground whitespace-nowrap">
@@ -2001,7 +1708,6 @@ export default function InventoryClient({
                     <th className="py-2 pl-3 pr-3 text-left text-xs font-medium text-muted-foreground w-44">{first && isSupply(first) ? "Variant" : "Size"}</th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground w-32">Stock</th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Shop Listing</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Auction</th>
                     <th className="px-3 py-2 w-12" />
                   </tr>
                 </thead>
@@ -2037,8 +1743,8 @@ export default function InventoryClient({
             <div className="flex gap-3">
               <span className="flex-shrink-0 w-7 h-7 rounded-full bg-[#DFE7D4] text-leaf font-bold flex items-center justify-center text-sm">2</span>
               <div>
-                <p className="font-medium text-sm">List it in your shop or start an auction</p>
-                <p className="text-xs text-muted-foreground">Each inventory row has a <strong>List in Shop</strong> and <strong>Create Auction</strong> button. Allocate some stock to each — you stay in control of how many go where.</p>
+                <p className="font-medium text-sm">List it in your shop</p>
+                <p className="text-xs text-muted-foreground">Each inventory row has a <strong>List in Shop</strong> button. Set a price and allocate how many go live — you stay in control of how many are available.</p>
               </div>
             </div>
             <div className="flex gap-3">
@@ -2070,9 +1776,9 @@ export default function InventoryClient({
         }}
       />
 
-      {!stripeOnboarded && activeRows.some(r => r.listing_id || r.auctions.length > 0) && (
+      {!stripeOnboarded && activeRows.some(r => r.listing_id) && (
         <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
-          <strong>Your listings are not visible to buyers yet.</strong> They appear on your personal storefront, but won&apos;t show in the public shop or auctions until you{" "}
+          <strong>Your listings are not visible to buyers yet.</strong> They appear on your personal storefront, but won&apos;t show in the public shop until you{" "}
           <a href="/account#seller-payments" className="underline font-medium hover:opacity-80">connect your Stripe account</a>.
           Buyers also cannot purchase until this is set up.
         </div>
@@ -2274,16 +1980,16 @@ export default function InventoryClient({
         <div>{visibleGroups.map(renderGroup)}</div>
       )}
 
-      {/* Unlinked listings & auctions */}
-      {(unlinkedListings.length > 0 || unlinkedAuctions.length > 0) && (() => {
-        const groups = groupUnlinked(unlinkedListings, unlinkedAuctions);
+      {/* Unlinked listings */}
+      {unlinkedListings.length > 0 && (() => {
+        const groups = groupUnlinked(unlinkedListings);
         return (
           <div className="mt-8 border-t pt-6">
             <div className="flex items-start justify-between gap-4 mb-4">
               <div>
                 <h2 className="text-base font-semibold">Not yet in inventory</h2>
                 <p className="text-sm text-muted-foreground mt-0.5">
-                  These listings and auctions were created before inventory tracking. Import each one to manage it alongside your inventory.
+                  These listings were created before inventory tracking. Import each one to manage it alongside your inventory.
                 </p>
               </div>
               <button
@@ -2335,57 +2041,6 @@ export default function InventoryClient({
                           >
                             {importingId === l.id ? "Importing…" : "Import"}
                           </button>
-                        </div>
-                      </div>
-                    ))}
-                    {group.auctions.map(a => (
-                      <div key={a.id} className="flex items-center gap-3 px-4 py-3 text-sm flex-wrap">
-                        <Gavel size={13} className="text-purple-600 shrink-0" />
-                        <span className="font-medium">Auction</span>
-                        {a.pot_size && <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs">{a.pot_size}</span>}
-                        <span>{a.quantity} qty</span>
-                        <span className="font-medium">Bid: {centsToDisplay(a.current_bid_cents)}</span>
-                        <span className={cn(
-                          "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
-                          a.status === "active" ? "bg-blue-100 text-blue-700" :
-                          a.status === "ended" ? "bg-purple-100 text-purple-700" :
-                          "bg-muted text-muted-foreground"
-                        )}>{a.status}</span>
-                        <span className="text-xs text-muted-foreground">Ends {new Date(a.ends_at).toLocaleDateString()}</span>
-                        <div className="ml-auto flex items-center gap-3">
-                          {confirmDeleteAuctionId === a.id ? (
-                            <>
-                              <span className="text-xs text-destructive font-medium">Remove this auction?</span>
-                              <button
-                                onClick={() => { setConfirmDeleteAuctionId(null); deleteUnlinkedAuction(a.id); }}
-                                className="text-xs bg-destructive hover:bg-destructive/90 text-destructive-foreground px-2.5 py-1 rounded transition-colors"
-                              >
-                                Yes, Remove
-                              </button>
-                              <button
-                                onClick={() => setConfirmDeleteAuctionId(null)}
-                                className="text-xs border rounded px-2.5 py-1 text-muted-foreground hover:text-foreground transition-colors"
-                              >
-                                Cancel
-                              </button>
-                            </>
-                          ) : (
-                            <>
-                              <button
-                                onClick={() => setConfirmDeleteAuctionId(a.id)}
-                                className="text-xs text-destructive hover:text-destructive/80 font-medium"
-                              >
-                                Delete
-                              </button>
-                              <button
-                                onClick={() => importAuction(a)}
-                                disabled={importingId === a.id}
-                                className="text-xs text-leaf hover:underline font-medium disabled:opacity-50"
-                              >
-                                {importingId === a.id ? "Importing…" : "Import to Inventory"}
-                              </button>
-                            </>
-                          )}
                         </div>
                       </div>
                     ))}
@@ -2553,7 +2208,6 @@ export default function InventoryClient({
           {modal?.type === "listing" && (() => {
             const modalStock = parseInt(listModalStockQty, 10);
             const effectiveStock = !isNaN(modalStock) && modalStock >= 0 ? modalStock : modal.row.quantity;
-            const otherAllocs = modal.row.auctions.filter(a => a.status === "active").reduce((s, a) => s + a.quantity, 0);
             const listNum = parseInt(listQty, 10);
             const overStock = !isNaN(listNum) && listNum > effectiveStock;
             return (
@@ -2593,7 +2247,7 @@ export default function InventoryClient({
                       className={overStock ? "border-destructive" : ""}
                     />
                     <p className="text-xs text-muted-foreground">
-                      {Math.max(0, effectiveStock - otherAllocs)} available
+                      {effectiveStock} available
                     </p>
                   </div>
                 </div>
@@ -2672,139 +2326,6 @@ export default function InventoryClient({
                     className="flex-1 bg-leaf hover:bg-forest"
                   >
                     {submitting ? "Publishing…" : "Go Live"}
-                  </Button>
-                </div>
-              </div>
-            );
-          })()}
-        </DialogContent>
-      </Dialog>
-
-      {/* ── Create Auction ── */}
-      <Dialog open={modal?.type === "auction"} onOpenChange={o => { if (!o) { setModal(null); setAuctionAck(false); } }}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Create Auction</DialogTitle>
-            {modal?.type === "auction" && (
-              <DialogDescription>
-                {modal.row.plant_name}{modal.row.variety ? ` · ${modal.row.variety}` : ""}{modal.row.pot_size ? ` · ${modal.row.pot_size}` : ""}
-              </DialogDescription>
-            )}
-          </DialogHeader>
-          {modal?.type === "auction" && (() => {
-            const a = avail(modal.row);
-            return (
-              <div className="space-y-4 mt-1">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <Label htmlFor="modal-bid">Starting Bid ($) *</Label>
-                    <Input id="modal-bid" type="number" min={0.01} step={0.01} value={startingBid} onChange={e => setStartingBid(e.target.value)} placeholder="0.00" autoFocus />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="modal-auc-qty">Quantity *</Label>
-                    <Input id="modal-auc-qty" type="number" min={1} max={a} value={auctionQty} onChange={e => setAuctionQty(e.target.value)} />
-                    <p className="text-xs text-muted-foreground">{a} available</p>
-                  </div>
-                </div>
-                <PriceSuggestion plantName={modal.row.plant_name} variety={modal.row.variety} label="bid" />
-                <div className="space-y-1">
-                  <Label htmlFor="modal-buy-now">Buy Now Price ($) <span className="font-normal text-muted-foreground">(optional)</span></Label>
-                  <Input id="modal-buy-now" type="number" min={0.01} step={0.01} value={buyNowPrice} onChange={e => setBuyNowPrice(e.target.value)} placeholder="Leave blank to disable" />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="modal-reserve">Reserve Price ($) <span className="font-normal text-muted-foreground">(optional)</span></Label>
-                  <Input id="modal-reserve" type="number" min={0.01} step={0.01} value={reservePrice} onChange={e => setReservePrice(e.target.value)} placeholder="Hidden minimum to sell" />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="modal-starts">Scheduled Start <span className="font-normal text-muted-foreground">(optional — goes live immediately if blank)</span></Label>
-                  <Input id="modal-starts" type="datetime-local" value={startsAt} onChange={e => setStartsAt(e.target.value)} min={new Date(Date.now() + 5 * 60 * 1000).toISOString().slice(0, 16)} />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="modal-ends">End Date & Time *</Label>
-                  <Input id="modal-ends" type="datetime-local" value={endsAt} onChange={e => setEndsAt(e.target.value)} min={new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16)} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Shipping <span className="text-destructive">*</span></Label>
-                  <div className={`grid gap-2 grid-cols-3`}>
-                    {shippingModes.map((mode) => (
-                      <button
-                        key={mode}
-                        type="button"
-                        onClick={() => setAuctionShippingMode(mode)}
-                        className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
-                          auctionShippingMode === mode
-                            ? "border-leaf bg-[#EBF0E6] text-forest dark:bg-forest/40 dark:text-[#A8BF9A] dark:border-leaf"
-                            : "border-input hover:bg-muted"
-                        }`}
-                      >
-                        {mode === "free" ? "Free" : mode === "flat" ? "Flat rate" : "By weight"}
-                      </button>
-                    ))}
-                  </div>
-                  {auctionShippingMode === "flat" && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-muted-foreground">$</span>
-                      <Input
-                        type="number"
-                        min={0.01}
-                        step={0.01}
-                        placeholder="e.g. 6.99"
-                        value={auctionShippingCost}
-                        onChange={e => setAuctionShippingCost(e.target.value)}
-                        className="max-w-[120px]"
-                      />
-                      <span className="text-xs text-muted-foreground">flat rate</span>
-                    </div>
-                  )}
-                  {auctionShippingMode === "weight" && (
-                    calculatedShippingEnabled ? (
-                      <div className="flex items-center gap-2">
-                        <Input
-                          type="number"
-                          min={0.1}
-                          step={0.1}
-                          placeholder="oz"
-                          value={auctionShippingWeightOz}
-                          onChange={e => setAuctionShippingWeightOz(e.target.value)}
-                          className="max-w-[90px]"
-                        />
-                        <span className="text-xs text-muted-foreground">oz — rate calculated at checkout</span>
-                      </div>
-                    ) : (
-                      <p className="text-xs text-amber-700 dark:text-amber-400">
-                        To use weight-based rates, complete your ship-from address and enable calculated shipping in{" "}
-                        <a href="/account#shipping-settings" className="underline hover:text-foreground font-medium">Shipping Settings →</a>
-                      </p>
-                    )
-                  )}
-                </div>
-                {!auctionShippingMode && (
-                  <p className="text-xs text-amber-700 dark:text-amber-400">Choose a shipping option above to continue.</p>
-                )}
-                <div className="rounded-md border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-3 text-xs text-amber-800 dark:text-amber-300">
-                  <label className="flex items-start gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={auctionAck}
-                      onChange={e => setAuctionAck(e.target.checked)}
-                      className="mt-0.5 shrink-0"
-                    />
-                    <span>I understand that once this auction goes live it <strong>cannot be cancelled, modified, or removed</strong>.</span>
-                  </label>
-                </div>
-                <div className="flex gap-2 pt-1">
-                  <Button variant="outline" onClick={() => { setModal(null); setAuctionAck(false); }} className="flex-1">Cancel</Button>
-                  <Button
-                    onClick={submitAuction}
-                    disabled={
-                      submitting || !startingBid || !endsAt || !auctionQty || !auctionAck ||
-                      !auctionShippingMode ||
-                      (auctionShippingMode === "weight" && !auctionShippingWeightOz) ||
-                      (auctionShippingMode === "flat" && !auctionShippingCost)
-                    }
-                    className="flex-1 bg-leaf hover:bg-forest"
-                  >
-                    {submitting ? "Starting…" : "Start Auction"}
                   </Button>
                 </div>
               </div>
@@ -3117,23 +2638,17 @@ export default function InventoryClient({
 
             <div className="space-y-1.5">
               <p className="font-semibold">Stock Breakdown</p>
-              <p className="text-muted-foreground">Every row tracks four numbers:</p>
+              <p className="text-muted-foreground">Every row tracks three numbers:</p>
               <ul className="list-disc pl-4 space-y-0.5 text-muted-foreground">
                 <li><span className="font-medium text-foreground">Total</span> — everything you own (click the number to edit)</li>
                 <li><span className="font-medium text-leaf">In Shop</span> — allocated to an active shop listing</li>
-                <li><span className="font-medium text-blue-700">In Auction</span> — reserved for a live auction</li>
-                <li><span className="font-medium text-foreground">Available</span> — Total minus In Shop minus In Auction</li>
+                <li><span className="font-medium text-foreground">Available</span> — Total minus In Shop</li>
               </ul>
             </div>
 
             <div className="space-y-1.5">
               <p className="font-semibold">Listing in the Shop</p>
               <p className="text-muted-foreground">Click <strong>List in Shop</strong> on any row to set a price and go live. Once listed, click <strong>Edit</strong> to update the price or quantity, or <strong>Pause</strong> to hide it from buyers temporarily. When a buyer purchases, your stock decrements automatically.</p>
-            </div>
-
-            <div className="space-y-1.5">
-              <p className="font-semibold">Running an Auction</p>
-              <p className="text-muted-foreground">Click <strong>Auction</strong> to set a starting bid, optional Buy Now price, and an end date. The row shows the live bid and a View link while it&apos;s running. When the auction ends with a winner, stock decrements on checkout. If no one bids, the quantity is released back to Available.</p>
             </div>
 
             <div className="space-y-1.5">

@@ -26,49 +26,24 @@ export default async function InventoryPage({
     supabase.from("inventory").select("*").eq("seller_id", user.id).not("archived_at", "is", null).gte("archived_at", thirtyDaysAgo).order("archived_at", { ascending: false }),
   ]);
 
-  // Fetch linked listings by ID, and all auctions by inventory_id (supports multiple per row)
-  const inventoryIds = (activeInventory ?? []).map(i => i.id);
+  // Fetch linked listings by ID
   const listingIds = (activeInventory ?? []).map(i => i.listing_id).filter(Boolean) as string[];
 
-  const [{ data: linkedListings }, { data: linkedAuctions }] = await Promise.all([
-    listingIds.length
-      ? supabase.from("listings").select("id, price_cents, quantity, status, created_at, sale_price_cents, sale_ends_at, bundle_discount_pct, sold_out_behavior, care_guide_pdf_url, last_activated_at").in("id", listingIds)
-      : Promise.resolve({ data: [] as { id: string; price_cents: number; quantity: number; status: string; created_at: string; sale_price_cents: number | null; sale_ends_at: string | null; bundle_discount_pct: number | null; sold_out_behavior: "mark_sold_out" | "auto_pause"; care_guide_pdf_url: string | null; last_activated_at: string | null }[] }),
-    inventoryIds.length
-      ? supabase.from("auctions").select("id, inventory_id, current_bid_cents, ends_at, status, quantity").in("inventory_id", inventoryIds)
-      : Promise.resolve({ data: [] as { id: string; inventory_id: string | null; current_bid_cents: number; ends_at: string; status: string; quantity: number }[] }),
-  ]);
+  const { data: linkedListings } = listingIds.length
+    ? await supabase.from("listings").select("id, price_cents, quantity, status, created_at, sale_price_cents, sale_ends_at, bundle_discount_pct, sold_out_behavior, care_guide_pdf_url, last_activated_at").in("id", listingIds)
+    : { data: [] as { id: string; price_cents: number; quantity: number; status: string; created_at: string; sale_price_cents: number | null; sale_ends_at: string | null; bundle_discount_pct: number | null; sold_out_behavior: "mark_sold_out" | "auto_pause"; care_guide_pdf_url: string | null; last_activated_at: string | null }[] };
 
   const listingMap = Object.fromEntries((linkedListings ?? []).map(l => [l.id, l]));
 
-  // Group auctions by inventory_id (one inventory row can have many auctions)
-  const auctionsByInvId = new Map<string, { id: string; quantity: number; current_bid_cents: number; ends_at: string; status: string }[]>();
-  for (const a of linkedAuctions ?? []) {
-    if (!a.inventory_id) continue;
-    if (!auctionsByInvId.has(a.inventory_id)) auctionsByInvId.set(a.inventory_id, []);
-    auctionsByInvId.get(a.inventory_id)!.push({ id: a.id, quantity: a.quantity, current_bid_cents: a.current_bid_cents, ends_at: a.ends_at, status: a.status });
-  }
-
-  function computeStatus(listing: { status: string } | null, auctions: { status: string }[]): string {
-    const activeListing = listing?.status === "active";
-    const pausedListing = listing?.status === "paused";
-    const soldOutListing = listing?.status === "sold_out";
-    const liveCount = auctions.filter(a => a.status === "active").length;
-    const hasEnded = auctions.some(a => a.status === "ended" || a.status === "cancelled");
-
-    if (activeListing && liveCount > 0) return "Shop + Auction";
-    if (activeListing) return "In Shop";
-    if (liveCount > 1) return `${liveCount} Live Auctions`;
-    if (liveCount === 1) return "Live Auction";
-    if (pausedListing) return "Paused";
-    if (soldOutListing) return "Sold Out";
-    if (hasEnded) return "Auction Ended";
+  function computeStatus(listing: { status: string } | null): string {
+    if (listing?.status === "active") return "In Shop";
+    if (listing?.status === "paused") return "Paused";
+    if (listing?.status === "sold_out") return "Sold Out";
     return "Draft";
   }
 
   const activeRows = (activeInventory ?? []).map((item) => {
     const listing = item.listing_id ? (listingMap[item.listing_id] ?? null) : null;
-    const auctions = auctionsByInvId.get(item.id) ?? [];
     return {
       id: item.id,
       plant_name: item.plant_name,
@@ -85,13 +60,12 @@ export default async function InventoryPage({
       listing_sold_out_behavior: (listing as { sold_out_behavior?: "mark_sold_out" | "auto_pause" } | null)?.sold_out_behavior ?? "mark_sold_out",
       listing_care_guide_pdf_url: (listing as { care_guide_pdf_url?: string | null } | null)?.care_guide_pdf_url ?? null,
       listing_last_activated_at: (listing as { last_activated_at?: string | null } | null)?.last_activated_at ?? null,
-      auctions,
       shipping_weight_oz: (item as { shipping_weight_oz?: number | null }).shipping_weight_oz ?? null,
       shipping_cost_cents: (item as { shipping_cost_cents?: number | null }).shipping_cost_cents ?? null,
       free_shipping: (item as { free_shipping?: boolean }).free_shipping ?? false,
       low_stock_threshold: (item as { low_stock_threshold?: number | null }).low_stock_threshold ?? null,
       cost_cents: (item as { cost_cents?: number | null }).cost_cents ?? null,
-      status: computeStatus(listing, auctions),
+      status: computeStatus(listing),
       description: item.description ?? "",
       notes: item.notes ?? "",
       images: (item.images as string[]) ?? [],
@@ -119,7 +93,6 @@ export default async function InventoryPage({
     listing_sold_out_behavior: "mark_sold_out" as "mark_sold_out" | "auto_pause",
     listing_care_guide_pdf_url: null as string | null,
     listing_last_activated_at: null as string | null,
-    auctions: [] as { id: string; quantity: number; current_bid_cents: number; ends_at: string; status: string }[],
     shipping_weight_oz: (item as { shipping_weight_oz?: number | null }).shipping_weight_oz ?? null,
     shipping_cost_cents: (item as { shipping_cost_cents?: number | null }).shipping_cost_cents ?? null,
     free_shipping: (item as { free_shipping?: boolean }).free_shipping ?? false,
@@ -136,21 +109,13 @@ export default async function InventoryPage({
     archived_at: item.archived_at,
   }));
 
-  // Orphaned listings/auctions — created before inventory tracking (no inventory_id)
-  const [{ data: unlinkedListings }, { data: unlinkedAuctions }] = await Promise.all([
-    supabase
-      .from("listings")
-      .select("id, plant_name, variety, quantity, price_cents, status, images, category, pot_size, description")
-      .eq("seller_id", user.id)
-      .is("inventory_id", null)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("auctions")
-      .select("id, plant_name, variety, quantity, current_bid_cents, ends_at, status, images, category, pot_size, description")
-      .eq("seller_id", user.id)
-      .is("inventory_id", null)
-      .order("created_at", { ascending: false }),
-  ]);
+  // Orphaned listings — created before inventory tracking (no inventory_id)
+  const { data: unlinkedListings } = await supabase
+    .from("listings")
+    .select("id, plant_name, variety, quantity, price_cents, status, images, category, pot_size, description")
+    .eq("seller_id", user.id)
+    .is("inventory_id", null)
+    .order("created_at", { ascending: false });
 
   const termsAccepted = !!profile?.seller_terms_accepted_at;
   const isAdmin = !!(profile as { is_admin?: boolean } | null)?.is_admin;
@@ -189,19 +154,6 @@ export default async function InventoryPage({
         category: l.category ?? null,
         pot_size: l.pot_size ?? null,
         description: l.description ?? "",
-      }))}
-      unlinkedAuctions={(unlinkedAuctions ?? []).map(a => ({
-        id: a.id,
-        plant_name: a.plant_name,
-        variety: a.variety ?? "",
-        quantity: a.quantity,
-        current_bid_cents: a.current_bid_cents,
-        ends_at: a.ends_at,
-        status: a.status,
-        images: (a.images as string[]) ?? [],
-        category: a.category ?? null,
-        pot_size: a.pot_size ?? null,
-        description: a.description ?? "",
       }))}
       initialSearch={q ?? ""}
       initialCategory={cat ?? ""}
