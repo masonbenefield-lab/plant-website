@@ -643,12 +643,24 @@ export default function InventoryClient({
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { toast.error("Not logged in"); setSubmitting(false); return; }
 
-    const { data: profile } = await supabase.from("profiles").select("ship_from_address").eq("id", user.id).single();
-    const hasShipFrom = !!(profile?.ship_from_address as { street1?: string } | null)?.street1;
+    const { data: profile } = await supabase.from("profiles").select("ship_from_address, calculated_shipping_enabled").eq("id", user.id).single();
+    const addr = profile?.ship_from_address as { street1?: string; city?: string; zip?: string } | null;
+    const hasShipFrom = !!(addr?.street1?.trim() && addr?.city?.trim() && addr?.zip?.trim());
+    const calcShippingOk = (profile as { calculated_shipping_enabled?: boolean | null } | null)?.calculated_shipping_enabled === true;
+
     if (!hasShipFrom) {
       toast.error("Ship-from address required", {
         description: "Add your ship-from address in Account Settings before creating a listing.",
-        action: { label: "Account Settings", onClick: () => router.push("/account#shipping-settings") },
+        action: { label: "Account Settings", onClick: () => router.push("/account/shipping") },
+      });
+      setSubmitting(false);
+      return;
+    }
+
+    if (listingShippingMode === "weight" && !calcShippingOk) {
+      toast.error("Enable calculated shipping first", {
+        description: "Complete your ship-from address and turn on calculated shipping in Shipping Settings.",
+        action: { label: "Shipping Settings", onClick: () => router.push("/account/shipping") },
       });
       setSubmitting(false);
       return;
@@ -745,12 +757,24 @@ export default function InventoryClient({
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { toast.error("Not logged in"); setSubmitting(false); return; }
 
-    const { data: profile } = await supabase.from("profiles").select("ship_from_address").eq("id", user.id).single();
-    const hasShipFrom = !!(profile?.ship_from_address as { street1?: string } | null)?.street1;
-    if (!hasShipFrom) {
+    const { data: profile } = await supabase.from("profiles").select("ship_from_address, calculated_shipping_enabled").eq("id", user.id).single();
+    const addr2 = profile?.ship_from_address as { street1?: string; city?: string; zip?: string } | null;
+    const hasShipFrom2 = !!(addr2?.street1?.trim() && addr2?.city?.trim() && addr2?.zip?.trim());
+    const calcShippingOk2 = (profile as { calculated_shipping_enabled?: boolean | null } | null)?.calculated_shipping_enabled === true;
+
+    if (!hasShipFrom2) {
       toast.error("Ship-from address required", {
         description: "Add your ship-from address in Account Settings before starting an auction.",
-        action: { label: "Account Settings", onClick: () => router.push("/account#shipping-settings") },
+        action: { label: "Account Settings", onClick: () => router.push("/account/shipping") },
+      });
+      setSubmitting(false);
+      return;
+    }
+
+    if (auctionShippingMode === "weight" && !calcShippingOk2) {
+      toast.error("Enable calculated shipping first", {
+        description: "Complete your ship-from address and turn on calculated shipping in Shipping Settings.",
+        action: { label: "Shipping Settings", onClick: () => router.push("/account/shipping") },
       });
       setSubmitting(false);
       return;
@@ -2074,11 +2098,11 @@ export default function InventoryClient({
         </div>
       )}
 
-      {!hasShipFrom && (
+      {!calculatedShippingEnabled && items.some(i => (i.shipping_weight_oz ?? 0) > 0) && (
         <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
-          <strong>Add a ship-from address before listing.</strong>{" "}
-          Buyers can&apos;t see shipping rates until you set your shipping origin.{" "}
-          <a href="/account#shipping-settings" className="underline font-medium hover:opacity-80">Add it now →</a>
+          <strong>Shipping setup incomplete.</strong>{" "}
+          You have items using weight-based shipping but your ship-from address isn&apos;t verified or calculated shipping isn&apos;t enabled.{" "}
+          <a href="/account/shipping" className="underline font-medium hover:opacity-80">Fix it now →</a>
         </div>
       )}
 

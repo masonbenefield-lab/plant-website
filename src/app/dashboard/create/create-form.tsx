@@ -84,8 +84,9 @@ export default function CreateInventoryPage() {
         supabase.from("profiles").select("plan, is_admin").eq("id", user.id).single(),
       ]);
       if (!profile?.bio?.trim() || !profile?.avatar_url) setProfileWarning("incomplete");
-      setHasShipFrom(!!(profile?.ship_from_address as { street1?: string } | null)?.street1);
-      setCalculatedShippingEnabled((profile as { calculated_shipping_enabled?: boolean | null } | null)?.calculated_shipping_enabled !== false);
+      const addr = profile?.ship_from_address as { street1?: string; city?: string; zip?: string } | null;
+      setHasShipFrom(!!(addr?.street1?.trim() && addr?.city?.trim() && addr?.zip?.trim()));
+      setCalculatedShippingEnabled((profile as { calculated_shipping_enabled?: boolean | null } | null)?.calculated_shipping_enabled === true);
       setPlanLimits(getPlanLimits(planProfile?.plan, !!planProfile?.is_admin));
     }
     checkProfile();
@@ -172,9 +173,9 @@ export default function CreateInventoryPage() {
         setSaving(false);
         return;
       }
-      if (s.shippingMode === "weight" && !hasShipFrom) {
-        toast.error("Ship-from address required for weight-based shipping", {
-          description: "Add your ship-from address in Shipping Settings before using calculated rates.",
+      if (s.shippingMode === "weight" && !calculatedShippingEnabled) {
+        toast.error("Complete your shipping setup first", {
+          description: "Add a verified ship-from address and enable calculated shipping in Shipping Settings.",
           action: { label: "Go to Shipping Settings", onClick: () => router.push("/account#shipping-settings") },
         });
         setSaving(false);
@@ -563,11 +564,8 @@ export default function CreateInventoryPage() {
                       </div>
                       <div className="space-y-2">
                         <Label className="text-xs">Shipping <span className="text-destructive">*</span></Label>
-                        {(() => {
-                          const modes = calculatedShippingEnabled ? (["free", "flat", "weight"] as const) : (["free", "flat"] as const);
-                          return (
-                        <div className={`grid gap-2 ${modes.length === 2 ? "grid-cols-2" : "grid-cols-3"}`}>
-                          {modes.map((mode) => (
+                        <div className="grid gap-2 grid-cols-3">
+                          {(["free", "flat", "weight"] as const).map((mode) => (
                             <button
                               key={mode}
                               type="button"
@@ -582,11 +580,6 @@ export default function CreateInventoryPage() {
                             </button>
                           ))}
                         </div>
-                          );
-                        })()}
-                        {!calculatedShippingEnabled && (
-                          <p className="text-xs text-muted-foreground">Want weight-based rates? <a href="/account#shipping-settings" className="underline hover:text-foreground">Enable calculated shipping →</a></p>
-                        )}
                         {size.shippingMode === "flat" && (
                           <div className="flex items-center gap-2">
                             <span className="text-xs text-muted-foreground">$</span>
@@ -604,23 +597,30 @@ export default function CreateInventoryPage() {
                           </div>
                         )}
                         {size.shippingMode === "weight" && (
-                          <div className="flex items-center gap-2">
-                            <Input
-                              type="number"
-                              min={0.1}
-                              step={0.1}
-                              placeholder="oz"
-                              value={size.weightOz}
-                              onChange={(e) => { updateSize(size.id, "weightOz", e.target.value); if (highlightWeightId === size.id) setHighlightWeightId(null); }}
-                              className={cn(
-                                "max-w-[90px] transition-all",
-                                highlightWeightId === size.id && "ring-2 ring-destructive border-destructive"
-                              )}
-                            />
-                            <span className={cn("text-xs", highlightWeightId === size.id ? "text-destructive font-medium" : "text-muted-foreground")}>
-                              oz — rate calculated at checkout
-                            </span>
-                          </div>
+                          calculatedShippingEnabled ? (
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="number"
+                                min={0.1}
+                                step={0.1}
+                                placeholder="oz"
+                                value={size.weightOz}
+                                onChange={(e) => { updateSize(size.id, "weightOz", e.target.value); if (highlightWeightId === size.id) setHighlightWeightId(null); }}
+                                className={cn(
+                                  "max-w-[90px] transition-all",
+                                  highlightWeightId === size.id && "ring-2 ring-destructive border-destructive"
+                                )}
+                              />
+                              <span className={cn("text-xs", highlightWeightId === size.id ? "text-destructive font-medium" : "text-muted-foreground")}>
+                                oz — rate calculated at checkout
+                              </span>
+                            </div>
+                          ) : (
+                            <p className="text-xs text-amber-700 dark:text-amber-400">
+                              To use weight-based rates, complete your ship-from address and enable calculated shipping in{" "}
+                              <a href="/account/shipping" className="underline hover:text-foreground font-medium">Shipping Settings →</a>
+                            </p>
+                          )
                         )}
                         {!size.shippingMode && (
                           <p className="text-xs text-amber-700 dark:text-amber-400">Choose a shipping option above to continue.</p>
