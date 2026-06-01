@@ -231,6 +231,9 @@ export default async function OrdersPage({
                             ) : "—"}
                             {" "}· {centsToDisplay(order.amount_cents)}
                           </p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {new Date(order.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                          </p>
                         </div>
                         <Badge className={statusColors[order.status] ?? ""} variant="secondary">
                           {order.status}
