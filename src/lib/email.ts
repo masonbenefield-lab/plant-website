@@ -206,22 +206,33 @@ export function buildOrderConfirmationHtml({
   plantName,
   amountCents,
   orderId,
+  items,
 }: {
   plantName: string;
   amountCents: number;
   orderId: string;
+  items?: { name: string; quantity: number }[];
 }): string {
   const siteUrl = siteBase();
+  const infoRows = items?.length
+    ? [
+        ...items.map((item, i) => ({
+          label: items.length > 1 ? `Item ${i + 1}` : "Plant",
+          value: item.quantity > 1 ? `${item.name} ×${item.quantity}` : item.name,
+        })),
+        { label: "Total paid", value: centsToDisplay(amountCents) },
+      ]
+    : [
+        { label: "Plant", value: plantName },
+        { label: "Total paid", value: centsToDisplay(amountCents) },
+      ];
   return emailBase({
     title: `Order confirmed — ${plantName}`,
     heading: "Your order is confirmed!",
     subheading: "Get ready — your plant is on its way",
     body: `
       <p style="margin:0 0 4px;">Thanks for your purchase! Here's a summary of your order.</p>
-      ${infoCard([
-        { label: "Plant", value: plantName },
-        { label: "Total paid", value: centsToDisplay(amountCents) },
-      ])}
+      ${infoCard(infoRows)}
       <p style="margin:0;font-size:14px;color:#6b7280;">Your seller will ship soon. We'll send another email when it's on the way.</p>
       ${ctaBtn("View Your Order", `${siteUrl}/orders/confirmed?id=${orderId}`)}
     `,
@@ -233,18 +244,20 @@ export async function sendOrderConfirmation({
   plantName,
   amountCents,
   orderId,
+  items,
 }: {
   buyerEmail: string;
   plantName: string;
   amountCents: number;
   orderId: string;
+  items?: { name: string; quantity: number }[];
 }) {
   const resend = getResend();
   await resend.emails.send({
     from: FROM,
     to: buyerEmail,
     subject: `Order confirmed — ${plantName}`,
-    html: buildOrderConfirmationHtml({ plantName, amountCents, orderId }),
+    html: buildOrderConfirmationHtml({ plantName, amountCents, orderId, items }),
   });
 }
 
@@ -675,12 +688,14 @@ export function buildNewOrderAlertHtml({
   orderId,
   buyerName,
   shippingAddress,
+  items,
 }: {
   plantName: string;
   amountCents: number;
   orderId: string;
   buyerName: string;
   shippingAddress: { name: string; line1: string; line2?: string; city: string; state: string; zip: string; country: string };
+  items?: { name: string; quantity: number }[];
 }): string {
   const siteUrl = siteBase();
   const addr = [
@@ -693,16 +708,26 @@ export function buildNewOrderAlertHtml({
     .filter(Boolean)
     .join("<br>");
 
+  const infoRows = items?.length
+    ? [
+        ...items.map((item, i) => ({
+          label: items.length > 1 ? `Item ${i + 1}` : "Plant",
+          value: item.quantity > 1 ? `${item.name} ×${item.quantity}` : item.name,
+        })),
+        { label: "Sale amount", value: centsToDisplay(amountCents) },
+      ]
+    : [
+        { label: "Plant", value: plantName },
+        { label: "Sale amount", value: centsToDisplay(amountCents) },
+      ];
+
   return emailBase({
     title: `New order: ${plantName}`,
     heading: "New order received!",
     subheading: `${buyerName} just bought from your shop`,
     body: `
       <p style="margin:0 0 4px;">You have a new order ready to ship.</p>
-      ${infoCard([
-        { label: "Plant", value: plantName },
-        { label: "Sale amount", value: centsToDisplay(amountCents) },
-      ])}
+      ${infoCard(infoRows)}
       <p style="margin:0 0 8px;font-size:13px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em;">Ship to</p>
       <p style="margin:0 0 24px;font-size:14px;color:#374151;line-height:1.8;">${addr}</p>
       ${ctaBtn("View Order", `${siteUrl}/orders?tab=sales`)}
@@ -717,6 +742,7 @@ export async function sendNewOrderAlert({
   orderId,
   buyerName,
   shippingAddress,
+  items,
 }: {
   sellerEmail: string;
   plantName: string;
@@ -724,13 +750,14 @@ export async function sendNewOrderAlert({
   orderId: string;
   buyerName: string;
   shippingAddress: { name: string; line1: string; line2?: string; city: string; state: string; zip: string; country: string };
+  items?: { name: string; quantity: number }[];
 }) {
   const resend = getResend();
   await resend.emails.send({
     from: FROM,
     to: sellerEmail,
     subject: `New order: ${plantName}`,
-    html: buildNewOrderAlertHtml({ plantName, amountCents, orderId, buyerName, shippingAddress }),
+    html: buildNewOrderAlertHtml({ plantName, amountCents, orderId, buyerName, shippingAddress, items }),
   });
 }
 

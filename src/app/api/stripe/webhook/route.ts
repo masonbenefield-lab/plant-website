@@ -98,17 +98,28 @@ export async function POST(request: Request) {
         .eq(order.listing_id ? "listing_id" : "auction_id", order.listing_id ?? order.auction_id ?? "");
 
       let plantName = "your plant";
+      let emailItems: { name: string; quantity: number }[] | undefined;
+
       if (order.listing_id) {
-        const { data: listing } = await supabase.from("listings").select("plant_name").eq("id", order.listing_id).single();
-        if (listing) plantName = listing.plant_name;
+        const { data: listing } = await supabase.from("listings").select("plant_name, variety").eq("id", order.listing_id).single();
+        if (listing) plantName = listing.variety ? `${listing.plant_name} — ${listing.variety}` : listing.plant_name;
       } else if (order.auction_id) {
-        const { data: auction } = await supabase.from("auctions").select("plant_name").eq("id", order.auction_id).single();
-        if (auction) plantName = auction.plant_name;
+        const { data: auction } = await supabase.from("auctions").select("plant_name, variety").eq("id", order.auction_id).single();
+        if (auction) plantName = auction.variety ? `${auction.plant_name} — ${auction.variety}` : auction.plant_name;
+      } else if (order.cart_items) {
+        const ci = order.cart_items as { plant_name: string; variety: string | null; quantity: number }[];
+        emailItems = ci.map((c) => ({
+          name: c.variety ? `${c.plant_name} — ${c.variety}` : c.plant_name,
+          quantity: c.quantity,
+        }));
+        plantName = ci.length === 1
+          ? emailItems[0].name
+          : `${ci[0].plant_name} + ${ci.length - 1} more`;
       }
 
       const { data: { user: buyer } } = await supabase.auth.admin.getUserById(order.buyer_id);
       if (buyer?.email) {
-        await sendOrderConfirmation({ buyerEmail: buyer.email, plantName, amountCents: order.amount_cents, orderId: order.id }).catch(() => {});
+        await sendOrderConfirmation({ buyerEmail: buyer.email, plantName, amountCents: order.amount_cents, orderId: order.id, items: emailItems }).catch(() => {});
       }
 
       // Notify seller
@@ -122,6 +133,7 @@ export async function POST(request: Request) {
           orderId: order.id,
           buyerName: addr.name,
           shippingAddress: addr,
+          items: emailItems,
         }).catch(() => {});
       }
 

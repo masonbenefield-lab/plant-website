@@ -211,9 +211,9 @@ export default async function OrdersPage({
                           {isCartOrder ? (
                             <div>
                               {cartItems!.map((ci) => (
-                                <p key={ci.listing_id} className="font-semibold text-sm leading-snug">
+                                <Link key={ci.listing_id} href={`/shop/${ci.listing_id}`} className="font-semibold text-sm leading-snug hover:text-leaf hover:underline block">
                                   {ci.plant_name}{ci.variety ? ` — ${ci.variety}` : ""} ×{ci.quantity}
-                                </p>
+                                </Link>
                               ))}
                             </div>
                           ) : (
