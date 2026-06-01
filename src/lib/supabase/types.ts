@@ -416,6 +416,8 @@ export interface Database {
           label_url: string | null;
           platform_fee_cents: number | null;
           tax_cents: number;
+          payment_deadline_at: string | null;
+          payment_reminder_sent: boolean;
           created_at: string;
         };
         Insert: {
@@ -442,6 +444,8 @@ export interface Database {
           shippo_rate_id?: string | null;
           platform_fee_cents?: number | null;
           tax_cents?: number;
+          payment_deadline_at?: string | null;
+          payment_reminder_sent?: boolean;
           created_at?: string;
         };
         Update: {
@@ -457,6 +461,8 @@ export interface Database {
           shippo_transaction_id?: string | null;
           label_url?: string | null;
           platform_fee_cents?: number | null;
+          payment_deadline_at?: string | null;
+          payment_reminder_sent?: boolean;
         };
         Relationships: [];
       };

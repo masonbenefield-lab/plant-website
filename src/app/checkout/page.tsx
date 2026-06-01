@@ -54,17 +54,39 @@ export default async function CheckoutPage({
       priceCents = (onSale ? data.sale_price_cents! : data.price_cents) * quantity;
     }
   } else if (auctionId) {
-    const { data } = await supabase
-      .from("auctions")
-      .select("plant_name, variety, current_bid_cents, status, ends_at")
-      .eq("id", auctionId)
-      .eq("current_bidder_id", user.id)
-      .single();
-    if (!data) notFound();
-    const hasEnded = data.status === "ended" || new Date(data.ends_at) <= new Date();
-    if (!hasEnded) notFound();
-    itemName = data.variety ? `${data.plant_name} — ${data.variety}` : data.plant_name;
-    priceCents = data.current_bid_cents;
+    if (offerId) {
+      // Second-bidder offer — look up the pre-created pending order
+      const { data: offerOrder } = await supabase
+        .from("orders")
+        .select("amount_cents, buyer_id, auction_id, payment_deadline_at")
+        .eq("id", offerId)
+        .eq("auction_id", auctionId)
+        .eq("buyer_id", user.id)
+        .eq("status", "pending")
+        .single();
+      if (!offerOrder) notFound();
+      if (offerOrder.payment_deadline_at && new Date(offerOrder.payment_deadline_at) < new Date()) notFound();
+      const { data: auctionData } = await supabase
+        .from("auctions")
+        .select("plant_name, variety")
+        .eq("id", auctionId)
+        .single();
+      if (!auctionData) notFound();
+      itemName = auctionData.variety ? `${auctionData.plant_name} — ${auctionData.variety}` : auctionData.plant_name;
+      priceCents = offerOrder.amount_cents;
+    } else {
+      const { data } = await supabase
+        .from("auctions")
+        .select("plant_name, variety, current_bid_cents, status, ends_at")
+        .eq("id", auctionId)
+        .eq("current_bidder_id", user.id)
+        .single();
+      if (!data) notFound();
+      const hasEnded = data.status === "ended" || new Date(data.ends_at) <= new Date();
+      if (!hasEnded) notFound();
+      itemName = data.variety ? `${data.plant_name} — ${data.variety}` : data.plant_name;
+      priceCents = data.current_bid_cents;
+    }
   } else {
     notFound();
   }

@@ -232,6 +232,94 @@ export async function POST(request: Request) {
   }
 
   if (auctionId) {
+    const admin = adminClient();
+
+    // Second-bidder offer: offerId points to a pre-created pending order
+    if (offerId) {
+      const { data: offerOrder } = await supabase
+        .from("orders")
+        .select("id, seller_id, auction_id, amount_cents, stripe_payment_intent_id, payment_deadline_at")
+        .eq("id", offerId)
+        .eq("auction_id", auctionId)
+        .eq("buyer_id", user.id)
+        .eq("status", "pending")
+        .single();
+
+      if (!offerOrder) return NextResponse.json({ error: "Offer not found or expired" }, { status: 404 });
+      if (offerOrder.payment_deadline_at && new Date(offerOrder.payment_deadline_at) < new Date()) {
+        return NextResponse.json({ error: "This offer has expired" }, { status: 410 });
+      }
+
+      // Reuse existing PI if already created (double-tap guard)
+      if (offerOrder.stripe_payment_intent_id) {
+        const existingPi = await getStripe().paymentIntents.retrieve(offerOrder.stripe_payment_intent_id);
+        if (existingPi.status !== "canceled") {
+          return NextResponse.json({ clientSecret: existingPi.client_secret, orderId: offerOrder.id, taxCents: 0 });
+        }
+      }
+
+      const [{ data: sellerProfile }, { data: sellerPlan }] = await Promise.all([
+        supabase.from("profiles").select("stripe_account_id, stripe_onboarded").eq("id", offerOrder.seller_id).single(),
+        supabase.from("profiles").select("plan, is_admin, groundbreaker").eq("id", offerOrder.seller_id).single(),
+      ]);
+
+      if (!sellerProfile?.stripe_onboarded || !sellerProfile.stripe_account_id) {
+        return NextResponse.json({ error: "Seller not set up for payments" }, { status: 400 });
+      }
+
+      const feePercent = planFeePercent(sellerPlan?.plan, !!sellerPlan?.is_admin, !!sellerPlan?.groundbreaker);
+      const offerShippingCents = Math.max(0, Math.round(shippingCostCents ?? 0));
+      const { taxCents: offerTaxCents, calculationId: offerCalcId } = await createStripeTaxCalculation(
+        offerOrder.amount_cents,
+        offerShippingCents,
+        shippingAddress,
+        auctionId
+      );
+      const offerTotalCents = offerOrder.amount_cents + offerShippingCents + offerTaxCents;
+      const offerFeeCents = Math.round(offerOrder.amount_cents * (feePercent / 100));
+      const offerStripeFeeCents = Math.round(offerTotalCents * 0.029) + 30;
+      const offerApplicationFeeCents = shippoRateId
+        ? offerFeeCents + offerShippingCents + offerStripeFeeCents + offerTaxCents
+        : offerFeeCents + offerStripeFeeCents + offerTaxCents;
+
+      const paymentIntent = await getStripe().paymentIntents.create({
+        amount: offerTotalCents,
+        currency: "usd",
+        application_fee_amount: offerApplicationFeeCents,
+        on_behalf_of: sellerProfile.stripe_account_id,
+        transfer_data: { destination: sellerProfile.stripe_account_id },
+        metadata: {
+          auction_id: auctionId,
+          platform_fee_cents: String(offerFeeCents),
+          stripe_fee_cents: String(offerStripeFeeCents),
+          tax_cents: String(offerTaxCents),
+          ...(offerCalcId ? { tax_calculation_id: offerCalcId } : {}),
+        },
+      });
+
+      const { error: updateError } = await admin
+        .from("orders")
+        .update({
+          stripe_payment_intent_id: paymentIntent.id,
+          shipping_address: shippingAddress,
+          amount_cents: offerTotalCents,
+          shipping_cost_cents: offerShippingCents,
+          shipping_service: shippingService ?? null,
+          shippo_rate_id: shippoRateId ?? null,
+          platform_fee_cents: offerFeeCents,
+          tax_cents: offerTaxCents,
+        })
+        .eq("id", offerId);
+
+      if (updateError) {
+        await getStripe().paymentIntents.cancel(paymentIntent.id).catch(() => {});
+        return NextResponse.json({ error: updateError.message }, { status: 500 });
+      }
+
+      return NextResponse.json({ clientSecret: paymentIntent.client_secret, orderId: offerOrder.id, taxCents: offerTaxCents });
+    }
+
+    // Normal winner checkout
     const { data: auction, error } = await supabase
       .from("auctions")
       .select("*")
@@ -249,7 +337,6 @@ export async function POST(request: Request) {
     }
 
     // Guard: if the winner already has a pending order + PaymentIntent, reuse it
-    // to prevent duplicate charges from double-taps or multiple tabs.
     const { data: existingOrder } = await supabase
       .from("orders")
       .select("id, stripe_payment_intent_id")
