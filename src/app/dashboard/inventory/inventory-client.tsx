@@ -2098,7 +2098,7 @@ export default function InventoryClient({
         </div>
       )}
 
-      {!calculatedShippingEnabled && items.some(i => (i.shipping_weight_oz ?? 0) > 0) && (
+      {!calculatedShippingEnabled && activeRows.some(i => (i.shipping_weight_oz ?? 0) > 0) && (
         <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
           <strong>Shipping setup incomplete.</strong>{" "}
           You have items using weight-based shipping but your ship-from address isn&apos;t verified or calculated shipping isn&apos;t enabled.{" "}
