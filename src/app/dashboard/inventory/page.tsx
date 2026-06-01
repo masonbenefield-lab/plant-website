@@ -157,8 +157,10 @@ export default async function InventoryPage({
   const stripeOnboarded = !!(profile as { stripe_onboarded?: boolean } | null)?.stripe_onboarded;
   const hasReturnPolicy = !!(profile as { return_policy_type?: string | null } | null)?.return_policy_type;
   const hasShippingTimeline = !!(profile as { shipping_days?: number | null } | null)?.shipping_days;
-  const hasShipFrom = !!(profile as { ship_from_address?: { street1?: string } | null } | null)?.ship_from_address?.street1;
-  const calculatedShippingEnabled = (profile as { calculated_shipping_enabled?: boolean | null } | null)?.calculated_shipping_enabled !== false;
+  const shipFromAddr = (profile as { ship_from_address?: { street1?: string; city?: string; zip?: string } | null } | null)?.ship_from_address;
+  const hasShipFrom = !!(shipFromAddr?.street1?.trim() && shipFromAddr?.city?.trim() && shipFromAddr?.zip?.trim());
+  // Require a complete address AND explicit opt-in (null/undefined = not enabled)
+  const calculatedShippingEnabled = hasShipFrom && (profile as { calculated_shipping_enabled?: boolean | null } | null)?.calculated_shipping_enabled === true;
 
   const { getPlanLimits } = await import("@/lib/plan-limits");
   const planLimits = getPlanLimits((profile as { plan?: string } | null)?.plan as "seedling" | "grower" | "nursery" | null, isAdmin);
