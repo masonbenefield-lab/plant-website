@@ -54,12 +54,7 @@ export default async function LandingPage() {
 
   const currentMonth = new Date().toISOString().slice(0, 7);
 
-  const [{ data: activeGiveaway }, { data: liveAuctions }, { data: nurseryProfiles }, { count: groundbreakerCount }, { data: recentCommunityPosts }] = await Promise.all([
-    supabase
-      .from("giveaway_months")
-      .select("id")
-      .eq("month", currentMonth)
-      .maybeSingle(),
+  const [{ data: liveAuctions }, { data: nurseryProfiles }, { count: groundbreakerCount }, { data: recentCommunityPosts }] = await Promise.all([
     supabase
       .from("auctions")
       .select("id, plant_name, variety, current_bid_cents, images, ends_at")
@@ -88,6 +83,12 @@ export default async function LandingPage() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
+  const { data: activeGiveaway } = await admin
+    .from("giveaway_months")
+    .select("id")
+    .eq("month", currentMonth)
+    .maybeSingle();
+
   const { data: gardenShowcasePlants } = await admin
     .from("garden_plants")
     .select("id, name, variety, images, user_id")
