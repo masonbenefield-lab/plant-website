@@ -26,14 +26,16 @@ const PRIORITIES: { value: Priority; label: string }[] = [
 interface Props {
   plantName: string;
   variety?: string | null;
+  /** Pre-populated ID if the item is already in the user's wishlist. */
+  initialSavedId?: string | null;
   /** Render as a small overlay icon (for image cards). Default: false (inline button). */
   overlay?: boolean;
 }
 
-export function SaveToWishlistButton({ plantName, variety, overlay = false }: Props) {
+export function SaveToWishlistButton({ plantName, variety, initialSavedId, overlay = false }: Props) {
   const [open, setOpen] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [savedItemId, setSavedItemId] = useState<string | null>(null);
+  const [saved, setSaved] = useState(!!initialSavedId);
+  const [savedItemId, setSavedItemId] = useState<string | null>(initialSavedId ?? null);
   const [name, setName] = useState(plantName);
   const [varietyVal, setVarietyVal] = useState(variety ?? "");
   const [notes, setNotes] = useState("");

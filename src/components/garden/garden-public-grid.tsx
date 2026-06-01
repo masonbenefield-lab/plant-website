@@ -36,16 +36,28 @@ type Plant = {
   pin_order?: number | null;
 };
 
+type WishlistRef = { id: string; name: string; variety: string | null };
+
+function findSavedId(refs: WishlistRef[], name: string, variety: string | null): string | null {
+  return refs.find(
+    (r) =>
+      r.name.toLowerCase() === name.toLowerCase() &&
+      (r.variety?.toLowerCase() ?? null) === (variety?.toLowerCase() ?? null)
+  )?.id ?? null;
+}
+
 export function GardenPublicGrid({
   plants,
   username,
   currentUserId,
   ownerId,
+  userWishlistItems,
 }: {
   plants: Plant[];
   username: string;
   currentUserId?: string | null;
   ownerId?: string | null;
+  userWishlistItems?: WishlistRef[];
 }) {
   const showSave = !!(currentUserId && ownerId && currentUserId !== ownerId);
   const [q, setQ] = useState("");
@@ -142,6 +154,7 @@ export function GardenPublicGrid({
                   <SaveToWishlistButton
                     plantName={plant.name}
                     variety={plant.variety}
+                    initialSavedId={userWishlistItems ? findSavedId(userWishlistItems, plant.name, plant.variety) : null}
                     overlay
                   />
                 </div>

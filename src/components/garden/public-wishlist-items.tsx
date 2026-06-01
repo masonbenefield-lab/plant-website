@@ -26,12 +26,24 @@ type WishlistItem = {
   priority: string;
 };
 
+type WishlistRef = { id: string; name: string; variety: string | null };
+
+function findSavedId(refs: WishlistRef[], name: string, variety: string | null): string | null {
+  return refs.find(
+    (r) =>
+      r.name.toLowerCase() === name.toLowerCase() &&
+      (r.variety?.toLowerCase() ?? null) === (variety?.toLowerCase() ?? null)
+  )?.id ?? null;
+}
+
 export function PublicWishlistItems({
   items,
   showSave,
+  userWishlistItems = [],
 }: {
   items: WishlistItem[];
   showSave: boolean;
+  userWishlistItems?: WishlistRef[];
 }) {
   return (
     <div className="space-y-2">
@@ -65,6 +77,7 @@ export function PublicWishlistItems({
               <SaveToWishlistButton
                 plantName={item.name}
                 variety={item.variety}
+                initialSavedId={findSavedId(userWishlistItems, item.name, item.variety)}
               />
             )}
           </CardContent>

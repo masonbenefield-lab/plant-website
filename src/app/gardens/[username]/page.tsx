@@ -83,6 +83,11 @@ export default async function PublicGardenPage({
     supabase.auth.getUser(),
   ]);
 
+  const isVisitor = !!(user && user.id !== profile.id);
+  const { data: userWishlistItems } = isVisitor
+    ? await supabase.from("wishlist_items").select("id, name, variety").eq("user_id", user!.id)
+    : { data: [] };
+
   const total = plants?.length ?? 0;
   const rawName = profile.display_name || profile.username;
   const displayName = rawName?.endsWith("s") ? `${rawName}'` : `${rawName}'s`;
@@ -149,6 +154,7 @@ export default async function PublicGardenPage({
         username={username}
         currentUserId={user?.id ?? null}
         ownerId={profile.id}
+        userWishlistItems={userWishlistItems ?? []}
       />
 
       <p className="text-center text-xs text-muted-foreground pt-4">

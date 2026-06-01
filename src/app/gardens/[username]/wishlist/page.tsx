@@ -88,6 +88,10 @@ export default async function PublicWishlistPage({
   const ordered = [...mustHave, ...want, ...nice];
   const showSave = !!(user && user.id !== profile.id);
 
+  const { data: userWishlistItems } = showSave
+    ? await supabase.from("wishlist_items").select("id, name, variety").eq("user_id", user!.id)
+    : { data: [] };
+
   return (
     <div className="max-w-3xl mx-auto px-4 py-12 space-y-10">
 
@@ -141,7 +145,7 @@ export default async function PublicWishlistPage({
           </CardContent>
         </Card>
       ) : (
-        <PublicWishlistItems items={ordered} showSave={showSave} />
+        <PublicWishlistItems items={ordered} showSave={showSave} userWishlistItems={userWishlistItems ?? []} />
       )}
 
       <p className="text-center text-xs text-muted-foreground pt-4">
