@@ -41,7 +41,7 @@ export async function createStripeTaxCalculation(
     ...(shippingCents > 0
       ? [{
           amount: shippingCents,
-          reference: "shipping",
+          reference: "shipping_cost",
           tax_behavior: "exclusive" as const,
         }]
       : []),
