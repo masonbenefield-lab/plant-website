@@ -77,6 +77,8 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
     const startingBidCents = dollarsToCents(data.get("starting_bid") as string);
     const buyNowRaw = data.get("buy_now_price") as string;
     const buyNowCents = buyNowRaw ? dollarsToCents(buyNowRaw) : null;
+    const reserveRaw = data.get("reserve_price") as string;
+    const reserveCents = reserveRaw ? dollarsToCents(reserveRaw) : null;
 
     const supabase = createClient();
     const { error } = await supabase.from("auctions").insert({
@@ -88,6 +90,7 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
       starting_bid_cents: startingBidCents,
       current_bid_cents: startingBidCents,
       buy_now_price_cents: buyNowCents,
+      reserve_price_cents: reserveCents,
       ends_at: endsAt,
       images: imageUrls,
       pot_size: potSize || null,
@@ -163,15 +166,29 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
               <Input id="quantity" name="quantity" type="number" min={1} defaultValue={1} required disabled={atAuctionLimit} />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="starting_bid">Starting Bid ($) *</Label>
-              <Input id="starting_bid" name="starting_bid" type="number" min={0.01} step={0.01} required disabled={atAuctionLimit} />
+              <Label htmlFor="starting_bid">Starting Bid *</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">$</span>
+                <Input id="starting_bid" name="starting_bid" type="number" min={0.01} step={0.01} required disabled={atAuctionLimit} className="pl-6" />
+              </div>
             </div>
           </div>
           <PriceSuggestion plantName={plantName} variety={variety} label="bid" />
           <div className="space-y-1">
-            <Label htmlFor="buy_now_price">Buy Now Price ($) <span className="font-normal text-muted-foreground">(optional)</span></Label>
-            <Input id="buy_now_price" name="buy_now_price" type="number" min={0.01} step={0.01} placeholder="Leave blank to disable" disabled={atAuctionLimit} />
+            <Label htmlFor="buy_now_price">Buy Now Price <span className="font-normal text-muted-foreground">(optional)</span></Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">$</span>
+              <Input id="buy_now_price" name="buy_now_price" type="number" min={0.01} step={0.01} placeholder="Leave blank to disable" disabled={atAuctionLimit} className="pl-6" />
+            </div>
             <p className="text-xs text-muted-foreground">Buyers can skip bidding and purchase immediately at this price.</p>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="reserve_price">Reserve Price <span className="font-normal text-muted-foreground">(optional)</span></Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">$</span>
+              <Input id="reserve_price" name="reserve_price" type="number" min={0.01} step={0.01} placeholder="Leave blank for no reserve" disabled={atAuctionLimit} className="pl-6" />
+            </div>
+            <p className="text-xs text-muted-foreground">Auction only completes if bidding reaches this amount. Buyers don&apos;t see the reserve — just whether it&apos;s been met.</p>
           </div>
           <div className="space-y-1">
             <Label htmlFor="duration_hours">Duration *</Label>
