@@ -569,21 +569,33 @@ export default function CreateInventoryPage() {
                       <div className="space-y-2">
                         <Label className="text-xs">Shipping <span className="text-destructive">*</span></Label>
                         <div className="grid gap-2 grid-cols-3">
-                          {(["free", "flat", "weight"] as const).map((mode) => (
-                            <button
-                              key={mode}
-                              type="button"
-                              onClick={() => updateSize(size.id, "shippingMode", mode)}
-                              className={`rounded-md border px-3 py-2 text-xs font-medium transition-colors ${
-                                size.shippingMode === mode
-                                  ? "border-leaf bg-[#EBF0E6] text-forest dark:bg-forest/40 dark:text-[#A8BF9A] dark:border-leaf"
-                                  : "border-input hover:bg-muted"
-                              }`}
-                            >
-                              {mode === "free" ? "Free" : mode === "flat" ? "Flat rate" : "By weight"}
-                            </button>
-                          ))}
+                          {(["free", "flat", "weight"] as const).map((mode) => {
+                            const weightLocked = mode === "weight" && !calculatedShippingEnabled;
+                            return (
+                              <button
+                                key={mode}
+                                type="button"
+                                disabled={weightLocked}
+                                onClick={() => updateSize(size.id, "shippingMode", mode)}
+                                title={weightLocked ? "Complete shipping setup to use weight-based rates" : undefined}
+                                className={`rounded-md border px-3 py-2 text-xs font-medium transition-colors ${
+                                  weightLocked
+                                    ? "border-input opacity-40 cursor-not-allowed"
+                                    : size.shippingMode === mode
+                                    ? "border-leaf bg-[#EBF0E6] text-forest dark:bg-forest/40 dark:text-[#A8BF9A] dark:border-leaf"
+                                    : "border-input hover:bg-muted"
+                                }`}
+                              >
+                                {mode === "free" ? "Free" : mode === "flat" ? "Flat rate" : "By weight"}
+                              </button>
+                            );
+                          })}
                         </div>
+                        {!calculatedShippingEnabled && (
+                          <p className="text-xs text-muted-foreground">
+                            <a href="/account#shipping-settings" className="underline hover:text-foreground">Set up calculated shipping</a> to unlock weight-based rates.
+                          </p>
+                        )}
                         {size.shippingMode === "flat" && (
                           <div className="flex items-center gap-2">
                             <span className="text-xs text-muted-foreground">$</span>
@@ -601,30 +613,23 @@ export default function CreateInventoryPage() {
                           </div>
                         )}
                         {size.shippingMode === "weight" && (
-                          calculatedShippingEnabled ? (
-                            <div className="flex items-center gap-2">
-                              <Input
-                                type="number"
-                                min={0.1}
-                                step={0.1}
-                                placeholder="oz"
-                                value={size.weightOz}
-                                onChange={(e) => { updateSize(size.id, "weightOz", e.target.value); if (highlightWeightId === size.id) setHighlightWeightId(null); }}
-                                className={cn(
-                                  "max-w-[90px] transition-all",
-                                  highlightWeightId === size.id && "ring-2 ring-destructive border-destructive"
-                                )}
-                              />
-                              <span className={cn("text-xs", highlightWeightId === size.id ? "text-destructive font-medium" : "text-muted-foreground")}>
-                                oz — rate calculated at checkout
-                              </span>
-                            </div>
-                          ) : (
-                            <p className="text-xs text-amber-700 dark:text-amber-400">
-                              To use weight-based rates, complete your ship-from address and enable calculated shipping in{" "}
-                              <a href="/account#shipping-settings" className="underline hover:text-foreground font-medium">Shipping Settings →</a>
-                            </p>
-                          )
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="number"
+                              min={0.1}
+                              step={0.1}
+                              placeholder="oz"
+                              value={size.weightOz}
+                              onChange={(e) => { updateSize(size.id, "weightOz", e.target.value); if (highlightWeightId === size.id) setHighlightWeightId(null); }}
+                              className={cn(
+                                "max-w-[90px] transition-all",
+                                highlightWeightId === size.id && "ring-2 ring-destructive border-destructive"
+                              )}
+                            />
+                            <span className={cn("text-xs", highlightWeightId === size.id ? "text-destructive font-medium" : "text-muted-foreground")}>
+                              oz — rate calculated at checkout
+                            </span>
+                          </div>
                         )}
                         {!size.shippingMode && (
                           <p className="text-xs text-amber-700 dark:text-amber-400">Choose a shipping option above to continue.</p>
