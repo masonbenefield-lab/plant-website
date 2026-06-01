@@ -108,6 +108,13 @@ export default function ShopFilterBar({ activeTab = "plants" }: { activeTab?: st
                 fetchSuggestions(val);
               });
             }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                if (debounceTimer.current) clearTimeout(debounceTimer.current);
+                setShowSuggestions(false);
+                update({ q: searchValue });
+              }
+            }}
             onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
             autoComplete="off"
           />
@@ -274,7 +281,7 @@ export default function ShopFilterBar({ activeTab = "plants" }: { activeTab?: st
       {hasFilters && (
         <div className="flex flex-wrap items-center gap-2" aria-label="Active filters">
           {q && (
-            <Chip label={`"${q}"`} onRemove={() => update({ q: "" })} />
+            <Chip label={`"${q}"`} onRemove={() => { update({ q: "" }); setSearchValue(""); }} />
           )}
           {sort !== "newest" && (
             <Chip label={SORT_OPTIONS.find((o) => o.value === sort)?.label ?? sort} onRemove={() => update({ sort: "" })} />
@@ -298,7 +305,7 @@ export default function ShopFilterBar({ activeTab = "plants" }: { activeTab?: st
             <Chip label={`Pot: ${potSize}`} onRemove={() => update({ pot_size: "" })} />
           )}
           <button
-            onClick={() => router.replace(pathname)}
+            onClick={() => { router.replace(pathname); setSearchValue(""); }}
             className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
           >
             Clear all

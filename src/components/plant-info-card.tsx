@@ -3,9 +3,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { Leaf, X } from "lucide-react";
-import { toast } from "sonner";
-
-const STORAGE_KEY = "plantet_plant_guide_enabled";
 
 export default function PlantInfoCard() {
   const searchParams = useSearchParams();
@@ -16,9 +13,8 @@ export default function PlantInfoCard() {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === "false") setEnabled(false);
-  }, []);
+    if (q && q.trim().length >= 3) setEnabled(true);
+  }, [q]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -48,11 +44,8 @@ export default function PlantInfoCard() {
   }, [q, enabled]);
 
   function dismiss() {
+    setDescription(null);
     setEnabled(false);
-    localStorage.setItem(STORAGE_KEY, "false");
-    toast("Plant Guide hidden", {
-      description: "You can turn it back on in Account Settings.",
-    });
   }
 
   if (!enabled) return null;
