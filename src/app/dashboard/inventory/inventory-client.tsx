@@ -651,7 +651,7 @@ export default function InventoryClient({
     if (!hasShipFrom) {
       toast.error("Ship-from address required", {
         description: "Add your ship-from address in Account Settings before creating a listing.",
-        action: { label: "Account Settings", onClick: () => router.push("/account/shipping") },
+        action: { label: "Account Settings", onClick: () => router.push("/account#shipping-settings") },
       });
       setSubmitting(false);
       return;
@@ -660,7 +660,7 @@ export default function InventoryClient({
     if (listingShippingMode === "weight" && !calcShippingOk) {
       toast.error("Enable calculated shipping first", {
         description: "Complete your ship-from address and turn on calculated shipping in Shipping Settings.",
-        action: { label: "Shipping Settings", onClick: () => router.push("/account/shipping") },
+        action: { label: "Shipping Settings", onClick: () => router.push("/account#shipping-settings") },
       });
       setSubmitting(false);
       return;
@@ -765,7 +765,7 @@ export default function InventoryClient({
     if (!hasShipFrom2) {
       toast.error("Ship-from address required", {
         description: "Add your ship-from address in Account Settings before starting an auction.",
-        action: { label: "Account Settings", onClick: () => router.push("/account/shipping") },
+        action: { label: "Account Settings", onClick: () => router.push("/account#shipping-settings") },
       });
       setSubmitting(false);
       return;
@@ -774,7 +774,7 @@ export default function InventoryClient({
     if (auctionShippingMode === "weight" && !calcShippingOk2) {
       toast.error("Enable calculated shipping first", {
         description: "Complete your ship-from address and turn on calculated shipping in Shipping Settings.",
-        action: { label: "Shipping Settings", onClick: () => router.push("/account/shipping") },
+        action: { label: "Shipping Settings", onClick: () => router.push("/account#shipping-settings") },
       });
       setSubmitting(false);
       return;
@@ -2102,7 +2102,7 @@ export default function InventoryClient({
         <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
           <strong>Shipping setup incomplete.</strong>{" "}
           You have items using weight-based shipping but your ship-from address isn&apos;t verified or calculated shipping isn&apos;t enabled.{" "}
-          <a href="/account/shipping" className="underline font-medium hover:opacity-80">Fix it now →</a>
+          <a href="/account#shipping-settings" className="underline font-medium hover:opacity-80">Fix it now →</a>
         </div>
       )}
 
@@ -2656,7 +2656,7 @@ export default function InventoryClient({
                     ) : (
                       <p className="text-xs text-amber-700 dark:text-amber-400">
                         To use weight-based rates, complete your ship-from address and enable calculated shipping in{" "}
-                        <a href="/account/shipping" className="underline hover:text-foreground font-medium">Shipping Settings →</a>
+                        <a href="/account#shipping-settings" className="underline hover:text-foreground font-medium">Shipping Settings →</a>
                       </p>
                     )
                   )}
@@ -2777,7 +2777,7 @@ export default function InventoryClient({
                     ) : (
                       <p className="text-xs text-amber-700 dark:text-amber-400">
                         To use weight-based rates, complete your ship-from address and enable calculated shipping in{" "}
-                        <a href="/account/shipping" className="underline hover:text-foreground font-medium">Shipping Settings →</a>
+                        <a href="/account#shipping-settings" className="underline hover:text-foreground font-medium">Shipping Settings →</a>
                       </p>
                     )
                   )}
@@ -3020,7 +3020,7 @@ export default function InventoryClient({
                         ) : (
                           <p className="text-xs text-amber-700 dark:text-amber-400 pt-1">
                             To use weight-based rates, complete your ship-from address and enable calculated shipping in{" "}
-                            <a href="/account/shipping" className="underline hover:text-foreground font-medium">Shipping Settings →</a>
+                            <a href="/account#shipping-settings" className="underline hover:text-foreground font-medium">Shipping Settings →</a>
                           </p>
                         )
                       )}

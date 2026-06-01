@@ -63,13 +63,6 @@ export default function CreateInventoryPage() {
   }
 
   function updateSize(id: number, field: keyof Omit<SizeEntry, "id">, value: string | boolean) {
-    if (field === "listInShop" && value === true && !hasShipFrom) {
-      toast.error("Ship-from address required", {
-        description: "Add your ship-from address in Account Settings before listing items.",
-        action: { label: "Account Settings", onClick: () => window.location.href = "/account#shipping-settings" },
-      });
-      return;
-    }
     setSizes(prev => prev.map(s => s.id === id ? { ...s, [field]: value } : s));
   }
 
@@ -618,7 +611,7 @@ export default function CreateInventoryPage() {
                           ) : (
                             <p className="text-xs text-amber-700 dark:text-amber-400">
                               To use weight-based rates, complete your ship-from address and enable calculated shipping in{" "}
-                              <a href="/account/shipping" className="underline hover:text-foreground font-medium">Shipping Settings →</a>
+                              <a href="/account#shipping-settings" className="underline hover:text-foreground font-medium">Shipping Settings →</a>
                             </p>
                           )
                         )}
