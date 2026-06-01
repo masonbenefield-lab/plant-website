@@ -512,6 +512,7 @@ export default function AccountForm({
       ? `Address removed — ${n} listing${n > 1 ? "s" : ""} paused`
       : "Ship-from address removed"
     );
+    router.refresh();
   }
 
   function toggleService(token: string) {
@@ -1122,7 +1123,7 @@ export default function AccountForm({
 
             <div className="space-y-3">
               {(() => {
-                const hasAddress = !!(shipFrom.street1?.trim() && shipFrom.city?.trim() && shipFrom.state?.trim() && shipFrom.zip?.trim());
+                const hasAddress = !!(rawShipFrom?.street1?.trim() && rawShipFrom?.city?.trim() && rawShipFrom?.state?.trim() && rawShipFrom?.zip?.trim());
                 return (
                   <div className={cn("flex items-center justify-between rounded-lg border p-4", !hasAddress && "opacity-60")}>
                     <div>
