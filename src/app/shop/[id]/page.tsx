@@ -266,6 +266,7 @@ export default async function ListingPage({
                     imageUrl={(listing.images as string[])?.[0] ?? null}
                     sellerId={listing.seller_id}
                     sellerUsername={seller?.username ?? ""}
+                    sellerDisplayName={seller?.display_name ?? seller?.username ?? ""}
                     maxQty={listing.quantity}
                     bundleDiscountPct={(listing as { bundle_discount_pct?: number | null }).bundle_discount_pct ?? null}
                   />

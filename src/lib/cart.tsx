@@ -11,6 +11,7 @@ export interface CartItem {
   imageUrl: string | null;
   sellerId: string;
   sellerUsername: string;
+  sellerDisplayName: string;
   bundleDiscountPct: number | null;
 }
 
@@ -25,6 +26,7 @@ interface CartContextValue {
   items: CartItem[];
   sellerId: string | null;
   sellerUsername: string | null;
+  sellerDisplayName: string | null;
   addItem: (item: CartItem) => "added" | "seller_conflict" | "updated";
   removeItem: (listingId: string) => void;
   updateQty: (listingId: string, qty: number) => void;
@@ -106,10 +108,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const count = items.reduce((sum, i) => sum + i.quantity, 0);
   const sellerId = items[0]?.sellerId ?? null;
   const sellerUsername = items[0]?.sellerUsername ?? null;
+  const sellerDisplayName = items[0]?.sellerDisplayName ?? null;
 
   return (
     <CartContext.Provider value={{
-      items, sellerId, sellerUsername,
+      items, sellerId, sellerUsername, sellerDisplayName,
       addItem, removeItem, updateQty, clearCart,
       totalCents, count,
       isOpen, openCart: () => setIsOpen(true), closeCart: () => setIsOpen(false),

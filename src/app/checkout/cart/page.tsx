@@ -80,6 +80,7 @@ export default function CartCheckoutPage() {
   const [rates, setRates] = useState<ShippoRate[]>([]);
   const [selectedRate, setSelectedRate] = useState<ShippoRate | null>(null);
   const [grandTotalCents, setGrandTotalCents] = useState(itemsTotalCents);
+  const [flatShippingCents, setFlatShippingCents] = useState<number | null>(null);
 
   useEffect(() => {
     setGrandTotalCents(itemsTotalCents);
@@ -143,6 +144,13 @@ export default function CartCheckoutPage() {
 
     if (data.freeShipping) {
       await createCartOrder({ shippingCostCents: 0 });
+      return;
+    }
+
+    if (data.flatRate) {
+      setFlatShippingCents(data.flatRateCents);
+      setGrandTotalCents(itemsTotalCents + data.flatRateCents);
+      await createCartOrder({ shippingCostCents: data.flatRateCents });
       return;
     }
 
@@ -215,12 +223,17 @@ export default function CartCheckoutPage() {
           <span>Items</span>
           <span>{centsToDisplay(itemsTotalCents)}</span>
         </div>
-        {selectedRate && (
+        {selectedRate ? (
           <div className="flex justify-between text-muted-foreground">
             <span>Shipping</span>
             <span>{centsToDisplay(Math.round(parseFloat(selectedRate.amount) * 100))}</span>
           </div>
-        )}
+        ) : flatShippingCents ? (
+          <div className="flex justify-between text-muted-foreground">
+            <span>Shipping</span>
+            <span>{centsToDisplay(flatShippingCents)}</span>
+          </div>
+        ) : null}
         <div className="flex justify-between font-semibold pt-1 border-t">
           <span>Total</span>
           <span className="text-leaf">{centsToDisplay(grandTotalCents)}</span>

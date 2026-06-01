@@ -22,10 +22,10 @@ export async function POST(request: Request) {
   let weightOz: number;
 
   if (listingIds?.length) {
-    // Cart: multiple listings from one seller — sum weights
+    // Cart: multiple listings from one seller — resolve shipping per listing
     const { data: listings } = await supabase
       .from("listings")
-      .select("seller_id, inventory_id")
+      .select("seller_id, inventory_id, free_shipping, shipping_cost_cents")
       .in("id", listingIds);
 
     if (!listings?.length) return NextResponse.json({ error: "Listings not found" }, { status: 404 });
@@ -35,18 +35,43 @@ export async function POST(request: Request) {
     sellerId = sellerIds[0];
 
     const invIds = listings.map((l) => l.inventory_id).filter(Boolean) as string[];
+    type InvRow = { id: string; shipping_weight_oz: number | null; free_shipping: boolean | null; shipping_cost_cents: number | null };
+    let invMap: Record<string, InvRow> = {};
     if (invIds.length) {
       const { data: invs } = await supabase
         .from("inventory")
-        .select("shipping_weight_oz, free_shipping")
+        .select("id, shipping_weight_oz, free_shipping, shipping_cost_cents")
         .in("id", invIds);
-      if (invs?.length && invs.every((inv) => inv.free_shipping)) {
-        return NextResponse.json({ rates: [], freeShipping: true });
-      }
-      weightOz = (invs ?? []).reduce((sum, inv) => sum + (inv.shipping_weight_oz ?? 16), 0);
-    } else {
-      weightOz = listings.length * 16; // default 1lb per item
+      invMap = Object.fromEntries((invs ?? []).map((inv) => [inv.id, inv as InvRow]));
     }
+
+    // Resolve per-listing shipping — one pass, all combinations handled
+    let totalFlatCents = 0;
+    let needsCalculated = false;
+    weightOz = 0;
+
+    for (const listing of listings) {
+      const inv = listing.inventory_id ? invMap[listing.inventory_id] : null;
+      const isFree = inv?.free_shipping ?? (listing as { free_shipping?: boolean | null }).free_shipping ?? false;
+      const flatCents = inv?.shipping_cost_cents ?? (listing as { shipping_cost_cents?: number | null }).shipping_cost_cents ?? null;
+      const itemWeight = inv?.shipping_weight_oz ?? 16;
+
+      weightOz += itemWeight; // always accumulate weight in case Shippo is needed
+      if (isFree) {
+        // contributes $0
+      } else if (flatCents) {
+        totalFlatCents += flatCents;
+      } else {
+        needsCalculated = true;
+      }
+    }
+
+    // free+free → freeShipping, free+flat → flatRate, flat+flat → flatRate, any+Shippo → Shippo
+    if (!needsCalculated) {
+      if (totalFlatCents === 0) return NextResponse.json({ rates: [], freeShipping: true });
+      return NextResponse.json({ rates: [], flatRate: true, flatRateCents: totalFlatCents });
+    }
+    // Mixed flat+Shippo: use Shippo for full weight, flat-rate costs absorbed into the calculated rate
   } else if (listingId) {
     const { data: listing } = await supabase
       .from("listings")

@@ -26,7 +26,7 @@ export function CartButton() {
 }
 
 export function CartDrawer() {
-  const { items, isOpen, closeCart, removeItem, updateQty, clearCart, totalCents, sellerUsername } = useCart();
+  const { items, isOpen, closeCart, removeItem, updateQty, clearCart, totalCents, sellerUsername, sellerDisplayName } = useCart();
 
   if (!isOpen) return null;
 
@@ -58,9 +58,8 @@ export function CartDrawer() {
               <p className="px-5 pt-3 text-xs text-muted-foreground">
                 From{" "}
                 <Link href={`/sellers/${sellerUsername}`} onClick={closeCart} className="text-leaf hover:underline font-medium">
-                  {sellerUsername}
+                  {sellerDisplayName ?? sellerUsername}
                 </Link>
-                {" "}— items from one seller per cart
               </p>
             )}
 

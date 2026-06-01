@@ -14,6 +14,7 @@ export default function AddToCartButton({
   imageUrl,
   sellerId,
   sellerUsername,
+  sellerDisplayName,
   maxQty,
   bundleDiscountPct,
 }: {
@@ -24,6 +25,7 @@ export default function AddToCartButton({
   imageUrl: string | null;
   sellerId: string;
   sellerUsername: string;
+  sellerDisplayName: string;
   maxQty: number;
   bundleDiscountPct?: number | null;
 }) {
@@ -32,14 +34,10 @@ export default function AddToCartButton({
 
   function handleAdd() {
     if (qty > maxQty) { toast.error("Not enough stock"); return; }
-    const result = addItem({ listingId, plantName, variety, priceCents, quantity: qty, imageUrl, sellerId, sellerUsername, bundleDiscountPct: bundleDiscountPct ?? null });
+    const result = addItem({ listingId, plantName, variety, priceCents, quantity: qty, imageUrl, sellerId, sellerUsername, sellerDisplayName, bundleDiscountPct: bundleDiscountPct ?? null });
     if (result === "seller_conflict") {
       toast.error("Your cart already has items from another seller. Clear your cart first.");
-    } else if (result === "updated") {
-      toast.success("Quantity updated in cart");
-      openCart();
     } else {
-      toast.success("Added to cart!");
       openCart();
     }
   }
