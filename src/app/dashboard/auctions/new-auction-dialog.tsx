@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { dollarsToCents } from "@/lib/stripe";
 import PriceSuggestion from "@/components/price-suggestion";
 import PotSizePicker from "@/components/pot-size-picker";
+import { PLANT_CATEGORIES } from "@/lib/categories";
 
 interface Props {
   sellerId: string;
@@ -73,12 +74,16 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
     const data = new FormData(form);
 
     const durationHours = Number(data.get("duration_hours"));
-    const endsAt = new Date(Date.now() + durationHours * 60 * 60 * 1000).toISOString();
+    const startsAtRaw = data.get("starts_at") as string;
+    const startsAt = startsAtRaw ? new Date(startsAtRaw).toISOString() : null;
+    const startBase = startsAt ? new Date(startsAt).getTime() : Date.now();
+    const endsAt = new Date(startBase + durationHours * 60 * 60 * 1000).toISOString();
     const startingBidCents = dollarsToCents(data.get("starting_bid") as string);
     const buyNowRaw = data.get("buy_now_price") as string;
     const buyNowCents = buyNowRaw ? dollarsToCents(buyNowRaw) : null;
     const reserveRaw = data.get("reserve_price") as string;
     const reserveCents = reserveRaw ? dollarsToCents(reserveRaw) : null;
+    const categoryRaw = data.get("category") as string;
 
     const supabase = createClient();
     const { error } = await supabase.from("auctions").insert({
@@ -91,6 +96,9 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
       current_bid_cents: startingBidCents,
       buy_now_price_cents: buyNowCents,
       reserve_price_cents: reserveCents,
+      category: categoryRaw || null,
+      starts_at: startsAt,
+      status: startsAt ? "scheduled" : "active",
       ends_at: endsAt,
       images: imageUrls,
       pot_size: potSize || null,
@@ -121,7 +129,7 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
         + New Auction
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create an Auction</DialogTitle>
         </DialogHeader>
@@ -190,21 +198,48 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
             </div>
             <p className="text-xs text-muted-foreground">Auction only completes if bidding reaches this amount. Buyers don&apos;t see the reserve — just whether it&apos;s been met.</p>
           </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <Label htmlFor="duration_hours">Duration *</Label>
+              <select
+                id="duration_hours"
+                name="duration_hours"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                required
+                disabled={atAuctionLimit}
+              >
+                <option value="24">24 hours</option>
+                <option value="48">48 hours</option>
+                <option value="72">72 hours</option>
+                <option value="120">5 days</option>
+                <option value="168">7 days</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="category">Category <span className="font-normal text-muted-foreground">(optional)</span></Label>
+              <select
+                id="category"
+                name="category"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                disabled={atAuctionLimit}
+              >
+                <option value="">Select a category…</option>
+                {PLANT_CATEGORIES.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+          </div>
           <div className="space-y-1">
-            <Label htmlFor="duration_hours">Duration *</Label>
-            <select
-              id="duration_hours"
-              name="duration_hours"
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              required
+            <Label htmlFor="starts_at">Schedule Start <span className="font-normal text-muted-foreground">(optional)</span></Label>
+            <Input
+              id="starts_at"
+              name="starts_at"
+              type="datetime-local"
               disabled={atAuctionLimit}
-            >
-              <option value="24">24 hours</option>
-              <option value="48">48 hours</option>
-              <option value="72">72 hours</option>
-              <option value="120">5 days</option>
-              <option value="168">7 days</option>
-            </select>
+              min={new Date().toISOString().slice(0, 16)}
+            />
+            <p className="text-xs text-muted-foreground">Leave blank to start immediately. Set a future date/time to queue the auction.</p>
           </div>
           <div className="space-y-1">
             <Label>Pot Size <span className="font-normal text-muted-foreground">(optional)</span></Label>
