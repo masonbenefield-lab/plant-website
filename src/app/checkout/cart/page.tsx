@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import Image from "next/image";
@@ -95,6 +95,29 @@ export default function CartCheckoutPage() {
     setGrandTotalCents(itemsTotalCents);
   }, [itemsTotalCents]);
 
+  // Reset to address step if cart items change while mid-checkout (e.g. via the cart sidebar)
+  const itemsFingerprintRef = useRef<string | null>(null);
+  useEffect(() => {
+    const fp = items.map((i) => `${i.listingId}:${i.quantity}`).join(",");
+    if (itemsFingerprintRef.current === null) {
+      itemsFingerprintRef.current = fp;
+      return;
+    }
+    if (fp !== itemsFingerprintRef.current) {
+      itemsFingerprintRef.current = fp;
+      if (step !== "address") {
+        setStep("address");
+        setRates([]);
+        setSelectedRate(null);
+        setClientSecret("");
+        setOrderId("");
+        setExtraFlatCents(0);
+        setItemBreakdown([]);
+        setFlatShippingCents(null);
+      }
+    }
+  }, [items]); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     try {
       const stored = localStorage.getItem(SAVED_ADDRESS_KEY);
@@ -102,7 +125,7 @@ export default function CartCheckoutPage() {
     } catch { /* ignore */ }
   }, []);
 
-  if (items.length === 0 && step === "address") {
+  if (items.length === 0) {
     return (
       <div className="max-w-xl mx-auto px-4 py-16 text-center">
         <p className="text-muted-foreground mb-4">Your cart is empty.</p>
