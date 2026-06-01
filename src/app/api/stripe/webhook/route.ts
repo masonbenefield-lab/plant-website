@@ -75,6 +75,7 @@ export async function POST(request: Request) {
       .from("orders")
       .update({ status: "paid" })
       .eq("stripe_payment_intent_id", pi.id)
+      .eq("status", "pending")
       .select("id, buyer_id, seller_id, amount_cents, listing_id, auction_id, shipping_address, cart_items")
       .single();
 
