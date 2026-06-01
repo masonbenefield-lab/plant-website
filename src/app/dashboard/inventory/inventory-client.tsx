@@ -858,9 +858,13 @@ export default function InventoryClient({
   async function deleteArchivedItem(row: Row) {
     setDeletingItemId(row.id);
     const supabase = createClient();
-    // Delete linked listings before removing the inventory row. The ON DELETE SET NULL
-    // constraint would otherwise null out inventory_id, causing the listing to
-    // reappear in "Not yet in inventory".
+    // Attempt to hard-delete the linked listing. If it has order history the FK on
+    // orders.listing_id will block deletion — we ignore the error and leave the listing
+    // with its inventory_id intact. After the inventory row is deleted the listing has
+    // a dangling inventory_id UUID, which keeps it out of "Not yet in inventory"
+    // (that query filters inventory_id IS NULL). This requires the
+    // listings_inventory_id_fkey FK constraint to be dropped in Supabase so deleting
+    // the inventory row doesn't trigger ON DELETE SET NULL and null out inventory_id.
     if (row.listing_id) {
       await supabase.from("listings").delete().eq("id", row.listing_id);
     }
