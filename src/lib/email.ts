@@ -1377,7 +1377,7 @@ export function buildDigestHtml({
 </html>`;
 }
 
-export async function sendMonthlyDigest({
+export async function sendWeeklyDigest({
   recipientEmail,
   username,
   userId,

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { sendMonthlyDigest, type DigestListing, type DigestAuction } from "@/lib/email";
+import { sendWeeklyDigest, type DigestListing, type DigestAuction } from "@/lib/email";
 
 export const maxDuration = 300;
 
@@ -248,7 +248,7 @@ export async function GET(request: Request) {
     if (!followedForUser.length && !freshForUser.length && !hotAuctions.length) continue;
 
     try {
-      await sendMonthlyDigest({
+      await sendWeeklyDigest({
         recipientEmail: email,
         username: profile.username,
         userId: profile.id,

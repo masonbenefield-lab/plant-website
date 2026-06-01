@@ -9,7 +9,7 @@ import { centsToDisplay } from "@/lib/stripe";
 import { Pagination } from "@/components/pagination";
 import OrderStatusSelect from "./order-status-select";
 import TrackingInput from "./tracking-input";
-import { BulkOrderActions, OrderCheckbox } from "./bulk-order-actions";
+import { BulkOrderActions, OrderCheckbox, type BulkOrderInfo } from "./bulk-order-actions";
 import type { OrderStatus } from "@/lib/supabase/types";
 import { toast } from "sonner";
 import { Printer, ExternalLink } from "lucide-react";
@@ -169,6 +169,22 @@ export default function OrdersClient({
     }
   }
 
+  function buildBulkOrderInfo(): BulkOrderInfo[] {
+    return orders
+      .filter((o) => selectedIds.includes(o.id))
+      .map((o) => {
+        const cartItems = o.cart_items as { plant_name: string; variety: string | null; quantity: number }[] | null;
+        let label: string;
+        if (cartItems?.length) {
+          label = cartItems.map((ci) => `${ci.plant_name}${ci.variety ? ` — ${ci.variety}` : ""} ×${ci.quantity}`).join(", ");
+        } else {
+          const item = o.listing_id ? listingMap[o.listing_id] : o.auction_id ? auctionMap[o.auction_id] : null;
+          label = item ? `${item.plant_name}${item.variety ? ` — ${item.variety}` : ""}` : o.id.slice(0, 8);
+        }
+        return { id: o.id, label, status: o.status };
+      });
+  }
+
   return (
     <div className="space-y-4">
       {/* Bulk actions bar */}
@@ -186,7 +202,7 @@ export default function OrdersClient({
       </div>
 
       {selectedIds.length > 0 && (
-        <BulkOrderActions selectedIds={selectedIds} onClear={() => setSelectedIds([])} />
+        <BulkOrderActions selectedOrders={buildBulkOrderInfo()} onClear={() => setSelectedIds([])} />
       )}
 
       <div className="space-y-4">

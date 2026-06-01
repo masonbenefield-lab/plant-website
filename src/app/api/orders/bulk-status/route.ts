@@ -1,8 +1,18 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import type { OrderStatus } from "@/lib/supabase/types";
+import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
+import type { Database, OrderStatus } from "@/lib/supabase/types";
+import { sendShippingNotification } from "@/lib/email";
+
+function adminClient() {
+  return createSupabaseAdmin<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 const VALID_STATUSES: OrderStatus[] = ["pending", "paid", "shipped", "delivered"];
+const STATUS_RANK: Record<string, number> = { pending: 0, paid: 1, shipped: 2, delivered: 3 };
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -17,10 +27,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Bulk order updates require a Grower or Nursery plan." }, { status: 403 });
   }
 
-  // Grower: up to 50 orders; Nursery+admin: up to 200
   const batchLimit = isAdmin || plan === "nursery" ? 200 : 50;
 
-  const { orderIds, status } = await request.json() as { orderIds: string[]; status: OrderStatus };
+  const { orderIds, status, trackingNumbers = {} } = await request.json() as {
+    orderIds: string[];
+    status: OrderStatus;
+    trackingNumbers?: Record<string, string>;
+  };
 
   if (!Array.isArray(orderIds) || orderIds.length === 0) {
     return NextResponse.json({ error: "No orders selected" }, { status: 400 });
@@ -32,16 +45,79 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid status" }, { status: 400 });
   }
 
+  // Fetch current orders to enforce forward-only transitions
+  const { data: currentOrders } = await supabase
+    .from("orders")
+    .select("id, status, buyer_id, listing_id, auction_id, cart_items")
+    .in("id", orderIds)
+    .eq("seller_id", user.id);
+
+  if (!currentOrders?.length) {
+    return NextResponse.json({ error: "No matching orders found" }, { status: 404 });
+  }
+
+  // Only update orders where the target status is a forward move
+  const eligibleIds = currentOrders
+    .filter((o) => STATUS_RANK[status] > STATUS_RANK[o.status])
+    .map((o) => o.id);
+
+  if (eligibleIds.length === 0) {
+    return NextResponse.json({ error: "Selected orders are already at or past that status" }, { status: 400 });
+  }
+
   const updatePayload: { status: OrderStatus; delivered_at?: string } = { status };
   if (status === "delivered") updatePayload.delivered_at = new Date().toISOString();
 
   const { error } = await supabase
     .from("orders")
     .update(updatePayload)
-    .in("id", orderIds)
+    .in("id", eligibleIds)
     .eq("seller_id", user.id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  return NextResponse.json({ success: true, count: orderIds.length });
+  // Handle tracking numbers for shipped orders
+  if (status === "shipped" && Object.keys(trackingNumbers).length > 0) {
+    const admin = adminClient();
+    for (const orderId of eligibleIds) {
+      const tracking = trackingNumbers[orderId]?.trim();
+      if (!tracking) continue;
+
+      await supabase
+        .from("orders")
+        .update({ tracking_number: tracking })
+        .eq("id", orderId);
+
+      // Send shipping notification email
+      try {
+        const order = currentOrders.find((o) => o.id === orderId);
+        if (!order) continue;
+        const { data: { user: buyer } } = await admin.auth.admin.getUserById(order.buyer_id);
+        if (!buyer?.email) continue;
+
+        let plantName = "your plant";
+        const cartItems = order.cart_items as { plant_name: string }[] | null;
+        if (cartItems?.length) {
+          plantName = cartItems.map((i) => i.plant_name).join(", ");
+        } else if (order.listing_id) {
+          const { data: listing } = await supabase.from("listings").select("plant_name").eq("id", order.listing_id).single();
+          if (listing) plantName = listing.plant_name;
+        } else if (order.auction_id) {
+          const { data: auction } = await supabase.from("auctions").select("plant_name").eq("id", order.auction_id).single();
+          if (auction) plantName = auction.plant_name;
+        }
+
+        await sendShippingNotification({
+          buyerEmail: buyer.email,
+          plantName,
+          trackingNumber: tracking,
+          orderId,
+        }).catch(() => {});
+      } catch {
+        // Email failure is non-fatal
+      }
+    }
+  }
+
+  return NextResponse.json({ success: true, count: eligibleIds.length });
 }

@@ -101,14 +101,14 @@ export async function POST(request: Request) {
 
   const [{ data: sellerProfile }, { data: sellerPlan }] = await Promise.all([
     supabase.from("profiles").select("stripe_account_id, stripe_onboarded").eq("id", sellerId).single(),
-    supabase.from("profiles").select("plan, is_admin").eq("id", sellerId).single(),
+    supabase.from("profiles").select("plan, is_admin, groundbreaker").eq("id", sellerId).single(),
   ]);
 
   if (!sellerProfile?.stripe_onboarded || !sellerProfile.stripe_account_id) {
     return NextResponse.json({ error: "Seller not set up for payments" }, { status: 400 });
   }
 
-  const feePercent = planFeePercent(sellerPlan?.plan, !!sellerPlan?.is_admin);
+  const feePercent = planFeePercent(sellerPlan?.plan, !!sellerPlan?.is_admin, !!(sellerPlan as { groundbreaker?: boolean } | null)?.groundbreaker);
   const shippingCents = Math.max(0, Math.round(shippingCostCents ?? 0));
   const { taxCents, calculationId } = await createStripeTaxCalculation(
     totalCents,
@@ -119,7 +119,7 @@ export async function POST(request: Request) {
   const grandTotalCents = totalCents + shippingCents + taxCents;
   const feeCents = Math.round(totalCents * (feePercent / 100));
   const stripeFeeCents = Math.round(grandTotalCents * 0.029) + 30;
-  const applicationFeeCents = feeCents + stripeFeeCents + taxCents;
+  const applicationFeeCents = feeCents + stripeFeeCents + taxCents + shippingCents;
 
   const admin = adminClient();
 

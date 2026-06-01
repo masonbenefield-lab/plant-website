@@ -9,7 +9,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { centsToDisplay } from "@/lib/stripe";
 import RateSellerForm from "./rate-seller-form";
 import DisputeButton from "./dispute-button";
-import ConfirmDeliveryButton from "./confirm-delivery-button";
 import OrdersClient from "@/app/dashboard/orders/orders-client";
 
 function adminClient() {
@@ -270,12 +269,6 @@ export default async function OrdersPage({
                     </p>
                   )}
 
-                  {order.status === "shipped" && (
-                    <div className="mt-3 pt-3 border-t flex items-center gap-3 flex-wrap">
-                      <ConfirmDeliveryButton orderId={order.id} />
-                      <span className="text-xs text-muted-foreground">Received your order? Confirm delivery to leave a review.</span>
-                    </div>
-                  )}
 
                   {(order.status === "paid" || order.status === "shipped" || order.status === "delivered") && (
                     <div className="mt-3 pt-3 border-t">
