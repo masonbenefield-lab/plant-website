@@ -7,7 +7,6 @@ import { createClient as createAdminClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import { centsToDisplay } from "@/lib/stripe";
 import { GROUNDBREAKER_CAP } from "@/lib/plan-limits";
-import HeroSearch from "@/components/hero-search";
 import LiveAuctionCard from "@/components/live-auction-card";
 import { HeroCategoryCarousel } from "@/components/hero-category-carousel";
 
@@ -176,19 +175,16 @@ export default async function LandingPage() {
                   Browse Plants
                 </Link>
               </div>
-              <p className="text-sm text-[#DFE7D4]/80 text-center lg:text-left">
+              <p className="text-xs text-cream/40 text-center lg:text-left">
                 or{" "}
-                <Link href="/auctions" className="font-medium text-white underline underline-offset-2 hover:text-[#C5D4BC]">
+                <Link href="/auctions" className="hover:text-cream/70 transition-colors">
                   browse live auctions
                 </Link>
                 {" · "}
-                <Link href="/garden" className="font-medium text-white underline underline-offset-2 hover:text-[#C5D4BC]">
+                <Link href="/garden" className="hover:text-cream/70 transition-colors">
                   start your garden log →
                 </Link>
               </p>
-
-              {/* Hero search */}
-              <HeroSearch />
             </div>
 
             {/* Right: category carousel */}
