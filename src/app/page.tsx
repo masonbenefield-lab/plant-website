@@ -603,16 +603,17 @@ export default async function LandingPage() {
               </g>
             </svg>
           </div>
-          <h2 className="text-3xl sm:text-4xl font-bold mb-4">Ready to grow your plant business?</h2>
+          <h2 className="text-3xl sm:text-4xl font-bold mb-4">Your plants deserve a home.</h2>
           <p className="text-cream/80 mb-8 text-base sm:text-lg">
-            Join hundreds of nurseries and hobbyists already buying and selling on Plantet.
+            Track your collection, connect with plant lovers, and buy or sell — free to join, no credit card needed.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link href="/signup" className={cn(buttonVariants({ size: "lg" }), "bg-terra text-white hover:bg-[#B05A39] font-semibold px-10 text-base border-0 min-w-[200px]")}>
-              Create Free Account
+            <Link href="/signup" className={cn(buttonVariants({ size: "lg" }), "bg-terra text-white hover:bg-[#B05A39] font-semibold px-10 text-base border-0 flex flex-col items-center gap-0 h-auto py-3 min-w-[200px]")}>
+              <span className="text-[11px] font-normal text-white/70 leading-none mb-1">Free to join</span>
+              Create your account
             </Link>
-            <Link href="/shop" className={cn(buttonVariants({ size: "lg" }), "bg-transparent border-2 border-cream text-cream hover:bg-cream/10 font-semibold px-10 text-base min-w-[200px]")}>
-              Browse Plants
+            <Link href="/shop" className={cn(buttonVariants({ size: "lg" }), "bg-transparent border border-cream/50 text-cream hover:bg-cream/10 font-semibold px-10 text-base min-w-[200px]")}>
+              Browse the shop
             </Link>
           </div>
         </div>
