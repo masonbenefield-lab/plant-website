@@ -37,18 +37,38 @@ export async function POST() {
 
   const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://plantet.shop").replace(/\/$/, "");
 
-  try {
-    const session = await getStripe().checkout.sessions.create({
+  async function createSession(cid: string) {
+    return getStripe().checkout.sessions.create({
       mode: "setup",
-      customer: customerId,
+      customer: cid,
       currency: "usd",
       success_url: `${appUrl}/api/stripe/setup-session/complete?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/account#bidding`,
     });
+  }
 
+  try {
+    const session = await createSession(customerId!);
     return NextResponse.json({ url: session.url });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Failed to create setup session";
+    // Stale customer ID (test/live mode switch, or data reset) — create a fresh one and retry
+    const msg = err instanceof Error ? err.message : "";
+    if (msg.includes("No such customer")) {
+      try {
+        const { data: authUser } = await admin.auth.admin.getUserById(user.id);
+        const customer = await getStripe().customers.create({
+          email: authUser?.user?.email,
+          metadata: { supabase_user_id: user.id },
+        });
+        await admin.from("profiles").update({ stripe_customer_id: customer.id }).eq("id", user.id);
+        const session = await createSession(customer.id);
+        return NextResponse.json({ url: session.url });
+      } catch (retryErr) {
+        const retryMsg = retryErr instanceof Error ? retryErr.message : "Failed to create setup session";
+        console.error("[setup-session retry]", retryMsg);
+        return NextResponse.json({ error: retryMsg }, { status: 500 });
+      }
+    }
     console.error("[setup-session]", msg);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
