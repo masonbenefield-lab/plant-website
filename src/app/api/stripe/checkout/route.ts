@@ -111,7 +111,7 @@ export async function POST(request: Request) {
     }
     const itemAmountCents = effectivePriceCents * quantity;
     const shippingCents = Math.max(0, Math.round(shippingCostCents ?? 0));
-    const { taxCents, calculationId } = await createStripeTaxCalculation(
+    const { taxCents, calculationId, stripeError: taxError } = await createStripeTaxCalculation(
       itemAmountCents,
       shippingCents,
       shippingAddress,
@@ -228,7 +228,7 @@ export async function POST(request: Request) {
       }
     }
 
-    return NextResponse.json({ clientSecret: paymentIntent.client_secret, orderId: order.id, taxCents });
+    return NextResponse.json({ clientSecret: paymentIntent.client_secret, orderId: order.id, taxCents, ...(taxError ? { _taxDebug: taxError } : {}) });
   }
 
   if (auctionId) {

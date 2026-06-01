@@ -17,7 +17,7 @@ export function calcTaxCents(itemAmountCents: number, state: string): number {
  * stripe.tax.transactions.createFromCalculation() in the webhook after payment
  * so the transaction appears in Stripe Tax → Transactions.
  *
- * Falls back to calcTaxCents() if the Stripe Tax API errors (e.g. no registrations).
+ * Falls back to calcTaxCents() if the Stripe Tax API errors.
  */
 export async function createStripeTaxCalculation(
   itemAmountCents: number,
@@ -31,20 +31,18 @@ export async function createStripeTaxCalculation(
     country: string;
   },
   reference?: string
-): Promise<{ taxCents: number; calculationId: string | null }> {
+): Promise<{ taxCents: number; calculationId: string | null; stripeError?: string }> {
   const lineItems = [
     {
       amount: itemAmountCents,
       reference: reference ?? "item",
       tax_behavior: "exclusive" as const,
-      tax_code: "txcd_99999999", // General - tangible goods
     },
     ...(shippingCents > 0
       ? [{
           amount: shippingCents,
           reference: "shipping",
           tax_behavior: "exclusive" as const,
-          tax_code: "txcd_92010001", // Shipping and handling
         }]
       : []),
   ];
@@ -68,8 +66,9 @@ export async function createStripeTaxCalculation(
 
     return { taxCents: calc.tax_amount_exclusive, calculationId: calc.id };
   } catch (err) {
-    console.error("[StripeTax] Calculation failed, falling back to local rates:", err);
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[StripeTax] Calculation failed:", msg);
     const fallback = calcTaxCents(itemAmountCents, address.state);
-    return { taxCents: fallback, calculationId: null };
+    return { taxCents: fallback, calculationId: null, stripeError: msg };
   }
 }
