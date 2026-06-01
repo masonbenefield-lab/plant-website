@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
 import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
-import { sendOrderConfirmation, sendNewOrderAlert } from "@/lib/email";
+import { sendOrderConfirmation, sendNewOrderAlert, sendLowStockAlert } from "@/lib/email";
 
 function adminClient() {
   return createSupabaseAdmin<Database>(
@@ -75,7 +75,7 @@ export async function POST(request: Request) {
       .from("orders")
       .update({ status: "paid" })
       .eq("stripe_payment_intent_id", pi.id)
-      .select("id, buyer_id, seller_id, amount_cents, listing_id, auction_id, shipping_address")
+      .select("id, buyer_id, seller_id, amount_cents, listing_id, auction_id, shipping_address, cart_items")
       .single();
 
     if (order) {
@@ -124,6 +124,55 @@ export async function POST(request: Request) {
           shippingAddress: addr,
         }).catch(() => {});
       }
+
+      // Cart checkout: decrement listing stock and inventory now that payment is confirmed
+      if (pi.metadata?.cart_checkout === "true" && order.cart_items) {
+        const cartItems = order.cart_items as { listing_id: string; quantity: number }[];
+        for (const cartItem of cartItems) {
+          const { data: listing } = await supabase
+            .from("listings")
+            .select("id, quantity, status, inventory_id, sold_out_behavior, seller_id")
+            .eq("id", cartItem.listing_id)
+            .single();
+          if (!listing) continue;
+
+          const newQty = Math.max(0, listing.quantity - cartItem.quantity);
+          const soldOut = newQty <= 0;
+          const soldOutBehavior = (listing as { sold_out_behavior?: string }).sold_out_behavior ?? "mark_sold_out";
+          await supabase
+            .from("listings")
+            .update({
+              quantity: newQty,
+              status: soldOut ? (soldOutBehavior === "auto_pause" ? "paused" : "sold_out") : "active",
+            })
+            .eq("id", listing.id);
+
+          // Update linked inventory
+          const invQuery = listing.inventory_id
+            ? supabase.from("inventory").select("id, quantity, listing_quantity, low_stock_threshold, plant_name, variety").eq("id", listing.inventory_id).single()
+            : supabase.from("inventory").select("id, quantity, listing_quantity, low_stock_threshold, plant_name, variety").eq("listing_id", listing.id).maybeSingle();
+          const { data: inv } = await invQuery;
+          if (inv) {
+            const newInvQty = Math.max(0, inv.quantity - cartItem.quantity);
+            const newListingQty = Math.max(0, (inv.listing_quantity ?? 0) - cartItem.quantity);
+            await supabase.from("inventory").update({ quantity: newInvQty, listing_quantity: newListingQty }).eq("id", inv.id);
+
+            const threshold = (inv as { low_stock_threshold?: number | null }).low_stock_threshold;
+            if (threshold && newInvQty <= threshold && newInvQty > 0) {
+              const { data: { user: sellerUser } } = await supabase.auth.admin.getUserById(listing.seller_id);
+              if (sellerUser?.email) {
+                sendLowStockAlert({
+                  sellerEmail: sellerUser.email,
+                  plantName: inv.plant_name,
+                  variety: inv.variety ?? null,
+                  quantity: newInvQty,
+                  inventoryId: inv.id,
+                }).catch(() => {});
+              }
+            }
+          }
+        }
+      }
     }
   }
 
@@ -137,7 +186,7 @@ export async function POST(request: Request) {
       .single();
 
     if (order) {
-      // Single-listing checkout: restore via PI metadata (stored at checkout time)
+      // Single-listing checkout: restore stock via PI metadata (stored at checkout time)
       if (order.listing_id && pi.metadata?.listing_qty) {
         await restoreListingStock(
           supabase,
@@ -146,19 +195,8 @@ export async function POST(request: Request) {
           pi.metadata.inventory_id ?? null
         );
       }
-
-      // Cart checkout: restore each item using the order's cart_items record
-      if (!order.listing_id && !order.auction_id && order.cart_items) {
-        const cartItems = order.cart_items as { listing_id: string; quantity: number }[];
-        for (const item of cartItems) {
-          const { data: listing } = await supabase
-            .from("listings")
-            .select("inventory_id")
-            .eq("id", item.listing_id)
-            .single();
-          await restoreListingStock(supabase, item.listing_id, item.quantity, listing?.inventory_id ?? null);
-        }
-      }
+      // Cart checkout: stock is only decremented on payment_intent.succeeded,
+      // so nothing to restore here for failed/abandoned cart checkouts.
 
       await supabase.from("orders").delete().eq("id", order.id);
     }

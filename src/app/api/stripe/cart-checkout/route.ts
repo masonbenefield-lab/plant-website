@@ -5,7 +5,6 @@ import type { Database } from "@/lib/supabase/types";
 import { getStripe } from "@/lib/stripe";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { planFeePercent } from "@/lib/plan-limits";
-import { sendLowStockAlert } from "@/lib/email";
 import { createStripeTaxCalculation } from "@/lib/tax";
 
 function adminClient() {
@@ -114,38 +113,10 @@ export async function POST(request: Request) {
   const stripeFeeCents = Math.round(grandTotalCents * 0.029) + 30;
   const applicationFeeCents = feeCents + stripeFeeCents + taxCents;
 
-  // Atomically decrement stock for each item before creating PaymentIntent — prevents overselling
   const admin = adminClient();
-  const decrementedItems: { listingId: string; originalQty: number }[] = [];
 
-  for (const cartItem of items) {
-    const listing = listings.find((l) => l.id === cartItem.listingId)!;
-    const newQty = listing.quantity - cartItem.quantity;
-    const soldOut = newQty <= 0;
-    const soldOutBehavior = (listing as { sold_out_behavior?: string }).sold_out_behavior ?? "mark_sold_out";
-
-    const { data: decremented } = await admin
-      .from("listings")
-      .update({
-        quantity: newQty,
-        status: soldOut ? (soldOutBehavior === "auto_pause" ? "paused" : "sold_out") : "active",
-      })
-      .eq("id", listing.id)
-      .gte("quantity", cartItem.quantity)
-      .select("id");
-
-    if (!decremented?.length) {
-      await Promise.all(
-        decrementedItems.map((d) =>
-          admin.from("listings").update({ quantity: d.originalQty, status: "active" }).eq("id", d.listingId)
-        )
-      );
-      return NextResponse.json({ error: `${listing.plant_name} just sold out — someone else got the last one.` }, { status: 409 });
-    }
-
-    decrementedItems.push({ listingId: listing.id, originalQty: listing.quantity });
-  }
-
+  // Stock is decremented in the webhook (payment_intent.succeeded) so abandoned
+  // checkouts do not permanently drain inventory.
   const paymentIntent = await getStripe().paymentIntents.create({
     amount: grandTotalCents,
     currency: "usd",
@@ -159,13 +130,6 @@ export async function POST(request: Request) {
       tax_cents: String(taxCents),
       ...(calculationId ? { tax_calculation_id: calculationId } : {}),
     },
-  }).catch(async (err) => {
-    await Promise.all(
-      decrementedItems.map((d) =>
-        admin.from("listings").update({ quantity: d.originalQty, status: "active" }).eq("id", d.listingId)
-      )
-    );
-    throw err;
   });
 
   const { data: order, error: orderError } = await supabase
@@ -187,50 +151,8 @@ export async function POST(request: Request) {
     .single();
 
   if (orderError) {
-    await Promise.all(
-      decrementedItems.map((d) =>
-        admin.from("listings").update({ quantity: d.originalQty, status: "active" }).eq("id", d.listingId)
-      )
-    );
     await getStripe().paymentIntents.cancel(paymentIntent.id).catch(() => {});
     return NextResponse.json({ error: orderError.message }, { status: 500 });
-  }
-
-  // Update linked inventory records
-  for (const cartItem of items) {
-    const listing = listings.find((l) => l.id === cartItem.listingId)!;
-    const newQty = listing.quantity - cartItem.quantity;
-    const soldOut = newQty <= 0;
-
-    const cartInvQuery = listing.inventory_id
-      ? admin.from("inventory").select("id, quantity, listing_quantity, low_stock_threshold, plant_name, variety").eq("id", listing.inventory_id).single()
-      : admin.from("inventory").select("id, quantity, listing_quantity, low_stock_threshold, plant_name, variety").eq("listing_id", listing.id).maybeSingle();
-
-    const { data: inv } = await cartInvQuery;
-    if (inv) {
-      const invId: string = (inv as { id: string }).id;
-      const newListingQty = Math.max(0, (inv.listing_quantity ?? 0) - cartItem.quantity);
-      const newInvQty = Math.max(0, inv.quantity - cartItem.quantity);
-      await admin.from("inventory").update({
-        quantity: newInvQty,
-        listing_quantity: newListingQty,
-      }).eq("id", invId);
-
-      const threshold = (inv as { low_stock_threshold?: number | null }).low_stock_threshold;
-      if (threshold && newInvQty <= threshold && newInvQty > 0) {
-        const { data: sellerAuth } = await admin.auth.admin.getUserById(listing.seller_id);
-        const sellerEmail = sellerAuth?.user?.email;
-        if (sellerEmail) {
-          sendLowStockAlert({
-            sellerEmail,
-            plantName: inv.plant_name,
-            variety: inv.variety ?? null,
-            quantity: newInvQty,
-            inventoryId: invId,
-          }).catch(() => {});
-        }
-      }
-    }
   }
 
   return NextResponse.json({ clientSecret: paymentIntent.client_secret, orderId: order.id, taxCents });
