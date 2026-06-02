@@ -148,16 +148,6 @@ export default async function AuctionPage({
             </div>
           )}
 
-          {(seller as { calculated_shipping_enabled?: boolean } | null)?.calculated_shipping_enabled !== false && (
-            <div className="mb-3">
-              <ShippingEstimate
-                auctionId={auction.id}
-                freeShipping={shippingFree}
-                shippingCostCents={shippingCostCents}
-              />
-            </div>
-          )}
-
           <AuctionBidPanel
             auction={{
               id: auction.id,
@@ -177,6 +167,7 @@ export default async function AuctionPage({
             buyerHasPaymentMethod={!!buyerProfile?.data?.default_payment_method_id}
             buyerHasShippingAddress={!!buyerProfile?.data?.saved_shipping_address}
             existingOrderStatus={existingOrderStatus}
+            showShippingEstimate={(seller as { calculated_shipping_enabled?: boolean } | null)?.calculated_shipping_enabled !== false}
             recentBids={
               (bids ?? []).map((b) => ({
                 id: b.id,

@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { centsToDisplay, dollarsToCents } from "@/lib/stripe";
 import Link from "next/link";
 import { ChevronDown, ChevronUp, AlertTriangle, CreditCard } from "lucide-react";
+import { ShippingEstimate } from "@/components/shipping-estimate";
 import type { AuctionStatus } from "@/lib/supabase/types";
 
 interface AuctionData {
@@ -58,6 +59,7 @@ export default function AuctionBidPanel({
   buyerHasShippingAddress,
   existingOrderStatus,
   recentBids: initialBids,
+  showShippingEstimate = false,
 }: {
   auction: AuctionData;
   userId: string | null;
@@ -65,6 +67,7 @@ export default function AuctionBidPanel({
   buyerHasShippingAddress: boolean;
   existingOrderStatus: string | null;
   recentBids: Bid[];
+  showShippingEstimate?: boolean;
 }) {
   const router = useRouter();
   const [auction, setAuction] = useState(initialAuction);
@@ -898,6 +901,14 @@ export default function AuctionBidPanel({
             </button>
           )}
         </div>
+      )}
+
+      {showShippingEstimate && (
+        <ShippingEstimate
+          auctionId={auction.id}
+          freeShipping={auction.free_shipping}
+          shippingCostCents={auction.shipping_cost_cents}
+        />
       )}
 
       {/* How auctions work — collapsible info */}
