@@ -366,7 +366,8 @@ export default function AuctionBidPanel({
   }
 
   const isEnded = auction.status !== "active" || new Date(auction.ends_at) <= new Date();
-  const isWinner = isEnded && auction.current_bidder_id === userId;
+  const reserveMet = !auction.reserve_price_cents || auction.current_bid_cents >= auction.reserve_price_cents;
+  const isWinner = isEnded && auction.current_bidder_id === userId && reserveMet;
   const msLeft = new Date(auction.ends_at).getTime() - Date.now();
   const isNearEnd = !isEnded && msLeft > 0 && msLeft < 5 * 60 * 1000;
   const minBidForDisplay = auction.current_bid_cents + getMinIncrement(auction.current_bid_cents);
@@ -462,6 +463,13 @@ export default function AuctionBidPanel({
         >
           You won! Complete Purchase →
         </a>
+      )}
+
+      {isEnded && auction.current_bidder_id === userId && !reserveMet && !existingOrderStatus && !orderConfirmed && (
+        <div className="rounded-md border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
+          <p className="font-medium">Reserve not met — you had the highest bid</p>
+          <p className="text-xs mt-0.5">The seller may offer to sell at your bid price. You&apos;ll receive an email if they do.</p>
+        </div>
       )}
 
       {!isEnded && userId && userId !== auction.seller_id && !buyerHasPaymentMethod && !buyerHasShippingAddress && (
