@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -47,6 +48,7 @@ export default function DisputeThread({
   sellerDisplayName: string;
   canEscalate: boolean;
 }) {
+  const router = useRouter();
   const [messages, setMessages] = useState<DisputeMessage[]>(initialMessages);
   const [status, setStatus] = useState(initialStatus);
   const [lastRepliedByRole, setLastRepliedByRole] = useState(initialLastRepliedByRole);
@@ -97,6 +99,7 @@ export default function DisputeThread({
     if (data.error) { toast.error(data.error); return; }
     setStatus("resolved");
     toast.success("Dispute marked as resolved.");
+    router.refresh();
   }
 
   async function escalate() {
@@ -108,6 +111,7 @@ export default function DisputeThread({
     setStatus("escalated");
     setCanEscalate(false);
     toast.success("Dispute escalated to Plantet.");
+    router.refresh();
   }
 
   async function refund() {
@@ -119,6 +123,7 @@ export default function DisputeThread({
     if (data.error) { toast.error(data.error); return; }
     setStatus("resolved");
     toast.success("Refund issued. The dispute has been resolved.");
+    router.refresh();
   }
 
   const st = STATUS_LABEL[status] ?? { label: status, color: "bg-gray-100 text-gray-600" };
