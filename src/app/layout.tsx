@@ -8,6 +8,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { CartProvider } from "@/lib/cart";
 import { CartDrawer } from "@/components/cart-drawer";
 import { createClient } from "@/lib/supabase/server";
+import { unstable_noStore as noStore } from "next/cache";
 
 const inter = Inter({
   variable: "--font-sans",
@@ -34,6 +35,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  noStore();
   const supabase = await createClient();
   const {
     data: { user },
