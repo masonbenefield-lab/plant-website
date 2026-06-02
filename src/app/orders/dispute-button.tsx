@@ -20,13 +20,33 @@ const REASONS = [
   "Other issue",
 ];
 
-export default function DisputeButton({ orderId }: { orderId: string }) {
+type DisputeState = {
+  id: string;
+  status: string;
+  reason: string;
+  seller_response: string | null;
+  created_at: string;
+} | null;
+
+export default function DisputeButton({
+  orderId,
+  existingDispute,
+}: {
+  orderId: string;
+  existingDispute?: DisputeState;
+}) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [details, setDetails] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [dispute, setDispute] = useState<DisputeState>(existingDispute ?? null);
 
-  async function submit(e: React.FormEvent) {
+  const canEscalate = dispute && dispute.status !== "resolved" && dispute.status !== "escalated" && (
+    dispute.status === "seller_responded" ||
+    (Date.now() - new Date(dispute.created_at).getTime()) >= 5 * 24 * 60 * 60 * 1000
+  );
+
+  async function submitDispute(e: React.FormEvent) {
     e.preventDefault();
     if (!reason) return;
     if (details) {
@@ -48,13 +68,70 @@ export default function DisputeButton({ orderId }: { orderId: string }) {
     if (data.error) {
       toast.error(data.error);
     } else {
-      toast.success("Your issue has been reported — we'll follow up via email.");
+      toast.success("The seller has been notified. They have 5 days to respond.");
+      setDispute({ id: data.disputeId, status: "seller_notified", reason, seller_response: null, created_at: new Date().toISOString() });
       setOpen(false);
       setReason("");
       setDetails("");
     }
   }
 
+  async function escalate() {
+    if (!dispute) return;
+    setSubmitting(true);
+    const res = await fetch(`/api/orders/dispute/${dispute.id}/escalate`, { method: "POST" });
+    const data = await res.json();
+    setSubmitting(false);
+    if (data.error) {
+      toast.error(data.error);
+    } else {
+      toast.success("Dispute escalated to Plantet — we'll review it and follow up.");
+      setDispute((d) => d ? { ...d, status: "escalated" } : d);
+    }
+  }
+
+  // Already escalated — show static badge
+  if (dispute?.status === "escalated") {
+    return (
+      <p className="text-xs text-amber-600 flex items-center gap-1">
+        <AlertTriangle size={11} /> Dispute escalated to Plantet
+      </p>
+    );
+  }
+
+  // Already resolved
+  if (dispute?.status === "resolved") {
+    return (
+      <p className="text-xs text-leaf flex items-center gap-1">
+        ✓ Dispute resolved
+      </p>
+    );
+  }
+
+  // Open dispute — show status + optional escalate
+  if (dispute) {
+    return (
+      <div className="space-y-1">
+        <p className="text-xs text-amber-600 flex items-center gap-1">
+          <AlertTriangle size={11} />
+          {dispute.status === "seller_responded"
+            ? "Seller responded — view in My Disputes"
+            : "Dispute open — awaiting seller response"}
+        </p>
+        {canEscalate && (
+          <button
+            onClick={escalate}
+            disabled={submitting}
+            className="text-xs text-red-600 hover:underline disabled:opacity-50"
+          >
+            {submitting ? "Escalating…" : "Escalate to Plantet →"}
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  // No dispute yet — show report button
   return (
     <>
       <button
@@ -69,10 +146,10 @@ export default function DisputeButton({ orderId }: { orderId: string }) {
           <DialogHeader>
             <DialogTitle>Report an Issue</DialogTitle>
             <DialogDescription>
-              Describe the problem with your order. We&apos;ll review it and follow up via email.
+              We&apos;ll notify the seller first. If they don&apos;t resolve it within 5 days, you can escalate to Plantet.
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={submit} className="space-y-4 mt-1">
+          <form onSubmit={submitDispute} className="space-y-4 mt-1">
             <div className="space-y-1">
               <Label>What went wrong? *</Label>
               <Select value={reason} onValueChange={v => { if (v) setReason(v); }}>
@@ -82,7 +159,6 @@ export default function DisputeButton({ orderId }: { orderId: string }) {
                 <SelectContent>
                   {REASONS.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                 </SelectContent>
-
               </Select>
             </div>
             <div className="space-y-1">
@@ -99,7 +175,7 @@ export default function DisputeButton({ orderId }: { orderId: string }) {
             <div className="flex gap-2 pt-1">
               <Button type="button" variant="outline" onClick={() => setOpen(false)} className="flex-1">Cancel</Button>
               <Button type="submit" disabled={submitting || !reason} className="flex-1 bg-red-600 hover:bg-red-700">
-                {submitting ? "Submitting…" : "Submit Report"}
+                {submitting ? "Submitting…" : "Notify Seller"}
               </Button>
             </div>
           </form>

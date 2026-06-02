@@ -196,6 +196,44 @@ export interface Database {
         Relationships: [];
       };
 
+      order_disputes: {
+        Row: {
+          id: string;
+          order_id: string;
+          buyer_id: string;
+          seller_id: string;
+          reason: string;
+          details: string | null;
+          seller_response: string | null;
+          status: string;
+          created_at: string;
+          responded_at: string | null;
+          escalated_at: string | null;
+          resolved_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          order_id: string;
+          buyer_id: string;
+          seller_id: string;
+          reason: string;
+          details?: string | null;
+          seller_response?: string | null;
+          status?: string;
+          created_at?: string;
+          responded_at?: string | null;
+          escalated_at?: string | null;
+          resolved_at?: string | null;
+        };
+        Update: {
+          seller_response?: string | null;
+          status?: string;
+          responded_at?: string | null;
+          escalated_at?: string | null;
+          resolved_at?: string | null;
+        };
+        Relationships: [];
+      };
       offers: {
         Row: {
           id: string;

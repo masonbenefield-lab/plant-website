@@ -12,7 +12,8 @@ import TrackingInput from "./tracking-input";
 import { BulkOrderActions, OrderCheckbox, type BulkOrderInfo } from "./bulk-order-actions";
 import type { OrderStatus } from "@/lib/supabase/types";
 import { toast } from "sonner";
-import { Printer, ExternalLink } from "lucide-react";
+import { Printer, ExternalLink, AlertTriangle } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 
 function detectCarrier(tracking: string): string {
   if (/^1Z[0-9A-Z]{16}$/i.test(tracking)) return "UPS";
@@ -131,11 +132,122 @@ function BuyLabelButton({ orderId, labelUrl: initialLabelUrl, createdAt }: { ord
   );
 }
 
+type DisputeRow = {
+  id: string;
+  order_id: string;
+  buyer_id: string;
+  reason: string;
+  details: string | null;
+  seller_response: string | null;
+  status: string;
+  created_at: string;
+};
+
+const DISPUTE_STATUS_LABEL: Record<string, { label: string; color: string }> = {
+  seller_notified: { label: "Dispute filed — awaiting your response", color: "text-amber-600" },
+  seller_responded: { label: "You responded — awaiting buyer", color: "text-blue-600" },
+  escalated: { label: "Escalated to Plantet", color: "text-red-600" },
+};
+
+function DisputePanel({ dispute }: { dispute: DisputeRow }) {
+  const [expanded, setExpanded] = useState(false);
+  const [response, setResponse] = useState(dispute.seller_response ?? "");
+  const [loading, setLoading] = useState(false);
+  const [currentStatus, setCurrentStatus] = useState(dispute.status);
+  const [currentResponse, setCurrentResponse] = useState(dispute.seller_response);
+
+  const st = DISPUTE_STATUS_LABEL[currentStatus];
+
+  async function submitResponse() {
+    if (!response.trim()) return;
+    setLoading(true);
+    const res = await fetch(`/api/orders/dispute/${dispute.id}/respond`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ response: response.trim() }),
+    });
+    const data = await res.json();
+    setLoading(false);
+    if (data.error) { toast.error(data.error); return; }
+    toast.success("Response sent to buyer.");
+    setCurrentResponse(response.trim());
+    setCurrentStatus("seller_responded");
+  }
+
+  async function markResolved() {
+    setLoading(true);
+    const res = await fetch(`/api/orders/dispute/${dispute.id}/resolve`, { method: "POST" });
+    const data = await res.json();
+    setLoading(false);
+    if (data.error) { toast.error(data.error); return; }
+    toast.success("Dispute marked as resolved.");
+    setCurrentStatus("resolved");
+  }
+
+  if (currentStatus === "resolved") return null;
+
+  return (
+    <div className="mt-3 pt-3 border-t border-amber-200">
+      <button
+        onClick={() => setExpanded(v => !v)}
+        className={`flex items-center gap-1.5 text-xs font-medium ${st?.color ?? "text-amber-600"}`}
+      >
+        <AlertTriangle size={12} />
+        {st?.label ?? "Dispute open"}
+        <span className="text-muted-foreground ml-1">{expanded ? "▲" : "▼"}</span>
+      </button>
+
+      {expanded && (
+        <div className="mt-3 space-y-3 text-sm">
+          <div className="bg-muted/40 rounded p-3">
+            <p className="text-xs font-medium text-muted-foreground mb-1">Buyer&apos;s report</p>
+            <p className="font-medium">{dispute.reason}</p>
+            {dispute.details && <p className="mt-1 text-muted-foreground">{dispute.details}</p>}
+          </div>
+
+          {currentResponse && (
+            <div className="bg-leaf/5 border border-leaf/20 rounded p-3">
+              <p className="text-xs font-medium text-leaf mb-1">Your response</p>
+              <p>{currentResponse}</p>
+            </div>
+          )}
+
+          {currentStatus !== "escalated" && (
+            <div className="space-y-2">
+              <Textarea
+                value={response}
+                onChange={e => setResponse(e.target.value)}
+                placeholder="Reply to the buyer about this issue…"
+                rows={3}
+                maxLength={500}
+                className="text-sm"
+              />
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={submitResponse} disabled={loading || !response.trim()} className="text-xs h-7">
+                  {loading ? "Sending…" : currentResponse ? "Update response" : "Send response"}
+                </Button>
+                <Button size="sm" variant="outline" onClick={markResolved} disabled={loading} className="text-xs h-7 text-leaf border-leaf/40 hover:bg-leaf/5">
+                  Mark resolved
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {currentStatus === "escalated" && (
+            <p className="text-xs text-red-600">This dispute has been escalated to Plantet for review.</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function OrdersClient({
   orders,
   listingMap,
   auctionMap,
   buyerMap,
+  disputeMap = {},
   page,
   totalPages,
   total,
@@ -148,6 +260,7 @@ export default function OrdersClient({
   listingMap: Record<string, ItemRow>;
   auctionMap: Record<string, ItemRow>;
   buyerMap: Record<string, BuyerRow>;
+  disputeMap?: Record<string, DisputeRow>;
   page: number;
   totalPages: number;
   total: number;
@@ -216,6 +329,7 @@ export default function OrdersClient({
             ? auctionMap[order.auction_id]
             : null;
           const buyer = buyerMap[order.buyer_id];
+          const dispute = disputeMap[order.id];
           const addr = order.shipping_address as {
             name: string; line1: string; line2?: string | null;
             city: string; state: string; zip: string; country: string;
@@ -304,6 +418,7 @@ export default function OrdersClient({
                     </a>
                   )}
                 </div>
+                {dispute && <DisputePanel dispute={dispute} />}
               </CardContent>
             </Card>
           );

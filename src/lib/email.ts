@@ -2159,3 +2159,165 @@ export async function sendGardenCareReminder({
     html: buildGardenCareReminderHtml({ username, userId, month, items }),
   });
 }
+
+// ─── Order Disputes ────────────────────────────────────────────────────────────
+
+export async function sendDisputeToSeller({
+  sellerEmail,
+  buyerUsername,
+  reason,
+  details,
+  orderId,
+  disputeId,
+}: {
+  sellerEmail: string;
+  buyerUsername: string;
+  reason: string;
+  details?: string | null;
+  orderId: string;
+  disputeId: string;
+}) {
+  const resend = getResend();
+  const base = siteBase();
+  await resend.emails.send({
+    from: FROM,
+    to: sellerEmail,
+    subject: `A buyer has reported an issue with order #${orderId.slice(0, 8)}`,
+    html: emailBase({
+      title: "Order dispute filed",
+      heading: "A buyer reported an issue",
+      body: `
+        <p style="margin:0 0 16px"><strong>${buyerUsername}</strong> has reported a problem with one of your orders.</p>
+        <table style="width:100%;border-collapse:collapse;margin-bottom:16px">
+          <tr><td style="padding:8px 12px;background:#f5f5f5;font-weight:600;width:36%">Reason</td><td style="padding:8px 12px;background:#fafafa">${reason}</td></tr>
+          ${details ? `<tr><td style="padding:8px 12px;background:#f5f5f5;font-weight:600">Details</td><td style="padding:8px 12px;background:#fafafa">${details.replace(/\n/g, "<br>")}</td></tr>` : ""}
+        </table>
+        <p style="margin:0 0 16px">Please respond to the buyer through your orders dashboard. If the issue is not addressed within 5 days, the buyer may escalate it to Plantet for review.</p>
+        <p style="margin:0"><a href="${base}/orders?tab=sales&dispute=${disputeId}" style="display:inline-block;padding:10px 20px;background:#2d6a4f;color:#fff;text-decoration:none;border-radius:6px;font-weight:600">View &amp; Respond →</a></p>
+      `,
+    }),
+  });
+}
+
+export async function sendDisputeConfirmationToBuyer({
+  buyerEmail,
+  sellerUsername,
+  reason,
+}: {
+  buyerEmail: string;
+  sellerUsername: string;
+  reason: string;
+}) {
+  const resend = getResend();
+  const base = siteBase();
+  await resend.emails.send({
+    from: FROM,
+    to: buyerEmail,
+    subject: "Your order dispute has been filed",
+    html: emailBase({
+      title: "Dispute filed",
+      heading: "We've notified the seller",
+      body: `
+        <p style="margin:0 0 16px">Your dispute has been filed and <strong>${sellerUsername}</strong> has been notified.</p>
+        <table style="width:100%;border-collapse:collapse;margin-bottom:16px">
+          <tr><td style="padding:8px 12px;background:#f5f5f5;font-weight:600;width:36%">Reason</td><td style="padding:8px 12px;background:#fafafa">${reason}</td></tr>
+        </table>
+        <p style="margin:0 0 16px">The seller has 5 days to respond. If they don't resolve the issue to your satisfaction, you can escalate the dispute to Plantet for review.</p>
+        <p style="margin:0"><a href="${base}/orders?tab=disputes" style="display:inline-block;padding:10px 20px;background:#2d6a4f;color:#fff;text-decoration:none;border-radius:6px;font-weight:600">View dispute →</a></p>
+      `,
+    }),
+  });
+}
+
+export async function sendDisputeResponseToBuyer({
+  buyerEmail,
+  sellerUsername,
+  sellerResponse,
+  disputeId,
+}: {
+  buyerEmail: string;
+  sellerUsername: string;
+  sellerResponse: string;
+  disputeId: string;
+}) {
+  const resend = getResend();
+  const base = siteBase();
+  await resend.emails.send({
+    from: FROM,
+    to: buyerEmail,
+    subject: `${sellerUsername} responded to your order dispute`,
+    html: emailBase({
+      title: "Seller responded",
+      heading: "The seller has responded to your dispute",
+      body: `
+        <p style="margin:0 0 16px"><strong>${sellerUsername}</strong> has replied to your dispute:</p>
+        <blockquote style="margin:0 0 16px;padding:12px 16px;background:#f5f5f5;border-left:3px solid #2d6a4f;border-radius:4px">${sellerResponse.replace(/\n/g, "<br>")}</blockquote>
+        <p style="margin:0 0 16px">If this resolves your issue, no further action is needed. If you're not satisfied, you can escalate the dispute to Plantet for review.</p>
+        <p style="margin:0"><a href="${base}/orders?tab=disputes&id=${disputeId}" style="display:inline-block;padding:10px 20px;background:#2d6a4f;color:#fff;text-decoration:none;border-radius:6px;font-weight:600">View dispute →</a></p>
+      `,
+    }),
+  });
+}
+
+export async function sendDisputeResolvedToBuyer({
+  buyerEmail,
+  sellerUsername,
+}: {
+  buyerEmail: string;
+  sellerUsername: string;
+}) {
+  const resend = getResend();
+  const base = siteBase();
+  await resend.emails.send({
+    from: FROM,
+    to: buyerEmail,
+    subject: "Your order dispute has been marked resolved",
+    html: emailBase({
+      title: "Dispute resolved",
+      heading: "Dispute marked as resolved",
+      body: `
+        <p style="margin:0 0 16px"><strong>${sellerUsername}</strong> has marked your dispute as resolved.</p>
+        <p style="margin:0 0 16px">If you believe the issue is not actually resolved, you can still escalate it to Plantet from your disputes page within 5 days.</p>
+        <p style="margin:0"><a href="${base}/orders?tab=disputes" style="display:inline-block;padding:10px 20px;background:#2d6a4f;color:#fff;text-decoration:none;border-radius:6px;font-weight:600">View dispute →</a></p>
+      `,
+    }),
+  });
+}
+
+export async function sendDisputeEscalatedToAdmin({
+  adminEmail,
+  buyerUsername,
+  sellerUsername,
+  reason,
+  details,
+  sellerResponse,
+  orderId,
+  disputeId,
+}: {
+  adminEmail: string;
+  buyerUsername: string;
+  sellerUsername: string;
+  reason: string;
+  details?: string | null;
+  sellerResponse?: string | null;
+  orderId: string;
+  disputeId: string;
+}) {
+  const resend = getResend();
+  const base = siteBase();
+  await resend.emails.send({
+    from: FROM,
+    to: adminEmail,
+    subject: `Escalated dispute — Order #${orderId.slice(0, 8)}`,
+    html: `
+      <p><strong>Buyer:</strong> ${buyerUsername}</p>
+      <p><strong>Seller:</strong> ${sellerUsername}</p>
+      <p><strong>Order ID:</strong> ${orderId}</p>
+      <p><strong>Dispute ID:</strong> ${disputeId}</p>
+      <p><strong>Reason:</strong> ${reason}</p>
+      ${details ? `<p><strong>Buyer details:</strong><br>${details.replace(/\n/g, "<br>")}</p>` : ""}
+      ${sellerResponse ? `<p><strong>Seller response:</strong><br>${sellerResponse.replace(/\n/g, "<br>")}</p>` : "<p><em>Seller did not respond.</em></p>"}
+      <p><a href="${base}/admin/reports">View in admin →</a></p>
+    `,
+  });
+}

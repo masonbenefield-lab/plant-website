@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { centsToDisplay } from "@/lib/stripe";
 import RateSellerForm from "./rate-seller-form";
 import DisputeButton from "./dispute-button";
+import EscalateButton from "./escalate-button";
 import OrdersClient from "@/app/dashboard/orders/orders-client";
 import { ExpiredAuctionBanner } from "./expired-auction-banner";
 
@@ -58,26 +59,34 @@ export const dynamic = "force-dynamic";
 export default async function OrdersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; tab?: string; page?: string }>;
+  searchParams: Promise<{ status?: string; tab?: string; page?: string; id?: string }>;
 }) {
   const { status = "", tab: tabParam, page: pageParam } = await searchParams;
-  const activeTab = tabParam === "sales" ? "sales" : "purchases";
+  const activeTab = tabParam === "sales" ? "sales" : tabParam === "disputes" ? "disputes" : "purchases";
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { count: pendingSalesCount } = await supabase
-    .from("orders")
-    .select("*", { count: "exact", head: true })
-    .eq("seller_id", user.id)
-    .eq("status", "paid");
+  const [{ count: pendingSalesCount }, { count: openDisputeCount }] = await Promise.all([
+    supabase
+      .from("orders")
+      .select("*", { count: "exact", head: true })
+      .eq("seller_id", user.id)
+      .eq("status", "paid"),
+    supabase
+      .from("order_disputes")
+      .select("*", { count: "exact", head: true })
+      .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
+      .not("status", "in", '("resolved")'),
+  ]);
 
   const tabBar = (
     <div className="flex border-b mb-6">
       {([
         { key: "purchases", label: "My Purchases", href: "/orders", badge: null },
         { key: "sales", label: "My Sales", href: "/orders?tab=sales", badge: pendingSalesCount ?? 0 },
+        { key: "disputes", label: "My Disputes", href: "/orders?tab=disputes", badge: openDisputeCount ?? 0 },
       ] as const).map(({ key, label, href, badge }) => (
         <Link
           key={key}
@@ -90,7 +99,7 @@ export default async function OrdersPage({
         >
           {label}
           {badge != null && badge > 0 && (
-            <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full text-xs font-semibold bg-blue-500 text-white">
+            <span className={`inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full text-xs font-semibold text-white ${key === "disputes" ? "bg-red-500" : "bg-blue-500"}`}>
               {badge}
             </span>
           )}
@@ -149,7 +158,8 @@ export default async function OrdersPage({
     const allListingIds = [...new Set([...listingIds, ...cartListingIds])];
 
     const admin = adminClient();
-    const [{ data: listings }, { data: auctionItems }, { data: sellers }, { data: existingRatings }, { data: gardenPlants }] =
+    const orderIds = orders.map((o) => o.id);
+    const [{ data: listings }, { data: auctionItems }, { data: sellers }, { data: existingRatings }, { data: gardenPlants }, { data: openDisputes }] =
       await Promise.all([
         listingIds.length
           ? admin.from("listings").select("id, plant_name, variety, images, care_guide_pdf_url").in("id", listingIds)
@@ -162,6 +172,9 @@ export default async function OrdersPage({
         allListingIds.length
           ? supabase.from("garden_plants").select("source_listing_id").eq("user_id", user.id).in("source_listing_id", allListingIds)
           : { data: [] },
+        orderIds.length
+          ? supabase.from("order_disputes").select("id, order_id, status, reason, seller_response, created_at").in("order_id", orderIds).neq("status", "resolved")
+          : { data: [] },
       ]);
 
     const listingMap = Object.fromEntries((listings ?? []).map((l) => [l.id, l]));
@@ -169,6 +182,7 @@ export default async function OrdersPage({
     const sellerMap = Object.fromEntries((sellers ?? []).map((s) => [s.id, s]));
     const ratedOrderIds = new Set(existingRatings?.map((r) => r.order_id) ?? []);
     const inGardenListingIds = new Set(gardenPlants?.map((g) => g.source_listing_id).filter(Boolean) ?? []);
+    const disputeByOrderId = Object.fromEntries((openDisputes ?? []).map((d) => [d.order_id, d]));
 
     return (
       <div className="max-w-4xl mx-auto px-4 py-10">
@@ -304,7 +318,7 @@ export default async function OrdersPage({
 
                   {(order.status === "paid" || order.status === "shipped" || order.status === "delivered") && (
                     <div className="mt-3 pt-3 border-t">
-                      <DisputeButton orderId={order.id} />
+                      <DisputeButton orderId={order.id} existingDispute={disputeByOrderId[order.id] ?? null} />
                     </div>
                   )}
 
@@ -399,6 +413,116 @@ export default async function OrdersPage({
     );
   }
 
+  // ── DISPUTES TAB ──────────────────────────────────────────────
+  if (activeTab === "disputes") {
+    const { data: disputes } = await supabase
+      .from("order_disputes")
+      .select("id, order_id, buyer_id, seller_id, reason, details, seller_response, status, created_at, escalated_at, resolved_at")
+      .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
+      .order("created_at", { ascending: false });
+
+    if (!disputes?.length) {
+      return (
+        <div className="max-w-4xl mx-auto px-4 py-10">
+          <h1 className="text-2xl font-bold mb-4">Orders</h1>
+          {tabBar}
+          <div className="text-center py-16 border rounded-xl bg-muted/30">
+            <p className="text-4xl mb-4">✅</p>
+            <p className="font-semibold mb-1">No disputes</p>
+            <p className="text-sm text-muted-foreground">You have no open or past disputes.</p>
+          </div>
+        </div>
+      );
+    }
+
+    // Fetch order + party info for all disputes
+    const disputeOrderIds = disputes.map((d) => d.order_id);
+    const partyIds = [...new Set(disputes.flatMap((d) => [d.buyer_id, d.seller_id]))];
+    const [{ data: disputeOrders }, { data: partyProfiles }] = await Promise.all([
+      supabase.from("orders").select("id, amount_cents, listing_id, auction_id, cart_items").in("id", disputeOrderIds),
+      supabase.from("profiles").select("id, username, display_name").in("id", partyIds),
+    ]);
+    const disputeOrderMap = Object.fromEntries((disputeOrders ?? []).map((o) => [o.id, o]));
+    const partyMap = Object.fromEntries((partyProfiles ?? []).map((p) => [p.id, p]));
+
+    const statusLabel: Record<string, { label: string; color: string }> = {
+      seller_notified: { label: "Awaiting seller response", color: "bg-yellow-100 text-yellow-800" },
+      seller_responded: { label: "Seller responded", color: "bg-blue-100 text-blue-800" },
+      escalated: { label: "Escalated to Plantet", color: "bg-red-100 text-red-700" },
+      resolved: { label: "Resolved", color: "bg-[#DFE7D4] text-forest" },
+    };
+
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-10">
+        <h1 className="text-2xl font-bold mb-4">Orders</h1>
+        {tabBar}
+        <div className="space-y-4">
+          {disputes.map((d) => {
+            const order = disputeOrderMap[d.order_id];
+            const isBuyer = d.buyer_id === user.id;
+            const otherPartyId = isBuyer ? d.seller_id : d.buyer_id;
+            const otherParty = partyMap[otherPartyId];
+            const st = statusLabel[d.status] ?? { label: d.status, color: "bg-gray-100 text-gray-600" };
+            const canEscalate = isBuyer && d.status !== "resolved" && d.status !== "escalated" && (
+              d.status === "seller_responded" ||
+              (Date.now() - new Date(d.created_at).getTime()) >= 5 * 24 * 60 * 60 * 1000
+            );
+
+            return (
+              <Card key={d.id}>
+                <CardContent className="p-5 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-sm">{d.reason}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {isBuyer ? "Seller" : "Buyer"}:{" "}
+                        {otherParty?.username ? (
+                          <Link href={`/sellers/${otherParty.username}`} className="text-leaf hover:underline">
+                            {otherParty.display_name ?? otherParty.username}
+                          </Link>
+                        ) : "—"}
+                        {order && <span> · {centsToDisplay(order.amount_cents)}</span>}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Filed {new Date(d.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                      </p>
+                    </div>
+                    <Badge className={st.color} variant="secondary">{st.label}</Badge>
+                  </div>
+
+                  {d.details && (
+                    <div className="text-sm bg-muted/40 rounded p-3">
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Your report</p>
+                      <p>{d.details}</p>
+                    </div>
+                  )}
+
+                  {d.seller_response && (
+                    <div className="text-sm bg-leaf/5 border border-leaf/20 rounded p-3">
+                      <p className="text-xs font-medium text-leaf mb-1">Seller&apos;s response</p>
+                      <p>{d.seller_response}</p>
+                    </div>
+                  )}
+
+                  {canEscalate && <EscalateButton disputeId={d.id} />}
+
+                  {!isBuyer && d.status !== "resolved" && (
+                    <Link
+                      href={`/orders?tab=sales`}
+                      className="text-xs text-leaf hover:underline"
+                    >
+                      Respond in My Sales →
+                    </Link>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
   // ── SALES TAB ─────────────────────────────────────────────────
   const page = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
   const from = (page - 1) * PAGE_SIZE_SALES;
@@ -471,7 +595,9 @@ export default async function OrdersPage({
   const auctionIds = salesOrders.filter((o) => o.auction_id).map((o) => o.auction_id!);
   const buyerIds = [...new Set(salesOrders.map((o) => o.buyer_id))];
 
-  const [{ data: listings }, { data: auctionItems }, { data: buyers }, { data: sellerProfile }] = await Promise.all([
+  const salesOrderIds = salesOrders.map((o) => o.id);
+
+  const [{ data: listings }, { data: auctionItems }, { data: buyers }, { data: sellerProfile }, { data: salesDisputes }] = await Promise.all([
     listingIds.length
       ? supabase.from("listings").select("id, plant_name, variety").in("id", listingIds)
       : { data: [] },
@@ -480,12 +606,16 @@ export default async function OrdersPage({
       : { data: [] },
     supabase.from("profiles").select("id, username").in("id", buyerIds),
     supabase.from("profiles").select("auto_labels_enabled").eq("id", user.id).single(),
+    salesOrderIds.length
+      ? supabase.from("order_disputes").select("id, order_id, buyer_id, reason, details, seller_response, status, created_at").in("order_id", salesOrderIds).neq("status", "resolved")
+      : { data: [] },
   ]);
 
   const listingMap = Object.fromEntries((listings ?? []).map((l) => [l.id, l]));
   const auctionMap = Object.fromEntries((auctionItems ?? []).map((a) => [a.id, a]));
   const buyerMap = Object.fromEntries((buyers ?? []).map((b) => [b.id, b]));
   const autoLabelsEnabled = (sellerProfile as { auto_labels_enabled?: boolean } | null)?.auto_labels_enabled !== false;
+  const salesDisputeMap = Object.fromEntries((salesDisputes ?? []).map((d) => [d.order_id, d]));
 
   const statusFilters = [
     { label: "All", value: "" },
@@ -528,6 +658,7 @@ export default async function OrdersPage({
         listingMap={listingMap}
         auctionMap={auctionMap}
         buyerMap={buyerMap}
+        disputeMap={salesDisputeMap}
         page={page}
         totalPages={totalPages}
         total={total}
