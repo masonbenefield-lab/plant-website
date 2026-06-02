@@ -171,12 +171,6 @@ export default async function AuctionPage({
             }
           />
 
-          {auction.description && (
-            <p className="text-sm text-muted-foreground leading-relaxed mt-6 mb-4">
-              {auction.description}
-            </p>
-          )}
-
           {seller && (
             <Link
               href={`/sellers/${seller.username}`}
@@ -191,6 +185,12 @@ export default async function AuctionPage({
               <span className="font-medium">{seller.display_name ?? seller.username}</span>
               <span className="text-muted-foreground">· View storefront →</span>
             </Link>
+          )}
+
+          {auction.description && (
+            <p className="text-sm text-muted-foreground leading-relaxed mt-2 mb-4">
+              {auction.description}
+            </p>
           )}
 
           <div className="mb-4 space-y-2">
