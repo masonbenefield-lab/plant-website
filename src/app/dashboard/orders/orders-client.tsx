@@ -13,6 +13,7 @@ import { BulkOrderActions, OrderCheckbox, type BulkOrderInfo } from "./bulk-orde
 import type { OrderStatus } from "@/lib/supabase/types";
 import { toast } from "sonner";
 import { Printer, ExternalLink, AlertTriangle } from "lucide-react";
+import GetLabelModal from "./get-label-modal";
 
 function detectCarrier(tracking: string): string {
   if (/^1Z[0-9A-Z]{16}$/i.test(tracking)) return "UPS";
@@ -62,6 +63,7 @@ type BuyerRow = { id: string; username: string };
 function BuyLabelButton({ orderId, labelUrl: initialLabelUrl, createdAt }: { orderId: string; labelUrl: string | null; createdAt: string }) {
   const [loading, setLoading] = useState(false);
   const [labelUrl, setLabelUrl] = useState(initialLabelUrl);
+  const [useModal, setUseModal] = useState(false);
 
   const ageMs = Date.now() - new Date(createdAt).getTime();
   const ageDays = ageMs / (1000 * 60 * 60 * 24);
@@ -92,13 +94,13 @@ function BuyLabelButton({ orderId, labelUrl: initialLabelUrl, createdAt }: { ord
     const data = await res.json();
     setLoading(false);
     if (data.error) {
-      const isPhoneError = /phone|email or phone/i.test(data.error);
-      toast.error(isPhoneError ? "Phone number required for USPS labels." : data.error, {
-        description: isPhoneError ? undefined : undefined,
-        action: isPhoneError
-          ? { label: "Account Settings →", onClick: () => window.location.href = "/account#shipping-settings" }
-          : undefined,
-      });
+      const isStaleRate = /phone|email or phone/i.test(data.error);
+      if (isStaleRate) {
+        setUseModal(true);
+        toast.info("Re-select a shipping rate to get your label.");
+      } else {
+        toast.error(data.error);
+      }
       return;
     }
     setLabelUrl(data.labelUrl);
@@ -106,6 +108,10 @@ function BuyLabelButton({ orderId, labelUrl: initialLabelUrl, createdAt }: { ord
       description: "Tracking number added. Click 'View label' to print.",
     });
     if (data.labelUrl) window.open(data.labelUrl, "_blank");
+  }
+
+  if (useModal) {
+    return <GetLabelModal orderId={orderId} initialLabelUrl={labelUrl} />;
   }
 
   if (rateExpired) {
