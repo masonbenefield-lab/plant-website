@@ -28,7 +28,7 @@ export async function POST(request: Request) {
 
   const { data: listing } = await supabase
     .from("listings")
-    .select("id, seller_id, price_cents, plant_name")
+    .select("id, seller_id, price_cents, plant_name, variety")
     .eq("id", listingId)
     .eq("seller_id", user.id)
     .single();
@@ -81,7 +81,7 @@ export async function POST(request: Request) {
           if (email) {
             await sendPriceDropAlert({
               email,
-              plantName: listing.plant_name,
+              plantName: listing.variety ? `${listing.plant_name} — ${listing.variety}` : listing.plant_name,
               regularCents: listing.price_cents,
               saleCents,
               listingUrl,

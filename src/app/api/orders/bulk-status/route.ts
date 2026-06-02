@@ -96,15 +96,15 @@ export async function POST(request: Request) {
         if (!buyer?.email) continue;
 
         let plantName = "your plant";
-        const cartItems = order.cart_items as { plant_name: string }[] | null;
+        const cartItems = order.cart_items as { plant_name: string; variety?: string | null }[] | null;
         if (cartItems?.length) {
-          plantName = cartItems.map((i) => i.plant_name).join(", ");
+          plantName = cartItems.map((i) => i.variety ? `${i.plant_name} — ${i.variety}` : i.plant_name).join(", ");
         } else if (order.listing_id) {
-          const { data: listing } = await supabase.from("listings").select("plant_name").eq("id", order.listing_id).single();
-          if (listing) plantName = listing.plant_name;
+          const { data: listing } = await supabase.from("listings").select("plant_name, variety").eq("id", order.listing_id).single();
+          if (listing) plantName = listing.variety ? `${listing.plant_name} — ${listing.variety}` : listing.plant_name;
         } else if (order.auction_id) {
-          const { data: auction } = await supabase.from("auctions").select("plant_name").eq("id", order.auction_id).single();
-          if (auction) plantName = auction.plant_name;
+          const { data: auction } = await supabase.from("auctions").select("plant_name, variety").eq("id", order.auction_id).single();
+          if (auction) plantName = auction.variety ? `${auction.plant_name} — ${auction.variety}` : auction.plant_name;
         }
 
         await sendShippingNotification({

@@ -67,10 +67,11 @@ export async function PATCH(
   // Fetch listing name for email
   const { data: listingData } = await admin
     .from("listings")
-    .select("plant_name")
+    .select("plant_name, variety")
     .eq("id", offer.listing_id)
     .single();
-  const plantName = (listingData as { plant_name: string } | null)?.plant_name ?? "your plant";
+  const ld = listingData as { plant_name: string; variety: string | null } | null;
+  const plantName = ld ? (ld.variety ? `${ld.plant_name} — ${ld.variety}` : ld.plant_name) : "your plant";
 
   // Email the buyer
   const { data: buyerAuth } = await admin.auth.admin.getUserById(offer.buyer_id);

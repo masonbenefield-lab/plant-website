@@ -34,13 +34,14 @@ export async function POST(request: Request) {
   const admin = adminClient();
   const [{ data: { user: previousBidder } }, { data: auction }] = await Promise.all([
     admin.auth.admin.getUserById(previousBidderId),
-    admin.from("auctions").select("plant_name").eq("id", auctionId).single(),
+    admin.from("auctions").select("plant_name, variety").eq("id", auctionId).single(),
   ]);
 
   if (previousBidder?.email && auction) {
+    const displayName = auction.variety ? `${auction.plant_name} — ${auction.variety}` : auction.plant_name;
     await sendOutbidNotification({
       bidderEmail: previousBidder.email,
-      plantName: auction.plant_name,
+      plantName: displayName,
       auctionId,
       newBidCents,
     }).catch(() => {});

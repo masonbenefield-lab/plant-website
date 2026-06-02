@@ -39,7 +39,7 @@ export async function GET(request: Request) {
   const in60min = new Date(now.getTime() + 60 * 60 * 1000).toISOString();
   const { data: soonAuctions } = await supabase
     .from("auctions")
-    .select("id, plant_name, ends_at")
+    .select("id, plant_name, variety, ends_at")
     .eq("status", "active")
     .eq("reminder_sent", false)
     .gt("ends_at", now.toISOString())
@@ -53,12 +53,13 @@ export async function GET(request: Request) {
 
     const bidderIds = [...new Set((bids ?? []).map((b) => b.bidder_id))];
     const auctionUrl = `${appUrl}/auctions/${auction.id}`;
+    const displayName = auction.variety ? `${auction.plant_name} — ${auction.variety}` : auction.plant_name;
 
     await Promise.allSettled(
       bidderIds.map(async (bidderId) => {
         const { data: auth } = await supabase.auth.admin.getUserById(bidderId);
         const email = auth?.user?.email;
-        if (email) await sendAuctionEndingSoon({ email, plantName: auction.plant_name, auctionUrl, endsAt: auction.ends_at });
+        if (email) await sendAuctionEndingSoon({ email, plantName: displayName, auctionUrl, endsAt: auction.ends_at });
       })
     );
 
@@ -78,7 +79,7 @@ export async function GET(request: Request) {
   // ── 3. Close expired active auctions ─────────────────────────────────────────
   const { data: expiredAuctions, error } = await supabase
     .from("auctions")
-    .select("id, current_bidder_id, seller_id, current_bid_cents, plant_name, inventory_id, reserve_price_cents, free_shipping, shipping_cost_cents, shipping_weight_oz")
+    .select("id, current_bidder_id, seller_id, current_bid_cents, plant_name, variety, inventory_id, reserve_price_cents, free_shipping, shipping_cost_cents, shipping_weight_oz")
     .eq("status", "active")
     .lt("ends_at", now.toISOString());
 
@@ -88,6 +89,7 @@ export async function GET(request: Request) {
   for (const auction of expiredAuctions ?? []) {
     await supabase.from("auctions").update({ status: "ended" }).eq("id", auction.id);
 
+    const displayName = auction.variety ? `${auction.plant_name} — ${auction.variety}` : auction.plant_name;
     const reserveMet = !auction.reserve_price_cents || auction.current_bid_cents >= auction.reserve_price_cents;
     const hasWinner = !!(auction.current_bidder_id && reserveMet);
 
@@ -206,7 +208,7 @@ export async function GET(request: Request) {
             // Winner gets a "charged" email instead of a "go pay" email
             await sendAuctionAutoCharged({
               winnerEmail,
-              plantName: auction.plant_name,
+              plantName: displayName,
               amountCents: totalCents,
               orderId: order?.id ?? "",
               appUrl,
@@ -218,7 +220,7 @@ export async function GET(request: Request) {
               .from("profiles").select("username").eq("id", auction.current_bidder_id!).single();
             await sendAuctionEndedSeller({
               sellerEmail,
-              plantName: auction.plant_name,
+              plantName: displayName,
               winnerFound: true,
               winnerUsername: winnerProfile?.username ?? "The buyer",
               amountCents: auction.current_bid_cents,
@@ -248,7 +250,7 @@ export async function GET(request: Request) {
       if (sellerEmail) {
         await sendAuctionEndedSeller({
           sellerEmail,
-          plantName: auction.plant_name,
+          plantName: displayName,
           winnerFound: false,
           amountCents: auction.reserve_price_cents ? auction.current_bid_cents : undefined,
           ordersUrl: `${appUrl}/orders?tab=sales`,
@@ -274,15 +276,16 @@ export async function GET(request: Request) {
   for (const order of reminderOrders ?? []) {
     const { data: auction } = await supabase
       .from("auctions")
-      .select("plant_name")
+      .select("plant_name, variety")
       .eq("id", order.auction_id!)
       .single();
     const { data: buyerAuth } = await supabase.auth.admin.getUserById(order.buyer_id);
     const buyerEmail = buyerAuth?.user?.email;
     if (buyerEmail && auction) {
+      const reminderDisplayName = auction.variety ? `${auction.plant_name} — ${auction.variety}` : auction.plant_name;
       await sendAuctionPaymentReminder({
         winnerEmail: buyerEmail,
-        plantName: auction.plant_name,
+        plantName: reminderDisplayName,
         checkoutUrl: `${appUrl}/checkout?auction=${order.auction_id}`,
         deadlineAt: order.payment_deadline_at!,
       }).catch(() => {});
@@ -305,7 +308,7 @@ export async function GET(request: Request) {
 
     const { data: auction } = await supabase
       .from("auctions")
-      .select("plant_name, current_bid_cents")
+      .select("plant_name, variety, current_bid_cents")
       .eq("id", order.auction_id!)
       .single();
 
@@ -329,9 +332,10 @@ export async function GET(request: Request) {
     const sellerEmail = sellerAuth?.user?.email;
 
     if (sellerEmail && auction) {
+      const expiredDisplayName = auction.variety ? `${auction.plant_name} — ${auction.variety}` : auction.plant_name;
       await sendAuctionPaymentExpired({
         sellerEmail,
-        plantName: auction.plant_name,
+        plantName: expiredDisplayName,
         winnerUsername: winnerProfile?.username ?? "The buyer",
         winningBidCents: order.amount_cents,
         hasSecondBidder: !!secondBid,
@@ -344,7 +348,7 @@ export async function GET(request: Request) {
   // ── 6. Expire pending reserve offers past their window ───────────────────────
   const { data: expiredOffers } = await supabase
     .from("auctions")
-    .select("id, seller_id, plant_name, current_bid_cents")
+    .select("id, seller_id, plant_name, variety, current_bid_cents")
     .eq("reserve_offer_status", "pending")
     .lt("reserve_offer_expires_at", now.toISOString());
 
@@ -353,10 +357,11 @@ export async function GET(request: Request) {
 
     const { data: sellerAuth } = await supabase.auth.admin.getUserById(auction.seller_id);
     const sellerEmail = sellerAuth?.user?.email;
+    const offerDisplayName = auction.variety ? `${auction.plant_name} — ${auction.variety}` : auction.plant_name;
     if (sellerEmail) {
       await sendReserveOfferExpired({
         sellerEmail,
-        plantName: auction.plant_name,
+        plantName: offerDisplayName,
         bidCents: auction.current_bid_cents,
         dashboardUrl: `${appUrl}/dashboard/auctions`,
       }).catch(() => {});
@@ -373,7 +378,7 @@ export async function GET(request: Request) {
 
 async function fallbackToManualCheckout(
   supabase: ReturnType<typeof adminClient>,
-  auction: { id: string; current_bidder_id: string | null; seller_id: string; current_bid_cents: number; plant_name: string },
+  auction: { id: string; current_bidder_id: string | null; seller_id: string; current_bid_cents: number; plant_name: string; variety?: string | null },
   now: Date,
   appUrl: string,
   winnerEmail: string | undefined,
@@ -382,6 +387,7 @@ async function fallbackToManualCheckout(
 ) {
   const deadline = new Date(now.getTime() + deadlineHours * 60 * 60 * 1000);
   const checkoutUrl = `${appUrl}/checkout?auction=${auction.id}`;
+  const displayName = auction.variety ? `${auction.plant_name} — ${auction.variety}` : auction.plant_name;
 
   // Create/update a pending order so the cron can track non-payment
   const { data: existingOrder } = await supabase
@@ -407,7 +413,7 @@ async function fallbackToManualCheckout(
   if (winnerEmail) {
     await sendAuctionPaymentFailed({
       winnerEmail,
-      plantName: auction.plant_name,
+      plantName: displayName,
       amountCents: auction.current_bid_cents,
       checkoutUrl,
     }).catch(() => {});
@@ -416,7 +422,7 @@ async function fallbackToManualCheckout(
   if (sellerEmail) {
     await sendAuctionEndedSeller({
       sellerEmail,
-      plantName: auction.plant_name,
+      plantName: displayName,
       winnerFound: true,
       winnerUsername: "The buyer",
       amountCents: auction.current_bid_cents,

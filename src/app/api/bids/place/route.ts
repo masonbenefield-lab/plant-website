@@ -70,7 +70,7 @@ export async function POST(request: Request) {
 
   const { data: auction, error: auctionErr } = await admin
     .from("auctions")
-    .select("id, seller_id, plant_name, current_bid_cents, current_bidder_id, status, ends_at, shipping_weight_oz")
+    .select("id, seller_id, plant_name, variety, current_bid_cents, current_bidder_id, status, ends_at, shipping_weight_oz")
     .eq("id", auctionId)
     .single();
 
@@ -161,7 +161,8 @@ export async function POST(request: Request) {
         }).eq("id", auctionId);
 
         // The incoming bidder was outbid by proxy — notify them server-side
-        notifyOutbid(admin, user.id, auction.plant_name, auctionId, counterCents);
+        const proxyDisplayName = auction.variety ? `${auction.plant_name} — ${auction.variety}` : auction.plant_name;
+        notifyOutbid(admin, user.id, proxyDisplayName, auctionId, counterCents);
 
         return NextResponse.json({
           ok: true,
@@ -192,7 +193,8 @@ export async function POST(request: Request) {
 
   // Notify the displaced leader server-side
   if (auction.current_bidder_id && auction.current_bidder_id !== user.id) {
-    notifyOutbid(admin, auction.current_bidder_id, auction.plant_name, auctionId, amountCents);
+    const outbidDisplayName = auction.variety ? `${auction.plant_name} — ${auction.variety}` : auction.plant_name;
+    notifyOutbid(admin, auction.current_bidder_id, outbidDisplayName, auctionId, amountCents);
   }
 
   return NextResponse.json({ ok: true, extended });

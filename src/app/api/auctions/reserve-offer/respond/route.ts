@@ -34,12 +34,13 @@ export async function POST(request: Request) {
 
   const { data: auction } = await admin
     .from("auctions")
-    .select("id, seller_id, plant_name, current_bid_cents, current_bidder_id, reserve_offer_status, reserve_offer_expires_at, free_shipping, shipping_cost_cents, shipping_weight_oz")
+    .select("id, seller_id, plant_name, variety, current_bid_cents, current_bidder_id, reserve_offer_status, reserve_offer_expires_at, free_shipping, shipping_cost_cents, shipping_weight_oz")
     .eq("id", auctionId)
     .single();
 
   if (!auction) return NextResponse.json({ error: "Auction not found" }, { status: 404 });
   if (auction.current_bidder_id !== user.id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const displayName = auction.variety ? `${auction.plant_name} — ${auction.variety}` : auction.plant_name;
   if (auction.reserve_offer_status !== "pending") {
     return NextResponse.json({ error: "Offer is no longer active" }, { status: 400 });
   }
@@ -58,7 +59,7 @@ export async function POST(request: Request) {
     if (sellerEmail) {
       await sendReserveOfferDeclined({
         sellerEmail,
-        plantName: auction.plant_name,
+        plantName: displayName,
         buyerUsername: buyerProfile?.username ?? "The buyer",
         bidCents: auction.current_bid_cents,
         dashboardUrl: `${appUrl}/dashboard/auctions`,
@@ -173,7 +174,7 @@ export async function POST(request: Request) {
     if (buyerEmail) {
       await sendReserveOfferAccepted({
         buyerEmail,
-        plantName: auction.plant_name,
+        plantName: displayName,
         amountCents: totalCents,
         appUrl,
       }).catch(() => {});
@@ -184,7 +185,7 @@ export async function POST(request: Request) {
     if (sellerEmail) {
       await sendReserveOfferAcceptedSeller({
         sellerEmail,
-        plantName: auction.plant_name,
+        plantName: displayName,
         buyerUsername,
         amountCents: totalCents,
         shippingAddress: (buyer.saved_shipping_address ?? null) as { name: string; line1: string; line2?: string | null; city: string; state: string; zip: string; country: string } | null,
@@ -202,7 +203,7 @@ export async function POST(request: Request) {
     if (buyerEmail) {
       await sendAuctionPaymentFailed({
         winnerEmail: buyerEmail,
-        plantName: auction.plant_name,
+        plantName: displayName,
         amountCents: totalCents,
         checkoutUrl: `${appUrl}/checkout?auction=${auctionId}`,
       }).catch(() => {});

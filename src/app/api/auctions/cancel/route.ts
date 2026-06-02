@@ -72,7 +72,7 @@ export async function POST(request: Request) {
   // Notify bidders (fire-and-forget, don't block response)
   if (bidderIds.length > 0) {
     const plantName = auction.variety
-      ? `${auction.plant_name} ${auction.variety}`
+      ? `${auction.plant_name} — ${auction.variety}`
       : auction.plant_name;
 
     const emailResults = await Promise.all(

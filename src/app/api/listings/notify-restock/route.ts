@@ -22,7 +22,7 @@ export async function POST(request: Request) {
   // Verify caller owns the listing
   const { data: listing } = await supabase
     .from("listings")
-    .select("id, plant_name, seller_id")
+    .select("id, plant_name, variety, seller_id")
     .eq("id", listingId)
     .eq("seller_id", user.id)
     .single();
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
 
   await Promise.allSettled(
     subscribers.map((sub) =>
-      sendRestockNotification({ email: sub.email, plantName: listing.plant_name, listingUrl })
+      sendRestockNotification({ email: sub.email, plantName: listing.variety ? `${listing.plant_name} — ${listing.variety}` : listing.plant_name, listingUrl })
     )
   );
 

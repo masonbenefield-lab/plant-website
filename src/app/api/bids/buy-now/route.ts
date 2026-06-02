@@ -37,7 +37,7 @@ export async function POST(request: Request) {
 
   const { data: auction, error: auctionErr } = await admin
     .from("auctions")
-    .select("id, seller_id, plant_name, current_bid_cents, current_bidder_id, buy_now_price_cents, status, ends_at, free_shipping, shipping_cost_cents, shipping_weight_oz, inventory_id")
+    .select("id, seller_id, plant_name, variety, current_bid_cents, current_bidder_id, buy_now_price_cents, status, ends_at, free_shipping, shipping_cost_cents, shipping_weight_oz, inventory_id")
     .eq("id", auctionId)
     .single();
 
@@ -47,6 +47,7 @@ export async function POST(request: Request) {
   if (auction.seller_id === user.id) return NextResponse.json({ error: "You can't buy your own auction" }, { status: 400 });
 
   const previousBidderId = auction.current_bidder_id;
+  const displayName = auction.variety ? `${auction.plant_name} — ${auction.variety}` : auction.plant_name;
 
   const { error: bidError } = await admin.from("bids").insert({
     auction_id: auctionId,
@@ -73,7 +74,7 @@ export async function POST(request: Request) {
     if (prevEmail) {
       sendOutbidNotification({
         bidderEmail: prevEmail,
-        plantName: auction.plant_name,
+        plantName: displayName,
         auctionId,
         newBidCents: auction.buy_now_price_cents,
       }).catch(() => {});
@@ -182,7 +183,7 @@ export async function POST(request: Request) {
       if (winnerEmail) {
         sendAuctionAutoCharged({
           winnerEmail,
-          plantName: auction.plant_name,
+          plantName: displayName,
           amountCents: totalCents,
           orderId: order?.id ?? "",
           appUrl,
@@ -192,7 +193,7 @@ export async function POST(request: Request) {
       if (sellerEmail) {
         sendAuctionEndedSeller({
           sellerEmail,
-          plantName: auction.plant_name,
+          plantName: displayName,
           winnerFound: true,
           winnerUsername: "The buyer",
           amountCents: auction.buy_now_price_cents,

@@ -62,7 +62,7 @@ export async function POST(request: Request) {
 
   const { data: auction } = await admin
     .from("auctions")
-    .select("plant_name, seller_id")
+    .select("plant_name, variety, seller_id")
     .eq("id", order.auction_id)
     .single();
 
@@ -96,9 +96,10 @@ export async function POST(request: Request) {
   const { data: bidderAuth } = await admin.auth.admin.getUserById(secondBid.bidder_id);
   const bidderEmail = bidderAuth?.user?.email;
   if (bidderEmail) {
+    const displayName = auction.variety ? `${auction.plant_name} — ${auction.variety}` : auction.plant_name;
     await sendSecondBidderOffer({
       bidderEmail,
-      plantName: auction.plant_name,
+      plantName: displayName,
       bidCents: secondBid.amount_cents,
       checkoutUrl: `${appUrl}/checkout?auction=${order.auction_id}&offer=${newOrder.id}`,
       expiresAt: deadline.toISOString(),

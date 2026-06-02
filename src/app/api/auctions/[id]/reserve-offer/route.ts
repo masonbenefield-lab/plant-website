@@ -27,7 +27,7 @@ export async function POST(
 
   const { data: auction } = await admin
     .from("auctions")
-    .select("id, seller_id, plant_name, status, current_bid_cents, current_bidder_id, reserve_price_cents, reserve_offer_status, free_shipping, shipping_cost_cents, shipping_weight_oz")
+    .select("id, seller_id, plant_name, variety, status, current_bid_cents, current_bidder_id, reserve_price_cents, reserve_offer_status, free_shipping, shipping_cost_cents, shipping_weight_oz")
     .eq("id", auctionId)
     .single();
 
@@ -75,10 +75,11 @@ export async function POST(
 
   const { data: buyerAuth } = await admin.auth.admin.getUserById(auction.current_bidder_id);
   const buyerEmail = buyerAuth?.user?.email;
+  const displayName = auction.variety ? `${auction.plant_name} — ${auction.variety}` : auction.plant_name;
   if (buyerEmail) {
     await sendReserveOfferToBuyer({
       buyerEmail,
-      plantName: auction.plant_name,
+      plantName: displayName,
       bidCents: auction.current_bid_cents,
       shippingLabel,
       offerUrl,

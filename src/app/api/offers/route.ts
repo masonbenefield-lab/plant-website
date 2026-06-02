@@ -30,7 +30,7 @@ export async function POST(request: Request) {
 
   const { data: listing, error: listingError } = await supabase
     .from("listings")
-    .select("id, seller_id, plant_name, price_cents, status")
+    .select("id, seller_id, plant_name, variety, price_cents, status")
     .eq("id", listingId)
     .eq("status", "active")
     .single();
@@ -98,7 +98,7 @@ export async function POST(request: Request) {
       sellerEmail,
       sellerUsername: sellerProfile?.username ?? "Seller",
       buyerUsername: buyerProfile?.username ?? "A buyer",
-      plantName: listing.plant_name,
+      plantName: listing.variety ? `${listing.plant_name} — ${listing.variety}` : listing.plant_name,
       amountCents,
       message: message?.trim() || null,
       offerId: offer.id,
