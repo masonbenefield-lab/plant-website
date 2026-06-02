@@ -7,7 +7,7 @@ import { planFeePercent } from "@/lib/plan-limits";
 import { createStripeTaxCalculation } from "@/lib/tax";
 import {
   sendReserveOfferDeclined,
-  sendAuctionAutoCharged,
+  sendReserveOfferAccepted,
   sendAuctionPaymentFailed,
 } from "@/lib/email";
 
@@ -169,11 +169,10 @@ export async function POST(request: Request) {
     const { data: buyerAuth } = await admin.auth.admin.getUserById(user.id);
     const buyerEmail = buyerAuth?.user?.email;
     if (buyerEmail) {
-      await sendAuctionAutoCharged({
-        winnerEmail: buyerEmail,
+      await sendReserveOfferAccepted({
+        buyerEmail,
         plantName: auction.plant_name,
         amountCents: totalCents,
-        orderId: order?.id ?? "",
         appUrl,
       }).catch(() => {});
     }

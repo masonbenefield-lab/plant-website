@@ -1857,6 +1857,50 @@ export async function sendAuctionPaymentFailed({
   });
 }
 
+// ─── Reserve offer accepted (buyer auto-charged) ─────────────────────────────
+
+export function buildReserveOfferAcceptedHtml({
+  plantName,
+  amountCents,
+  appUrl,
+}: {
+  plantName: string;
+  amountCents: number;
+  appUrl: string;
+}): string {
+  return emailBase({
+    title: `Purchase confirmed — ${plantName}`,
+    heading: "Purchase confirmed!",
+    subheading: "Your card has been charged",
+    body: `
+      <p style="margin:0 0 4px;">You accepted the seller's reserve offer for <strong>${plantName}</strong>. Your saved payment method has been charged and your order is confirmed.</p>
+      ${infoCard([{ label: "Total charged", value: centsToDisplay(amountCents) }])}
+      <p style="margin:0 0 24px;font-size:14px;color:#6b7280;">The seller will be in touch with tracking information once your order ships.</p>
+      ${ctaBtn("View Order", `${appUrl}/orders`)}
+    `,
+  });
+}
+
+export async function sendReserveOfferAccepted({
+  buyerEmail,
+  plantName,
+  amountCents,
+  appUrl,
+}: {
+  buyerEmail: string;
+  plantName: string;
+  amountCents: number;
+  appUrl: string;
+}) {
+  const resend = getResend();
+  await resend.emails.send({
+    from: FROM,
+    to: buyerEmail,
+    subject: `Purchase confirmed — ${plantName}`,
+    html: buildReserveOfferAcceptedHtml({ plantName, amountCents, appUrl }),
+  });
+}
+
 // ─── Reserve offer: seller accepts below-reserve bid ─────────────────────────
 
 export function buildReserveOfferToBuyerHtml({

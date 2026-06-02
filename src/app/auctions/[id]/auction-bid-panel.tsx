@@ -81,6 +81,7 @@ export default function AuctionBidPanel({
   const [selectedRateId, setSelectedRateId] = useState<string | null>(null);
   const [loadingRates, setLoadingRates] = useState(false);
   const [savedCard, setSavedCard] = useState<{ brand: string; last4: string } | null>(null);
+  const [savedShippingState, setSavedShippingState] = useState<string | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -166,6 +167,7 @@ export default function AuctionBidPanel({
       .then((r) => r.json())
       .then((data) => {
         if (data.card) setSavedCard({ brand: data.card.brand, last4: data.card.last4 });
+        if (data.shippingAddress?.state) setSavedShippingState(data.shippingAddress.state);
       })
       .catch(() => {});
   }, [userId]);
@@ -321,6 +323,14 @@ export default function AuctionBidPanel({
 
   function isSafetyWarning(cents: number): boolean {
     return cents >= minBidForDisplay * 3;
+  }
+
+  function estimateTaxCents(amountCents: number, state: string | null): number | null {
+    if (!state) return null;
+    const rates: Record<string, number> = { TX: 0.0825 };
+    const rate = rates[state.toUpperCase()];
+    if (rate === undefined) return null;
+    return Math.round(amountCents * rate);
   }
 
   return (
@@ -538,9 +548,18 @@ export default function AuctionBidPanel({
                 ? (selectedRate ? Math.round(parseFloat(selectedRate.amount) * 100) : null)
                 : (auction.shipping_cost_cents ?? 0);
             const canConfirm = !auction.shipping_weight_oz || !!selectedRate;
-            const totalCents = shippingCents !== null ? pendingConfirm.cents + shippingCents : null;
+            const taxEstimate = estimateTaxCents(
+              pendingConfirm.cents + (shippingCents ?? 0),
+              savedShippingState
+            );
+            const hasTaxEstimate = taxEstimate !== null;
+            const taxEstimateCents = taxEstimate ?? 0;
+            const totalCents = shippingCents !== null
+              ? pendingConfirm.cents + shippingCents + taxEstimateCents
+              : null;
             const reserveNotMet = !!(auction.reserve_price_cents && pendingConfirm.cents < auction.reserve_price_cents);
-            const isWarning = isSafetyWarning(pendingConfirm.cents) || reserveNotMet;
+            const isSelfOutbid = !!userId && auction.current_bidder_id === userId;
+            const isWarning = isSafetyWarning(pendingConfirm.cents) || reserveNotMet || isSelfOutbid;
             return (
               <div className={cn(
                 "rounded-lg border px-4 py-3 space-y-3",
@@ -553,6 +572,15 @@ export default function AuctionBidPanel({
                     <AlertTriangle size={15} className="shrink-0" />
                     <p className="text-xs font-semibold">
                       This bid is much higher than the minimum ({centsToDisplay(minBidForDisplay)}). Double-check before confirming.
+                    </p>
+                  </div>
+                )}
+
+                {isSelfOutbid && (
+                  <div className="flex items-start gap-2 text-amber-700 dark:text-amber-400">
+                    <AlertTriangle size={15} className="shrink-0 mt-0.5" />
+                    <p className="text-xs font-semibold">
+                      You&apos;re already the highest bidder at {centsToDisplay(auction.current_bid_cents)} — this bid increases your commitment.
                     </p>
                   </div>
                 )}
@@ -626,14 +654,19 @@ export default function AuctionBidPanel({
 
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Tax</span>
-                    <span className="text-xs text-muted-foreground italic">Calculated at settlement</span>
+                    {hasTaxEstimate
+                      ? <span className="font-medium">~{centsToDisplay(taxEstimateCents)}</span>
+                      : <span className="text-xs text-muted-foreground italic">Calculated at settlement</span>
+                    }
                   </div>
 
                   <div className="flex justify-between border-t pt-1.5 font-semibold">
                     <span>Est. Total</span>
                     <span>
                       {totalCents !== null ? centsToDisplay(totalCents) : "—"}
-                      <span className="text-xs font-normal text-muted-foreground"> + tax</span>
+                      {totalCents !== null && !hasTaxEstimate && (
+                        <span className="text-xs font-normal text-muted-foreground"> + tax</span>
+                      )}
                     </span>
                   </div>
                 </div>

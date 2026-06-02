@@ -25,6 +25,7 @@ import {
   buildPasswordChangedHtml,
   buildEmailChangedHtml,
   buildReserveOfferToBuyerHtml,
+  buildReserveOfferAcceptedHtml,
   buildReserveOfferDeclinedHtml,
   buildReserveOfferExpiredHtml,
 } from "@/lib/email";
@@ -311,8 +312,18 @@ export default async function EmailPreviewPage() {
       }),
     },
     {
+      id: "reserve-offer-accepted",
+      label: "Reserve Offer Accepted (Buyer)",
+      category: "Auction",
+      html: buildReserveOfferAcceptedHtml({
+        plantName: "Monstera Deliciosa",
+        amountCents: 3450,
+        appUrl: PREVIEW_SITE,
+      }),
+    },
+    {
       id: "reserve-offer-buyer",
-      label: "Reserve Offer (Buyer)",
+      label: "Reserve Offer — Confirm (Buyer)",
       category: "Auction",
       html: buildReserveOfferToBuyerHtml({
         plantName: "Monstera Deliciosa",
