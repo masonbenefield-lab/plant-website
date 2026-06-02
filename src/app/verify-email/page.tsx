@@ -5,12 +5,15 @@ import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { MailCheck, RefreshCw } from "lucide-react";
 import Link from "next/link";
 
 function VerifyEmailContent() {
   const searchParams = useSearchParams();
-  const email = searchParams.get("email") ?? "";
+  const emailParam = searchParams.get("email") ?? "";
+  const [emailInput, setEmailInput] = useState(emailParam);
+  const email = emailInput.trim();
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [countdown, setCountdown] = useState(0);
 
@@ -50,6 +53,16 @@ function VerifyEmailContent() {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3 pt-0">
+          {!emailParam && (
+            <Input
+              type="email"
+              placeholder="Enter your email address"
+              value={emailInput}
+              onChange={(e) => setEmailInput(e.target.value)}
+              className="text-sm"
+            />
+          )}
+
           <p className="text-xs text-muted-foreground">
             Don&apos;t see it? Check your spam folder or request a new link below.
           </p>
@@ -65,7 +78,7 @@ function VerifyEmailContent() {
             variant="outline"
             size="sm"
             onClick={resend}
-            disabled={!email || status === "sending" || countdown > 0}
+            disabled={!email || status === "sending" || countdown > 0 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)}
             className="gap-2"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${status === "sending" ? "animate-spin" : ""}`} />
