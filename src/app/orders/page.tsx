@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { centsToDisplay } from "@/lib/stripe";
 import RateSellerForm from "./rate-seller-form";
+import MarkReceivedButton from "./mark-received-button";
 import DisputeButton from "./dispute-button";
 import DisputeThread from "./dispute-thread";
 import type { DisputeMessage } from "./dispute-thread";
@@ -317,7 +318,14 @@ export default async function OrdersPage({
                     );
                   })()}
 
-                  {(order.status === "paid" || order.status === "shipped" || order.status === "delivered") && (
+                  {order.status === "shipped" && (
+                    <div className="mt-3 pt-3 border-t flex items-center gap-3 flex-wrap">
+                      <MarkReceivedButton orderId={order.id} />
+                      <DisputeButton orderId={order.id} existingDispute={disputeByOrderId[order.id] ?? null} />
+                    </div>
+                  )}
+
+                  {(order.status === "paid" || order.status === "delivered") && (
                     <div className="mt-3 pt-3 border-t">
                       <DisputeButton orderId={order.id} existingDispute={disputeByOrderId[order.id] ?? null} />
                     </div>

@@ -46,5 +46,22 @@ export async function GET(request: Request) {
     if (!error) deleted++;
   }
 
-  return NextResponse.json({ ok: true, deleted });
+  // Auto-deliver orders that have been in "shipped" status for 14+ days
+  const cutoff = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+  const { data: staleShipped } = await admin
+    .from("orders")
+    .select("id")
+    .eq("status", "shipped")
+    .lt("updated_at", cutoff);
+
+  let autoDelivered = 0;
+  for (const order of staleShipped ?? []) {
+    const { error } = await admin
+      .from("orders")
+      .update({ status: "delivered", delivered_at: new Date().toISOString() })
+      .eq("id", order.id);
+    if (!error) autoDelivered++;
+  }
+
+  return NextResponse.json({ ok: true, deleted, autoDelivered });
 }

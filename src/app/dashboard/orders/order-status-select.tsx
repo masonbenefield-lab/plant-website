@@ -69,10 +69,6 @@ export default function OrderStatusSelect({
 
   function handleChange(value: string | null) {
     if (!value) return;
-    if ((value === "shipped" || value === "delivered") && !trackingNumber) {
-      toast.error("Add a tracking number before marking as shipped");
-      return;
-    }
     setPendingStatus(value as OrderStatus);
   }
 
@@ -98,9 +94,7 @@ export default function OrderStatusSelect({
         </SelectTrigger>
         <SelectContent>
           {forwardStatuses.map((s) => (
-            <SelectItem key={s} value={s} className="text-xs">
-              {s === "shipped" && !trackingNumber ? `${s} (add tracking first)` : s}
-            </SelectItem>
+            <SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>
           ))}
         </SelectContent>
       </Select>
