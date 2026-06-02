@@ -44,7 +44,7 @@ export default function AuctionFilterBar() {
   }
 
   const q          = params.get("q") ?? "";
-  const sort       = params.get("sort") ?? "ending_soon";
+  const sort       = params.get("sort") ?? "";
   const maxBid     = params.get("max_bid") ?? "";
   const category   = params.get("category") ?? "";
   const location   = params.get("location") ?? "";
@@ -53,7 +53,7 @@ export default function AuctionFilterBar() {
   const endsWithin = params.get("ends_within") ?? "";
   const potSize    = params.get("pot_size") ?? "";
 
-  const hasFilters = q || sort !== "ending_soon" || maxBid || category || location || hasBuyNow || noBids || endsWithin || potSize;
+  const hasFilters = q || sort || maxBid || category || location || hasBuyNow || noBids || endsWithin || potSize;
 
   const update = useCallback(
     (patch: Record<string, string>) => {
@@ -98,6 +98,7 @@ export default function AuctionFilterBar() {
             onChange={(e) => update({ sort: e.target.value })}
             className="h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           >
+            <option value="">Sort by...</option>
             {SORT_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>
             ))}
