@@ -452,7 +452,17 @@ export default function AuctionBidPanel({
         </a>
       )}
 
-      {!isEnded && userId && userId !== auction.seller_id && !buyerHasPaymentMethod && (
+      {!isEnded && userId && userId !== auction.seller_id && !buyerHasPaymentMethod && !buyerHasShippingAddress && (
+        <div className="rounded-md border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
+          <p className="font-medium">Payment method and delivery address required to bid</p>
+          <p className="text-xs mt-0.5">Save a card and delivery address before bidding — your card is charged automatically if you win.</p>
+          <a href="/account#bidding" className="text-xs font-semibold underline underline-offset-2 mt-1 inline-block">
+            Set up in Account Settings →
+          </a>
+        </div>
+      )}
+
+      {!isEnded && userId && userId !== auction.seller_id && !buyerHasPaymentMethod && buyerHasShippingAddress && (
         <div className="rounded-md border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
           <p className="font-medium">Payment method required to bid</p>
           <p className="text-xs mt-0.5">Save a card in your account settings — your card is charged automatically if you win.</p>
