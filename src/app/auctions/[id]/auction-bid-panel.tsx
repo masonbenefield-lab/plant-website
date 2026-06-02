@@ -906,7 +906,7 @@ export default function AuctionBidPanel({
       {showShippingEstimate && (
         <ShippingEstimate
           auctionId={auction.id}
-          freeShipping={auction.free_shipping}
+          freeShipping={auction.free_shipping ?? false}
           shippingCostCents={auction.shipping_cost_cents}
         />
       )}
