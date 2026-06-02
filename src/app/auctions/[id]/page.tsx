@@ -81,13 +81,15 @@ export default async function AuctionPage({
     : { data: [] };
   const bidderMap = Object.fromEntries((bidders ?? []).map((b) => [b.id, b]));
 
-  const [wishlistRow, reportRow, buyerProfile] = await Promise.all([
+  const [wishlistRow, reportRow, buyerProfile, existingOrderRow] = await Promise.all([
     user ? supabase.from("wishlists").select("id").eq("user_id", user.id).eq("auction_id", auction.id).maybeSingle() : Promise.resolve({ data: null }),
     user ? supabase.from("reports").select("id").eq("reporter_id", user.id).eq("auction_id", auction.id).maybeSingle() : Promise.resolve({ data: null }),
     user ? supabase.from("profiles").select("default_payment_method_id, saved_shipping_address").eq("id", user.id).single() : Promise.resolve({ data: null }),
+    user ? supabase.from("orders").select("id, status").eq("auction_id", auction.id).eq("buyer_id", user.id).maybeSingle() : Promise.resolve({ data: null }),
   ]);
   const isWishlisted = !!wishlistRow.data;
   const isReported = !!reportRow.data;
+  const existingOrderStatus = existingOrderRow.data?.status ?? null;
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-10">
@@ -184,6 +186,7 @@ export default async function AuctionPage({
             userId={user?.id ?? null}
             buyerHasPaymentMethod={!!buyerProfile?.data?.default_payment_method_id}
             buyerHasShippingAddress={!!buyerProfile?.data?.saved_shipping_address}
+            existingOrderStatus={existingOrderStatus}
             recentBids={
               (bids ?? []).map((b) => ({
                 id: b.id,

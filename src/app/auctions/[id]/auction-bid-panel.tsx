@@ -56,12 +56,14 @@ export default function AuctionBidPanel({
   userId,
   buyerHasPaymentMethod,
   buyerHasShippingAddress,
+  existingOrderStatus,
   recentBids: initialBids,
 }: {
   auction: AuctionData;
   userId: string | null;
   buyerHasPaymentMethod: boolean;
   buyerHasShippingAddress: boolean;
+  existingOrderStatus: string | null;
   recentBids: Bid[];
 }) {
   const router = useRouter();
@@ -83,6 +85,8 @@ export default function AuctionBidPanel({
   const [loadingRates, setLoadingRates] = useState(false);
   const [savedCard, setSavedCard] = useState<{ brand: string; last4: string } | null>(null);
   const [savedShippingState, setSavedShippingState] = useState<string | null>(null);
+  const [orderConfirmed, setOrderConfirmed] = useState(false);
+  const [pendingBuyNow, setPendingBuyNow] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
@@ -315,16 +319,29 @@ export default function AuctionBidPanel({
     }
   }
 
-  async function buyNow() {
+  function buyNow() {
     if (!userId) return toast.error("Sign in to buy");
     if (userId === auction.seller_id) return toast.error("You can't buy your own auction");
     if (!auction.buy_now_price_cents) return;
+    setPendingBuyNow(true);
+  }
 
+  async function confirmBuyNow() {
+    setPendingBuyNow(false);
     setPlacing(true);
+    const selectedRate = shippingRates.find((r) => r.objectId === selectedRateId);
+    const shippingPayload = selectedRate && auction.shipping_weight_oz ? {
+      shippingRateId: selectedRate.objectId,
+      shippingService: selectedRate.servicelevelName,
+      shippingCarrier: selectedRate.provider,
+      shippingCostCents: Math.round(parseFloat(selectedRate.amount) * 100),
+      estimatedDays: selectedRate.estimatedDays,
+    } : {};
+
     const res = await fetch("/api/bids/buy-now", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ auctionId: auction.id }),
+      body: JSON.stringify({ auctionId: auction.id, ...shippingPayload }),
     });
     const data = await res.json();
     setPlacing(false);
@@ -343,6 +360,7 @@ export default function AuctionBidPanel({
     }
 
     if (data.autoCharged) {
+      setOrderConfirmed(true);
       toast.success("Purchase complete — your card has been charged!");
       router.refresh();
     } else {
@@ -436,7 +454,15 @@ export default function AuctionBidPanel({
         </CardContent>
       </Card>
 
-      {isWinner && (
+      {isWinner && (existingOrderStatus || orderConfirmed) && (
+        <a
+          href="/orders"
+          className={cn(buttonVariants({ size: "lg" }), "w-full bg-leaf hover:bg-forest")}
+        >
+          Order confirmed — View Order →
+        </a>
+      )}
+      {isWinner && !existingOrderStatus && !orderConfirmed && (
         <a
           href={`/checkout?auction=${auction.id}`}
           className={cn(buttonVariants({ size: "lg" }), "w-full bg-leaf hover:bg-forest")}
@@ -466,19 +492,116 @@ export default function AuctionBidPanel({
       )}
 
       {!isEnded && auction.buy_now_price_cents && userId && userId !== auction.seller_id && buyerHasPaymentMethod && (
-        <div className="rounded-lg border border-orange-200 bg-orange-50 dark:bg-orange-900/10 dark:border-orange-800 p-3 flex items-center justify-between gap-3">
-          <div>
-            <p className="text-sm font-medium">Buy Now</p>
-            <p className="text-xs text-muted-foreground">Skip bidding — purchase immediately</p>
+        <>
+          <div className="rounded-lg border border-orange-200 bg-orange-50 dark:bg-orange-900/10 dark:border-orange-800 p-3 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium">Buy Now</p>
+              <p className="text-xs text-muted-foreground">Skip bidding — purchase immediately</p>
+            </div>
+            <Button
+              onClick={buyNow}
+              disabled={placing}
+              className="bg-orange-600 hover:bg-orange-700 shrink-0"
+            >
+              {placing ? "…" : `${centsToDisplay(auction.buy_now_price_cents)}`}
+            </Button>
           </div>
-          <Button
-            onClick={buyNow}
-            disabled={placing}
-            className="bg-orange-600 hover:bg-orange-700 shrink-0"
-          >
-            {placing ? "…" : `${centsToDisplay(auction.buy_now_price_cents)}`}
-          </Button>
-        </div>
+
+          {/* Buy Now confirmation dialog */}
+          {pendingBuyNow && (() => {
+            const selectedRate = shippingRates.find((r) => r.objectId === selectedRateId);
+            const bnShippingCents = auction.free_shipping
+              ? 0
+              : auction.shipping_weight_oz
+                ? (selectedRate ? Math.round(parseFloat(selectedRate.amount) * 100) : null)
+                : (auction.shipping_cost_cents ?? 0);
+            const bnTaxEstimate = estimateTaxCents(
+              auction.buy_now_price_cents + (bnShippingCents ?? 0),
+              savedShippingState
+            );
+            const bnTaxCents = bnTaxEstimate ?? 0;
+            const bnTotal = bnShippingCents !== null ? auction.buy_now_price_cents + bnShippingCents + bnTaxCents : null;
+            const bnCanConfirm = !auction.shipping_weight_oz || !!selectedRate;
+            return (
+              <div className="rounded-lg border border-orange-200 bg-orange-50 dark:bg-orange-900/20 dark:border-orange-800 px-4 py-3 space-y-3">
+                <p className="text-sm font-semibold">Confirm Buy Now</p>
+
+                <div className="space-y-1.5 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Item</span>
+                    <span className="font-medium">{centsToDisplay(auction.buy_now_price_cents)}</span>
+                  </div>
+
+                  {auction.free_shipping ? (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Shipping</span>
+                      <span className="font-medium text-leaf">Free</span>
+                    </div>
+                  ) : auction.shipping_weight_oz ? (
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Shipping</span>
+                        {selectedRate
+                          ? <span className="font-medium">{centsToDisplay(Math.round(parseFloat(selectedRate.amount) * 100))}</span>
+                          : <span className="text-muted-foreground text-xs italic">Select a method below</span>
+                        }
+                      </div>
+                      <div className="rounded-md border bg-background/60 divide-y">
+                        {loadingRates && <p className="text-xs text-muted-foreground px-3 py-2">Loading rates…</p>}
+                        {!loadingRates && shippingRates.length === 0 && <p className="text-xs text-muted-foreground px-3 py-2">No rates available — contact the seller.</p>}
+                        {shippingRates.map((rate) => (
+                          <label key={rate.objectId} className="flex items-center gap-2.5 cursor-pointer px-3 py-2 hover:bg-muted/40 transition-colors">
+                            <input type="radio" name="bnShippingRate" value={rate.objectId} checked={selectedRateId === rate.objectId} onChange={() => setSelectedRateId(rate.objectId)} className="accent-leaf shrink-0" />
+                            <span className="text-xs flex-1">
+                              <span className="font-medium">{rate.provider} {rate.servicelevelName}</span>
+                              {rate.estimatedDays ? <span className="text-muted-foreground"> · {rate.estimatedDays}d</span> : null}
+                            </span>
+                            <span className="text-xs font-semibold shrink-0">${rate.amount}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Shipping</span>
+                      <span className="font-medium">{centsToDisplay(auction.shipping_cost_cents ?? 0)}</span>
+                    </div>
+                  )}
+
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Tax</span>
+                    {bnTaxEstimate !== null
+                      ? <span className="font-medium">~{centsToDisplay(bnTaxCents)}</span>
+                      : <span className="text-xs text-muted-foreground italic">Calculated at settlement</span>
+                    }
+                  </div>
+
+                  <div className="flex justify-between border-t pt-1.5 font-semibold">
+                    <span>Total</span>
+                    <span>
+                      {bnTotal !== null ? centsToDisplay(bnTotal) : "—"}
+                      {bnTotal !== null && bnTaxEstimate === null && <span className="text-xs font-normal text-muted-foreground"> + tax</span>}
+                    </span>
+                  </div>
+                </div>
+
+                {savedCard && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <CreditCard size={12} className="shrink-0" />
+                    <span><span className="capitalize">{savedCard.brand}</span> ••••{savedCard.last4} — will be charged now</span>
+                  </div>
+                )}
+
+                <div className="flex gap-2 justify-end">
+                  <Button size="sm" variant="outline" onClick={() => setPendingBuyNow(false)}>Cancel</Button>
+                  <Button size="sm" disabled={!bnCanConfirm || placing} onClick={confirmBuyNow} className="bg-orange-600 hover:bg-orange-700 text-white">
+                    {placing ? "Processing…" : "Confirm Purchase"}
+                  </Button>
+                </div>
+              </div>
+            );
+          })()}
+        </>
       )}
 
       {!isEnded && userId && userId !== auction.seller_id && buyerHasPaymentMethod && buyerHasShippingAddress && (
