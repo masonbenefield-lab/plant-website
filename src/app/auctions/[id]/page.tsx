@@ -136,9 +136,25 @@ export default async function AuctionPage({
             </div>
           </div>
 
+          {auction.description && (
+            <p className="text-sm text-muted-foreground leading-relaxed mt-3 mb-3">
+              {auction.description}
+            </p>
+          )}
+
           {auction.status === "scheduled" && auction.starts_at && (
             <div className="mb-4 rounded-md border border-blue-200 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-800 px-3 py-2 text-sm text-blue-800 dark:text-blue-300">
               🕐 This auction opens on {new Date(auction.starts_at).toLocaleString("en-US", { month: "long", day: "numeric", hour: "numeric", minute: "2-digit" })}
+            </div>
+          )}
+
+          {(seller as { calculated_shipping_enabled?: boolean } | null)?.calculated_shipping_enabled !== false && (
+            <div className="mb-3">
+              <ShippingEstimate
+                auctionId={auction.id}
+                freeShipping={shippingFree}
+                shippingCostCents={shippingCostCents}
+              />
             </div>
           )}
 
@@ -187,20 +203,7 @@ export default async function AuctionPage({
             </Link>
           )}
 
-          {auction.description && (
-            <p className="text-sm text-muted-foreground leading-relaxed mt-2 mb-4">
-              {auction.description}
-            </p>
-          )}
-
           <div className="mb-4 space-y-2">
-            {(seller as { calculated_shipping_enabled?: boolean } | null)?.calculated_shipping_enabled !== false && (
-              <ShippingEstimate
-                auctionId={auction.id}
-                freeShipping={shippingFree}
-                shippingCostCents={shippingCostCents}
-              />
-            )}
             {seller?.shipping_days && (
               <p className="text-xs text-muted-foreground">
                 🚚 Ships within {seller.shipping_days}{(seller as { shipping_days_max?: number | null }).shipping_days_max ? `–${(seller as { shipping_days_max?: number | null }).shipping_days_max}` : ""} day{((seller as { shipping_days_max?: number | null }).shipping_days_max ?? seller.shipping_days) !== 1 ? "s" : ""}
