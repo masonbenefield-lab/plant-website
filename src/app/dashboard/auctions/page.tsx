@@ -216,6 +216,9 @@ export default async function DashboardAuctionsPage({
                         {auction.buy_now_price_cents && (
                           <span className="text-orange-600 font-medium">Buy Now: {centsToDisplay(auction.buy_now_price_cents)}</span>
                         )}
+                        {auction.reserve_price_cents && (
+                          <span className="text-muted-foreground">Reserve: {centsToDisplay(auction.reserve_price_cents)}</span>
+                        )}
                         <span>
                           {(auction as { free_shipping?: boolean | null }).free_shipping
                             ? "Free shipping"
