@@ -74,10 +74,11 @@ export async function POST(request: Request) {
     .eq("id", auctionId)
     .single();
 
+  if (!bidderProfile.saved_shipping_address) {
+    return NextResponse.json({ error: "shipping_address_required" }, { status: 403 });
+  }
+
   if (auction?.shipping_weight_oz) {
-    if (!bidderProfile.saved_shipping_address) {
-      return NextResponse.json({ error: "shipping_address_required" }, { status: 403 });
-    }
     if (!shippingRateId || shippingCostCents == null) {
       return NextResponse.json({ error: "shipping_rate_required" }, { status: 400 });
     }

@@ -405,12 +405,12 @@ export default function AuctionBidPanel({
         </div>
       )}
 
-      {!isEnded && userId && userId !== auction.seller_id && buyerHasPaymentMethod && auction.shipping_weight_oz && !buyerHasShippingAddress && (
+      {!isEnded && userId && userId !== auction.seller_id && buyerHasPaymentMethod && !buyerHasShippingAddress && (
         <div className="rounded-md border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
-          <p className="font-medium">Shipping address required to bid</p>
-          <p className="text-xs mt-0.5">This auction uses calculated shipping — add your address so we can calculate rates.</p>
+          <p className="font-medium">Delivery address required to bid</p>
+          <p className="text-xs mt-0.5">We need your delivery address so the seller knows where to ship your order.</p>
           <a href="/account#bidding" className="text-xs font-semibold underline underline-offset-2 mt-1 inline-block">
-            Add shipping address →
+            Add delivery address →
           </a>
         </div>
       )}
@@ -431,7 +431,7 @@ export default function AuctionBidPanel({
         </div>
       )}
 
-      {!isEnded && userId && userId !== auction.seller_id && buyerHasPaymentMethod && (!auction.shipping_weight_oz || buyerHasShippingAddress) && (
+      {!isEnded && userId && userId !== auction.seller_id && buyerHasPaymentMethod && buyerHasShippingAddress && (
         <div className="space-y-2">
           {/* Shipping rate picker for weight-based auctions */}
           {auction.shipping_weight_oz && (
