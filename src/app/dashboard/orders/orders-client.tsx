@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -61,6 +62,7 @@ type ItemRow = { id: string; plant_name: string; variety: string | null };
 type BuyerRow = { id: string; username: string };
 
 function BuyLabelButton({ orderId, labelUrl: initialLabelUrl, createdAt }: { orderId: string; labelUrl: string | null; createdAt: string }) {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [labelUrl, setLabelUrl] = useState(initialLabelUrl);
   const [useModal, setUseModal] = useState(false);
@@ -104,6 +106,7 @@ function BuyLabelButton({ orderId, labelUrl: initialLabelUrl, createdAt }: { ord
       return;
     }
     setLabelUrl(data.labelUrl);
+    router.refresh();
     toast.success("Label purchased!", {
       description: "Tracking number added. Click 'View label' to print.",
     });
