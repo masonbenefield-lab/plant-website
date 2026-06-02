@@ -434,12 +434,16 @@ export default async function SellerStorefront({
             <StorefrontGarden
               plants={(gardenPlants ?? []).map((p) => ({ ...p, images: p.images as string[] | null }))}
               username={username}
+              canWishlist={!!user && user.id !== profile.id}
             />
           </TabsContent>
         )}
         {profile.wishlist_public && (
           <TabsContent value="wishlist" className="mt-6">
-            <StorefrontWishlist items={wishlistItems ?? []} />
+            <StorefrontWishlist
+              items={wishlistItems ?? []}
+              canWishlist={!!user && user.id !== profile.id}
+            />
           </TabsContent>
         )}
       </Tabs>

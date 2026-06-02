@@ -3,11 +3,14 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Search, X, Heart, Sprout } from "lucide-react";
+import { Search, X, Heart, Sprout, BookmarkPlus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { centsToDisplay } from "@/lib/stripe";
+import { toast } from "sonner";
 
 type Listing = {
   id: string;
@@ -267,7 +270,87 @@ export function StorefrontAuctions({ auctions, paymentsEnabled = true }: { aucti
   );
 }
 
-export function StorefrontGarden({ plants, username }: { plants: GardenPlant[]; username: string }) {
+function AddToWishlistButton({ name, variety }: { name: string; variety?: string | null }) {
+  const [open, setOpen] = useState(false);
+  const [priority, setPriority] = useState<"must" | "want" | "nice">("want");
+  const [saving, setSaving] = useState(false);
+  const [added, setAdded] = useState(false);
+
+  async function add() {
+    setSaving(true);
+    const res = await fetch("/api/garden/wishlist", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, variety: variety ?? null, priority }),
+    });
+    setSaving(false);
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      toast.error(d.error ?? "Failed to add to wishlist");
+      return;
+    }
+    setAdded(true);
+    setOpen(false);
+    toast.success(`${name}${variety ? ` (${variety})` : ""} added to your wishlist`);
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        title={added ? "Already on your wishlist" : "Add to my wishlist"}
+        onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!added) setOpen(true); }}
+        className={cn(
+          "flex items-center justify-center w-8 h-8 rounded-full shadow transition-colors",
+          added
+            ? "bg-rose-500 text-white cursor-default"
+            : "bg-white/90 hover:bg-rose-50 text-rose-400 hover:text-rose-500 dark:bg-black/60 dark:hover:bg-rose-900/40"
+        )}
+      >
+        <Heart size={14} className={added ? "fill-white" : ""} />
+      </button>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-xs">
+          <DialogHeader>
+            <DialogTitle>Add to your wishlist</DialogTitle>
+            <DialogDescription>
+              <span className="font-medium text-foreground">{name}{variety ? ` — ${variety}` : ""}</span>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Priority</p>
+            <div className="flex gap-2">
+              {(["must", "want", "nice"] as const).map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setPriority(p)}
+                  className={cn(
+                    "flex-1 text-xs py-1.5 rounded-md border font-medium transition-colors",
+                    priority === p
+                      ? "border-leaf bg-[#EBF0E6] text-leaf dark:bg-forest/30"
+                      : "border-muted-foreground/20 text-muted-foreground hover:border-leaf/50"
+                  )}
+                >
+                  {p === "must" ? "Must have" : p === "want" ? "Want it" : "Nice to have"}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex gap-2 mt-1">
+            <Button variant="outline" className="flex-1" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button className="flex-1 bg-leaf hover:bg-forest" onClick={add} disabled={saving}>
+              {saving ? "Adding…" : "Add to wishlist"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+export function StorefrontGarden({ plants, username, canWishlist }: { plants: GardenPlant[]; username: string; canWishlist?: boolean }) {
   const [q, setQ] = useState("");
 
   const filtered = plants.filter((p) =>
@@ -291,7 +374,13 @@ export function StorefrontGarden({ plants, username }: { plants: GardenPlant[]; 
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {filtered.map((plant) => (
-            <Link key={plant.id} href={`/gardens/${username}/${plant.id}?from=storefront`}>
+            <div key={plant.id} className="relative group">
+              {canWishlist && (
+                <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <AddToWishlistButton name={plant.name} variety={plant.variety} />
+                </div>
+              )}
+              <Link href={`/gardens/${username}/${plant.id}?from=storefront`}>
               <Card className="overflow-hidden h-full hover:shadow-md transition-shadow group">
                 <div className="aspect-square relative bg-muted">
                   {plant.images?.[0] ? (
@@ -325,7 +414,8 @@ export function StorefrontGarden({ plants, username }: { plants: GardenPlant[]; 
                   )}
                 </CardContent>
               </Card>
-            </Link>
+              </Link>
+            </div>
           ))}
         </div>
       )}
@@ -333,7 +423,7 @@ export function StorefrontGarden({ plants, username }: { plants: GardenPlant[]; 
   );
 }
 
-export function StorefrontWishlist({ items }: { items: WishlistItem[] }) {
+export function StorefrontWishlist({ items, canWishlist }: { items: WishlistItem[]; canWishlist?: boolean }) {
   const [q, setQ] = useState("");
 
   const filtered = items.filter((i) =>
@@ -381,6 +471,11 @@ export function StorefrontWishlist({ items }: { items: WishlistItem[] }) {
                   <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{item.notes}</p>
                 )}
               </div>
+              {canWishlist && (
+                <div className="shrink-0 self-center">
+                  <AddToWishlistButton name={item.name} variety={item.variety} />
+                </div>
+              )}
             </div>
           ))}
         </div>
