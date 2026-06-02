@@ -39,7 +39,13 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
   const [variety, setVariety] = useState("");
   const [potSize, setPotSize] = useState("");
   const [shippingMode, setShippingMode] = useState<"" | "free" | "flat" | "weight">("");
+  const [startingBidVal, setStartingBidVal] = useState(0);
+  const [buyNowVal, setBuyNowVal] = useState(0);
+  const [reserveVal, setReserveVal] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const buyNowError = buyNowVal > 0 && startingBidVal > 0 && buyNowVal <= startingBidVal;
+  const reserveError = reserveVal > 0 && startingBidVal > 0 && reserveVal < startingBidVal;
 
   const atAuctionLimit = planLimit !== null && currentCount >= planLimit;
   const atPhotoLimit = photoLimit !== null && imageUrls.length >= photoLimit;
@@ -160,6 +166,9 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
       setVariety("");
       setPotSize("");
       setShippingMode("");
+      setStartingBidVal(0);
+      setBuyNowVal(0);
+      setReserveVal(0);
       form.reset();
       router.refresh();
     }
@@ -189,7 +198,7 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
         <form onSubmit={handleSubmit} className="space-y-4 mt-2">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <Label htmlFor="plant_name">Plant Name *</Label>
+              <Label htmlFor="plant_name">Plant Type *</Label>
               <Input
                 id="plant_name"
                 name="plant_name"
@@ -219,7 +228,8 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
               <Label htmlFor="starting_bid">Starting Bid *</Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">$</span>
-                <Input id="starting_bid" name="starting_bid" type="number" min={0.01} step={0.01} required disabled={atAuctionLimit} className="pl-6" />
+                <Input id="starting_bid" name="starting_bid" type="number" min={0.01} step={0.01} required disabled={atAuctionLimit} className="pl-6"
+                  onChange={(e) => setStartingBidVal(parseFloat(e.target.value) || 0)} />
               </div>
             </div>
           </div>
@@ -228,17 +238,21 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
             <Label htmlFor="buy_now_price">Buy Now Price <span className="font-normal text-muted-foreground">(optional)</span></Label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">$</span>
-              <Input id="buy_now_price" name="buy_now_price" type="number" min={0.01} step={0.01} placeholder="Leave blank to disable" disabled={atAuctionLimit} className="pl-6" />
+              <Input id="buy_now_price" name="buy_now_price" type="number" min={0.01} step={0.01} placeholder="Leave blank to disable" disabled={atAuctionLimit} className={`pl-6 ${buyNowError ? "border-red-400 focus-visible:ring-red-400" : ""}`}
+                onChange={(e) => setBuyNowVal(parseFloat(e.target.value) || 0)} />
             </div>
-            <p className="text-xs text-muted-foreground">Buyers can skip bidding and purchase immediately at this price.</p>
+            {buyNowError && <p className="text-xs text-red-600">Buy Now price must be higher than the starting bid.</p>}
+            {!buyNowError && <p className="text-xs text-muted-foreground">Buyers can skip bidding and purchase immediately at this price.</p>}
           </div>
           <div className="space-y-1">
             <Label htmlFor="reserve_price">Reserve Price <span className="font-normal text-muted-foreground">(optional)</span></Label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">$</span>
-              <Input id="reserve_price" name="reserve_price" type="number" min={0.01} step={0.01} placeholder="Leave blank for no reserve" disabled={atAuctionLimit} className="pl-6" />
+              <Input id="reserve_price" name="reserve_price" type="number" min={0.01} step={0.01} placeholder="Leave blank for no reserve" disabled={atAuctionLimit} className={`pl-6 ${reserveError ? "border-red-400 focus-visible:ring-red-400" : ""}`}
+                onChange={(e) => setReserveVal(parseFloat(e.target.value) || 0)} />
             </div>
-            <p className="text-xs text-muted-foreground">Auction only completes if bidding reaches this amount. Buyers don&apos;t see the reserve — just whether it&apos;s been met.</p>
+            {reserveError && <p className="text-xs text-red-600">Reserve price must be at least the starting bid.</p>}
+            {!reserveError && <p className="text-xs text-muted-foreground">Auction only completes if bidding reaches this amount. Buyers don&apos;t see the reserve — just whether it&apos;s been met.</p>}
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
@@ -399,7 +413,7 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
           )}
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={saving || atAuctionLimit || !shippingMode || (shippingMode === "weight" && !calculatedShippingEnabled)} className="bg-leaf hover:bg-forest">
+            <Button type="submit" disabled={saving || atAuctionLimit || !shippingMode || (shippingMode === "weight" && !calculatedShippingEnabled) || buyNowError || reserveError} className="bg-leaf hover:bg-forest">
               {saving ? "Saving…" : "Create auction"}
             </Button>
           </div>
