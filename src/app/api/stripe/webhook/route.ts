@@ -118,14 +118,17 @@ export async function POST(request: Request) {
           : `${ci[0].plant_name} + ${ci.length - 1} more`;
       }
 
+      // Auction orders: close route already sent winner + seller emails — skip here
+      const isAuctionOrder = !!order.auction_id;
+
       const { data: { user: buyer } } = await supabase.auth.admin.getUserById(order.buyer_id);
-      if (buyer?.email) {
+      if (buyer?.email && !isAuctionOrder) {
         await sendOrderConfirmation({ buyerEmail: buyer.email, plantName, amountCents: order.amount_cents, orderId: order.id, items: emailItems }).catch(() => {});
       }
 
       // Notify seller
       const { data: { user: seller } } = await supabase.auth.admin.getUserById(order.seller_id);
-      if (seller?.email && order.shipping_address) {
+      if (seller?.email && order.shipping_address && !isAuctionOrder) {
         const addr = order.shipping_address as { name: string; line1: string; line2?: string; city: string; state: string; zip: string; country: string };
         await sendNewOrderAlert({
           sellerEmail: seller.email,
