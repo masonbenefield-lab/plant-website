@@ -210,6 +210,8 @@ export interface Database {
           responded_at: string | null;
           escalated_at: string | null;
           resolved_at: string | null;
+          last_replied_at: string | null;
+          last_replied_by_role: string | null;
         };
         Insert: {
           id?: string;
@@ -224,6 +226,8 @@ export interface Database {
           responded_at?: string | null;
           escalated_at?: string | null;
           resolved_at?: string | null;
+          last_replied_at?: string | null;
+          last_replied_by_role?: string | null;
         };
         Update: {
           seller_response?: string | null;
@@ -231,6 +235,31 @@ export interface Database {
           responded_at?: string | null;
           escalated_at?: string | null;
           resolved_at?: string | null;
+          last_replied_at?: string | null;
+          last_replied_by_role?: string | null;
+        };
+        Relationships: [];
+      };
+      order_dispute_messages: {
+        Row: {
+          id: string;
+          dispute_id: string;
+          sender_id: string;
+          message: string;
+          images: string[];
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          dispute_id: string;
+          sender_id: string;
+          message: string;
+          images?: string[];
+          created_at?: string;
+        };
+        Update: {
+          message?: string;
+          images?: string[];
         };
         Relationships: [];
       };

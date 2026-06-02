@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -9,8 +10,10 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, ImagePlus, X } from "lucide-react";
 import { findProhibitedWord, censorWord, logViolation } from "@/lib/profanity";
+import { compressImage } from "@/lib/compress-image";
+import { createClient } from "@/lib/supabase/client";
 
 const REASONS = [
   "Item not received",
@@ -20,12 +23,11 @@ const REASONS = [
   "Other issue",
 ];
 
+const MAX_PHOTOS = 3;
+
 type DisputeState = {
   id: string;
   status: string;
-  reason: string;
-  seller_response: string | null;
-  created_at: string;
 } | null;
 
 export default function DisputeButton({
@@ -38,13 +40,34 @@ export default function DisputeButton({
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [details, setDetails] = useState("");
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [dispute, setDispute] = useState<DisputeState>(existingDispute ?? null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  const canEscalate = dispute && dispute.status !== "resolved" && dispute.status !== "escalated" && (
-    dispute.status === "seller_responded" ||
-    (Date.now() - new Date(dispute.created_at).getTime()) >= 5 * 24 * 60 * 60 * 1000
-  );
+  async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+    const remaining = MAX_PHOTOS - photoUrls.length;
+    if (remaining <= 0) return;
+    setUploading(true);
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setUploading(false); return; }
+    const newUrls: string[] = [];
+    for (const rawFile of files.slice(0, remaining)) {
+      const file = await compressImage(rawFile);
+      const path = `disputes/${user.id}/${Date.now()}-${file.name}`;
+      const { error } = await supabase.storage.from("listings").upload(path, file, { upsert: true });
+      if (error) { toast.error(`Upload failed: ${error.message}`); continue; }
+      const { data } = supabase.storage.from("listings").getPublicUrl(path);
+      newUrls.push(data.publicUrl);
+    }
+    setPhotoUrls((prev) => [...prev, ...newUrls]);
+    setUploading(false);
+    e.target.value = "";
+  }
 
   async function submitDispute(e: React.FormEvent) {
     e.preventDefault();
@@ -61,7 +84,7 @@ export default function DisputeButton({
     const res = await fetch("/api/orders/dispute", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ orderId, reason, details }),
+      body: JSON.stringify({ orderId, reason, details, images: photoUrls }),
     });
     const data = await res.json();
     setSubmitting(false);
@@ -69,69 +92,29 @@ export default function DisputeButton({
       toast.error(data.error);
     } else {
       toast.success("The seller has been notified. They have 5 days to respond.");
-      setDispute({ id: data.disputeId, status: "seller_notified", reason, seller_response: null, created_at: new Date().toISOString() });
+      setDispute({ id: data.disputeId, status: "seller_notified" });
       setOpen(false);
       setReason("");
       setDetails("");
+      setPhotoUrls([]);
     }
   }
 
-  async function escalate() {
-    if (!dispute) return;
-    setSubmitting(true);
-    const res = await fetch(`/api/orders/dispute/${dispute.id}/escalate`, { method: "POST" });
-    const data = await res.json();
-    setSubmitting(false);
-    if (data.error) {
-      toast.error(data.error);
-    } else {
-      toast.success("Dispute escalated to Plantet — we'll review it and follow up.");
-      setDispute((d) => d ? { ...d, status: "escalated" } : d);
-    }
-  }
-
-  // Already escalated — show static badge
-  if (dispute?.status === "escalated") {
+  // Open dispute — show status link to disputes tab
+  if (dispute && dispute.status !== "resolved") {
     return (
       <p className="text-xs text-amber-600 flex items-center gap-1">
-        <AlertTriangle size={11} /> Dispute escalated to Plantet
+        <AlertTriangle size={11} />
+        Dispute open —{" "}
+        <a href="/orders?tab=disputes" className="underline hover:text-amber-700">view in My Disputes</a>
       </p>
     );
   }
 
-  // Already resolved
   if (dispute?.status === "resolved") {
-    return (
-      <p className="text-xs text-leaf flex items-center gap-1">
-        ✓ Dispute resolved
-      </p>
-    );
+    return <p className="text-xs text-leaf flex items-center gap-1">✓ Dispute resolved</p>;
   }
 
-  // Open dispute — show status + optional escalate
-  if (dispute) {
-    return (
-      <div className="space-y-1">
-        <p className="text-xs text-amber-600 flex items-center gap-1">
-          <AlertTriangle size={11} />
-          {dispute.status === "seller_responded"
-            ? "Seller responded — view in My Disputes"
-            : "Dispute open — awaiting seller response"}
-        </p>
-        {canEscalate && (
-          <button
-            onClick={escalate}
-            disabled={submitting}
-            className="text-xs text-red-600 hover:underline disabled:opacity-50"
-          >
-            {submitting ? "Escalating…" : "Escalate to Plantet →"}
-          </button>
-        )}
-      </div>
-    );
-  }
-
-  // No dispute yet — show report button
   return (
     <>
       <button
@@ -153,9 +136,7 @@ export default function DisputeButton({
             <div className="space-y-1">
               <Label>What went wrong? *</Label>
               <Select value={reason} onValueChange={v => { if (v) setReason(v); }}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a reason…" />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Select a reason…" /></SelectTrigger>
                 <SelectContent>
                   {REASONS.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                 </SelectContent>
@@ -172,9 +153,41 @@ export default function DisputeButton({
                 maxLength={500}
               />
             </div>
+
+            {/* Photo upload */}
+            <div className="space-y-2">
+              <Label>Photos <span className="font-normal text-muted-foreground">(optional, up to 3)</span></Label>
+              <div className="flex flex-wrap gap-2">
+                {photoUrls.map((url) => (
+                  <div key={url} className="relative w-16 h-16">
+                    <Image src={url} alt="Dispute photo" fill className="object-cover rounded-md border" />
+                    <button
+                      type="button"
+                      onClick={() => setPhotoUrls(prev => prev.filter(u => u !== url))}
+                      className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-background border rounded-full flex items-center justify-center hover:bg-red-50"
+                    >
+                      <X size={10} />
+                    </button>
+                  </div>
+                ))}
+                {photoUrls.length < MAX_PHOTOS && (
+                  <button
+                    type="button"
+                    onClick={() => fileRef.current?.click()}
+                    disabled={uploading}
+                    className="w-16 h-16 border-2 border-dashed rounded-md flex flex-col items-center justify-center text-muted-foreground hover:border-leaf hover:text-leaf transition-colors disabled:opacity-50"
+                  >
+                    <ImagePlus size={18} />
+                    <span className="text-[9px] mt-0.5">{uploading ? "…" : "Add"}</span>
+                  </button>
+                )}
+              </div>
+              <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoChange} />
+            </div>
+
             <div className="flex gap-2 pt-1">
               <Button type="button" variant="outline" onClick={() => setOpen(false)} className="flex-1">Cancel</Button>
-              <Button type="submit" disabled={submitting || !reason} className="flex-1 bg-red-600 hover:bg-red-700">
+              <Button type="submit" disabled={submitting || uploading || !reason} className="flex-1 bg-red-600 hover:bg-red-700">
                 {submitting ? "Submitting…" : "Notify Seller"}
               </Button>
             </div>

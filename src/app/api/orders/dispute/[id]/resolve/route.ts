@@ -24,7 +24,7 @@ export async function POST(
     .from("order_disputes")
     .select("id, buyer_id, seller_id, status")
     .eq("id", id)
-    .eq("seller_id", user.id)
+    .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
     .single();
 
   if (!dispute) return NextResponse.json({ error: "Dispute not found" }, { status: 404 });
@@ -37,19 +37,21 @@ export async function POST(
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Notify buyer
+  // Notify the other party
+  const isSeller = dispute.seller_id === user.id;
+  const otherPartyId = isSeller ? dispute.buyer_id : dispute.seller_id;
   try {
     const admin = adminClient();
-    const [{ data: sellerProfile }, { data: buyerAuthData }] = await Promise.all([
+    const [{ data: resolverProfile }, { data: otherAuthData }] = await Promise.all([
       supabase.from("profiles").select("username, display_name").eq("id", user.id).single(),
-      admin.auth.admin.getUserById(dispute.buyer_id),
+      admin.auth.admin.getUserById(otherPartyId),
     ]);
-    const buyerEmail = buyerAuthData?.user?.email;
-    const sellerDisplayName = (sellerProfile as { display_name?: string | null; username?: string | null } | null)?.display_name ?? sellerProfile?.username ?? "The seller";
-    if (buyerEmail) {
+    const otherEmail = otherAuthData?.user?.email;
+    const resolverDisplayName = (resolverProfile as { display_name?: string | null; username?: string | null } | null)?.display_name ?? resolverProfile?.username ?? "The other party";
+    if (otherEmail) {
       await sendDisputeResolvedToBuyer({
-        buyerEmail,
-        sellerUsername: sellerDisplayName,
+        buyerEmail: otherEmail,
+        sellerUsername: resolverDisplayName,
       }).catch(() => {});
     }
   } catch {

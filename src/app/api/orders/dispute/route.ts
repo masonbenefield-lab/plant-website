@@ -19,10 +19,11 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { orderId, reason, details } = await request.json() as {
+  const { orderId, reason, details, images = [] } = await request.json() as {
     orderId: string;
     reason: string;
     details?: string;
+    images?: string[];
   };
 
   if (!orderId || !reason) {
@@ -65,6 +66,15 @@ export async function POST(request: Request) {
   if (insertErr || !dispute) {
     return NextResponse.json({ error: insertErr?.message ?? "Failed to file dispute" }, { status: 500 });
   }
+
+  // Create first thread message from the buyer's report
+  const firstMessage = [reason, details?.trim()].filter(Boolean).join("\n\n");
+  await supabase.from("order_dispute_messages").insert({
+    dispute_id: dispute.id,
+    sender_id: user.id,
+    message: firstMessage,
+    images: images.filter(Boolean),
+  });
 
   // Fetch names and emails for notifications
   const admin = adminClient();

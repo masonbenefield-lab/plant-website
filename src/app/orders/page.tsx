@@ -9,8 +9,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { centsToDisplay } from "@/lib/stripe";
 import RateSellerForm from "./rate-seller-form";
 import DisputeButton from "./dispute-button";
-import EscalateButton from "./escalate-button";
-import DisputeSellerPanel from "./dispute-seller-panel";
+import DisputeThread from "./dispute-thread";
+import type { DisputeMessage } from "./dispute-thread";
 import OrdersClient from "@/app/dashboard/orders/orders-client";
 import { ExpiredAuctionBanner } from "./expired-auction-banner";
 
@@ -441,9 +441,21 @@ export default async function OrdersPage({
   if (activeTab === "disputes") {
     const { data: disputes } = await supabase
       .from("order_disputes")
-      .select("id, order_id, buyer_id, seller_id, reason, details, seller_response, status, created_at, escalated_at, resolved_at")
+      .select("id, order_id, buyer_id, seller_id, reason, status, created_at, last_replied_at, last_replied_by_role")
       .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
       .order("created_at", { ascending: false });
+
+    // Auto-resolve disputes where the other party hasn't replied in 5 days
+    const staleIds = (disputes ?? []).filter((d) => {
+      if (d.status === "resolved" || d.status === "escalated") return false;
+      const lastReplied = d.last_replied_at ? new Date(d.last_replied_at) : null;
+      if (!lastReplied) return false;
+      const daysSince = (Date.now() - lastReplied.getTime()) / (1000 * 60 * 60 * 24);
+      return daysSince >= 5;
+    }).map((d) => d.id);
+    if (staleIds.length > 0) {
+      await supabase.from("order_disputes").update({ status: "resolved", resolved_at: new Date().toISOString() }).in("id", staleIds);
+    }
 
     if (!disputes?.length) {
       return (
@@ -459,9 +471,11 @@ export default async function OrdersPage({
       );
     }
 
-    // Fetch order + party info for all disputes
+    // Fetch orders, item names, party profiles, and messages
     const disputeOrderIds = disputes.map((d) => d.order_id);
     const partyIds = [...new Set(disputes.flatMap((d) => [d.buyer_id, d.seller_id]))];
+    const disputeIds = disputes.map((d) => d.id);
+
     const { data: disputeOrders } = await supabase
       .from("orders")
       .select("id, amount_cents, listing_id, auction_id, cart_items")
@@ -470,23 +484,22 @@ export default async function OrdersPage({
     const dListingIds = (disputeOrders ?? []).filter((o) => o.listing_id).map((o) => o.listing_id!);
     const dAuctionIds = (disputeOrders ?? []).filter((o) => o.auction_id).map((o) => o.auction_id!);
 
-    const [{ data: partyProfiles }, { data: dListings }, { data: dAuctions }] = await Promise.all([
+    const [{ data: partyProfiles }, { data: dListings }, { data: dAuctions }, { data: allMessages }] = await Promise.all([
       supabase.from("profiles").select("id, username, display_name").in("id", partyIds),
       dListingIds.length ? supabase.from("listings").select("id, plant_name, variety").in("id", dListingIds) : { data: [] },
       dAuctionIds.length ? supabase.from("auctions").select("id, plant_name, variety").in("id", dAuctionIds) : { data: [] },
+      supabase.from("order_dispute_messages").select("id, dispute_id, sender_id, message, images, created_at").in("dispute_id", disputeIds).order("created_at", { ascending: true }),
     ]);
 
     const disputeOrderMap = Object.fromEntries((disputeOrders ?? []).map((o) => [o.id, o]));
     const partyMap = Object.fromEntries((partyProfiles ?? []).map((p) => [p.id, p]));
     const dListingMap = Object.fromEntries((dListings ?? []).map((l) => [l.id, l]));
     const dAuctionMap = Object.fromEntries((dAuctions ?? []).map((a) => [a.id, a]));
-
-    const statusLabel: Record<string, { label: string; color: string }> = {
-      seller_notified: { label: "Awaiting seller response", color: "bg-yellow-100 text-yellow-800" },
-      seller_responded: { label: "Seller responded", color: "bg-blue-100 text-blue-800" },
-      escalated: { label: "Escalated to Plantet", color: "bg-red-100 text-red-700" },
-      resolved: { label: "Resolved", color: "bg-[#DFE7D4] text-forest" },
-    };
+    const messagesByDispute: Record<string, DisputeMessage[]> = {};
+    for (const msg of allMessages ?? []) {
+      if (!messagesByDispute[msg.dispute_id]) messagesByDispute[msg.dispute_id] = [];
+      messagesByDispute[msg.dispute_id].push({ ...msg, images: (msg.images as string[]) ?? [] });
+    }
 
     return (
       <div className="max-w-4xl mx-auto px-4 py-10">
@@ -494,17 +507,23 @@ export default async function OrdersPage({
         {tabBar}
         <div className="space-y-4">
           {disputes.map((d) => {
+            const resolvedByStale = staleIds.includes(d.id);
+            const effectiveStatus = resolvedByStale ? "resolved" : d.status;
             const order = disputeOrderMap[d.order_id];
             const isBuyer = d.buyer_id === user.id;
-            const otherPartyId = isBuyer ? d.seller_id : d.buyer_id;
-            const otherParty = partyMap[otherPartyId];
-            const st = statusLabel[d.status] ?? { label: d.status, color: "bg-gray-100 text-gray-600" };
-            const canEscalate = isBuyer && d.status !== "resolved" && d.status !== "escalated" && (
-              d.status === "seller_responded" ||
+            const buyerId = d.buyer_id;
+            const sellerId = d.seller_id;
+            const buyerParty = partyMap[buyerId];
+            const sellerParty = partyMap[sellerId];
+            const otherParty = isBuyer ? sellerParty : buyerParty;
+            const buyerDisplayName = buyerParty?.display_name ?? buyerParty?.username ?? "Buyer";
+            const sellerDisplayName = sellerParty?.display_name ?? sellerParty?.username ?? "Seller";
+
+            const canEscalate = isBuyer && effectiveStatus !== "resolved" && effectiveStatus !== "escalated" && (
+              effectiveStatus === "seller_responded" ||
               (Date.now() - new Date(d.created_at).getTime()) >= 5 * 24 * 60 * 60 * 1000
             );
 
-            // Resolve item name
             let itemName: string | null = null;
             if (order) {
               const cartItems = order.cart_items as { plant_name: string; variety: string | null }[] | null;
@@ -519,53 +538,40 @@ export default async function OrdersPage({
               }
             }
 
+            const messages = messagesByDispute[d.id] ?? [];
+
             return (
               <Card key={d.id}>
-                <CardContent className="p-5 space-y-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      {itemName && <p className="font-semibold">{itemName}</p>}
-                      <p className="text-sm font-medium mt-0.5">{d.reason}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {isBuyer ? "Seller" : "Buyer"}:{" "}
-                        {otherParty?.username ? (
-                          <Link href={`/sellers/${otherParty.username}`} className="text-leaf hover:underline">
-                            {otherParty.display_name ?? otherParty.username}
-                          </Link>
-                        ) : "—"}
-                        {order && <span> · {centsToDisplay(order.amount_cents)}</span>}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Filed {new Date(d.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                      </p>
-                    </div>
-                    <Badge className={st.color} variant="secondary">{st.label}</Badge>
+                <CardContent className="p-5 space-y-4">
+                  {/* Header */}
+                  <div>
+                    {itemName && <p className="font-semibold">{itemName}</p>}
+                    <p className="text-sm font-medium mt-0.5">{d.reason}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {isBuyer ? "Seller" : "Buyer"}:{" "}
+                      {otherParty?.username ? (
+                        <Link href={`/sellers/${otherParty.username}`} className="text-leaf hover:underline">
+                          {otherParty.display_name ?? otherParty.username}
+                        </Link>
+                      ) : "—"}
+                      {order && <span> · {centsToDisplay(order.amount_cents)}</span>}
+                      <span className="ml-2">· Filed {new Date(d.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+                    </p>
                   </div>
 
-                  {d.details && (
-                    <div className="text-sm bg-muted/40 rounded p-3">
-                      <p className="text-xs font-medium text-muted-foreground mb-1">{isBuyer ? "Your report" : "Buyer's report"}</p>
-                      <p>{d.details}</p>
-                    </div>
-                  )}
-
-                  {/* Buyer view: show seller response + escalate */}
-                  {isBuyer && d.seller_response && (
-                    <div className="text-sm bg-leaf/5 border border-leaf/20 rounded p-3">
-                      <p className="text-xs font-medium text-leaf mb-1">Seller&apos;s response</p>
-                      <p>{d.seller_response}</p>
-                    </div>
-                  )}
-                  {canEscalate && <EscalateButton disputeId={d.id} />}
-
-                  {/* Seller view: inline respond/resolve panel */}
-                  {!isBuyer && (
-                    <DisputeSellerPanel
-                      disputeId={d.id}
-                      initialResponse={d.seller_response}
-                      initialStatus={d.status}
-                    />
-                  )}
+                  {/* Thread */}
+                  <DisputeThread
+                    disputeId={d.id}
+                    initialMessages={messages}
+                    initialStatus={effectiveStatus}
+                    initialLastRepliedByRole={d.last_replied_by_role}
+                    initialLastRepliedAt={d.last_replied_at}
+                    currentUserId={user.id}
+                    isBuyer={isBuyer}
+                    buyerDisplayName={buyerDisplayName}
+                    sellerDisplayName={sellerDisplayName}
+                    canEscalate={canEscalate}
+                  />
                 </CardContent>
               </Card>
             );
@@ -659,7 +665,7 @@ export default async function OrdersPage({
     supabase.from("profiles").select("id, username").in("id", buyerIds),
     supabase.from("profiles").select("auto_labels_enabled").eq("id", user.id).single(),
     salesOrderIds.length
-      ? supabase.from("order_disputes").select("id, order_id, buyer_id, reason, details, seller_response, status, created_at").in("order_id", salesOrderIds).neq("status", "resolved")
+      ? supabase.from("order_disputes").select("id, order_id, status").in("order_id", salesOrderIds).neq("status", "resolved")
       : { data: [] },
   ]);
 
