@@ -29,9 +29,22 @@ export default function SignupPage() {
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [ageConfirmed, setAgeConfirmed] = useState(false);
+  const [usConfirmed, setUsConfirmed] = useState(false);
   const [emailOptIn, setEmailOptIn] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [geoBlocked, setGeoBlocked] = useState(false);
+  const [geoChecked, setGeoChecked] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/geo")
+      .then((r) => r.json())
+      .then((data: { country: string | null }) => {
+        if (data.country && data.country !== "US") setGeoBlocked(true);
+      })
+      .catch(() => {})
+      .finally(() => setGeoChecked(true));
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -65,6 +78,24 @@ export default function SignupPage() {
     }
 
     setLoading(false);
+  }
+
+  if (geoChecked && geoBlocked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <Card className="w-full max-w-sm text-center">
+          <CardHeader>
+            <CardTitle>US Only (For Now)</CardTitle>
+            <CardDescription>
+              Plantet is currently available in the United States only. We&apos;re working on expanding — check back soon!
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">If you believe this is an error, you may be connected through a VPN or proxy. Try disabling it and reloading.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (
@@ -167,6 +198,16 @@ export default function SignupPage() {
             <label className="flex items-start gap-2 cursor-pointer text-sm text-muted-foreground">
               <input
                 type="checkbox"
+                checked={usConfirmed}
+                onChange={(e) => setUsConfirmed(e.target.checked)}
+                className="mt-0.5 accent-leaf"
+                required
+              />
+              <span>I confirm I am located in the United States.</span>
+            </label>
+            <label className="flex items-start gap-2 cursor-pointer text-sm text-muted-foreground">
+              <input
+                type="checkbox"
                 checked={emailOptIn}
                 onChange={(e) => setEmailOptIn(e.target.checked)}
                 className="mt-0.5 accent-leaf"
@@ -175,7 +216,7 @@ export default function SignupPage() {
                 Send me the weekly plant digest — new arrivals, hot auctions, and picks from shops I follow. Delivered every Sunday. Unsubscribe anytime.
               </span>
             </label>
-            <Button type="submit" className="w-full bg-leaf hover:bg-forest" disabled={loading || !ageConfirmed}>
+            <Button type="submit" className="w-full bg-leaf hover:bg-forest" disabled={loading || !ageConfirmed || !usConfirmed}>
               {loading ? "Creating account…" : "Create account"}
             </Button>
             {planInfo && (
