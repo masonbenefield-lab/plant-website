@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { centsToDisplay, dollarsToCents } from "@/lib/stripe";
+import Link from "next/link";
 import { ChevronDown, ChevronUp, AlertTriangle, CreditCard } from "lucide-react";
 import type { AuctionStatus } from "@/lib/supabase/types";
 
@@ -142,6 +143,40 @@ export default function AuctionBidPanel({
 
     document.addEventListener("visibilitychange", handleVisibility);
     return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [auction.id]);
+
+  // Polling fallback — keeps bids and auction state fresh if Realtime lags
+  useEffect(() => {
+    async function poll() {
+      if (document.hidden) return;
+      const supabase = createClient();
+      const [{ data: auctionData }, { data: bidData }] = await Promise.all([
+        supabase
+          .from("auctions")
+          .select("current_bid_cents, current_bidder_id, status, ends_at")
+          .eq("id", auction.id)
+          .single(),
+        supabase
+          .from("bids")
+          .select("id, amount_cents, created_at, bidder:profiles(username)")
+          .eq("auction_id", auction.id)
+          .order("amount_cents", { ascending: false })
+          .limit(10),
+      ]);
+      if (auctionData) setAuction((prev) => ({ ...prev, ...auctionData }));
+      if (bidData) {
+        type RawBid = { id: string; amount_cents: number; created_at: string; bidder: { username: string } | { username: string }[] | null };
+        setBids((bidData as RawBid[]).map((b) => ({
+          id: b.id,
+          amount_cents: b.amount_cents,
+          created_at: b.created_at,
+          bidder: Array.isArray(b.bidder) ? (b.bidder[0] ?? null) : b.bidder,
+        })));
+      }
+    }
+
+    const id = setInterval(poll, 10_000);
+    return () => clearInterval(id);
   }, [auction.id]);
 
   useEffect(() => {
@@ -714,7 +749,14 @@ export default function AuctionBidPanel({
               <div key={bid.id} className="flex items-center justify-between text-sm py-1 border-b last:border-0">
                 <span className="text-muted-foreground">
                   {i === 0 && "🏆 "}
-                  {bid.bidder?.username ?? "Anonymous"}
+                  {bid.bidder?.username ? (
+                    <Link
+                      href={`/sellers/${bid.bidder.username}`}
+                      className="hover:text-foreground hover:underline underline-offset-2 transition-colors"
+                    >
+                      {bid.bidder.username}
+                    </Link>
+                  ) : "Anonymous"}
                 </span>
                 <span className="font-medium">{centsToDisplay(bid.amount_cents)}</span>
               </div>
