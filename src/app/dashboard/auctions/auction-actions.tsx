@@ -159,6 +159,48 @@ export function AcceptHighestBidButton({
   );
 }
 
+export function ForceCloseButton({ auctionId, plantName }: { auctionId: string; plantName: string }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [closing, setClosing] = useState(false);
+
+  async function forceClose() {
+    setClosing(true);
+    const res = await fetch(`/api/auctions/${auctionId}/force-close`, { method: "POST" });
+    const data = await res.json();
+    setClosing(false);
+    if (!res.ok) { toast.error(data.error ?? "Failed to close auction"); return; }
+    toast.success("Auction closed — processing winner…");
+    setOpen(false);
+    router.refresh();
+  }
+
+  return (
+    <>
+      <Button variant="outline" size="sm" onClick={() => setOpen(true)} className="text-orange-600 border-orange-200 hover:bg-orange-50 font-mono text-xs">
+        Force Close
+      </Button>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Force close &ldquo;{plantName}&rdquo;?</DialogTitle>
+            <DialogDescription>
+              Admin testing tool — closes this auction immediately regardless of end time, triggers winner processing and auto-charge. Cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 mt-2">
+            <Button variant="outline" onClick={() => setOpen(false)} className="flex-1">Cancel</Button>
+            <Button onClick={forceClose} disabled={closing} className="flex-1 bg-orange-600 hover:bg-orange-700 text-white">
+              {closing ? "Closing…" : "Force close"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
 export default function AuctionActions({ auctionId }: { auctionId: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);

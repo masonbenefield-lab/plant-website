@@ -10,7 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { centsToDisplay } from "@/lib/stripe";
 import { Pagination } from "@/components/pagination";
 import DashboardSearch from "@/components/dashboard-search";
-import { DeleteScheduledAuctionButton, DeleteEndedAuctionButton, AcceptHighestBidButton } from "./auction-actions";
+import { DeleteScheduledAuctionButton, DeleteEndedAuctionButton, AcceptHighestBidButton, ForceCloseButton } from "./auction-actions";
 import AuctionActions from "./auction-actions";
 import NewAuctionDialog from "./new-auction-dialog";
 import { LocalDate } from "@/components/local-date";
@@ -225,6 +225,9 @@ export default async function DashboardAuctionsPage({
                           <Link href={`/auctions/${auction.id}`} className="text-sm text-muted-foreground hover:underline">
                             View →
                           </Link>
+                          {isAdmin && (
+                            <ForceCloseButton auctionId={auction.id} plantName={auction.plant_name} />
+                          )}
                           <AuctionActions auctionId={auction.id} />
                         </>
                       )}
