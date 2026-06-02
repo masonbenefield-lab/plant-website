@@ -24,6 +24,9 @@ import {
   buildChangeEmailHtml,
   buildPasswordChangedHtml,
   buildEmailChangedHtml,
+  buildReserveOfferToBuyerHtml,
+  buildReserveOfferDeclinedHtml,
+  buildReserveOfferExpiredHtml,
 } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
@@ -305,6 +308,39 @@ export default async function EmailPreviewPage() {
         username: "plantlover",
         userId: "preview-user-id",
         freshListings: sampleListings,
+      }),
+    },
+    {
+      id: "reserve-offer-buyer",
+      label: "Reserve Offer (Buyer)",
+      category: "Auction",
+      html: buildReserveOfferToBuyerHtml({
+        plantName: "Monstera Deliciosa",
+        bidCents: 2800,
+        shippingLabel: "USPS Priority Mail — $8.50",
+        offerUrl: `${PREVIEW_SITE}/auctions/${PREVIEW_AUCTION_ID}/reserve-offer`,
+        expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
+      }),
+    },
+    {
+      id: "reserve-offer-declined",
+      label: "Reserve Offer Declined (Seller)",
+      category: "Seller",
+      html: buildReserveOfferDeclinedHtml({
+        plantName: "Monstera Deliciosa",
+        buyerUsername: "plantlover99",
+        bidCents: 2800,
+        dashboardUrl: `${PREVIEW_SITE}/dashboard/auctions`,
+      }),
+    },
+    {
+      id: "reserve-offer-expired",
+      label: "Reserve Offer Expired (Seller)",
+      category: "Seller",
+      html: buildReserveOfferExpiredHtml({
+        plantName: "Monstera Deliciosa",
+        bidCents: 2800,
+        dashboardUrl: `${PREVIEW_SITE}/dashboard/auctions`,
       }),
     },
     {
