@@ -191,7 +191,12 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
     if (error) {
       toast.error(error.message);
     } else {
-      toast.success("Auction created!");
+      if (prefill) {
+        await supabase.from("auctions").delete().eq("id", prefill.id);
+        toast.success("Auction relisted!");
+      } else {
+        toast.success("Auction created!");
+      }
       setOpen(false);
       setImageUrls([]);
       setPlantName("");
