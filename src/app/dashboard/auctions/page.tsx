@@ -10,7 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { centsToDisplay } from "@/lib/stripe";
 import { Pagination } from "@/components/pagination";
 import DashboardSearch from "@/components/dashboard-search";
-import { DeleteScheduledAuctionButton, DeleteEndedAuctionButton } from "./auction-actions";
+import { DeleteScheduledAuctionButton, DeleteEndedAuctionButton, AcceptHighestBidButton } from "./auction-actions";
 import AuctionActions from "./auction-actions";
 import NewAuctionDialog from "./new-auction-dialog";
 import { LocalDate } from "@/components/local-date";
@@ -232,7 +232,31 @@ export default async function DashboardAuctionsPage({
                         <DeleteScheduledAuctionButton auctionId={auction.id} />
                       )}
                       {(auction.status === "ended" || auction.status === "cancelled" || auction.status === "expired") && (
-                        <DeleteEndedAuctionButton auctionId={auction.id} />
+                        <div className="flex items-center gap-2">
+                          {/* Reserve offer button — ended auctions where reserve was not met and no offer sent yet */}
+                          {auction.status === "ended" &&
+                            auction.current_bidder_id &&
+                            auction.reserve_price_cents &&
+                            auction.current_bid_cents < auction.reserve_price_cents &&
+                            !auction.reserve_offer_status && (
+                              <AcceptHighestBidButton
+                                auctionId={auction.id}
+                                bidCents={auction.current_bid_cents}
+                                plantName={auction.plant_name}
+                              />
+                            )}
+                          {/* Reserve offer status badge */}
+                          {auction.reserve_offer_status && (
+                            <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                              auction.reserve_offer_status === "accepted" ? "bg-[#EBF0E6] text-leaf" :
+                              auction.reserve_offer_status === "pending" ? "bg-amber-50 text-amber-700" :
+                              "bg-muted text-muted-foreground"
+                            }`}>
+                              Offer: {auction.reserve_offer_status}
+                            </span>
+                          )}
+                          <DeleteEndedAuctionButton auctionId={auction.id} />
+                        </div>
                       )}
                     </div>
                   </CardContent>

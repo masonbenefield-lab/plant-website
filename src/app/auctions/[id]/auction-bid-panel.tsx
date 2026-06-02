@@ -258,6 +258,12 @@ export default function AuctionBidPanel({
       toast.success(`Bid of ${centsToDisplay(cents)} placed!`);
       if (maxCents) toast.info(`Auto-bidding enabled up to ${centsToDisplay(maxCents)}`, { duration: 4000 });
       if (data.extended) toast.info("Auction extended — bid placed in final 2 minutes");
+      if (auction.reserve_price_cents && cents < auction.reserve_price_cents) {
+        toast.warning(
+          `Reserve not met — the auction won't close in your favour unless a bid reaches ${centsToDisplay(auction.reserve_price_cents)}.`,
+          { duration: 7000 }
+        );
+      }
     }
     setBidAmount("");
     setMaxBidAmount("");
@@ -533,10 +539,12 @@ export default function AuctionBidPanel({
                 : (auction.shipping_cost_cents ?? 0);
             const canConfirm = !auction.shipping_weight_oz || !!selectedRate;
             const totalCents = shippingCents !== null ? pendingConfirm.cents + shippingCents : null;
+            const reserveNotMet = !!(auction.reserve_price_cents && pendingConfirm.cents < auction.reserve_price_cents);
+            const isWarning = isSafetyWarning(pendingConfirm.cents) || reserveNotMet;
             return (
               <div className={cn(
                 "rounded-lg border px-4 py-3 space-y-3",
-                isSafetyWarning(pendingConfirm.cents)
+                isWarning
                   ? "border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800"
                   : "border-[#A8BF9A] bg-[#EBF0E6] dark:bg-forest/20 dark:border-forest"
               )}>
@@ -545,6 +553,15 @@ export default function AuctionBidPanel({
                     <AlertTriangle size={15} className="shrink-0" />
                     <p className="text-xs font-semibold">
                       This bid is much higher than the minimum ({centsToDisplay(minBidForDisplay)}). Double-check before confirming.
+                    </p>
+                  </div>
+                )}
+
+                {auction.reserve_price_cents && pendingConfirm.cents < auction.reserve_price_cents && (
+                  <div className="flex items-start gap-2 text-amber-700 dark:text-amber-400">
+                    <AlertTriangle size={15} className="shrink-0 mt-0.5" />
+                    <p className="text-xs font-semibold">
+                      Reserve not met — this auction only closes if a bid reaches {centsToDisplay(auction.reserve_price_cents)}. The seller may still accept your bid after the auction ends.
                     </p>
                   </div>
                 )}
@@ -633,7 +650,7 @@ export default function AuctionBidPanel({
                     size="sm"
                     disabled={!canConfirm}
                     onClick={confirmBid}
-                    className={isSafetyWarning(pendingConfirm.cents)
+                    className={isWarning
                       ? "bg-amber-600 hover:bg-amber-700"
                       : "bg-leaf hover:bg-forest"
                     }

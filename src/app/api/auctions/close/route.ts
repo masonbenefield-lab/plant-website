@@ -9,6 +9,7 @@ import {
   sendAuctionEndedSeller,
   sendAuctionPaymentReminder,
   sendAuctionPaymentExpired,
+  sendReserveOfferExpired,
 } from "@/lib/email";
 import { getStripe } from "@/lib/stripe";
 import { planFeePercent } from "@/lib/plan-limits";
@@ -339,7 +340,34 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.json({ closed, reminders: reminderOrders?.length ?? 0, expired: expiredOrders?.length ?? 0 });
+  // ── 6. Expire pending reserve offers past their window ───────────────────────
+  const { data: expiredOffers } = await supabase
+    .from("auctions")
+    .select("id, seller_id, plant_name, current_bid_cents")
+    .eq("reserve_offer_status", "pending")
+    .lt("reserve_offer_expires_at", now.toISOString());
+
+  for (const auction of expiredOffers ?? []) {
+    await supabase.from("auctions").update({ reserve_offer_status: "expired" }).eq("id", auction.id);
+
+    const { data: sellerAuth } = await supabase.auth.admin.getUserById(auction.seller_id);
+    const sellerEmail = sellerAuth?.user?.email;
+    if (sellerEmail) {
+      await sendReserveOfferExpired({
+        sellerEmail,
+        plantName: auction.plant_name,
+        bidCents: auction.current_bid_cents,
+        dashboardUrl: `${appUrl}/dashboard/auctions`,
+      }).catch(() => {});
+    }
+  }
+
+  return NextResponse.json({
+    closed,
+    reminders: reminderOrders?.length ?? 0,
+    expired: expiredOrders?.length ?? 0,
+    offersExpired: expiredOffers?.length ?? 0,
+  });
 }
 
 async function fallbackToManualCheckout(

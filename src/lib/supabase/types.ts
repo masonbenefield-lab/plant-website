@@ -350,6 +350,9 @@ export interface Database {
           shipping_weight_oz: number | null;
           shipping_cost_cents: number | null;
           free_shipping: boolean;
+          reserve_offer_sent_at: string | null;
+          reserve_offer_expires_at: string | null;
+          reserve_offer_status: string | null;
           created_at: string;
         };
         Insert: {
@@ -376,6 +379,9 @@ export interface Database {
           shipping_weight_oz?: number | null;
           shipping_cost_cents?: number | null;
           free_shipping?: boolean;
+          reserve_offer_sent_at?: string | null;
+          reserve_offer_expires_at?: string | null;
+          reserve_offer_status?: string | null;
           created_at?: string;
         };
         Update: {
@@ -401,6 +407,9 @@ export interface Database {
           shipping_weight_oz?: number | null;
           shipping_cost_cents?: number | null;
           free_shipping?: boolean;
+          reserve_offer_sent_at?: string | null;
+          reserve_offer_expires_at?: string | null;
+          reserve_offer_status?: string | null;
         };
         Relationships: [];
       };

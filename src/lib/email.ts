@@ -1857,6 +1857,116 @@ export async function sendAuctionPaymentFailed({
   });
 }
 
+// ─── Reserve offer: seller accepts below-reserve bid ─────────────────────────
+
+export async function sendReserveOfferToBuyer({
+  buyerEmail,
+  plantName,
+  bidCents,
+  shippingLabel,
+  offerUrl,
+  expiresAt,
+}: {
+  buyerEmail: string;
+  plantName: string;
+  bidCents: number;
+  shippingLabel: string;
+  offerUrl: string;
+  expiresAt: string;
+}) {
+  const resend = getResend();
+  const deadline = new Date(expiresAt).toLocaleString("en-US", { month: "long", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short" });
+  await resend.emails.send({
+    from: FROM,
+    to: buyerEmail,
+    subject: `The seller accepted your bid on ${plantName}`,
+    html: emailBase({
+      title: `The seller accepted your bid on ${plantName}`,
+      heading: "Great news — the seller said yes!",
+      subheading: plantName,
+      body: `
+        <p style="margin:0 0 4px;">Your bid didn't meet the original reserve, but the seller has decided to accept it anyway. Confirm your purchase before the offer expires.</p>
+        ${infoCard([
+          { label: "Item", value: plantName },
+          { label: "Your bid", value: centsToDisplay(bidCents) },
+          { label: "Shipping", value: shippingLabel },
+          { label: "Offer expires", value: deadline },
+        ])}
+        <p style="margin:16px 0 0;font-size:14px;color:#6b7280;">Your saved payment method will be charged when you confirm. This offer expires in 48 hours.</p>
+        ${ctaBtn("Confirm Purchase", offerUrl)}
+      `,
+    }),
+  });
+}
+
+export async function sendReserveOfferDeclined({
+  sellerEmail,
+  plantName,
+  buyerUsername,
+  bidCents,
+  dashboardUrl,
+}: {
+  sellerEmail: string;
+  plantName: string;
+  buyerUsername: string;
+  bidCents: number;
+  dashboardUrl: string;
+}) {
+  const resend = getResend();
+  await resend.emails.send({
+    from: FROM,
+    to: sellerEmail,
+    subject: `Your reserve offer for ${plantName} was declined`,
+    html: emailBase({
+      title: `Reserve offer declined — ${plantName}`,
+      heading: "The buyer declined your offer",
+      subheading: plantName,
+      body: `
+        <p style="margin:0 0 4px;"><strong>${buyerUsername}</strong> declined your reserve offer. You can relist the item or try a different approach.</p>
+        ${infoCard([
+          { label: "Item", value: plantName },
+          { label: "Declined bid", value: centsToDisplay(bidCents) },
+        ])}
+        ${ctaBtn("Go to Your Auctions", dashboardUrl)}
+      `,
+    }),
+  });
+}
+
+export async function sendReserveOfferExpired({
+  sellerEmail,
+  plantName,
+  bidCents,
+  dashboardUrl,
+}: {
+  sellerEmail: string;
+  plantName: string;
+  bidCents: number;
+  dashboardUrl: string;
+}) {
+  const resend = getResend();
+  await resend.emails.send({
+    from: FROM,
+    to: sellerEmail,
+    subject: `Your reserve offer for ${plantName} expired`,
+    html: emailBase({
+      title: `Reserve offer expired — ${plantName}`,
+      heading: "Your reserve offer expired",
+      subheading: plantName,
+      body: `
+        <p style="margin:0 0 4px;">The buyer didn't respond to your reserve offer within 48 hours. You can relist the item or create a new auction.</p>
+        ${infoCard([
+          { label: "Item", value: plantName },
+          { label: "Offered bid", value: centsToDisplay(bidCents) },
+        ])}
+        ${ctaBtn("Go to Your Auctions", dashboardUrl)}
+      `,
+    }),
+  });
+}
+
+// ─── Garden care reminder ─────────────────────────────────────────────────────
+
 export async function sendGardenCareReminder({
   recipientEmail,
   username,
