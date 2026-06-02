@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdmin } from "@supabase/supabase-js";
+import type { EmailOtpType } from "@supabase/supabase-js";
 import { GROUNDBREAKER_CAP } from "@/lib/plan-limits";
 import { sendWelcomeEmail } from "@/lib/email";
 
@@ -67,7 +68,7 @@ export async function GET(request: Request) {
   if (tokenHash && type) {
     const { data: { session }, error } = await supabase.auth.verifyOtp({
       token_hash: tokenHash,
-      type: type as Parameters<typeof supabase.auth.verifyOtp>[0]["type"],
+      type: type as EmailOtpType,
     });
     if (!error && session?.user) {
       return handleSession(session.user, origin, next);
