@@ -378,7 +378,30 @@ export default async function OrdersPage({
                       );
                     }
                     const listingId = order.listing_id;
-                    if (!listingId) return null;
+                    if (!listingId) {
+                      // Auction order — show add to garden without already-added check
+                      if (!order.auction_id || !item) return null;
+                      const plantName = item.plant_name ?? "";
+                      const plantVariety = item.variety ?? null;
+                      const auctionParams = new URLSearchParams({
+                        name: plantName,
+                        ...(plantVariety ? { variety: plantVariety } : {}),
+                        source_type: "purchase",
+                        ...(seller ? { source_name: seller.display_name ?? seller.username } : {}),
+                        order_id: order.id,
+                        seller_id: order.seller_id,
+                      });
+                      return (
+                        <div className="mt-3 pt-3 border-t">
+                          <Link
+                            href={`/garden/new?${auctionParams.toString()}`}
+                            className="inline-flex items-center gap-1.5 text-xs font-medium text-leaf hover:text-forest hover:underline"
+                          >
+                            🪴 Add to garden →
+                          </Link>
+                        </div>
+                      );
+                    }
                     const alreadyAdded = inGardenListingIds.has(listingId);
                     const plantName = item?.plant_name ?? "";
                     const plantVariety = item?.variety ?? null;
