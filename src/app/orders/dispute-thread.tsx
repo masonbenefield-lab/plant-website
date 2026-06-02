@@ -28,6 +28,7 @@ export default function DisputeThread({
   initialStatus,
   initialLastRepliedByRole,
   initialLastRepliedAt,
+  disputeCreatedAt,
   currentUserId,
   isBuyer,
   buyerDisplayName,
@@ -39,6 +40,7 @@ export default function DisputeThread({
   initialStatus: string;
   initialLastRepliedByRole: string | null;
   initialLastRepliedAt: string | null;
+  disputeCreatedAt: string;
   currentUserId: string;
   isBuyer: boolean;
   buyerDisplayName: string;
@@ -61,13 +63,12 @@ export default function DisputeThread({
 
   // 5-day timeout countdown for the OTHER party's turn
   const otherRole = isBuyer ? "seller" : "buyer";
-  const isOthersTurn = lastRepliedByRole === myRole || (lastRepliedByRole === null && !isBuyer);
-  const timeoutDeadline = lastRepliedAt
-    ? new Date(new Date(lastRepliedAt).getTime() + 5 * 24 * 60 * 60 * 1000)
-    : null;
-  const daysLeft = timeoutDeadline
-    ? Math.max(0, Math.ceil((timeoutDeadline.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
-    : null;
+  // null last_replied_by_role means dispute was just filed — seller's turn
+  const isSellersTurn = lastRepliedByRole === "buyer" || lastRepliedByRole === null;
+  const isOthersTurn = isBuyer ? isSellersTurn : !isSellersTurn;
+  const lastActivity = lastRepliedAt ?? disputeCreatedAt;
+  const timeoutDeadline = new Date(new Date(lastActivity).getTime() + 5 * 24 * 60 * 60 * 1000);
+  const daysLeft = Math.max(0, Math.ceil((timeoutDeadline.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
 
   async function sendReply() {
     if (!reply.trim()) return;
@@ -127,9 +128,12 @@ export default function DisputeThread({
       {/* Status badge */}
       <div className="flex items-center justify-between">
         <Badge className={st.color} variant="secondary">{st.label}</Badge>
-        {!isClosed && isOthersTurn && daysLeft !== null && (
+        {!isClosed && isOthersTurn && (
           <p className="text-xs text-muted-foreground">
             {otherRole === "seller" ? "Seller" : "Buyer"} has {daysLeft} day{daysLeft !== 1 ? "s" : ""} to respond
+            {isBuyer && isSellersTurn && daysLeft > 0 && (
+              <span className="block mt-0.5">Escalation available once this window closes</span>
+            )}
           </p>
         )}
       </div>

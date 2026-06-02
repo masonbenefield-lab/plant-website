@@ -570,6 +570,7 @@ export default async function OrdersPage({
                     initialStatus={effectiveStatus}
                     initialLastRepliedByRole={d.last_replied_by_role}
                     initialLastRepliedAt={d.last_replied_at}
+                    disputeCreatedAt={d.created_at}
                     currentUserId={user.id}
                     isBuyer={isBuyer}
                     buyerDisplayName={buyerDisplayName}

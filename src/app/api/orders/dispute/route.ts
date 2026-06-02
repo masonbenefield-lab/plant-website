@@ -59,6 +59,8 @@ export async function POST(request: Request) {
       seller_id: order.seller_id,
       reason,
       details: details?.trim() || null,
+      last_replied_at: new Date().toISOString(),
+      last_replied_by_role: "buyer",
     })
     .select("id")
     .single();
