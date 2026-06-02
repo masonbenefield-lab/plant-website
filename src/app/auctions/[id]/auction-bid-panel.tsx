@@ -23,6 +23,8 @@ interface AuctionData {
   ends_at: string;
   seller_id: string;
   current_bidder_id: string | null;
+  free_shipping: boolean | null;
+  shipping_cost_cents: number | null;
   shipping_weight_oz: number | null;
 }
 
@@ -201,9 +203,6 @@ export default function AuctionBidPanel({
     e.preventDefault();
     if (!userId) return toast.error("Sign in to bid");
     if (userId === auction.seller_id) return toast.error("You can't bid on your own auction");
-    if (auction.shipping_weight_oz && !selectedRateId) {
-      return toast.error("Please select a shipping option");
-    }
     const cents = dollarsToCents(bidAmount);
     const minIncrement = getMinIncrement(auction.current_bid_cents);
     const minBid = auction.current_bid_cents + minIncrement;
@@ -433,35 +432,6 @@ export default function AuctionBidPanel({
 
       {!isEnded && userId && userId !== auction.seller_id && buyerHasPaymentMethod && buyerHasShippingAddress && (
         <div className="space-y-2">
-          {/* Shipping rate picker for weight-based auctions */}
-          {auction.shipping_weight_oz && (
-            <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
-              <p className="text-xs font-medium">Select shipping method</p>
-              {loadingRates && <p className="text-xs text-muted-foreground">Loading shipping rates…</p>}
-              {!loadingRates && shippingRates.length === 0 && (
-                <p className="text-xs text-muted-foreground">No rates available — contact the seller.</p>
-              )}
-              {shippingRates.map((rate) => (
-                <label key={rate.objectId} className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="shippingRate"
-                    value={rate.objectId}
-                    checked={selectedRateId === rate.objectId}
-                    onChange={() => setSelectedRateId(rate.objectId)}
-                    className="accent-leaf"
-                  />
-                  <span className="text-xs">
-                    <span className="font-medium">{rate.provider} {rate.servicelevelName}</span>
-                    {" — "}
-                    <span className="text-leaf font-semibold">${rate.amount}</span>
-                    {rate.estimatedDays ? <span className="text-muted-foreground"> ({rate.estimatedDays} day{rate.estimatedDays !== 1 ? "s" : ""})</span> : null}
-                  </span>
-                </label>
-              ))}
-            </div>
-          )}
-
           {/* Quick bid buttons */}
           <div className="flex gap-2">
             {getQuickBidOptions(auction.current_bid_cents).map((inc) => (
@@ -554,42 +524,114 @@ export default function AuctionBidPanel({
           )}
 
           {/* Confirmation step */}
-          {pendingConfirm !== null && (
-            <div className={cn(
-              "rounded-lg border px-4 py-3 space-y-3",
-              isSafetyWarning(pendingConfirm.cents)
-                ? "border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800"
-                : "border-[#A8BF9A] bg-[#EBF0E6] dark:bg-forest/20 dark:border-forest"
-            )}>
-              {isSafetyWarning(pendingConfirm.cents) && (
-                <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
-                  <AlertTriangle size={15} className="shrink-0" />
-                  <p className="text-xs font-semibold">
-                    This bid is much higher than the minimum ({centsToDisplay(minBidForDisplay)}). Double-check before confirming.
-                  </p>
-                </div>
-              )}
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className={cn(
-                    "text-sm font-medium",
-                    isSafetyWarning(pendingConfirm.cents)
-                      ? "text-amber-800 dark:text-amber-300"
-                      : "text-forest dark:text-[#A8BF9A]"
-                  )}>
-                    Confirm bid of{" "}
-                    <span className="font-bold">{centsToDisplay(pendingConfirm.cents)}</span>?
-                  </p>
-                  {pendingConfirm.maxCents && (
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Auto-bidding up to {centsToDisplay(pendingConfirm.maxCents)}
+          {pendingConfirm !== null && (() => {
+            const selectedRate = shippingRates.find((r) => r.objectId === selectedRateId);
+            const shippingCents = auction.free_shipping
+              ? 0
+              : auction.shipping_weight_oz
+                ? (selectedRate ? Math.round(parseFloat(selectedRate.amount) * 100) : null)
+                : (auction.shipping_cost_cents ?? 0);
+            const canConfirm = !auction.shipping_weight_oz || !!selectedRate;
+            const totalCents = shippingCents !== null ? pendingConfirm.cents + shippingCents : null;
+            return (
+              <div className={cn(
+                "rounded-lg border px-4 py-3 space-y-3",
+                isSafetyWarning(pendingConfirm.cents)
+                  ? "border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800"
+                  : "border-[#A8BF9A] bg-[#EBF0E6] dark:bg-forest/20 dark:border-forest"
+              )}>
+                {isSafetyWarning(pendingConfirm.cents) && (
+                  <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
+                    <AlertTriangle size={15} className="shrink-0" />
+                    <p className="text-xs font-semibold">
+                      This bid is much higher than the minimum ({centsToDisplay(minBidForDisplay)}). Double-check before confirming.
                     </p>
+                  </div>
+                )}
+
+                <p className="text-sm font-semibold">Confirm bid</p>
+
+                {/* Cost breakdown */}
+                <div className="space-y-1.5 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Bid</span>
+                    <span className="font-medium">{centsToDisplay(pendingConfirm.cents)}</span>
+                  </div>
+
+                  {/* Shipping */}
+                  {auction.free_shipping ? (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Shipping</span>
+                      <span className="font-medium text-leaf">Free</span>
+                    </div>
+                  ) : auction.shipping_weight_oz ? (
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Shipping</span>
+                        {selectedRate
+                          ? <span className="font-medium">{centsToDisplay(Math.round(parseFloat(selectedRate.amount) * 100))}</span>
+                          : <span className="text-muted-foreground text-xs italic">Select a method below</span>
+                        }
+                      </div>
+                      {/* Rate picker inside dialog */}
+                      <div className="rounded-md border bg-background/60 divide-y">
+                        {loadingRates && (
+                          <p className="text-xs text-muted-foreground px-3 py-2">Loading shipping rates…</p>
+                        )}
+                        {!loadingRates && shippingRates.length === 0 && (
+                          <p className="text-xs text-muted-foreground px-3 py-2">No rates available — contact the seller.</p>
+                        )}
+                        {shippingRates.map((rate) => (
+                          <label key={rate.objectId} className="flex items-center gap-2.5 cursor-pointer px-3 py-2 hover:bg-muted/40 transition-colors">
+                            <input
+                              type="radio"
+                              name="shippingRateConfirm"
+                              value={rate.objectId}
+                              checked={selectedRateId === rate.objectId}
+                              onChange={() => setSelectedRateId(rate.objectId)}
+                              className="accent-leaf shrink-0"
+                            />
+                            <span className="text-xs flex-1">
+                              <span className="font-medium">{rate.provider} {rate.servicelevelName}</span>
+                              {rate.estimatedDays ? <span className="text-muted-foreground"> · {rate.estimatedDays} day{rate.estimatedDays !== 1 ? "s" : ""}</span> : null}
+                            </span>
+                            <span className="text-xs font-semibold text-leaf shrink-0">${rate.amount}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Shipping</span>
+                      <span className="font-medium">{centsToDisplay(auction.shipping_cost_cents ?? 0)}</span>
+                    </div>
                   )}
+
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Tax</span>
+                    <span className="text-xs text-muted-foreground italic">Calculated at settlement</span>
+                  </div>
+
+                  <div className="flex justify-between border-t pt-1.5 font-semibold">
+                    <span>Est. Total</span>
+                    <span>
+                      {totalCents !== null ? centsToDisplay(totalCents) : "—"}
+                      <span className="text-xs font-normal text-muted-foreground"> + tax</span>
+                    </span>
+                  </div>
                 </div>
-                <div className="flex gap-2 shrink-0">
+
+                {pendingConfirm.maxCents && (
+                  <p className="text-xs text-muted-foreground">
+                    Auto-bidding up to {centsToDisplay(pendingConfirm.maxCents)}
+                  </p>
+                )}
+
+                <div className="flex gap-2 justify-end">
                   <Button size="sm" variant="outline" onClick={() => setPendingConfirm(null)}>Cancel</Button>
                   <Button
                     size="sm"
+                    disabled={!canConfirm}
                     onClick={confirmBid}
                     className={isSafetyWarning(pendingConfirm.cents)
                       ? "bg-amber-600 hover:bg-amber-700"
@@ -600,8 +642,8 @@ export default function AuctionBidPanel({
                   </Button>
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
       )}
 

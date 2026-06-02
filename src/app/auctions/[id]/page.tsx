@@ -177,6 +177,8 @@ export default async function AuctionPage({
               ends_at: auction.ends_at,
               seller_id: auction.seller_id,
               current_bidder_id: auction.current_bidder_id,
+              free_shipping: shippingFree ?? null,
+              shipping_cost_cents: shippingCostCents ?? null,
               shipping_weight_oz: invShipping?.shipping_weight_oz ?? auction.shipping_weight_oz ?? null,
             }}
             userId={user?.id ?? null}
