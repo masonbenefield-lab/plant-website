@@ -216,6 +216,15 @@ export default async function DashboardAuctionsPage({
                         {auction.buy_now_price_cents && (
                           <span className="text-orange-600 font-medium">Buy Now: {centsToDisplay(auction.buy_now_price_cents)}</span>
                         )}
+                        <span>
+                          {(auction as { free_shipping?: boolean | null }).free_shipping
+                            ? "Free shipping"
+                            : (auction as { shipping_weight_oz?: number | null }).shipping_weight_oz
+                              ? "Weight-based shipping"
+                              : (auction as { shipping_cost_cents?: number | null }).shipping_cost_cents
+                                ? `Shipping: ${centsToDisplay((auction as { shipping_cost_cents: number }).shipping_cost_cents)}`
+                                : "Shipping: not set"}
+                        </span>
                         <span>Ends: <LocalDate iso={auction.ends_at} /></span>
                       </div>
                     </div>

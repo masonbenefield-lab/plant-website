@@ -240,9 +240,15 @@ export default function OrdersClient({
                           ))
                         ) : (
                           <>
-                            <span className="font-semibold">
-                              {item?.plant_name}{item?.variety ? ` — ${item.variety}` : ""}
-                            </span>
+                            {order.auction_id ? (
+                              <Link href={`/auctions/${order.auction_id}`} className="font-semibold hover:underline underline-offset-2">
+                                {item?.plant_name}{item?.variety ? ` — ${item.variety}` : ""}
+                              </Link>
+                            ) : (
+                              <span className="font-semibold">
+                                {item?.plant_name}{item?.variety ? ` — ${item.variety}` : ""}
+                              </span>
+                            )}
                             <span className="text-xs text-muted-foreground">
                               {order.auction_id ? "(auction)" : "(listing)"}
                             </span>

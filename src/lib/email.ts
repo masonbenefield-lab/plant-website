@@ -781,6 +781,7 @@ export async function sendAuctionEndedSeller({
   winnerUsername,
   amountCents,
   ordersUrl,
+  autoCharged = false,
 }: {
   sellerEmail: string;
   plantName: string;
@@ -788,40 +789,60 @@ export async function sendAuctionEndedSeller({
   winnerUsername?: string;
   amountCents?: number;
   ordersUrl: string;
+  autoCharged?: boolean;
 }) {
   const siteUrl = siteBase();
   const resend = getResend();
-  const html = winnerFound
-    ? emailBase({
-        title: `Your auction for ${plantName} ended`,
-        heading: "Your auction ended — buyer is checking out",
-        subheading: `${plantName}`,
-        body: `
-          <p style="margin:0 0 4px;"><strong>${winnerUsername}</strong> won your auction and has been sent a checkout link.</p>
-          ${infoCard([
-            { label: "Item", value: plantName },
-            { label: "Winning bid", value: centsToDisplay(amountCents ?? 0) },
-            { label: "Payment deadline", value: "48 hours from auction close" },
-          ])}
-          <p style="margin:16px 0 0;font-size:14px;color:#6b7280;">You'll receive another notification once payment is confirmed. If the buyer doesn't pay within 48 hours you'll be able to offer to the next bidder or relist.</p>
-          ${ctaBtn("View Your Orders", `${siteUrl}/orders?tab=sales`)}
-        `,
-      })
-    : emailBase({
-        title: `Your auction for ${plantName} ended with no bids`,
-        heading: "Auction ended — no bids",
-        subheading: `${plantName}`,
-        body: `
-          <p style="margin:0 0 20px;">Your auction for <strong>${plantName}</strong> ended without receiving any bids${amountCents ? ` that met the reserve price` : ""}. You can create a new auction or list it at a fixed price.</p>
-          ${ctaBtn("Create New Auction", `${siteUrl}/dashboard/auctions`)}
-        `,
-      });
-  await resend.emails.send({
-    from: FROM,
-    to: sellerEmail,
-    subject: winnerFound ? `Your ${plantName} auction ended — buyer is checking out` : `Your ${plantName} auction ended with no bids`,
-    html,
-  });
+
+  let html: string;
+  let subject: string;
+
+  if (!winnerFound) {
+    subject = `Your ${plantName} auction ended with no bids`;
+    html = emailBase({
+      title: `Your auction for ${plantName} ended with no bids`,
+      heading: "Auction ended — no bids",
+      subheading: plantName,
+      body: `
+        <p style="margin:0 0 20px;">Your auction for <strong>${plantName}</strong> ended without receiving any bids. You can create a new auction or list it at a fixed price.</p>
+        ${ctaBtn("Create New Auction", `${siteUrl}/dashboard/auctions`)}
+      `,
+    });
+  } else if (autoCharged) {
+    subject = `Your ${plantName} auction sold — payment received!`;
+    html = emailBase({
+      title: `Your auction for ${plantName} sold`,
+      heading: "Auction sold — payment received!",
+      subheading: plantName,
+      body: `
+        <p style="margin:0 0 4px;"><strong>${winnerUsername ?? "The buyer"}</strong> won your auction and their payment has been processed automatically. Time to ship!</p>
+        ${infoCard([
+          { label: "Item", value: plantName },
+          { label: "Winning bid", value: centsToDisplay(amountCents ?? 0) },
+        ])}
+        ${ctaBtn("View Order to Ship", `${siteUrl}/dashboard/orders`)}
+      `,
+    });
+  } else {
+    subject = `Your ${plantName} auction ended — buyer has 24 hours to pay`;
+    html = emailBase({
+      title: `Your auction for ${plantName} ended`,
+      heading: "Your auction ended — awaiting payment",
+      subheading: plantName,
+      body: `
+        <p style="margin:0 0 4px;"><strong>${winnerUsername ?? "The buyer"}</strong> won your auction. They have 24 hours to complete payment.</p>
+        ${infoCard([
+          { label: "Item", value: plantName },
+          { label: "Winning bid", value: centsToDisplay(amountCents ?? 0) },
+          { label: "Payment deadline", value: "24 hours from auction close" },
+        ])}
+        <p style="margin:16px 0 0;font-size:14px;color:#6b7280;">You'll receive another notification once payment is confirmed.</p>
+        ${ctaBtn("View Your Orders", `${siteUrl}/dashboard/orders`)}
+      `,
+    });
+  }
+
+  await resend.emails.send({ from: FROM, to: sellerEmail, subject, html });
 }
 
 // ─── Auction payment reminder (winner, 4 hours before deadline) ───────────────

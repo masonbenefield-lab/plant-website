@@ -223,6 +223,7 @@ export async function GET(request: Request) {
               winnerUsername: winnerProfile?.username ?? "The buyer",
               amountCents: auction.current_bid_cents,
               ordersUrl: `${appUrl}/orders?tab=sales`,
+              autoCharged: true,
             }).catch(() => {});
           }
 

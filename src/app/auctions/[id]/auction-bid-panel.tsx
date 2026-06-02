@@ -446,8 +446,8 @@ export default function AuctionBidPanel({
             </div>
             <div className="text-right">
               <p className="text-xs text-muted-foreground">Time remaining</p>
-              <p className={`text-xl font-bold ${timeLeft === "Ended" ? "text-red-600" : "text-foreground"}`}>
-                {timeLeft}
+              <p className={`text-xl font-bold ${isEnded ? "text-red-600" : "text-foreground"}`}>
+                {isEnded ? "Ended" : timeLeft}
               </p>
             </div>
           </div>

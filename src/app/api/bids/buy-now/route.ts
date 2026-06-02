@@ -197,6 +197,7 @@ export async function POST(request: Request) {
           winnerUsername: "The buyer",
           amountCents: auction.buy_now_price_cents,
           ordersUrl: `${appUrl}/orders?tab=sales`,
+          autoCharged: true,
         }).catch(() => {});
       }
 
