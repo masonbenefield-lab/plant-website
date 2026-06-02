@@ -94,12 +94,45 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
     const reserveCents = reserveRaw ? dollarsToCents(reserveRaw) : null;
     const categoryRaw = data.get("category") as string;
 
+    const quantity = Number(data.get("quantity"));
+    if (quantity < 1) {
+      toast.error("Quantity must be at least 1.");
+      setSaving(false);
+      return;
+    }
+    if (buyNowCents && buyNowCents <= startingBidCents) {
+      toast.error("Buy Now price must be higher than the starting bid.");
+      setSaving(false);
+      return;
+    }
+    if (reserveCents && reserveCents < startingBidCents) {
+      toast.error("Reserve price must be at least the starting bid.");
+      setSaving(false);
+      return;
+    }
+    if (shippingMode === "flat") {
+      const flatCents = dollarsToCents(data.get("shipping_cost") as string);
+      if (!flatCents || flatCents <= 0) {
+        toast.error("Enter a valid flat shipping rate.");
+        setSaving(false);
+        return;
+      }
+    }
+    if (shippingMode === "weight") {
+      const weightOz = Number(data.get("shipping_weight_oz"));
+      if (!weightOz || weightOz <= 0) {
+        toast.error("Enter a valid shipping weight.");
+        setSaving(false);
+        return;
+      }
+    }
+
     const supabase = createClient();
     const { error } = await supabase.from("auctions").insert({
       seller_id: sellerId,
       plant_name: data.get("plant_name") as string,
       variety: (data.get("variety") as string) || null,
-      quantity: Number(data.get("quantity")),
+      quantity,
       description: (data.get("description") as string) || null,
       starting_bid_cents: startingBidCents,
       current_bid_cents: startingBidCents,

@@ -90,6 +90,10 @@ export async function POST(request: Request) {
   if (auction.seller_id === user.id) return NextResponse.json({ error: "You can't bid on your own auction" }, { status: 400 });
   if (await isBlocked(user.id, auction.seller_id)) return NextResponse.json({ error: "Unable to place bid." }, { status: 403 });
 
+  if (!amountCents || amountCents <= 0) {
+    return NextResponse.json({ error: "Invalid bid amount" }, { status: 400 });
+  }
+
   const minIncrement = getMinIncrement(auction.current_bid_cents);
   const minBid = auction.current_bid_cents + minIncrement;
   if (amountCents < minBid) {

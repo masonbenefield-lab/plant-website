@@ -25,26 +25,33 @@ export async function POST(request: Request) {
 
   const admin = adminClient();
 
-  const { data: bidderProfile } = await admin
-    .from("profiles")
-    .select("default_payment_method_id")
-    .eq("id", user.id)
-    .single();
-
-  if (!bidderProfile?.default_payment_method_id) {
-    return NextResponse.json({ error: "Add a payment method before buying" }, { status: 403 });
-  }
-
-  const { data: auction, error: auctionErr } = await admin
-    .from("auctions")
-    .select("id, seller_id, plant_name, variety, current_bid_cents, current_bidder_id, buy_now_price_cents, status, ends_at, free_shipping, shipping_cost_cents, shipping_weight_oz, inventory_id")
-    .eq("id", auctionId)
-    .single();
+  const [{ data: buyer }, { data: auction, error: auctionErr }] = await Promise.all([
+    admin.from("profiles").select("stripe_customer_id, default_payment_method_id, saved_shipping_address").eq("id", user.id).single(),
+    admin.from("auctions").select("id, seller_id, plant_name, variety, current_bid_cents, current_bidder_id, buy_now_price_cents, status, ends_at, free_shipping, shipping_cost_cents, shipping_weight_oz, inventory_id").eq("id", auctionId).single(),
+  ]);
 
   if (auctionErr || !auction) return NextResponse.json({ error: "Auction not found" }, { status: 404 });
   if (auction.status !== "active") return NextResponse.json({ error: "Auction is not active" }, { status: 400 });
   if (!auction.buy_now_price_cents) return NextResponse.json({ error: "No buy now price set" }, { status: 400 });
   if (auction.seller_id === user.id) return NextResponse.json({ error: "You can't buy your own auction" }, { status: 400 });
+
+  if (!buyer?.default_payment_method_id) {
+    return NextResponse.json({ error: "Add a payment method before buying" }, { status: 403 });
+  }
+  if (!auction.free_shipping && !buyer.saved_shipping_address) {
+    return NextResponse.json({ error: "Add a shipping address in Account Settings before buying" }, { status: 403 });
+  }
+  if (auction.shipping_weight_oz) {
+    const { data: shippingSelection } = await admin
+      .from("auction_shipping_selections")
+      .select("cost_cents")
+      .eq("auction_id", auctionId)
+      .eq("bidder_id", user.id)
+      .maybeSingle();
+    if (!shippingSelection) {
+      return NextResponse.json({ error: "Select a shipping rate before buying" }, { status: 400 });
+    }
+  }
 
   const previousBidderId = auction.current_bidder_id;
   const displayName = auction.variety ? `${auction.plant_name} — ${auction.variety}` : auction.plant_name;
@@ -84,11 +91,12 @@ export async function POST(request: Request) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://plantet.shop";
   const now = new Date();
 
-  // Fetch buyer + seller for auto-charge
-  const [{ data: buyer }, { data: sellerProfile }] = await Promise.all([
-    admin.from("profiles").select("stripe_customer_id, default_payment_method_id, saved_shipping_address").eq("id", user.id).single(),
-    admin.from("profiles").select("stripe_account_id, plan, is_admin, groundbreaker").eq("id", auction.seller_id).single(),
-  ]);
+  // Fetch seller for auto-charge
+  const { data: sellerProfile } = await admin
+    .from("profiles")
+    .select("stripe_account_id, plan, is_admin, groundbreaker")
+    .eq("id", auction.seller_id)
+    .single();
 
   const canAutoCharge = !!(
     buyer?.stripe_customer_id &&

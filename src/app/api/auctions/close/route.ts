@@ -86,7 +86,9 @@ export async function GET(request: Request) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   let closed = 0;
+  let closeErrors = 0;
   for (const auction of expiredAuctions ?? []) {
+    try {
     await supabase.from("auctions").update({ status: "ended" }).eq("id", auction.id);
 
     const displayName = auction.variety ? `${auction.plant_name} — ${auction.variety}` : auction.plant_name;
@@ -259,6 +261,9 @@ export async function GET(request: Request) {
     }
 
     closed++;
+    } catch {
+      closeErrors++;
+    }
   }
 
   // ── 4. Send payment reminders for orders approaching deadline ────────────────
@@ -370,6 +375,7 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     closed,
+    closeErrors,
     reminders: reminderOrders?.length ?? 0,
     expired: expiredOrders?.length ?? 0,
     offersExpired: expiredOffers?.length ?? 0,
