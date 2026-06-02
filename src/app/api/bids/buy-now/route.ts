@@ -179,6 +179,7 @@ export async function POST(request: Request) {
         shipping_cost_cents: shippingCents,
         tax_cents: taxCents,
         platform_fee_cents: feeCents,
+        shippo_rate_id: shippingRateId ?? null,
         payment_deadline_at: deadline.toISOString(),
         status: "pending",
       }).select("id").single();

@@ -167,6 +167,18 @@ export async function GET(request: Request) {
 
           // Create the order first so the webhook can find it
           const deadline = new Date(now.getTime() + PAYMENT_DEADLINE_HOURS * 60 * 60 * 1000);
+          // Capture rate_id for label printing (weight-based only)
+          let shippoRateId: string | null = null;
+          if (auction.shipping_weight_oz) {
+            const { data: sel } = await supabase
+              .from("auction_shipping_selections")
+              .select("rate_id")
+              .eq("auction_id", auction.id)
+              .eq("bidder_id", auction.current_bidder_id!)
+              .single();
+            shippoRateId = sel?.rate_id ?? null;
+          }
+
           const { data: order } = await supabase.from("orders").insert({
             buyer_id: auction.current_bidder_id!,
             seller_id: auction.seller_id,
@@ -176,6 +188,7 @@ export async function GET(request: Request) {
             shipping_cost_cents: shippingCents,
             tax_cents: taxCents,
             platform_fee_cents: feeCents,
+            shippo_rate_id: shippoRateId,
             payment_deadline_at: deadline.toISOString(),
             status: "pending",
           }).select("id").single();
