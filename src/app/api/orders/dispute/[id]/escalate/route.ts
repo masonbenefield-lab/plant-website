@@ -53,13 +53,15 @@ export async function POST(
   try {
     const admin = adminClient();
     const [{ data: buyerProfile }, { data: sellerProfile }] = await Promise.all([
-      supabase.from("profiles").select("username").eq("id", user.id).single(),
-      supabase.from("profiles").select("username").eq("id", dispute.seller_id).single(),
+      supabase.from("profiles").select("username, display_name").eq("id", user.id).single(),
+      supabase.from("profiles").select("username, display_name").eq("id", dispute.seller_id).single(),
     ]);
+    const buyerDisplayName = (buyerProfile as { display_name?: string | null; username?: string | null } | null)?.display_name ?? buyerProfile?.username ?? "Unknown buyer";
+    const sellerDisplayName = (sellerProfile as { display_name?: string | null; username?: string | null } | null)?.display_name ?? sellerProfile?.username ?? "Unknown seller";
     await sendDisputeEscalatedToAdmin({
       adminEmail: "masonbenefield@gmail.com",
-      buyerUsername: buyerProfile?.username ?? "Unknown buyer",
-      sellerUsername: sellerProfile?.username ?? "Unknown seller",
+      buyerUsername: buyerDisplayName,
+      sellerUsername: sellerDisplayName,
       reason: dispute.reason,
       details: dispute.details,
       sellerResponse: dispute.seller_response,

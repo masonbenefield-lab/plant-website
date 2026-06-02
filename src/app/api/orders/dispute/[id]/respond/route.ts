@@ -48,14 +48,15 @@ export async function POST(
   try {
     const admin = adminClient();
     const [{ data: sellerProfile }, { data: buyerAuthData }] = await Promise.all([
-      supabase.from("profiles").select("username").eq("id", user.id).single(),
+      supabase.from("profiles").select("username, display_name").eq("id", user.id).single(),
       admin.auth.admin.getUserById(dispute.buyer_id),
     ]);
     const buyerEmail = buyerAuthData?.user?.email;
+    const sellerDisplayName = (sellerProfile as { display_name?: string | null; username?: string | null } | null)?.display_name ?? sellerProfile?.username ?? "The seller";
     if (buyerEmail) {
       await sendDisputeResponseToBuyer({
         buyerEmail,
-        sellerUsername: sellerProfile?.username ?? "The seller",
+        sellerUsername: sellerDisplayName,
         sellerResponse: response.trim(),
         disputeId: id,
       }).catch(() => {});

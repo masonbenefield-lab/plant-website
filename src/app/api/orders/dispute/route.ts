@@ -74,16 +74,16 @@ export async function POST(request: Request) {
     { data: sellerAuthData },
     { data: buyerAuthData },
   ] = await Promise.all([
-    supabase.from("profiles").select("username").eq("id", user.id).single(),
-    supabase.from("profiles").select("username").eq("id", order.seller_id).single(),
+    supabase.from("profiles").select("username, display_name").eq("id", user.id).single(),
+    supabase.from("profiles").select("username, display_name").eq("id", order.seller_id).single(),
     admin.auth.admin.getUserById(order.seller_id),
     admin.auth.admin.getUserById(user.id),
   ]);
 
   const sellerEmail = sellerAuthData?.user?.email;
   const buyerEmail = buyerAuthData?.user?.email;
-  const buyerUsername = buyerProfile?.username ?? "A buyer";
-  const sellerUsername = sellerProfile?.username ?? "the seller";
+  const buyerUsername = (buyerProfile as { display_name?: string | null; username?: string | null } | null)?.display_name ?? buyerProfile?.username ?? "A buyer";
+  const sellerUsername = (sellerProfile as { display_name?: string | null; username?: string | null } | null)?.display_name ?? sellerProfile?.username ?? "the seller";
 
   await Promise.allSettled([
     sellerEmail
