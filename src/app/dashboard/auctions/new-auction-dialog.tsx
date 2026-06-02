@@ -293,7 +293,13 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
               name="starts_at"
               type="datetime-local"
               disabled={atAuctionLimit}
-              min={(() => { const n = new Date(); return new Date(n.getTime() - n.getTimezoneOffset() * 60000).toISOString().slice(0, 16); })()}
+              step={900}
+              min={(() => {
+                const n = new Date();
+                const ms15 = 15 * 60 * 1000;
+                const next = new Date(Math.ceil(n.getTime() / ms15) * ms15);
+                return new Date(next.getTime() - next.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+              })()}
             />
             <p className="text-xs text-muted-foreground">Leave blank to start immediately. Set a future date/time to queue the auction.</p>
           </div>
