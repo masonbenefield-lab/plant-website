@@ -519,10 +519,14 @@ export default async function OrdersPage({
             const buyerDisplayName = buyerParty?.display_name ?? buyerParty?.username ?? "Buyer";
             const sellerDisplayName = sellerParty?.display_name ?? sellerParty?.username ?? "Seller";
 
-            const canEscalate = isBuyer && effectiveStatus !== "resolved" && effectiveStatus !== "escalated" && (
-              effectiveStatus === "seller_responded" ||
-              (Date.now() - new Date(d.created_at).getTime()) >= 5 * 24 * 60 * 60 * 1000
-            );
+            const lastActivity = d.last_replied_at ?? d.created_at;
+            const isSellersTurn = d.last_replied_by_role === "buyer" || d.last_replied_by_role === null;
+            const sellerWindowExpired = Date.now() - new Date(lastActivity).getTime() >= 5 * 24 * 60 * 60 * 1000;
+            const canEscalate = isBuyer &&
+              effectiveStatus !== "resolved" &&
+              effectiveStatus !== "escalated" &&
+              isSellersTurn &&
+              sellerWindowExpired;
 
             let itemName: string | null = null;
             if (order) {
