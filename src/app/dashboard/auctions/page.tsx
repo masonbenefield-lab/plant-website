@@ -228,7 +228,10 @@ export default async function DashboardAuctionsPage({
                                 ? `Shipping: ${centsToDisplay((auction as { shipping_cost_cents: number }).shipping_cost_cents)}`
                                 : "Shipping: not set"}
                         </span>
-                        <span>Ends: <LocalDate iso={auction.ends_at} /></span>
+                        {auction.status === "scheduled" && (auction as { starts_at?: string | null }).starts_at
+                          ? <span>Goes live: <LocalDate iso={(auction as { starts_at: string }).starts_at} /></span>
+                          : <span>Ends: <LocalDate iso={auction.ends_at} /></span>
+                        }
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
