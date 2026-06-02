@@ -137,9 +137,25 @@ export default async function AuctionPage({
           </div>
 
           {auction.description && (
-            <p className="text-sm text-muted-foreground leading-relaxed mb-5 mt-3">
+            <p className="text-sm text-muted-foreground leading-relaxed mb-4 mt-3">
               {auction.description}
             </p>
+          )}
+
+          {seller && (
+            <Link
+              href={`/sellers/${seller.username}`}
+              className="inline-flex items-center gap-2 mb-4 text-sm hover:underline"
+            >
+              <Avatar className="h-6 w-6">
+                <AvatarImage src={seller.avatar_url ?? undefined} />
+                <AvatarFallback className="bg-[#DFE7D4] text-leaf text-xs">
+                  {(seller.display_name ?? seller.username).slice(0, 1).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <span className="font-medium">{seller.display_name ?? seller.username}</span>
+              <span className="text-muted-foreground">· View storefront →</span>
+            </Link>
           )}
 
           <div className="mb-4 space-y-2">
@@ -208,23 +224,6 @@ export default async function AuctionPage({
             </div>
           )}
 
-          {seller && (
-            <Link
-              href={`/sellers/${seller.username}`}
-              className="flex items-center gap-3 mt-8 p-4 rounded-lg border hover:bg-muted transition-colors"
-            >
-              <Avatar className="h-10 w-10">
-                <AvatarImage src={seller.avatar_url ?? undefined} />
-                <AvatarFallback className="bg-[#DFE7D4] text-leaf">
-                  {(seller.display_name ?? seller.username).slice(0, 1).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="text-sm font-medium">{seller.display_name ?? seller.username}</p>
-                <p className="text-xs text-muted-foreground">View storefront →</p>
-              </div>
-            </Link>
-          )}
         </div>
       </div>
     </div>
