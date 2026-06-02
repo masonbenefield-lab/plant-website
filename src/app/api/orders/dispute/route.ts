@@ -39,16 +39,15 @@ export async function POST(request: Request) {
 
   if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
 
-  // Check no open dispute already exists
+  // Block if any dispute has ever been filed on this order (open or resolved)
   const { data: existing } = await supabase
     .from("order_disputes")
     .select("id")
     .eq("order_id", orderId)
-    .neq("status", "resolved")
     .maybeSingle();
 
   if (existing) {
-    return NextResponse.json({ error: "A dispute is already open for this order." }, { status: 409 });
+    return NextResponse.json({ error: "A dispute has already been filed for this order." }, { status: 409 });
   }
 
   const { data: dispute, error: insertErr } = await supabase

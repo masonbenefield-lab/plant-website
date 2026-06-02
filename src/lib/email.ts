@@ -2160,7 +2160,38 @@ export async function sendGardenCareReminder({
   });
 }
 
-// ─── Order Disputes ────────────────────────────────────────────────────────────
+// ─── Order Disputes ───────────────────────────────────────────────────────────
+
+export async function sendDisputeReminderToSeller({
+  sellerEmail,
+  buyerUsername,
+  reason,
+  disputeId,
+}: {
+  sellerEmail: string;
+  buyerUsername: string;
+  reason: string;
+  disputeId: string;
+}) {
+  const resend = getResend();
+  const base = siteBase();
+  await resend.emails.send({
+    from: FROM,
+    to: sellerEmail,
+    subject: "Reminder: You have 1 day left to respond to a dispute",
+    html: emailBase({
+      title: "Dispute response reminder",
+      heading: "1 day left to respond",
+      subheading: "A buyer dispute is awaiting your reply",
+      body: `
+        <p style="margin:0 0 16px"><strong>${buyerUsername}</strong> filed a dispute regarding: <strong>${reason}</strong></p>
+        <p style="margin:0 0 16px">You have <strong>1 day left</strong> to respond before the buyer can escalate this to Plantet for review.</p>
+        <p style="margin:0 0 16px">Head to My Disputes to reply directly to the buyer and resolve this together.</p>
+        ${ctaBtn("Respond now", `${base}/orders?tab=disputes&id=${disputeId}`)}
+      `,
+    }),
+  });
+}
 
 export async function sendDisputeToSeller({
   sellerEmail,
