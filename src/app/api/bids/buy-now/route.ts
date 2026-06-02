@@ -21,7 +21,21 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Sign in to buy" }, { status: 401 });
 
-  const { auctionId } = await request.json() as { auctionId: string };
+  const {
+    auctionId,
+    shippingRateId,
+    shippingService,
+    shippingCarrier,
+    shippingCostCents: bodyShippingCents,
+    estimatedDays,
+  } = await request.json() as {
+    auctionId: string;
+    shippingRateId?: string | null;
+    shippingService?: string | null;
+    shippingCarrier?: string | null;
+    shippingCostCents?: number | null;
+    estimatedDays?: number | null;
+  };
 
   const admin = adminClient();
 
@@ -42,15 +56,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Add a shipping address in Account Settings before buying" }, { status: 403 });
   }
   if (auction.shipping_weight_oz) {
-    const { data: shippingSelection } = await admin
-      .from("auction_shipping_selections")
-      .select("cost_cents")
-      .eq("auction_id", auctionId)
-      .eq("bidder_id", user.id)
-      .maybeSingle();
-    if (!shippingSelection) {
+    if (!shippingRateId || bodyShippingCents == null) {
       return NextResponse.json({ error: "Select a shipping rate before buying" }, { status: 400 });
     }
+    // Persist the selected rate so the auto-charge block can look it up
+    await admin.from("auction_shipping_selections").upsert({
+      auction_id: auctionId,
+      bidder_id: user.id,
+      rate_id: shippingRateId,
+      service: shippingService ?? null,
+      carrier: shippingCarrier ?? null,
+      cost_cents: bodyShippingCents,
+      estimated_days: estimatedDays ?? null,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "auction_id,bidder_id" });
   }
 
   const previousBidderId = auction.current_bidder_id;
