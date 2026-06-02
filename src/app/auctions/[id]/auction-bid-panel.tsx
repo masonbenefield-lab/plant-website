@@ -299,15 +299,9 @@ export default function AuctionBidPanel({
         { duration: 6000 }
       );
     } else {
-      toast.success(`Bid of ${centsToDisplay(cents)} placed!`);
+      const extendedNote = data.extended ? " — auction extended by 2 minutes" : "";
+      toast.success(`Bid of ${centsToDisplay(cents)} placed!${extendedNote}`);
       if (maxCents) toast.info(`Auto-bidding enabled up to ${centsToDisplay(maxCents)}`, { duration: 4000 });
-      if (data.extended) toast.info("Auction extended — bid placed in final 2 minutes");
-      if (auction.reserve_price_cents && cents < auction.reserve_price_cents) {
-        toast.warning(
-          `Reserve not met — the auction won't close in your favour unless a bid reaches ${centsToDisplay(auction.reserve_price_cents)}.`,
-          { duration: 7000 }
-        );
-      }
     }
     setBidAmount("");
     setMaxBidAmount("");
