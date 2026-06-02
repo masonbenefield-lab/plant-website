@@ -158,11 +158,6 @@ export default async function AuctionsPage({
     (wRows ?? []).forEach((r) => { if (r.auction_id) wishlistedSet.add(r.auction_id); });
   }
 
-  const endingSoon = (auctions ?? []).filter((a) => {
-    const ms = new Date(a.ends_at).getTime() - Date.now();
-    return ms > 0 && ms <= 2 * 60 * 60 * 1000;
-  });
-
   return (
     <div className="max-w-7xl mx-auto px-4 py-10">
       <h1 className="text-2xl font-bold mb-6">Live Auctions</h1>
@@ -171,39 +166,6 @@ export default async function AuctionsPage({
         <AuctionFilterBar />
       </Suspense>
 
-      {/* ── Ending Soon spotlight ─────────────────────────────────────── */}
-      {!q && !sort && endingSoon.length > 0 && (
-        <div className="mb-8 rounded-2xl border border-orange-200 bg-orange-50 dark:bg-orange-900/10 dark:border-orange-900/40 p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-orange-600 font-bold text-sm">⏰ Ending Soon</span>
-            <span className="text-xs text-orange-500">These auctions close in under 2 hours</span>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {endingSoon.slice(0, 4).map((auction) => {
-              const endsAt = new Date(auction.ends_at);
-              const diff = endsAt.getTime() - Date.now();
-              const m = Math.floor(diff / 60000);
-              const timeStr = m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`;
-              return (
-                <Link key={auction.id} href={`/auctions/${auction.id}`} className="group block bg-white dark:bg-card rounded-xl border border-orange-100 dark:border-orange-900/30 overflow-hidden hover:shadow-md transition-shadow">
-                  <div className="relative h-28 bg-muted">
-                    {auction.images[0] ? (
-                      <Image src={auction.images[0]} alt={auction.plant_name} fill className="object-cover" />
-                    ) : (
-                      <div className="flex items-center justify-center h-full text-3xl">🌿</div>
-                    )}
-                    <span className="absolute top-1.5 right-1.5 bg-orange-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{timeStr} left</span>
-                  </div>
-                  <div className="p-2.5">
-                    <p className="text-sm font-semibold truncate">{auction.plant_name}{auction.variety ? ` ${auction.variety}` : ""}</p>
-                    <p className={`text-sm font-bold mt-0.5 ${auction.bid_count > 0 ? "text-leaf" : "text-muted-foreground"}`}>{centsToDisplay(auction.current_bid_cents)}</p>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {!sortedAuctions?.length ? (
         <div className="text-center py-16">

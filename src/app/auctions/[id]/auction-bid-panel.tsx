@@ -472,7 +472,7 @@ export default function AuctionBidPanel({
         </div>
       )}
 
-      {!isEnded && auction.buy_now_price_cents && userId && userId !== auction.seller_id && buyerHasPaymentMethod && (
+      {!isEnded && auction.buy_now_price_cents && userId && userId !== auction.seller_id && buyerHasPaymentMethod && buyerHasShippingAddress && (
         <>
           <div className="rounded-lg border border-orange-200 bg-orange-50 dark:bg-orange-900/10 dark:border-orange-800 p-3 flex items-center justify-between gap-3">
             <div>
