@@ -221,8 +221,9 @@ export default async function OrdersPage({
                             </div>
                           ) : (
                             <p className="font-semibold">
-                              {item?.plant_name}
-                              {item?.variety ? ` — ${item.variety}` : ""}
+                              {item
+                                ? `${item.plant_name}${item.variety ? ` — ${item.variety}` : ""}`
+                                : "Item details unavailable"}
                             </p>
                           )}
                           <p className="text-sm text-muted-foreground mt-0.5">
