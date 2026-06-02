@@ -1046,3 +1046,19 @@ CREATE POLICY "Service role only" ON referral_activations FOR ALL USING (false);
 - `src/app/dashboard/auctions/page.tsx` — illustrated empty state
 - `src/app/auctions/[id]/auction-bid-panel.tsx` — "How auctions work" collapsible
 - `vercel.json` — added cleanup-sponsor-requests cron
+
+---
+
+## 2026-06-02 — Dispute refunds
+
+### Features added
+- Sellers can issue a full refund directly from the dispute thread via "Issue refund" button
+- Refund goes through Stripe with `reverse_transfer: true, refund_application_fee: true` — money comes from seller's Stripe balance, Plantet returns its platform fee, buyer gets 100% back
+- Order marked `refunded`, dispute auto-resolved on successful refund
+- Both parties emailed: buyer gets refund confirmation with amount and 5–10 day timeline; seller gets confirmation with note about Stripe processing fee being non-refundable
+- Button only visible to sellers (not buyers), only on open disputes
+
+### Files modified
+- `src/app/api/orders/dispute/[id]/refund/route.ts` — new POST endpoint
+- `src/lib/email.ts` — added `sendRefundIssuedToBuyer`, `sendRefundIssuedToSeller`
+- `src/app/orders/dispute-thread.tsx` — added "Issue refund" button for sellers

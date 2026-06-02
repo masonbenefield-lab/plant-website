@@ -2321,3 +2321,56 @@ export async function sendDisputeEscalatedToAdmin({
     `,
   });
 }
+
+export async function sendRefundIssuedToBuyer({
+  buyerEmail,
+  sellerUsername,
+  amountCents,
+}: {
+  buyerEmail: string;
+  sellerUsername: string;
+  amountCents: number;
+}) {
+  const resend = getResend();
+  const base = siteBase();
+  await resend.emails.send({
+    from: FROM,
+    to: buyerEmail,
+    subject: "Your refund has been issued",
+    html: emailBase({
+      title: "Refund issued",
+      heading: "Your refund is on the way",
+      body: `
+        <p style="margin:0 0 16px"><strong>${sellerUsername}</strong> has issued a full refund of <strong>${centsToDisplay(amountCents)}</strong> for your order.</p>
+        <p style="margin:0 0 16px">Refunds typically appear on your statement within 5–10 business days depending on your bank.</p>
+        <p style="margin:0 0 16px">Your dispute has been marked as resolved.</p>
+        ${ctaBtn("View my orders", `${base}/orders`)}
+      `,
+    }),
+  });
+}
+
+export async function sendRefundIssuedToSeller({
+  sellerEmail,
+  amountCents,
+}: {
+  sellerEmail: string;
+  amountCents: number;
+}) {
+  const resend = getResend();
+  const base = siteBase();
+  await resend.emails.send({
+    from: FROM,
+    to: sellerEmail,
+    subject: "Refund confirmation",
+    html: emailBase({
+      title: "Refund confirmed",
+      heading: "Refund issued",
+      body: `
+        <p style="margin:0 0 16px">You successfully issued a refund of <strong>${centsToDisplay(amountCents)}</strong>. The dispute has been marked as resolved.</p>
+        <p style="margin:0 0 16px">The refund will be reversed from your Stripe balance. Stripe's processing fee is non-refundable.</p>
+        ${ctaBtn("View my sales", `${base}/dashboard/orders`)}
+      `,
+    }),
+  });
+}

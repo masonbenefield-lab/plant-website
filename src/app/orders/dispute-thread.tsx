@@ -53,6 +53,7 @@ export default function DisputeThread({
   const [sending, setSending] = useState(false);
   const [resolving, setResolving] = useState(false);
   const [escalating, setEscalating] = useState(false);
+  const [refunding, setRefunding] = useState(false);
   const [canEscalate, setCanEscalate] = useState(initialCanEscalate);
 
   const isClosed = status === "resolved" || status === "escalated";
@@ -106,6 +107,17 @@ export default function DisputeThread({
     setStatus("escalated");
     setCanEscalate(false);
     toast.success("Dispute escalated to Plantet.");
+  }
+
+  async function refund() {
+    if (!confirm("Issue a full refund to the buyer? This cannot be undone.")) return;
+    setRefunding(true);
+    const res = await fetch(`/api/orders/dispute/${disputeId}/refund`, { method: "POST" });
+    const data = await res.json();
+    setRefunding(false);
+    if (data.error) { toast.error(data.error); return; }
+    setStatus("resolved");
+    toast.success("Refund issued. The dispute has been resolved.");
   }
 
   const st = STATUS_LABEL[status] ?? { label: status, color: "bg-gray-100 text-gray-600" };
@@ -182,13 +194,18 @@ export default function DisputeThread({
             className="text-sm resize-none"
           />
           <div className="flex items-center justify-between gap-2 flex-wrap">
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Button size="sm" onClick={sendReply} disabled={sending || !reply.trim()} className="h-7 text-xs bg-leaf hover:bg-forest text-white">
                 {sending ? "Sending…" : "Send reply"}
               </Button>
               <Button size="sm" variant="outline" onClick={resolve} disabled={resolving} className="h-7 text-xs text-leaf border-leaf/40 hover:bg-leaf/5">
                 {resolving ? "Resolving…" : "Mark resolved"}
               </Button>
+              {!isBuyer && (
+                <Button size="sm" variant="outline" onClick={refund} disabled={refunding} className="h-7 text-xs text-red-600 border-red-200 hover:bg-red-50">
+                  {refunding ? "Refunding…" : "Issue refund"}
+                </Button>
+              )}
             </div>
             {isBuyer && canEscalate && (
               <button onClick={escalate} disabled={escalating} className="text-xs text-red-600 hover:underline disabled:opacity-50">
