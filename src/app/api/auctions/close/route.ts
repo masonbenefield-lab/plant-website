@@ -266,11 +266,14 @@ export async function GET(request: Request) {
 
       // Email seller that their auction ended with no winner
       if (sellerEmail) {
+        const hadBids = (auction.bid_count ?? 0) > 0;
+        const reserveNotMet = !!(auction.reserve_price_cents && auction.current_bid_cents < auction.reserve_price_cents);
         await sendAuctionEndedSeller({
           sellerEmail,
           plantName: displayName,
           winnerFound: false,
-          amountCents: auction.reserve_price_cents ? auction.current_bid_cents : undefined,
+          reserveNotMet: hadBids && reserveNotMet,
+          amountCents: hadBids ? auction.current_bid_cents : undefined,
           ordersUrl: `${appUrl}/orders?tab=sales`,
         }).catch(() => {});
       }

@@ -778,6 +778,7 @@ export async function sendAuctionEndedSeller({
   sellerEmail,
   plantName,
   winnerFound,
+  reserveNotMet = false,
   winnerUsername,
   amountCents,
   ordersUrl,
@@ -786,6 +787,7 @@ export async function sendAuctionEndedSeller({
   sellerEmail: string;
   plantName: string;
   winnerFound: boolean;
+  reserveNotMet?: boolean;
   winnerUsername?: string;
   amountCents?: number;
   ordersUrl: string;
@@ -797,15 +799,26 @@ export async function sendAuctionEndedSeller({
   let html: string;
   let subject: string;
 
-  if (!winnerFound) {
+  if (!winnerFound && reserveNotMet) {
+    subject = `Your ${plantName} auction ended — reserve not met`;
+    html = emailBase({
+      title: `Your auction for ${plantName} ended`,
+      heading: "Auction ended — reserve not met",
+      subheading: plantName,
+      body: `
+        <p style="margin:0 0 20px;">Your auction for <strong>${plantName}</strong> ended. The highest bid was ${centsToDisplay(amountCents ?? 0)}, which didn't reach your reserve price. You can accept the highest bid from your auction dashboard, relist, or list it at a fixed price.</p>
+        ${ctaBtn("View Auction", `${siteUrl}/dashboard/auctions`)}
+      `,
+    });
+  } else if (!winnerFound) {
     subject = `Your ${plantName} auction ended with no bids`;
     html = emailBase({
       title: `Your auction for ${plantName} ended with no bids`,
       heading: "Auction ended — no bids",
       subheading: plantName,
       body: `
-        <p style="margin:0 0 20px;">Your auction for <strong>${plantName}</strong> ended without receiving any bids. You can create a new auction or list it at a fixed price.</p>
-        ${ctaBtn("Create New Auction", `${siteUrl}/dashboard/auctions`)}
+        <p style="margin:0 0 20px;">Your auction for <strong>${plantName}</strong> ended without receiving any bids. You can relist it or list it at a fixed price.</p>
+        ${ctaBtn("Relist Auction", `${siteUrl}/dashboard/auctions`)}
       `,
     });
   } else if (autoCharged) {
