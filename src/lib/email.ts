@@ -1901,6 +1901,70 @@ export async function sendReserveOfferAccepted({
   });
 }
 
+// ─── Reserve offer accepted — seller notification ────────────────────────────
+
+export function buildReserveOfferAcceptedSellerHtml({
+  plantName,
+  buyerUsername,
+  amountCents,
+  shippingAddress,
+  dashboardUrl,
+}: {
+  plantName: string;
+  buyerUsername: string;
+  amountCents: number;
+  shippingAddress: { name: string; line1: string; line2?: string | null; city: string; state: string; zip: string; country: string } | null;
+  dashboardUrl: string;
+}): string {
+  const addrLines = shippingAddress
+    ? [
+        shippingAddress.name,
+        shippingAddress.line1,
+        shippingAddress.line2 || null,
+        `${shippingAddress.city}, ${shippingAddress.state} ${shippingAddress.zip}`,
+        shippingAddress.country,
+      ].filter(Boolean).join("<br>")
+    : "Address on file";
+  return emailBase({
+    title: `Reserve offer accepted — ${plantName}`,
+    heading: "Your reserve offer was accepted!",
+    subheading: "Payment confirmed — time to ship",
+    body: `
+      <p style="margin:0 0 4px;"><strong>${buyerUsername}</strong> accepted your reserve offer for <strong>${plantName}</strong>. Payment has been processed — please ship as soon as possible.</p>
+      ${infoCard([
+        { label: "Item", value: plantName },
+        { label: "Total received", value: centsToDisplay(amountCents) },
+        { label: "Ship to", value: addrLines },
+      ])}
+      ${ctaBtn("View Orders", dashboardUrl)}
+    `,
+  });
+}
+
+export async function sendReserveOfferAcceptedSeller({
+  sellerEmail,
+  plantName,
+  buyerUsername,
+  amountCents,
+  shippingAddress,
+  dashboardUrl,
+}: {
+  sellerEmail: string;
+  plantName: string;
+  buyerUsername: string;
+  amountCents: number;
+  shippingAddress: { name: string; line1: string; line2?: string | null; city: string; state: string; zip: string; country: string } | null;
+  dashboardUrl: string;
+}) {
+  const resend = getResend();
+  await resend.emails.send({
+    from: FROM,
+    to: sellerEmail,
+    subject: `Reserve offer accepted — ${plantName} sold!`,
+    html: buildReserveOfferAcceptedSellerHtml({ plantName, buyerUsername, amountCents, shippingAddress, dashboardUrl }),
+  });
+}
+
 // ─── Reserve offer: seller accepts below-reserve bid ─────────────────────────
 
 export function buildReserveOfferToBuyerHtml({

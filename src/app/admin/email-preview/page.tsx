@@ -26,6 +26,7 @@ import {
   buildEmailChangedHtml,
   buildReserveOfferToBuyerHtml,
   buildReserveOfferAcceptedHtml,
+  buildReserveOfferAcceptedSellerHtml,
   buildReserveOfferDeclinedHtml,
   buildReserveOfferExpiredHtml,
 } from "@/lib/email";
@@ -331,6 +332,18 @@ export default async function EmailPreviewPage() {
         shippingLabel: "USPS Priority Mail — $8.50",
         offerUrl: `${PREVIEW_SITE}/auctions/${PREVIEW_AUCTION_ID}/reserve-offer`,
         expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
+      }),
+    },
+    {
+      id: "reserve-offer-accepted-seller",
+      label: "Reserve Offer Accepted (Seller)",
+      category: "Seller",
+      html: buildReserveOfferAcceptedSellerHtml({
+        plantName: "Monstera Deliciosa",
+        buyerUsername: "plantlover99",
+        amountCents: 3450,
+        shippingAddress: sampleAddress,
+        dashboardUrl: `${PREVIEW_SITE}/dashboard/orders`,
       }),
     },
     {

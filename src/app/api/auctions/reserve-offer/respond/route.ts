@@ -8,6 +8,7 @@ import { createStripeTaxCalculation } from "@/lib/tax";
 import {
   sendReserveOfferDeclined,
   sendReserveOfferAccepted,
+  sendReserveOfferAcceptedSeller,
   sendAuctionPaymentFailed,
 } from "@/lib/email";
 
@@ -168,12 +169,26 @@ export async function POST(request: Request) {
 
     const { data: buyerAuth } = await admin.auth.admin.getUserById(user.id);
     const buyerEmail = buyerAuth?.user?.email;
+    const buyerUsername = (await admin.from("profiles").select("username").eq("id", user.id).single()).data?.username ?? "The buyer";
     if (buyerEmail) {
       await sendReserveOfferAccepted({
         buyerEmail,
         plantName: auction.plant_name,
         amountCents: totalCents,
         appUrl,
+      }).catch(() => {});
+    }
+
+    const { data: sellerAuth } = await admin.auth.admin.getUserById(auction.seller_id);
+    const sellerEmail = sellerAuth?.user?.email;
+    if (sellerEmail) {
+      await sendReserveOfferAcceptedSeller({
+        sellerEmail,
+        plantName: auction.plant_name,
+        buyerUsername,
+        amountCents: totalCents,
+        shippingAddress: (buyer.saved_shipping_address ?? null) as { name: string; line1: string; line2?: string | null; city: string; state: string; zip: string; country: string } | null,
+        dashboardUrl: `${appUrl}/dashboard/orders`,
       }).catch(() => {});
     }
 
