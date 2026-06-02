@@ -381,10 +381,28 @@ export default function AuctionBidPanel({
     return cents >= minBidForDisplay * 3;
   }
 
+  function normalizeState(state: string): string {
+    const names: Record<string, string> = {
+      ALABAMA: "AL", ALASKA: "AK", ARIZONA: "AZ", ARKANSAS: "AR", CALIFORNIA: "CA",
+      COLORADO: "CO", CONNECTICUT: "CT", DELAWARE: "DE", FLORIDA: "FL", GEORGIA: "GA",
+      HAWAII: "HI", IDAHO: "ID", ILLINOIS: "IL", INDIANA: "IN", IOWA: "IA",
+      KANSAS: "KS", KENTUCKY: "KY", LOUISIANA: "LA", MAINE: "ME", MARYLAND: "MD",
+      MASSACHUSETTS: "MA", MICHIGAN: "MI", MINNESOTA: "MN", MISSISSIPPI: "MS",
+      MISSOURI: "MO", MONTANA: "MT", NEBRASKA: "NE", NEVADA: "NV", "NEW HAMPSHIRE": "NH",
+      "NEW JERSEY": "NJ", "NEW MEXICO": "NM", "NEW YORK": "NY", "NORTH CAROLINA": "NC",
+      "NORTH DAKOTA": "ND", OHIO: "OH", OKLAHOMA: "OK", OREGON: "OR", PENNSYLVANIA: "PA",
+      "RHODE ISLAND": "RI", "SOUTH CAROLINA": "SC", "SOUTH DAKOTA": "SD", TENNESSEE: "TN",
+      TEXAS: "TX", UTAH: "UT", VERMONT: "VT", VIRGINIA: "VA", WASHINGTON: "WA",
+      "WEST VIRGINIA": "WV", WISCONSIN: "WI", WYOMING: "WY",
+    };
+    const upper = state.toUpperCase().trim();
+    return names[upper] ?? upper;
+  }
+
   function estimateTaxCents(amountCents: number, state: string | null): number | null {
     if (!state) return null;
     const rates: Record<string, number> = { TX: 0.0825 };
-    const rate = rates[state.toUpperCase()];
+    const rate = rates[normalizeState(state)];
     if (rate === undefined) return null;
     return Math.round(amountCents * rate);
   }
