@@ -352,7 +352,7 @@ export default function AuctionBidPanel({
           ⚠️ Bids placed in the final 2 minutes extend this auction by 2 minutes.
         </p>
       )}
-      <Card className="bg-[#EBF0E6] border-[#C5D4BC]">
+      <Card className="bg-[#EBF0E6] border-[#C5D4BC] dark:bg-forest/20 dark:border-forest/40">
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <div>
@@ -481,16 +481,20 @@ export default function AuctionBidPanel({
             <div className="flex gap-2">
               <div className="flex-1">
                 <Label htmlFor="bid" className="sr-only">Bid amount</Label>
-                <Input
-                  id="bid"
-                  type="number"
-                  min={(minBidForDisplay / 100).toFixed(2)}
-                  step="0.01"
-                  placeholder={`Min ${centsToDisplay(minBidForDisplay)}`}
-                  value={bidAmount}
-                  onChange={(e) => setBidAmount(e.target.value)}
-                  required
-                />
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none">$</span>
+                  <Input
+                    id="bid"
+                    type="number"
+                    min={(minBidForDisplay / 100).toFixed(2)}
+                    step="0.01"
+                    placeholder={(minBidForDisplay / 100).toFixed(2)}
+                    value={bidAmount}
+                    onChange={(e) => setBidAmount(e.target.value)}
+                    className="pl-6"
+                    required
+                  />
+                </div>
               </div>
               <Button
                 type="submit"
@@ -521,15 +525,19 @@ export default function AuctionBidPanel({
                   <p className="text-xs text-muted-foreground mb-1.5">
                     System auto-bids the minimum increment on your behalf whenever you&apos;re outbid, up to this amount.
                   </p>
-                  <Input
-                    id="maxBid"
-                    type="number"
-                    min={(minBidForDisplay / 100).toFixed(2)}
-                    step="0.01"
-                    placeholder={`e.g. ${centsToDisplay(minBidForDisplay * 5)}`}
-                    value={maxBidAmount}
-                    onChange={(e) => setMaxBidAmount(e.target.value)}
-                  />
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none">$</span>
+                    <Input
+                      id="maxBid"
+                      type="number"
+                      min={(minBidForDisplay / 100).toFixed(2)}
+                      step="0.01"
+                      placeholder={(minBidForDisplay * 5 / 100).toFixed(2)}
+                      value={maxBidAmount}
+                      onChange={(e) => setMaxBidAmount(e.target.value)}
+                      className="pl-6"
+                    />
+                  </div>
                 </div>
               </div>
             )}
