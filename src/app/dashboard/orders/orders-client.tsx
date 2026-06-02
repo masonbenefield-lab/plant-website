@@ -92,7 +92,13 @@ function BuyLabelButton({ orderId, labelUrl: initialLabelUrl, createdAt }: { ord
     const data = await res.json();
     setLoading(false);
     if (data.error) {
-      toast.error(data.error);
+      const isPhoneError = /phone|email or phone/i.test(data.error);
+      toast.error(isPhoneError ? "Phone number required for USPS labels." : data.error, {
+        description: isPhoneError ? undefined : undefined,
+        action: isPhoneError
+          ? { label: "Account Settings →", onClick: () => window.location.href = "/account#shipping-settings" }
+          : undefined,
+      });
       return;
     }
     setLabelUrl(data.labelUrl);
