@@ -136,6 +136,9 @@ export default function GetLabelModal({
                 </div>
                 <p className="text-xs text-muted-foreground">Include packaging. 16 oz = 1 lb.</p>
               </div>
+              <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md px-3 py-2">
+                ⚠️ Enter the actual packed weight. If USPS weighs your package and finds a discrepancy, the difference is billed back and your account may be flagged for repeated underreporting.
+              </p>
               {error && <p className="text-sm text-destructive">{error}</p>}
               <Button onClick={fetchRates} disabled={loading} className="bg-leaf hover:bg-forest w-full">
                 {loading ? <><Loader2 size={14} className="animate-spin mr-2" />Fetching rates…</> : "Get Rates"}

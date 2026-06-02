@@ -163,7 +163,10 @@ export async function GET(request: Request) {
           const feePercent = planFeePercent(sellerProfile.plan, !!sellerProfile.is_admin, !!sellerProfile.groundbreaker);
           const feeCents = Math.round(auction.current_bid_cents * (feePercent / 100));
           const stripeFeeCents = Math.round(totalCents * 0.029) + 30;
-          const appFeeAmount = feeCents + stripeFeeCents + taxCents;
+          // For weight-based (Shippo) orders hold the shipping on the platform side
+          // so the platform can cover the label cost — seller receives item price only
+          const platformShipping = auction.shipping_weight_oz ? shippingCents : 0;
+          const appFeeAmount = feeCents + stripeFeeCents + taxCents + platformShipping;
 
           // Create the order first so the webhook can find it
           const deadline = new Date(now.getTime() + PAYMENT_DEADLINE_HOURS * 60 * 60 * 1000);

@@ -413,6 +413,9 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
                 <span className="text-xs text-muted-foreground">oz — rate calculated at checkout</span>
               </div>
             )}
+            {shippingMode === "weight" && calculatedShippingEnabled && (
+              <p className="text-xs text-amber-600 dark:text-amber-400">⚠️ Enter the actual packed weight. Underreporting causes USPS billing adjustments and may result in account suspension.</p>
+            )}
           </div>
           {!shippingMode && (
             <p className="text-xs text-amber-700 dark:text-amber-400">Choose a shipping option above to continue.</p>

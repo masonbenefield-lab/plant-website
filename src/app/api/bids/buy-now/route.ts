@@ -167,7 +167,9 @@ export async function POST(request: Request) {
       const feePercent = planFeePercent(sellerProfile!.plan, !!sellerProfile!.is_admin, !!sellerProfile!.groundbreaker);
       const feeCents = Math.round(auction.buy_now_price_cents * (feePercent / 100));
       const stripeFeeCents = Math.round(totalCents * 0.029) + 30;
-      const appFeeAmount = feeCents + stripeFeeCents + taxCents;
+      // For weight-based (Shippo) orders hold shipping on the platform side to cover label cost
+      const platformShipping = auction.shipping_weight_oz ? shippingCents : 0;
+      const appFeeAmount = feeCents + stripeFeeCents + taxCents + platformShipping;
 
       const deadline = new Date(now.getTime() + PAYMENT_DEADLINE_HOURS * 60 * 60 * 1000);
       const { data: order } = await admin.from("orders").insert({

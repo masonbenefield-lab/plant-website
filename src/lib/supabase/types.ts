@@ -162,6 +162,41 @@ export interface Database {
         Relationships: [];
       };
 
+      shipping_adjustments: {
+        Row: {
+          id: string;
+          order_id: string | null;
+          seller_id: string | null;
+          shippo_transaction_id: string | null;
+          original_weight_oz: number | null;
+          billed_weight_oz: number | null;
+          adjustment_cents: number;
+          shippo_event_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          order_id?: string | null;
+          seller_id?: string | null;
+          shippo_transaction_id?: string | null;
+          original_weight_oz?: number | null;
+          billed_weight_oz?: number | null;
+          adjustment_cents: number;
+          shippo_event_id?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          order_id?: string | null;
+          seller_id?: string | null;
+          shippo_transaction_id?: string | null;
+          original_weight_oz?: number | null;
+          billed_weight_oz?: number | null;
+          adjustment_cents?: number;
+          shippo_event_id?: string | null;
+        };
+        Relationships: [];
+      };
+
       auction_shipping_selections: {
         Row: {
           id: string;
