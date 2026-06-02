@@ -182,28 +182,18 @@ export default function SignupPage() {
             <label className="flex items-start gap-2 cursor-pointer text-sm text-muted-foreground">
               <input
                 type="checkbox"
-                checked={ageConfirmed}
-                onChange={(e) => setAgeConfirmed(e.target.checked)}
+                checked={ageConfirmed && usConfirmed}
+                onChange={(e) => { setAgeConfirmed(e.target.checked); setUsConfirmed(e.target.checked); }}
                 className="mt-0.5 accent-leaf"
                 required
               />
               <span>
-                I confirm I am at least 18 years old and have read the{" "}
+                I confirm I am at least 18 years old, located in the United States, and have read the{" "}
                 <Link href="/privacy-policy" className="underline hover:text-foreground" target="_blank">
                   Privacy Policy
                 </Link>
                 .
               </span>
-            </label>
-            <label className="flex items-start gap-2 cursor-pointer text-sm text-muted-foreground">
-              <input
-                type="checkbox"
-                checked={usConfirmed}
-                onChange={(e) => setUsConfirmed(e.target.checked)}
-                className="mt-0.5 accent-leaf"
-                required
-              />
-              <span>I confirm I am located in the United States.</span>
             </label>
             <label className="flex items-start gap-2 cursor-pointer text-sm text-muted-foreground">
               <input
