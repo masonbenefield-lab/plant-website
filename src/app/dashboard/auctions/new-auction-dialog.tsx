@@ -42,6 +42,16 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
   const [startingBidVal, setStartingBidVal] = useState(0);
   const [buyNowVal, setBuyNowVal] = useState(0);
   const [reserveVal, setReserveVal] = useState(0);
+  const [startsAt, setStartsAt] = useState("");
+
+  function handleStartsAtChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const val = e.target.value;
+    if (!val) { setStartsAt(""); return; }
+    const ms15 = 15 * 60 * 1000;
+    const snapped = new Date(Math.round(new Date(val).getTime() / ms15) * ms15);
+    const local = new Date(snapped.getTime() - snapped.getTimezoneOffset() * 60000);
+    setStartsAt(local.toISOString().slice(0, 16));
+  }
   const fileRef = useRef<HTMLInputElement>(null);
 
   const buyNowError = buyNowVal > 0 && startingBidVal > 0 && buyNowVal <= startingBidVal;
@@ -264,6 +274,7 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
                 required
                 disabled={atAuctionLimit}
               >
+                <option value="0.167">10 minutes (test only)</option>
                 <option value="24">24 hours</option>
                 <option value="48">48 hours</option>
                 <option value="72">72 hours</option>
@@ -294,6 +305,8 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
               type="datetime-local"
               disabled={atAuctionLimit}
               step={900}
+              value={startsAt}
+              onChange={handleStartsAtChange}
               min={(() => {
                 const n = new Date();
                 const ms15 = 15 * 60 * 1000;

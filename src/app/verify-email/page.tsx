@@ -14,7 +14,8 @@ function VerifyEmailContent() {
   const emailParam = searchParams.get("email") ?? "";
   const [emailInput, setEmailInput] = useState(emailParam);
   const email = emailInput.trim();
-  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error" | "already_confirmed">("idle");
+  const [errorMsg, setErrorMsg] = useState("");
   const [countdown, setCountdown] = useState(0);
 
   useEffect(() => {
@@ -29,7 +30,22 @@ function VerifyEmailContent() {
     const supabase = createClient();
     const { error } = await supabase.auth.resend({ type: "signup", email });
     if (error) {
-      setStatus("error");
+      const msg = error.message?.toLowerCase() ?? "";
+      if (
+        msg.includes("already confirmed") ||
+        msg.includes("already registered") ||
+        msg.includes("email address is already") ||
+        msg.includes("user already exists") ||
+        error.status === 422
+      ) {
+        setStatus("already_confirmed");
+      } else if (msg.includes("rate limit") || msg.includes("too many requests") || error.status === 429) {
+        setErrorMsg("Too many attempts — wait a minute and try again.");
+        setStatus("error");
+      } else {
+        setErrorMsg(error.message ?? "");
+        setStatus("error");
+      }
     } else {
       setStatus("sent");
       setCountdown(60);
@@ -70,8 +86,11 @@ function VerifyEmailContent() {
           {status === "sent" && (
             <p className="text-xs text-leaf font-medium">New link sent — check your inbox.</p>
           )}
+          {status === "already_confirmed" && (
+            <p className="text-xs text-leaf font-medium">Your email is already confirmed — <Link href="/login" className="underline">sign in instead</Link>.</p>
+          )}
           {status === "error" && (
-            <p className="text-xs text-destructive">Something went wrong. Try again in a moment.</p>
+            <p className="text-xs text-destructive">{errorMsg || "Something went wrong. Try again in a moment."}</p>
           )}
 
           <Button
