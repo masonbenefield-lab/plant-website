@@ -136,8 +136,43 @@ export default async function AuctionPage({
             </div>
           </div>
 
+          {auction.status === "scheduled" && auction.starts_at && (
+            <div className="mb-4 rounded-md border border-blue-200 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-800 px-3 py-2 text-sm text-blue-800 dark:text-blue-300">
+              🕐 This auction opens on {new Date(auction.starts_at).toLocaleString("en-US", { month: "long", day: "numeric", hour: "numeric", minute: "2-digit" })}
+            </div>
+          )}
+
+          <AuctionBidPanel
+            auction={{
+              id: auction.id,
+              status: auction.status,
+              current_bid_cents: auction.current_bid_cents,
+              starting_bid_cents: auction.starting_bid_cents,
+              buy_now_price_cents: auction.buy_now_price_cents,
+              reserve_price_cents: auction.reserve_price_cents,
+              ends_at: auction.ends_at,
+              seller_id: auction.seller_id,
+              current_bidder_id: auction.current_bidder_id,
+              free_shipping: shippingFree ?? null,
+              shipping_cost_cents: shippingCostCents ?? null,
+              shipping_weight_oz: invShipping?.shipping_weight_oz ?? auction.shipping_weight_oz ?? null,
+            }}
+            userId={user?.id ?? null}
+            buyerHasPaymentMethod={!!buyerProfile?.data?.default_payment_method_id}
+            buyerHasShippingAddress={!!buyerProfile?.data?.saved_shipping_address}
+            existingOrderStatus={existingOrderStatus}
+            recentBids={
+              (bids ?? []).map((b) => ({
+                id: b.id,
+                amount_cents: b.amount_cents,
+                created_at: b.created_at,
+                bidder: bidderMap[b.bidder_id] ?? null,
+              }))
+            }
+          />
+
           {auction.description && (
-            <p className="text-sm text-muted-foreground leading-relaxed mb-4 mt-3">
+            <p className="text-sm text-muted-foreground leading-relaxed mt-6 mb-4">
               {auction.description}
             </p>
           )}
@@ -178,40 +213,6 @@ export default async function AuctionPage({
               />
             )}
           </div>
-
-          {auction.status === "scheduled" && auction.starts_at && (
-            <div className="mb-4 rounded-md border border-blue-200 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-800 px-3 py-2 text-sm text-blue-800 dark:text-blue-300">
-              🕐 This auction opens on {new Date(auction.starts_at).toLocaleString("en-US", { month: "long", day: "numeric", hour: "numeric", minute: "2-digit" })}
-            </div>
-          )}
-          <AuctionBidPanel
-            auction={{
-              id: auction.id,
-              status: auction.status,
-              current_bid_cents: auction.current_bid_cents,
-              starting_bid_cents: auction.starting_bid_cents,
-              buy_now_price_cents: auction.buy_now_price_cents,
-              reserve_price_cents: auction.reserve_price_cents,
-              ends_at: auction.ends_at,
-              seller_id: auction.seller_id,
-              current_bidder_id: auction.current_bidder_id,
-              free_shipping: shippingFree ?? null,
-              shipping_cost_cents: shippingCostCents ?? null,
-              shipping_weight_oz: invShipping?.shipping_weight_oz ?? auction.shipping_weight_oz ?? null,
-            }}
-            userId={user?.id ?? null}
-            buyerHasPaymentMethod={!!buyerProfile?.data?.default_payment_method_id}
-            buyerHasShippingAddress={!!buyerProfile?.data?.saved_shipping_address}
-            existingOrderStatus={existingOrderStatus}
-            recentBids={
-              (bids ?? []).map((b) => ({
-                id: b.id,
-                amount_cents: b.amount_cents,
-                created_at: b.created_at,
-                bidder: bidderMap[b.bidder_id] ?? null,
-              }))
-            }
-          />
 
           {user && user.id !== auction.seller_id && (
             <div className="mt-4 flex justify-end">
