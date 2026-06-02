@@ -27,9 +27,10 @@ interface NavbarProps {
   unreadMessages?: number;
   pendingReports?: number;
   pendingSalesOrders?: number;
+  actionableDisputeCount?: number;
 }
 
-export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessages = 0, pendingReports = 0, pendingSalesOrders = 0 }: NavbarProps) {
+export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessages = 0, pendingReports = 0, pendingSalesOrders = 0, actionableDisputeCount = 0 }: NavbarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const headerRef = useRef<HTMLElement>(null);
@@ -174,6 +175,9 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
                     <span className="absolute top-0.5 right-0.5 w-3.5 h-3.5 rounded-full bg-leaf text-white text-[9px] font-bold flex items-center justify-center">
                       {pendingSalesOrders > 9 ? "9+" : pendingSalesOrders}
                     </span>
+                  )}
+                  {actionableDisputeCount > 0 && (
+                    <span className="absolute top-0.5 left-0.5 w-2.5 h-2.5 rounded-full bg-red-500" />
                   )}
                   <span className="text-[9px] leading-none font-medium">Orders</span>
                 </Link>

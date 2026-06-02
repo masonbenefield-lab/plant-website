@@ -43,15 +43,21 @@ export default async function RootLayout({
   let unreadMessages = 0;
   let pendingReports = 0;
   let pendingSalesOrders = 0;
+  let actionableDisputeCount = 0;
   if (user) {
-    const [{ data }, { count: msgCount }, { count: salesCount }] = await Promise.all([
+    const [{ data }, { count: msgCount }, { count: salesCount }, { count: sellerDisputeCount }, { count: buyerDisputeCount }] = await Promise.all([
       supabase.from("profiles").select("username, avatar_url, is_admin").eq("id", user.id).single(),
       supabase.from("messages").select("id", { count: "exact", head: true }).is("read_at", null).neq("sender_id", user.id),
       supabase.from("orders").select("id", { count: "exact", head: true }).eq("seller_id", user.id).eq("status", "paid"),
+      // Seller: disputes filed against them that need a response
+      supabase.from("order_disputes").select("id", { count: "exact", head: true }).eq("seller_id", user.id).eq("status", "seller_notified"),
+      // Buyer: disputes where the seller has responded and buyer should review
+      supabase.from("order_disputes").select("id", { count: "exact", head: true }).eq("buyer_id", user.id).eq("status", "seller_responded"),
     ]);
     profile = data;
     unreadMessages = msgCount ?? 0;
     pendingSalesOrders = salesCount ?? 0;
+    actionableDisputeCount = (sellerDisputeCount ?? 0) + (buyerDisputeCount ?? 0);
     if (profile?.is_admin) {
       const { count } = await supabase.from("reports").select("id", { count: "exact", head: true }).eq("status", "pending");
       pendingReports = count ?? 0;
@@ -74,6 +80,7 @@ export default async function RootLayout({
               unreadMessages={unreadMessages}
               pendingReports={pendingReports}
               pendingSalesOrders={pendingSalesOrders}
+              actionableDisputeCount={actionableDisputeCount}
             />
             <main className="flex-1">{children}</main>
             <Footer />
