@@ -5,7 +5,7 @@ import { GROUNDBREAKER_CAP } from "@/lib/plan-limits";
 import { sendWelcomeEmail } from "@/lib/email";
 
 async function handleSession(
-  session: { user: { id: string; email?: string; created_at: string } },
+  user: { id: string; email?: string; created_at: string },
   origin: string,
   next: string
 ) {
@@ -17,12 +17,12 @@ async function handleSession(
   const { data: profile } = await admin
     .from("profiles")
     .select("groundbreaker, username")
-    .eq("id", session.user.id)
+    .eq("id", user.id)
     .single();
 
-  const isNewUser = Date.now() - new Date(session.user.created_at).getTime() < 10 * 60 * 1000;
-  if (isNewUser && session.user.email && profile?.username) {
-    sendWelcomeEmail({ recipientEmail: session.user.email, username: profile.username }).catch(() => {});
+  const isNewUser = Date.now() - new Date(user.created_at).getTime() < 10 * 60 * 1000;
+  if (isNewUser && user.email && profile?.username) {
+    sendWelcomeEmail({ recipientEmail: user.email, username: profile.username }).catch(() => {});
   }
 
   if (!profile?.groundbreaker) {
@@ -39,7 +39,7 @@ async function handleSession(
           groundbreaker_number: (count ?? 0) + 1,
           plan: "nursery",
         })
-        .eq("id", session.user.id);
+        .eq("id", user.id);
     }
   }
 
