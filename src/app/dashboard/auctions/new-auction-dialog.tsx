@@ -21,27 +21,49 @@ import PriceSuggestion from "@/components/price-suggestion";
 import PotSizePicker from "@/components/pot-size-picker";
 import { PLANT_CATEGORIES } from "@/lib/categories";
 
+interface PrefillData {
+  id: string;
+  plant_name: string;
+  variety: string | null;
+  quantity: number;
+  description: string | null;
+  images: string[];
+  starting_bid_cents: number;
+  buy_now_price_cents: number | null;
+  reserve_price_cents: number | null;
+  category: string | null;
+  pot_size: string | null;
+  free_shipping: boolean;
+  shipping_cost_cents: number | null;
+  shipping_weight_oz: number | null;
+}
+
 interface Props {
   sellerId: string;
   planLimit: number | null;
   currentCount: number;
   photoLimit: number | null;
   calculatedShippingEnabled: boolean;
+  prefill?: PrefillData;
+  triggerLabel?: string;
 }
 
-export default function NewAuctionDialog({ sellerId, planLimit, currentCount, photoLimit, calculatedShippingEnabled }: Props) {
+export default function NewAuctionDialog({ sellerId, planLimit, currentCount, photoLimit, calculatedShippingEnabled, prefill, triggerLabel }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [imageUrls, setImageUrls] = useState<string[]>([]);
-  const [plantName, setPlantName] = useState("");
-  const [variety, setVariety] = useState("");
-  const [potSize, setPotSize] = useState("");
-  const [shippingMode, setShippingMode] = useState<"" | "free" | "flat" | "weight">("");
-  const [startingBidVal, setStartingBidVal] = useState(0);
-  const [buyNowVal, setBuyNowVal] = useState(0);
-  const [reserveVal, setReserveVal] = useState(0);
+  const [imageUrls, setImageUrls] = useState<string[]>(prefill?.images ?? []);
+  const [plantName, setPlantName] = useState(prefill?.plant_name ?? "");
+  const [variety, setVariety] = useState(prefill?.variety ?? "");
+  const [potSize, setPotSize] = useState(prefill?.pot_size ?? "");
+  const [category, setCategory] = useState(prefill?.category ?? "");
+  const [shippingMode, setShippingMode] = useState<"" | "free" | "flat" | "weight">(
+    prefill ? (prefill.free_shipping ? "free" : prefill.shipping_weight_oz ? "weight" : prefill.shipping_cost_cents ? "flat" : "") : ""
+  );
+  const [startingBidVal, setStartingBidVal] = useState(prefill ? prefill.starting_bid_cents / 100 : 0);
+  const [buyNowVal, setBuyNowVal] = useState(prefill ? (prefill.buy_now_price_cents ?? 0) / 100 : 0);
+  const [reserveVal, setReserveVal] = useState(prefill ? (prefill.reserve_price_cents ?? 0) / 100 : 0);
   const [startsAt, setStartsAt] = useState("");
 
   function handleStartsAtChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -186,13 +208,13 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
 
   return (
     <>
-      <Button className="bg-leaf hover:bg-forest" onClick={() => setOpen(true)}>
-        + New Auction
+      <Button variant={prefill ? "outline" : "default"} size={prefill ? "sm" : "default"} className={prefill ? "" : "bg-leaf hover:bg-forest"} onClick={() => setOpen(true)}>
+        {triggerLabel ?? "+ New Auction"}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create an Auction</DialogTitle>
+          <DialogTitle>{prefill ? "Relist Auction" : "Create an Auction"}</DialogTitle>
         </DialogHeader>
 
         {atAuctionLimit && (
@@ -232,13 +254,14 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
               <Label htmlFor="quantity">Quantity *</Label>
-              <Input id="quantity" name="quantity" type="number" min={1} defaultValue={1} required disabled={atAuctionLimit} />
+              <Input id="quantity" name="quantity" type="number" min={1} defaultValue={prefill?.quantity ?? 1} required disabled={atAuctionLimit} />
             </div>
             <div className="space-y-1">
               <Label htmlFor="starting_bid">Starting Bid *</Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">$</span>
                 <Input id="starting_bid" name="starting_bid" type="number" min={0.01} step={0.01} required disabled={atAuctionLimit} className="pl-6"
+                  value={startingBidVal || ""}
                   onChange={(e) => setStartingBidVal(parseFloat(e.target.value) || 0)} />
               </div>
             </div>
@@ -249,6 +272,7 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">$</span>
               <Input id="buy_now_price" name="buy_now_price" type="number" min={0.01} step={0.01} placeholder="Leave blank to disable" disabled={atAuctionLimit} className={`pl-6 ${buyNowError ? "border-red-400 focus-visible:ring-red-400" : ""}`}
+                value={buyNowVal || ""}
                 onChange={(e) => setBuyNowVal(parseFloat(e.target.value) || 0)} />
             </div>
             {buyNowError && <p className="text-xs text-red-600">Buy Now price must be higher than the starting bid.</p>}
@@ -259,6 +283,7 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">$</span>
               <Input id="reserve_price" name="reserve_price" type="number" min={0.01} step={0.01} placeholder="Leave blank for no reserve" disabled={atAuctionLimit} className={`pl-6 ${reserveError ? "border-red-400 focus-visible:ring-red-400" : ""}`}
+                value={reserveVal || ""}
                 onChange={(e) => setReserveVal(parseFloat(e.target.value) || 0)} />
             </div>
             {reserveError && <p className="text-xs text-red-600">Reserve price must be at least the starting bid.</p>}
@@ -289,6 +314,8 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
                 name="category"
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 disabled={atAuctionLimit}
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
               >
                 <option value="">Select a category…</option>
                 {PLANT_CATEGORIES.map((c) => (
@@ -322,7 +349,7 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
           </div>
           <div className="space-y-1">
             <Label htmlFor="description">Description</Label>
-            <Textarea id="description" name="description" rows={3} maxLength={1000} disabled={atAuctionLimit} />
+            <Textarea id="description" name="description" rows={3} maxLength={1000} disabled={atAuctionLimit} defaultValue={prefill?.description ?? ""} />
           </div>
           <div className="space-y-1">
             <Label>
@@ -400,6 +427,7 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
                   placeholder="e.g. 6.99"
                   required
                   className="max-w-[140px]"
+                  defaultValue={prefill?.shipping_cost_cents ? (prefill.shipping_cost_cents / 100).toFixed(2) : ""}
                 />
                 <span className="text-xs text-muted-foreground">flat rate charged to buyer</span>
               </div>
@@ -422,6 +450,7 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
                   placeholder="e.g. 12"
                   required
                   className="max-w-[100px]"
+                  defaultValue={prefill?.shipping_weight_oz ?? ""}
                 />
                 <span className="text-xs text-muted-foreground">oz — rate calculated at checkout</span>
               </div>
@@ -436,7 +465,7 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
             <Button type="submit" disabled={saving || atAuctionLimit || !shippingMode || (shippingMode === "weight" && !calculatedShippingEnabled) || buyNowError || reserveError} className="bg-leaf hover:bg-forest">
-              {saving ? "Saving…" : "Create auction"}
+              {saving ? "Saving…" : prefill ? "Relist auction" : "Create auction"}
             </Button>
           </div>
         </form>

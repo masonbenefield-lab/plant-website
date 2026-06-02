@@ -13,7 +13,6 @@ import DashboardSearch from "@/components/dashboard-search";
 import { DeleteScheduledAuctionButton, DeleteEndedAuctionButton, AcceptHighestBidButton, ForceCloseButton } from "./auction-actions";
 import AuctionActions from "./auction-actions";
 import NewAuctionDialog from "./new-auction-dialog";
-import RelistButton from "./relist-button";
 import { LocalDate } from "@/components/local-date";
 import type { Database } from "@/lib/supabase/types";
 
@@ -278,7 +277,15 @@ export default async function DashboardAuctionsPage({
                             </span>
                           )}
                           {auction.status === "ended" && !auction.current_bidder_id && (
-                            <RelistButton auctionId={auction.id} />
+                            <NewAuctionDialog
+                              sellerId={user.id}
+                              planLimit={planLimits.auctions}
+                              currentCount={activeAuctionCount}
+                              photoLimit={planLimits.photos}
+                              calculatedShippingEnabled={calculatedShippingEnabled}
+                              prefill={auction}
+                              triggerLabel="Relist"
+                            />
                           )}
                           <DeleteEndedAuctionButton auctionId={auction.id} />
                         </div>
