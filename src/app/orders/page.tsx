@@ -10,6 +10,7 @@ import { centsToDisplay } from "@/lib/stripe";
 import RateSellerForm from "./rate-seller-form";
 import DisputeButton from "./dispute-button";
 import EscalateButton from "./escalate-button";
+import DisputeSellerPanel from "./dispute-seller-panel";
 import OrdersClient from "@/app/dashboard/orders/orders-client";
 import { ExpiredAuctionBanner } from "./expired-auction-banner";
 
@@ -438,12 +439,24 @@ export default async function OrdersPage({
     // Fetch order + party info for all disputes
     const disputeOrderIds = disputes.map((d) => d.order_id);
     const partyIds = [...new Set(disputes.flatMap((d) => [d.buyer_id, d.seller_id]))];
-    const [{ data: disputeOrders }, { data: partyProfiles }] = await Promise.all([
-      supabase.from("orders").select("id, amount_cents, listing_id, auction_id, cart_items").in("id", disputeOrderIds),
+    const { data: disputeOrders } = await supabase
+      .from("orders")
+      .select("id, amount_cents, listing_id, auction_id, cart_items")
+      .in("id", disputeOrderIds);
+
+    const dListingIds = (disputeOrders ?? []).filter((o) => o.listing_id).map((o) => o.listing_id!);
+    const dAuctionIds = (disputeOrders ?? []).filter((o) => o.auction_id).map((o) => o.auction_id!);
+
+    const [{ data: partyProfiles }, { data: dListings }, { data: dAuctions }] = await Promise.all([
       supabase.from("profiles").select("id, username, display_name").in("id", partyIds),
+      dListingIds.length ? supabase.from("listings").select("id, plant_name, variety").in("id", dListingIds) : { data: [] },
+      dAuctionIds.length ? supabase.from("auctions").select("id, plant_name, variety").in("id", dAuctionIds) : { data: [] },
     ]);
+
     const disputeOrderMap = Object.fromEntries((disputeOrders ?? []).map((o) => [o.id, o]));
     const partyMap = Object.fromEntries((partyProfiles ?? []).map((p) => [p.id, p]));
+    const dListingMap = Object.fromEntries((dListings ?? []).map((l) => [l.id, l]));
+    const dAuctionMap = Object.fromEntries((dAuctions ?? []).map((a) => [a.id, a]));
 
     const statusLabel: Record<string, { label: string; color: string }> = {
       seller_notified: { label: "Awaiting seller response", color: "bg-yellow-100 text-yellow-800" },
@@ -468,12 +481,28 @@ export default async function OrdersPage({
               (Date.now() - new Date(d.created_at).getTime()) >= 5 * 24 * 60 * 60 * 1000
             );
 
+            // Resolve item name
+            let itemName: string | null = null;
+            if (order) {
+              const cartItems = order.cart_items as { plant_name: string; variety: string | null }[] | null;
+              if (cartItems?.length) {
+                itemName = cartItems.map((ci) => ci.variety ? `${ci.plant_name} — ${ci.variety}` : ci.plant_name).join(", ");
+              } else if (order.listing_id && dListingMap[order.listing_id]) {
+                const l = dListingMap[order.listing_id];
+                itemName = l.variety ? `${l.plant_name} — ${l.variety}` : l.plant_name;
+              } else if (order.auction_id && dAuctionMap[order.auction_id]) {
+                const a = dAuctionMap[order.auction_id];
+                itemName = a.variety ? `${a.plant_name} — ${a.variety}` : a.plant_name;
+              }
+            }
+
             return (
               <Card key={d.id}>
                 <CardContent className="p-5 space-y-3">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="font-semibold text-sm">{d.reason}</p>
+                      {itemName && <p className="font-semibold">{itemName}</p>}
+                      <p className="text-sm font-medium mt-0.5">{d.reason}</p>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {isBuyer ? "Seller" : "Buyer"}:{" "}
                         {otherParty?.username ? (
@@ -492,27 +521,27 @@ export default async function OrdersPage({
 
                   {d.details && (
                     <div className="text-sm bg-muted/40 rounded p-3">
-                      <p className="text-xs font-medium text-muted-foreground mb-1">Your report</p>
+                      <p className="text-xs font-medium text-muted-foreground mb-1">{isBuyer ? "Your report" : "Buyer's report"}</p>
                       <p>{d.details}</p>
                     </div>
                   )}
 
-                  {d.seller_response && (
+                  {/* Buyer view: show seller response + escalate */}
+                  {isBuyer && d.seller_response && (
                     <div className="text-sm bg-leaf/5 border border-leaf/20 rounded p-3">
                       <p className="text-xs font-medium text-leaf mb-1">Seller&apos;s response</p>
                       <p>{d.seller_response}</p>
                     </div>
                   )}
-
                   {canEscalate && <EscalateButton disputeId={d.id} />}
 
-                  {!isBuyer && d.status !== "resolved" && (
-                    <Link
-                      href={`/orders?tab=sales`}
-                      className="text-xs text-leaf hover:underline"
-                    >
-                      Respond in My Sales →
-                    </Link>
+                  {/* Seller view: inline respond/resolve panel */}
+                  {!isBuyer && (
+                    <DisputeSellerPanel
+                      disputeId={d.id}
+                      initialResponse={d.seller_response}
+                      initialStatus={d.status}
+                    />
                   )}
                 </CardContent>
               </Card>
