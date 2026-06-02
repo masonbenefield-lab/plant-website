@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Bookmark, BookmarkCheck, Loader2 } from "lucide-react";
+import { Plus, Check, Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -112,7 +112,7 @@ export function SaveToWishlistButton({ plantName, variety, initialSavedId, overl
               : "bg-black/40 text-white hover:bg-black/60"
           )}
         >
-          {saved ? <BookmarkCheck size={14} /> : <Bookmark size={14} />}
+          {saved ? <Check size={14} /> : <Plus size={14} />}
         </button>
       ) : (
         <button
@@ -127,7 +127,7 @@ export function SaveToWishlistButton({ plantName, variety, initialSavedId, overl
               : "border-input text-muted-foreground hover:text-leaf hover:border-leaf"
           )}
         >
-          {saved ? <BookmarkCheck size={15} /> : <Bookmark size={15} />}
+          {saved ? <Check size={15} /> : <Plus size={15} />}
         </button>
       )}
 
