@@ -290,7 +290,7 @@ export default function OrdersClient({
 
           const isHighlighted = order.id === highlightId;
           return (
-            <Card key={order.id} id={`order-${order.id}`} className={isHighlighted ? "ring-2 ring-leaf shadow-lg" : ""}>
+            <Card key={order.id} id={`order-${order.id}`} className={`overflow-visible${isHighlighted ? " ring-2 ring-leaf shadow-lg" : ""}`}>
               <CardContent className="p-5">
                 <div className="flex items-start gap-3">
                   <OrderCheckbox orderId={order.id} selectedIds={selectedIds} onToggle={toggleOrder} />
