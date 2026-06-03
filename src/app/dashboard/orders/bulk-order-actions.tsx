@@ -76,7 +76,7 @@ export function BulkOrderActions({
         <select
           value={targetStatus}
           onChange={(e) => setTargetStatus(e.target.value as OrderStatus)}
-          className="h-8 w-40 rounded-lg border border-input bg-transparent px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring/50 cursor-pointer"
+          className="h-8 w-40 rounded-lg border border-input bg-white px-2 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-ring/50 cursor-pointer dark:bg-gray-800 dark:text-gray-100"
           disabled={availableStatuses.length === 0}
         >
           {availableStatuses.length === 0

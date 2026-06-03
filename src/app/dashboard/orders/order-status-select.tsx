@@ -84,7 +84,7 @@ export default function OrderStatusSelect({
       <select
         defaultValue=""
         onChange={(e) => handleChange(e.target.value || null)}
-        className="h-8 w-36 rounded-lg border border-input bg-transparent px-2 text-xs text-foreground outline-none focus:ring-2 focus:ring-ring/50 cursor-pointer"
+        className="h-8 w-36 rounded-lg border border-input bg-white px-2 text-xs text-gray-900 outline-none focus:ring-2 focus:ring-ring/50 cursor-pointer dark:bg-gray-800 dark:text-gray-100"
       >
         <option value="" disabled>Mark as…</option>
         {forwardStatuses.map((s) => (
