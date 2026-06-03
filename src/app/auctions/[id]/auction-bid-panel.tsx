@@ -293,7 +293,14 @@ export default function AuctionBidPanel({
     setPlacing(false);
 
     if (!res.ok) {
-      toast.error(data.error ?? "Failed to place bid");
+      if (data.error === "card_expired") {
+        toast.error("Your saved card has expired — update it in Account Settings before bidding.", {
+          duration: 8000,
+          action: { label: "Update card", onClick: () => window.location.href = "/account#bidding" },
+        });
+      } else {
+        toast.error(data.error ?? "Failed to place bid");
+      }
       return;
     }
 

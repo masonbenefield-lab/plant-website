@@ -4,6 +4,7 @@ import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import { isBlocked } from "@/lib/blocks";
 import { sendOutbidNotification } from "@/lib/email";
+import { getStripe } from "@/lib/stripe";
 
 function adminClient() {
   return createSupabaseAdmin<Database>(
@@ -66,6 +67,26 @@ export async function POST(request: Request) {
 
   if (!bidderProfile?.default_payment_method_id) {
     return NextResponse.json({ error: "payment_method_required" }, { status: 403 });
+  }
+
+  // Check card is not expired
+  try {
+    const pm = await getStripe().paymentMethods.retrieve(bidderProfile.default_payment_method_id);
+    if (pm.type === "card" && pm.card) {
+      const now = new Date();
+      const expYear = pm.card.exp_year;
+      const expMonth = pm.card.exp_month;
+      const isExpired = expYear < now.getFullYear() ||
+        (expYear === now.getFullYear() && expMonth < now.getMonth() + 1);
+      if (isExpired) {
+        return NextResponse.json({
+          error: "card_expired",
+          message: "Your saved card has expired. Please update your payment method in Account Settings.",
+        }, { status: 402 });
+      }
+    }
+  } catch {
+    // If Stripe check fails, allow bid to proceed — don't block on a network hiccup
   }
 
   const { data: auction, error: auctionErr } = await admin
