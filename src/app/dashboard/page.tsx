@@ -34,7 +34,7 @@ export default async function DashboardPage() {
     { count: followingCount },
     { count: groundbreakerCount },
   ] = await Promise.all([
-    supabase.from("profiles").select("username, bio, avatar_url, stripe_onboarded, plan, garden_public, groundbreaker, groundbreaker_number, ship_from_address, return_policy_type, shipping_days").eq("id", user.id).single(),
+    supabase.from("profiles").select("username, bio, avatar_url, stripe_onboarded, plan, garden_public, groundbreaker, groundbreaker_number, ship_from_address, return_policy_type, shipping_days, seller_terms_accepted_at").eq("id", user.id).single(),
     supabase.from("listings").select("*", { count: "exact", head: true }).eq("seller_id", user.id).eq("status", "active"),
     supabase.from("auctions").select("*", { count: "exact", head: true }).eq("seller_id", user.id).eq("status", "active"),
     supabase.from("follows").select("*", { count: "exact", head: true }).eq("seller_id", user.id),
@@ -106,6 +106,7 @@ export default async function DashboardPage() {
   const hasListing = (listingCount ?? 0) > 0 || (auctionCount ?? 0) > 0;
   const checks = {
     profile:       !!(profile?.bio && profile?.avatar_url),
+    sellerAgreement: !!(profile as { seller_terms_accepted_at?: string | null } | null)?.seller_terms_accepted_at,
     stripe:        !!profile?.stripe_onboarded,
     shipping:      !!((profile?.ship_from_address as { street1?: string } | null)?.street1),
     shippingTimeline: !!(profile as { shipping_days?: number | null } | null)?.shipping_days,
@@ -154,6 +155,7 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent className="space-y-2">
             <CheckItem done={checks.profile}          label="Complete your profile"                         href="/account"                   hint="Add a bio and profile photo so buyers trust you" />
+            <CheckItem done={checks.sellerAgreement}  label="Accept the seller agreement"                   href="/seller-agreement?next=/dashboard" hint="Review and accept Plantet's seller terms before listing" />
             <CheckItem done={checks.stripe}           label="Connect your bank account"                     href="/account#seller-payments"   hint="Required to receive payments — connect your bank via Stripe before listing" />
             <CheckItem done={checks.shipping}         label="Set up your ship-from address &amp; shipping preferences" href="/account#shipping-settings" hint="Required for calculated shipping rates and auto labels" />
             <CheckItem done={checks.shippingTimeline} label="Set your shipping timeline"                    href="/account#shipping-days"     hint="Let buyers know how quickly you ship" />
@@ -206,8 +208,9 @@ export default async function DashboardPage() {
             <CardTitle className="text-base text-forest">Get your shop ready</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            <CheckItem done={checks.profile}       label="Complete your profile"              href="/account"                    hint="Add a bio and profile photo so buyers trust you" />
-            <CheckItem done={checks.stripe}        label="Connect your bank account"           href="/account#seller-payments"    hint="Required to receive payments — connect your bank via Stripe before listing" />
+            <CheckItem done={checks.profile}          label="Complete your profile"                         href="/account"                         hint="Add a bio and profile photo so buyers trust you" />
+            <CheckItem done={checks.sellerAgreement}  label="Accept the seller agreement"                   href="/seller-agreement?next=/dashboard" hint="Review and accept Plantet's seller terms before listing" />
+            <CheckItem done={checks.stripe}           label="Connect your bank account"                     href="/account#seller-payments"         hint="Required to receive payments — connect your bank via Stripe before listing" />
             <CheckItem done={checks.shipping}      label="Set up your ship-from address &amp; shipping preferences"  href="/account#shipping-settings"  hint="Required for calculated shipping rates and auto labels — also review your rate and label toggle settings" />
             <CheckItem done={checks.shippingTimeline} label="Set your shipping timeline"         href="/account#shipping-days"      hint="Let buyers know how quickly you ship so they know what to expect" />
             <CheckItem done={checks.returnPolicy}     label="Set your return policy"              href="/account#return-policy"      hint="Let buyers know upfront whether you accept returns, offer a DOA guarantee, or handle issues case by case" />
