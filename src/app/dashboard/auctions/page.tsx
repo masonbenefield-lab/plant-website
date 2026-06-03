@@ -148,6 +148,7 @@ export default async function DashboardAuctionsPage({
         if (a.status === "active") activeBidAuctions.push(row);
         else historyAuctions.push(row);
       }
+      historyAuctions.sort((a, b) => new Date(b.ends_at).getTime() - new Date(a.ends_at).getTime());
     }
   }
 
