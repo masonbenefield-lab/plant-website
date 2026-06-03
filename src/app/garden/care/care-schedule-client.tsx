@@ -173,9 +173,12 @@ function IntervalsModal({
     meta: getFieldMeta(plants.map((p) => p[key])),
   }));
 
+  const todayStr = new Date().toISOString().split("T")[0];
+
   const [values, setValues] = useState<Record<string, string>>(
     Object.fromEntries(fields.map(({ key, meta }) => [key, meta.defaultValue]))
   );
+  const [startDate, setStartDate] = useState(todayStr);
   const [saving, setSaving] = useState(false);
   const isBulk = plants.length > 1;
 
@@ -196,6 +199,7 @@ function IntervalsModal({
       toast.info("No intervals entered");
       return;
     }
+    if (startDate) body.startDate = startDate;
     setSaving(true);
     const res = await fetch("/api/garden/update-intervals", {
       method: "PATCH",
@@ -249,6 +253,21 @@ function IntervalsModal({
             <span className="text-xs text-muted-foreground shrink-0">days</span>
           </div>
         ))}
+
+        <div className="border-t pt-3 space-y-1.5">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground w-36 shrink-0">📅 Schedule from</span>
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="h-8 text-sm flex-1 min-w-0"
+            />
+          </div>
+          <p className="text-xs text-muted-foreground pl-[152px]">
+            Intervals count from this date. Clear to leave the schedule open-ended.
+          </p>
+        </div>
       </div>
 
       <DialogFooter showCloseButton>
