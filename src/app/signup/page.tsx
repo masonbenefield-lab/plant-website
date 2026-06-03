@@ -99,7 +99,37 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
+    <div className="min-h-screen flex flex-col md:flex-row">
+      {/* Left panel — value props */}
+      <div className="hidden md:flex flex-col justify-center px-12 py-16 bg-forest text-white w-1/2 shrink-0">
+        <div className="max-w-sm">
+          <div className="flex items-center gap-2.5 mb-8">
+            <img src="/plantet-mark-white.svg" alt="" width={32} height={32} />
+            <span className="font-bold text-2xl tracking-[-0.02em]" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>Plantet</span>
+          </div>
+          <h2 className="text-3xl font-bold leading-snug mb-3">The marketplace for plant lovers.</h2>
+          <p className="text-white/70 text-sm mb-10">Join thousands of growers buying, selling, and connecting over plants.</p>
+          <ul className="space-y-6">
+            {[
+              { icon: "🌱", title: "Track your collection", body: "Log every plant you own, care history, and health status in My Garden." },
+              { icon: "🛒", title: "Buy from independent growers", body: "Discover rare and hard-to-find plants from small nurseries and hobbyists." },
+              { icon: "🏷️", title: "Sell at fixed price or auction", body: "List plants, run timed auctions, and get paid directly to your bank." },
+              { icon: "🤝", title: "Connect with fellow growers", body: "Ask questions, share plants, and follow growers you love in the community." },
+            ].map(({ icon, title, body }) => (
+              <li key={title} className="flex items-start gap-3">
+                <span className="text-2xl mt-0.5 shrink-0">{icon}</span>
+                <div>
+                  <p className="font-semibold text-sm">{title}</p>
+                  <p className="text-white/65 text-sm mt-0.5">{body}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+
+      {/* Right panel — form */}
+      <div className="flex flex-1 items-center justify-center px-4 py-10">
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle>Create an account</CardTitle>
@@ -221,6 +251,7 @@ export default function SignupPage() {
           </CardFooter>
         </form>
       </Card>
+      </div>
     </div>
   );
 }
