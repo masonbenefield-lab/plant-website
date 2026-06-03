@@ -3,13 +3,6 @@
 import { useRouter } from "next/navigation";
 import { useTransition, useState } from "react";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -88,16 +81,16 @@ export default function OrderStatusSelect({
 
   return (
     <>
-      <Select onValueChange={handleChange}>
-        <SelectTrigger className="w-36 text-xs h-8">
-          <span className="text-muted-foreground">Mark as…</span>
-        </SelectTrigger>
-        <SelectContent>
-          {forwardStatuses.map((s) => (
-            <SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <select
+        defaultValue=""
+        onChange={(e) => handleChange(e.target.value || null)}
+        className="h-8 w-36 rounded-lg border border-input bg-transparent px-2 text-xs text-foreground outline-none focus:ring-2 focus:ring-ring/50 cursor-pointer"
+      >
+        <option value="" disabled>Mark as…</option>
+        {forwardStatuses.map((s) => (
+          <option key={s} value={s}>{s}</option>
+        ))}
+      </select>
 
       <Dialog open={!!pendingStatus} onOpenChange={(open) => { if (!open) setPendingStatus(null); }}>
         <DialogContent className="max-w-sm">

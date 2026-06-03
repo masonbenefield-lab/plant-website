@@ -5,9 +5,6 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
@@ -76,21 +73,21 @@ export function BulkOrderActions({
     <>
       <div className="flex items-center gap-3 px-4 py-2.5 bg-muted rounded-lg border">
         <span className="text-sm font-medium">{selectedOrders.length} selected</span>
-        <Select value={targetStatus} onValueChange={(v) => setTargetStatus(v as OrderStatus)}>
-          <SelectTrigger className="h-8 w-40 text-sm">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {availableStatuses.map((s) => (
-              <SelectItem key={s} value={s}>
-                {s === "paid" ? "Mark as Paid" : s === "shipped" ? "Mark as Shipped" : "Mark as Delivered"}
-              </SelectItem>
-            ))}
-            {availableStatuses.length === 0 && (
-              <SelectItem value="shipped" disabled>No forward moves available</SelectItem>
-            )}
-          </SelectContent>
-        </Select>
+        <select
+          value={targetStatus}
+          onChange={(e) => setTargetStatus(e.target.value as OrderStatus)}
+          className="h-8 w-40 rounded-lg border border-input bg-transparent px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring/50 cursor-pointer"
+          disabled={availableStatuses.length === 0}
+        >
+          {availableStatuses.length === 0
+            ? <option>No moves available</option>
+            : availableStatuses.map((s) => (
+                <option key={s} value={s}>
+                  {s === "paid" ? "Mark as Paid" : s === "shipped" ? "Mark as Shipped" : "Mark as Delivered"}
+                </option>
+              ))
+          }
+        </select>
         <Button size="sm" onClick={handleApply} disabled={loading || availableStatuses.length === 0} className="bg-leaf hover:bg-forest h-8">
           {loading ? "Updating…" : "Apply"}
         </Button>
