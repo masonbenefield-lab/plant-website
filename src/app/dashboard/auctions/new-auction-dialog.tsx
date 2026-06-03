@@ -483,7 +483,7 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
                   <select
                     value={packageType}
                     onChange={(e) => setPackageType(e.target.value)}
-                    className="h-8 w-full rounded-lg border border-input bg-transparent px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring/50"
+                    className="h-8 w-full rounded-lg border border-input bg-white px-2 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-ring/50 dark:bg-gray-800 dark:text-gray-100"
                   >
                     <option value="box">Box (custom dimensions)</option>
                     <option value="padded_envelope">Padded envelope (12.5 × 9.5 × 1 in)</option>
