@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 import GardenTabs from "@/components/garden/garden-tabs";
 import { CareScheduleClient } from "./care-schedule-client";
+import type { PlantWithIntervals } from "./care-schedule-client";
 
 export default async function CareSchedulePage() {
   const supabase = await createClient();
@@ -87,6 +87,16 @@ export default async function CareSchedulePage() {
     !p.water_interval_days && !p.fertilize_interval_days && !p.repot_interval_days && !p.prune_interval_days
   );
 
+  const plantIntervals: PlantWithIntervals[] = allPlants.map((p) => ({
+    id: p.id,
+    name: p.variety ? `${p.name} — ${p.variety}` : p.name,
+    image: (p.images as string[] | null)?.[0] ?? null,
+    waterInterval: p.water_interval_days ?? null,
+    fertilizeInterval: p.fertilize_interval_days ?? null,
+    repotInterval: p.repot_interval_days ?? null,
+    pruneInterval: p.prune_interval_days ?? null,
+  }));
+
   return (
     <div className="max-w-5xl mx-auto px-4 py-10 space-y-8">
       <div>
@@ -114,6 +124,7 @@ export default async function CareSchedulePage() {
             image: (p.images as string[] | null)?.[0] ?? null,
           }))}
           totalWithSchedule={plantsWithSchedule.length}
+          plantIntervals={plantIntervals}
         />
       )}
     </div>
