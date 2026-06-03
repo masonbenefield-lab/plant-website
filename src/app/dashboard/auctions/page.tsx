@@ -99,6 +99,7 @@ export default async function DashboardAuctionsPage({
     current_bidder_id: string | null;
     status: string;
     ends_at: string;
+    created_at: string;
     images: string[] | null;
     seller_id: string;
   };
@@ -124,7 +125,7 @@ export default async function DashboardAuctionsPage({
     if (auctionIds.length) {
       const { data: allAuctions } = await admin
         .from("auctions")
-        .select("id, plant_name, variety, current_bid_cents, current_bidder_id, status, ends_at, images, seller_id")
+        .select("id, plant_name, variety, current_bid_cents, current_bidder_id, status, ends_at, created_at, images, seller_id")
         .in("id", auctionIds)
         .order("ends_at", { ascending: true });
 
@@ -231,6 +232,7 @@ export default async function DashboardAuctionsPage({
                                 ? `Shipping: ${centsToDisplay((auction as { shipping_cost_cents: number }).shipping_cost_cents)}`
                                 : "Shipping: not set"}
                         </span>
+                        <span>Started: <LocalDate iso={auction.created_at} /></span>
                         {auction.status === "scheduled" && (auction as { starts_at?: string | null }).starts_at
                           ? <span>Goes live: <LocalDate iso={(auction as { starts_at: string }).starts_at} /></span>
                           : <span>Ends: <LocalDate iso={auction.ends_at} /></span>
@@ -354,7 +356,7 @@ export default async function DashboardAuctionsPage({
                 if (won) { badgeLabel = "Won"; badgeClass = "bg-[#DFE7D4] text-leaf dark:bg-forest/40 dark:text-sage"; }
                 else if (noWinner) { badgeLabel = "No winner"; }
                 return (
-                  <Link key={a.id} href={won ? `/checkout?auction=${a.id}` : `/auctions/${a.id}`}>
+                  <Link key={a.id} href={`/auctions/${a.id}`}>
                     <Card className="hover:shadow-md transition-shadow">
                       <CardContent className="p-4 flex items-center gap-4">
                         <div className="w-14 h-14 rounded-lg bg-muted overflow-hidden shrink-0 relative">
@@ -376,12 +378,13 @@ export default async function DashboardAuctionsPage({
                             {!won && a.current_bid_cents !== myBid && (
                               <span>Winning bid: <span className="font-medium text-foreground">{centsToDisplay(a.current_bid_cents)}</span></span>
                             )}
+                            <span>Started: <LocalDate iso={a.created_at} /></span>
                             <span>Ended: <LocalDate iso={a.ends_at} /></span>
                           </div>
                         </div>
                         {won && (
                           <span className="shrink-0 text-sm font-semibold text-leaf underline underline-offset-2">
-                            Complete purchase →
+                            View →
                           </span>
                         )}
                       </CardContent>

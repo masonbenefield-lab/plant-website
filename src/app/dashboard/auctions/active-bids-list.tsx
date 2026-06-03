@@ -16,6 +16,7 @@ type BidAuction = {
   current_bidder_id: string | null;
   status: string;
   ends_at: string;
+  created_at: string;
   images: string[] | null;
 };
 
