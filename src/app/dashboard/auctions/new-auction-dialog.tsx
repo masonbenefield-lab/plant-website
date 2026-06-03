@@ -494,16 +494,16 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
                   <div className="space-y-1">
                     <p className="text-xs text-muted-foreground">Box dimensions (inches)</p>
                     <div className="flex items-center gap-2">
-                      <Input name="box_length_in" type="number" min={1} step={0.5} placeholder="L" className="w-16 text-xs" defaultValue={prefill?.box_length_in ?? 10} />
+                      <Input name="box_length_in" type="number" min={1} max={48} step={0.5} placeholder="L" className="w-16 text-xs" defaultValue={prefill?.box_length_in ?? 10} />
                       <span className="text-xs text-muted-foreground">×</span>
-                      <Input name="box_width_in" type="number" min={1} step={0.5} placeholder="W" className="w-16 text-xs" defaultValue={prefill?.box_width_in ?? 8} />
+                      <Input name="box_width_in" type="number" min={1} max={24} step={0.5} placeholder="W" className="w-16 text-xs" defaultValue={prefill?.box_width_in ?? 8} />
                       <span className="text-xs text-muted-foreground">×</span>
-                      <Input name="box_height_in" type="number" min={1} step={0.5} placeholder="H" className="w-16 text-xs" defaultValue={prefill?.box_height_in ?? 4} />
+                      <Input name="box_height_in" type="number" min={1} max={24} step={0.5} placeholder="H" className="w-16 text-xs" defaultValue={prefill?.box_height_in ?? 4} />
                       <span className="text-xs text-muted-foreground">in</span>
                     </div>
                   </div>
                 )}
-                <p className="text-xs text-amber-600 dark:text-amber-400">⚠️ Enter the actual packed weight. Underreporting causes USPS billing adjustments.</p>
+                <p className="text-xs text-amber-600 dark:text-amber-400">⚠️ Enter the actual packed weight. Max box size: 48 × 24 × 24 in. Underreporting causes USPS billing adjustments.</p>
               </div>
             )}
           </div>
