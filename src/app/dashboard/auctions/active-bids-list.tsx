@@ -76,38 +76,26 @@ export function ActiveBidsList({
   userId: string;
 }) {
   const router = useRouter();
-  const [auctions, setAuctions] = useState(initialAuctions);
 
   useEffect(() => {
-    setAuctions(initialAuctions);
-  }, [initialAuctions]);
-
-  useEffect(() => {
-    if (!auctions.length) return;
+    if (!initialAuctions.length) return;
     const supabase = createClient();
 
-    const channels = auctions.map((a) =>
+    const channels = initialAuctions.map((a) =>
       supabase
         .channel(`bid-watch:${a.id}`)
         .on(
           "postgres_changes",
           { event: "UPDATE", schema: "public", table: "auctions", filter: `id=eq.${a.id}` },
-          (payload) => {
-            const updated = payload.new as BidAuction;
-            setAuctions((prev) =>
-              prev.map((x) => (x.id === updated.id ? { ...x, ...updated } : x))
-            );
-            // Also refresh server data if auction ended
-            if (updated.status !== "active") router.refresh();
-          }
+          () => { router.refresh(); }
         )
         .subscribe()
     );
 
     return () => { channels.forEach((c) => supabase.removeChannel(c)); };
-  }, [auctions.map((a) => a.id).join(","), router]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [initialAuctions.map((a) => a.id).join(","), router]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!auctions.length) {
+  if (!initialAuctions.length) {
     return (
       <div className="flex flex-col items-center justify-center text-center py-16 px-4 rounded-lg border border-dashed">
         <div className="text-4xl mb-3">🏷️</div>
@@ -127,7 +115,7 @@ export function ActiveBidsList({
 
   return (
     <div className="space-y-3">
-      {auctions.map((a) => {
+      {initialAuctions.map((a) => {
         const isWinning = a.current_bidder_id === userId;
         const myBid = highBidMap[a.id];
         const img = a.images?.[0];
