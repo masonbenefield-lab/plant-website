@@ -70,9 +70,18 @@ export default function NewListingDialog({ sellerId, planLimit, currentCount, ph
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (atListingLimit) return;
-    setSaving(true);
     const form = e.currentTarget;
     const data = new FormData(form);
+    if (shippingMode === "weight" && packageType === "box") {
+      const l = Number(data.get("box_length_in"));
+      const w = Number(data.get("box_width_in"));
+      const h = Number(data.get("box_height_in"));
+      if (l > 48 || w > 24 || h > 24) {
+        toast.error("Box dimensions exceed carrier limits (max 48 × 24 × 24 in).");
+        return;
+      }
+    }
+    setSaving(true);
 
     const supabase = createClient();
     const { error } = await supabase.from("listings").insert({

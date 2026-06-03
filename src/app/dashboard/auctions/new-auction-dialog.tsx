@@ -175,6 +175,16 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
         setSaving(false);
         return;
       }
+      if (packageType === "box") {
+        const l = Number(data.get("box_length_in"));
+        const w = Number(data.get("box_width_in"));
+        const h = Number(data.get("box_height_in"));
+        if (l > 48 || w > 24 || h > 24) {
+          toast.error("Box dimensions exceed carrier limits (max 48 × 24 × 24 in).");
+          setSaving(false);
+          return;
+        }
+      }
     }
 
     const supabase = createClient();
