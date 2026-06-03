@@ -78,7 +78,8 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
   const fileRef = useRef<HTMLInputElement>(null);
 
   const buyNowError = buyNowVal > 0 && startingBidVal > 0 && buyNowVal <= startingBidVal;
-  const reserveError = reserveVal > 0 && startingBidVal > 0 && reserveVal < startingBidVal;
+  const reserveError = (reserveVal > 0 && startingBidVal > 0 && reserveVal < startingBidVal)
+    || (reserveVal > 0 && buyNowVal > 0 && reserveVal >= buyNowVal);
 
   const atAuctionLimit = planLimit !== null && currentCount >= planLimit;
   const atPhotoLimit = photoLimit !== null && imageUrls.length >= photoLimit;
@@ -146,6 +147,11 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
     }
     if (reserveCents && reserveCents < startingBidCents) {
       toast.error("Reserve price must be at least the starting bid.");
+      setSaving(false);
+      return;
+    }
+    if (reserveCents && buyNowCents && reserveCents >= buyNowCents) {
+      toast.error("Reserve price must be below the Buy Now price.");
       setSaving(false);
       return;
     }
@@ -294,7 +300,7 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
                 value={reserveVal || ""}
                 onChange={(e) => setReserveVal(parseFloat(e.target.value) || 0)} />
             </div>
-            {reserveError && <p className="text-xs text-red-600">Reserve price must be at least the starting bid.</p>}
+            {reserveError && <p className="text-xs text-red-600">{reserveVal > 0 && buyNowVal > 0 && reserveVal >= buyNowVal ? "Reserve price must be below the Buy Now price." : "Reserve price must be at least the starting bid."}</p>}
             {!reserveError && <p className="text-xs text-muted-foreground">Auction only completes if bidding reaches this amount. Buyers don&apos;t see the reserve — just whether it&apos;s been met.</p>}
           </div>
           <div className="grid grid-cols-2 gap-4">
