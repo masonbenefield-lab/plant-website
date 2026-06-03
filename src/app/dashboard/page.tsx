@@ -140,7 +140,7 @@ export default async function DashboardPage() {
           <NavLink href="/account" label="Account Settings" />
         </div>
 
-        <Card className="border-[#C5D4BC] bg-[#EBF0E6] dark:bg-forest/20 dark:border-forest">
+        <Card className="border-[#C5D4BC] bg-[#EBF0E6]">
           <CardHeader className="pb-3">
             <CardTitle className="text-base text-forest dark:text-[#C5D4BC]">Get your shop ready</CardTitle>
           </CardHeader>
