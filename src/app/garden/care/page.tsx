@@ -1,0 +1,121 @@
+import { redirect } from "next/navigation";
+import Link from "next/link";
+import Image from "next/image";
+import { createClient } from "@/lib/supabase/server";
+import GardenTabs from "@/components/garden/garden-tabs";
+import { CareScheduleClient } from "./care-schedule-client";
+
+export default async function CareSchedulePage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const { data: plants } = await supabase
+    .from("garden_plants")
+    .select("id, name, variety, images, water_interval_days, fertilize_interval_days, repot_interval_days, prune_interval_days")
+    .eq("user_id", user.id)
+    .order("name", { ascending: true });
+
+  const allPlants = plants ?? [];
+  const plantIds = allPlants.map((p) => p.id);
+
+  const { data: lastEvents } = plantIds.length
+    ? await supabase
+        .from("garden_events")
+        .select("plant_id, event_type, event_date")
+        .in("plant_id", plantIds)
+        .in("event_type", ["watered", "fertilized", "repotted", "pruned"])
+        .order("event_date", { ascending: false })
+    : { data: [] };
+
+  // Build map: plantId -> { eventType -> lastDate }
+  const lastEventMap: Record<string, Record<string, string>> = {};
+  for (const ev of lastEvents ?? []) {
+    if (!lastEventMap[ev.plant_id]) lastEventMap[ev.plant_id] = {};
+    if (!lastEventMap[ev.plant_id][ev.event_type]) {
+      lastEventMap[ev.plant_id][ev.event_type] = ev.event_date;
+    }
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  type CareEntry = {
+    plantId: string;
+    plantName: string;
+    image: string | null;
+    careType: string;
+    eventKey: string;
+    interval: number;
+    lastDate: string | null;
+    daysUntilDue: number; // negative = overdue
+  };
+
+  const CHECKS = [
+    { type: "Water",     eventKey: "watered",    intervalKey: "water_interval_days"     },
+    { type: "Fertilize", eventKey: "fertilized", intervalKey: "fertilize_interval_days" },
+    { type: "Repot",     eventKey: "repotted",   intervalKey: "repot_interval_days"     },
+    { type: "Prune",     eventKey: "pruned",      intervalKey: "prune_interval_days"     },
+  ] as const;
+
+  const entries: CareEntry[] = [];
+
+  for (const plant of allPlants) {
+    const name = plant.variety ? `${plant.name} — ${plant.variety}` : plant.name;
+    const image = (plant.images as string[] | null)?.[0] ?? null;
+    for (const { type, eventKey, intervalKey } of CHECKS) {
+      const interval = (plant as Record<string, unknown>)[intervalKey] as number | null;
+      if (!interval) continue;
+      const lastDateStr = lastEventMap[plant.id]?.[eventKey] ?? null;
+      let daysUntilDue: number;
+      if (lastDateStr) {
+        const last = new Date(lastDateStr);
+        last.setHours(0, 0, 0, 0);
+        const nextDue = new Date(last.getTime() + interval * 86400000);
+        daysUntilDue = Math.round((nextDue.getTime() - today.getTime()) / 86400000);
+      } else {
+        daysUntilDue = -interval; // never done — treat as overdue by full interval
+      }
+      entries.push({ plantId: plant.id, plantName: name, image, careType: type, eventKey, interval, lastDate: lastDateStr, daysUntilDue });
+    }
+  }
+
+  const plantsWithSchedule = allPlants.filter((p) =>
+    p.water_interval_days || p.fertilize_interval_days || p.repot_interval_days || p.prune_interval_days
+  );
+  const plantsWithoutSchedule = allPlants.filter((p) =>
+    !p.water_interval_days && !p.fertilize_interval_days && !p.repot_interval_days && !p.prune_interval_days
+  );
+
+  return (
+    <div className="max-w-5xl mx-auto px-4 py-10 space-y-8">
+      <div>
+        <h1 className="text-2xl font-bold">My Garden</h1>
+        <p className="text-muted-foreground text-sm mt-0.5">{allPlants.length} plant{allPlants.length !== 1 ? "s" : ""} tracked</p>
+      </div>
+
+      <GardenTabs />
+
+      {allPlants.length === 0 ? (
+        <div className="text-center py-20 border rounded-xl bg-muted/30">
+          <p className="text-4xl mb-3">🌱</p>
+          <p className="font-semibold mb-1">No plants yet</p>
+          <p className="text-sm text-muted-foreground mb-4">Add plants to your garden to set up care schedules.</p>
+          <Link href="/garden/new" className="inline-flex items-center justify-center rounded-md bg-leaf hover:bg-forest text-white px-4 py-2 text-sm font-medium transition-colors">
+            Add your first plant
+          </Link>
+        </div>
+      ) : (
+        <CareScheduleClient
+          entries={entries}
+          plantsWithoutSchedule={plantsWithoutSchedule.map((p) => ({
+            id: p.id,
+            name: p.variety ? `${p.name} — ${p.variety}` : p.name,
+            image: (p.images as string[] | null)?.[0] ?? null,
+          }))}
+          totalWithSchedule={plantsWithSchedule.length}
+        />
+      )}
+    </div>
+  );
+}

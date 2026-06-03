@@ -1062,3 +1062,17 @@ CREATE POLICY "Service role only" ON referral_activations FOR ALL USING (false);
 - `src/app/api/orders/dispute/[id]/refund/route.ts` — new POST endpoint
 - `src/lib/email.ts` — added `sendRefundIssuedToBuyer`, `sendRefundIssuedToSeller`
 - `src/app/orders/dispute-thread.tsx` — added "Issue refund" button for sellers
+
+---
+
+## 2026-06-03 — Care Schedule TypeScript fixes
+
+### Bugs fixed
+- `src/app/api/garden/log-care/route.ts` — `CARE_EVENT_MAP` retyped as `Record<string, GardenEventType>` so `eventType` is assignable to the insert type (was `string`, caused TS2769)
+- `src/app/garden/care/care-schedule-client.tsx` — Fixed `onLogged` callback type mismatch: `Section` and `CareCard` now accept `(plantId: string, careType: string) => void`; `CareCard` closes over `entry.plantId`/`entry.careType` before passing a no-arg callback to `QuickLogButton`. Previously the optimistic removal in `handleLogged` was getting `undefined` for both args and never removing entries from state.
+
+### SQL migrations required
+- None
+
+### Environment variables
+- None
