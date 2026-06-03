@@ -254,7 +254,8 @@ export async function GET(request: Request) {
           }
 
         } catch {
-          // Auto-charge failed — fall back to manual checkout with 24h window
+          // Auto-charge failed — clear the declined card so the buyer must update it before bidding again
+          await supabase.from("profiles").update({ default_payment_method_id: null }).eq("id", auction.current_bidder_id!);
           await fallbackToManualCheckout(supabase, auction, now, appUrl, winnerEmail, sellerEmail, PAYMENT_DEADLINE_HOURS);
         }
       } else {

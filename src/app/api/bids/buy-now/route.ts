@@ -244,6 +244,9 @@ export async function POST(request: Request) {
       .eq("bidder_id", user.id)
       .eq("amount_cents", auction.buy_now_price_cents);
 
+    // Clear the declined card so the buyer must update it before bidding again
+    await admin.from("profiles").update({ default_payment_method_id: null }).eq("id", user.id);
+
     return NextResponse.json({
       error: "payment_declined",
       message: "Your payment was declined. Please update your card in Account Settings and try again.",
