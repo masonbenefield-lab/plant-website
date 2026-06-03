@@ -179,11 +179,13 @@ export async function POST(request: Request) {
         const extended = endsAt.getTime() - now.getTime() < SNIPE_WINDOW_MS;
         const newEndsAt = extended ? new Date(now.getTime() + SNIPE_WINDOW_MS).toISOString() : undefined;
 
-        await admin.from("auctions").update({
+        const { error: proxyUpdateError } = await admin.from("auctions").update({
           current_bid_cents: counterCents,
           current_bidder_id: auction.current_bidder_id,
           ...(extended ? { ends_at: newEndsAt } : {}),
         }).eq("id", auctionId);
+
+        if (proxyUpdateError) return NextResponse.json({ error: proxyUpdateError.message }, { status: 500 });
 
         // The incoming bidder was outbid by proxy — notify them server-side
         const proxyDisplayName = auction.variety ? `${auction.plant_name} — ${auction.variety}` : auction.plant_name;

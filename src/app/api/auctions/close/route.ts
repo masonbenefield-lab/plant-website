@@ -120,146 +120,143 @@ export async function GET(request: Request) {
       const canAutoCharge = !!(
         buyer?.stripe_customer_id &&
         buyer?.default_payment_method_id &&
-        sellerProfile?.stripe_account_id
+        sellerProfile?.stripe_account_id &&
+        (auction.free_shipping || buyer?.saved_shipping_address)
       );
 
       if (canAutoCharge) {
-        try {
-          // Calculate shipping cost
-          let shippingCents = 0;
-          if (auction.free_shipping) {
-            shippingCents = 0;
-          } else if (auction.shipping_cost_cents) {
-            shippingCents = auction.shipping_cost_cents;
-          } else if (auction.shipping_weight_oz) {
-            // Use pre-selected rate from bidder
-            const { data: shippingSelection } = await supabase
-              .from("auction_shipping_selections")
-              .select("cost_cents, rate_id, service, carrier")
-              .eq("auction_id", auction.id)
-              .eq("bidder_id", auction.current_bidder_id!)
-              .single();
-            shippingCents = shippingSelection?.cost_cents ?? 0;
-          }
+        // Calculate shipping cost
+        let shippingCents = 0;
+        if (auction.free_shipping) {
+          shippingCents = 0;
+        } else if (auction.shipping_cost_cents) {
+          shippingCents = auction.shipping_cost_cents;
+        } else if (auction.shipping_weight_oz) {
+          const { data: shippingSelection } = await supabase
+            .from("auction_shipping_selections")
+            .select("cost_cents, rate_id, service, carrier")
+            .eq("auction_id", auction.id)
+            .eq("bidder_id", auction.current_bidder_id!)
+            .single();
+          shippingCents = shippingSelection?.cost_cents ?? 0;
+        }
 
-          const shippingAddr = (buyer.saved_shipping_address ?? {}) as Record<string, string>;
-          const stripeShippingAddr = {
-            line1: shippingAddr.line1 ?? shippingAddr.street1 ?? "",
-            line2: shippingAddr.line2 ?? undefined,
-            city: shippingAddr.city ?? "",
-            state: shippingAddr.state ?? "",
-            zip: shippingAddr.zip ?? "",
-            country: shippingAddr.country ?? "US",
-          };
+        const shippingAddr = (buyer!.saved_shipping_address ?? {}) as Record<string, string>;
+        const stripeShippingAddr = {
+          line1: shippingAddr.line1 ?? shippingAddr.street1 ?? "",
+          line2: shippingAddr.line2 ?? undefined,
+          city: shippingAddr.city ?? "",
+          state: shippingAddr.state ?? "",
+          zip: shippingAddr.zip ?? "",
+          country: shippingAddr.country ?? "US",
+        };
 
-          const { taxCents, calculationId } = await createStripeTaxCalculation(
-            auction.current_bid_cents,
-            shippingCents,
-            stripeShippingAddr,
-            auction.id
-          ).catch(() => ({ taxCents: 0, calculationId: null }));
+        const { taxCents, calculationId } = await createStripeTaxCalculation(
+          auction.current_bid_cents,
+          shippingCents,
+          stripeShippingAddr,
+          auction.id
+        ).catch(() => ({ taxCents: 0, calculationId: null }));
 
-          const totalCents = auction.current_bid_cents + shippingCents + taxCents;
-          const feePercent = planFeePercent(sellerProfile.plan, !!sellerProfile.is_admin, !!sellerProfile.groundbreaker);
-          const feeCents = Math.round(auction.current_bid_cents * (feePercent / 100));
-          const stripeFeeCents = Math.round(totalCents * 0.029) + 30;
-          // For weight-based (Shippo) orders hold the shipping on the platform side
-          // so the platform can cover the label cost — seller receives item price only
-          const platformShipping = auction.shipping_weight_oz ? shippingCents : 0;
-          const appFeeAmount = feeCents + stripeFeeCents + taxCents + platformShipping;
+        const totalCents = auction.current_bid_cents + shippingCents + taxCents;
+        const feePercent = planFeePercent(sellerProfile!.plan, !!sellerProfile!.is_admin, !!sellerProfile!.groundbreaker);
+        const feeCents = Math.round(auction.current_bid_cents * (feePercent / 100));
+        const stripeFeeCents = Math.round(totalCents * 0.029) + 30;
+        const platformShipping = auction.shipping_weight_oz ? shippingCents : 0;
+        const appFeeAmount = feeCents + stripeFeeCents + taxCents + platformShipping;
 
-          // Create the order first so the webhook can find it
-          const deadline = new Date(now.getTime() + PAYMENT_DEADLINE_HOURS * 60 * 60 * 1000);
-          // Capture rate_id for label printing (weight-based only)
-          let shippoRateId: string | null = null;
-          if (auction.shipping_weight_oz) {
-            const { data: sel } = await supabase
-              .from("auction_shipping_selections")
-              .select("rate_id")
-              .eq("auction_id", auction.id)
-              .eq("bidder_id", auction.current_bidder_id!)
-              .single();
-            shippoRateId = sel?.rate_id ?? null;
-          }
+        const deadline = new Date(now.getTime() + PAYMENT_DEADLINE_HOURS * 60 * 60 * 1000);
+        let shippoRateId: string | null = null;
+        if (auction.shipping_weight_oz) {
+          const { data: sel } = await supabase
+            .from("auction_shipping_selections")
+            .select("rate_id")
+            .eq("auction_id", auction.id)
+            .eq("bidder_id", auction.current_bidder_id!)
+            .single();
+          shippoRateId = sel?.rate_id ?? null;
+        }
 
-          const { data: order } = await supabase.from("orders").insert({
-            buyer_id: auction.current_bidder_id!,
-            seller_id: auction.seller_id,
-            auction_id: auction.id,
-            shipping_address: buyer.saved_shipping_address as { name: string; line1: string; line2?: string | null; city: string; state: string; zip: string; country: string } | null,
-            amount_cents: totalCents,
-            shipping_cost_cents: shippingCents,
-            tax_cents: taxCents,
-            platform_fee_cents: feeCents,
-            shippo_rate_id: shippoRateId,
-            payment_deadline_at: deadline.toISOString(),
-            status: "pending",
-            item_snapshot: {
-              plant_name: auction.plant_name,
-              variety: auction.variety ?? null,
-              image: (auction.images as string[] | null)?.[0] ?? null,
-            },
-          }).select("id").single();
+        // Create order before charging — if order insert fails, fall back without
+        // touching the buyer's card (internal error, not a payment failure)
+        const { data: order, error: orderErr } = await supabase.from("orders").insert({
+          buyer_id: auction.current_bidder_id!,
+          seller_id: auction.seller_id,
+          auction_id: auction.id,
+          shipping_address: buyer!.saved_shipping_address as { name: string; line1: string; line2?: string | null; city: string; state: string; zip: string; country: string } | null,
+          amount_cents: totalCents,
+          shipping_cost_cents: shippingCents,
+          tax_cents: taxCents,
+          platform_fee_cents: feeCents,
+          shippo_rate_id: shippoRateId,
+          payment_deadline_at: deadline.toISOString(),
+          status: "pending",
+          item_snapshot: {
+            plant_name: auction.plant_name,
+            variety: auction.variety ?? null,
+            image: (auction.images as string[] | null)?.[0] ?? null,
+          },
+        }).select("id").single();
 
-          const pi = await getStripe().paymentIntents.create({
-            amount: totalCents,
-            currency: "usd",
-            customer: buyer.stripe_customer_id!,
-            payment_method: buyer.default_payment_method_id!,
-            confirm: true,
-            off_session: true,
-            on_behalf_of: sellerProfile.stripe_account_id!,
-            transfer_data: { destination: sellerProfile.stripe_account_id! },
-            application_fee_amount: appFeeAmount,
-            metadata: {
-              order_id: order?.id ?? "",
-              auction_id: auction.id,
-              auto_charged: "true",
-              platform_fee_cents: String(feeCents),
-              stripe_fee_cents: String(stripeFeeCents),
-              tax_cents: String(taxCents),
-              ...(calculationId ? { tax_calculation_id: calculationId } : {}),
-            },
-          });
-
-          if (order?.id) {
-            await supabase.from("orders").update({ stripe_payment_intent_id: pi.id }).eq("id", order.id);
-          }
-
-          // Webhook will handle marking order paid + sending confirmation
-          // But if PI is already succeeded (common for US cards), notify seller now
-          if (winnerEmail) {
-            // Winner gets a "charged" email instead of a "go pay" email
-            await sendAuctionAutoCharged({
-              winnerEmail,
-              plantName: displayName,
-              amountCents: totalCents,
-              orderId: order?.id ?? "",
-              appUrl,
-            }).catch(() => {});
-          }
-
-          if (sellerEmail) {
-            const { data: winnerProfile } = await supabase
-              .from("profiles").select("username").eq("id", auction.current_bidder_id!).single();
-            await sendAuctionEndedSeller({
-              sellerEmail,
-              plantName: displayName,
-              winnerFound: true,
-              winnerUsername: winnerProfile?.username ?? "The buyer",
-              amountCents: auction.current_bid_cents,
-              ordersUrl: `${appUrl}/orders?tab=sales`,
-              autoCharged: true,
-            }).catch(() => {});
-          }
-
-        } catch {
-          // Auto-charge failed — clear the declined card so the buyer must update it before bidding again
-          await supabase.from("profiles").update({ default_payment_method_id: null }).eq("id", auction.current_bidder_id!);
+        if (orderErr || !order?.id) {
           await fallbackToManualCheckout(supabase, auction, now, appUrl, winnerEmail, sellerEmail, PAYMENT_DEADLINE_HOURS);
+        } else {
+          try {
+            const pi = await getStripe().paymentIntents.create({
+              amount: totalCents,
+              currency: "usd",
+              customer: buyer!.stripe_customer_id!,
+              payment_method: buyer!.default_payment_method_id!,
+              confirm: true,
+              off_session: true,
+              on_behalf_of: sellerProfile!.stripe_account_id!,
+              transfer_data: { destination: sellerProfile!.stripe_account_id! },
+              application_fee_amount: appFeeAmount,
+              metadata: {
+                order_id: order.id,
+                auction_id: auction.id,
+                auto_charged: "true",
+                platform_fee_cents: String(feeCents),
+                stripe_fee_cents: String(stripeFeeCents),
+                tax_cents: String(taxCents),
+                ...(calculationId ? { tax_calculation_id: calculationId } : {}),
+              },
+            });
+
+            await supabase.from("orders").update({ stripe_payment_intent_id: pi.id }).eq("id", order.id);
+
+            if (winnerEmail) {
+              await sendAuctionAutoCharged({
+                winnerEmail,
+                plantName: displayName,
+                amountCents: totalCents,
+                orderId: order.id,
+                appUrl,
+              }).catch(() => {});
+            }
+
+            if (sellerEmail) {
+              const { data: winnerProfile } = await supabase
+                .from("profiles").select("username").eq("id", auction.current_bidder_id!).single();
+              await sendAuctionEndedSeller({
+                sellerEmail,
+                plantName: displayName,
+                winnerFound: true,
+                winnerUsername: winnerProfile?.username ?? "The buyer",
+                amountCents: auction.current_bid_cents,
+                ordersUrl: `${appUrl}/orders?tab=sales`,
+                autoCharged: true,
+              }).catch(() => {});
+            }
+
+          } catch {
+            // Stripe charge declined — clear the card and send manual checkout link
+            await supabase.from("profiles").update({ default_payment_method_id: null }).eq("id", auction.current_bidder_id!);
+            await fallbackToManualCheckout(supabase, auction, now, appUrl, winnerEmail, sellerEmail, PAYMENT_DEADLINE_HOURS);
+          }
         }
       } else {
-        // Buyer has no saved payment method — fall back
+        // Buyer has no saved payment method or address — fall back to manual checkout
         await fallbackToManualCheckout(supabase, auction, now, appUrl, winnerEmail, sellerEmail, PAYMENT_DEADLINE_HOURS);
       }
     } else {
