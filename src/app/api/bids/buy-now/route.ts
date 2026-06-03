@@ -86,23 +86,25 @@ export async function POST(request: Request) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://plantet.shop";
   const now = new Date();
 
-  // Record the bid
+  // Lock the auction atomically — only succeeds if status is still "active".
+  // Two simultaneous Buy Now requests will race here; only one will match the row.
+  const { data: locked, error: updateError } = await admin
+    .from("auctions")
+    .update({ current_bid_cents: auction.buy_now_price_cents, current_bidder_id: user.id, status: "ended" })
+    .eq("id", auctionId)
+    .eq("status", "active")
+    .select("id");
+
+  if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
+  if (!locked?.length) return NextResponse.json({ error: "This auction is no longer available." }, { status: 409 });
+
+  // Record the bid only after we've confirmed we hold the lock
   const { error: bidError } = await admin.from("bids").insert({
     auction_id: auctionId,
     bidder_id: user.id,
     amount_cents: auction.buy_now_price_cents,
   });
   if (bidError) return NextResponse.json({ error: bidError.message }, { status: 500 });
-
-  // Lock the auction by marking it ended — acts as an optimistic concurrency lock
-  // so two simultaneous Buy Now clicks can't both succeed
-  const { error: updateError } = await admin
-    .from("auctions")
-    .update({ current_bid_cents: auction.buy_now_price_cents, current_bidder_id: user.id, status: "ended" })
-    .eq("id", auctionId)
-    .eq("status", "active");
-
-  if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
 
   // Calculate amounts
   let shippingCents = 0;
