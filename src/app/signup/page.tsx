@@ -111,7 +111,7 @@ export default function SignupPage() {
           <p className="text-white/70 text-sm mb-10">Join thousands of growers buying, selling, and connecting over plants.</p>
           <ul className="space-y-6">
             {[
-              { icon: "🌱", title: "Track your collection", body: "Log every plant you own, care history, and health status in My Garden." },
+              { icon: "🌱", title: "Track and share your collection", body: "Log every plant you own, make your garden public, and share new additions to your followers' feeds." },
               { icon: "🛒", title: "Buy from independent growers", body: "Discover rare and hard-to-find plants from small nurseries and hobbyists." },
               { icon: "🏷️", title: "Sell at fixed price or auction", body: "List plants, run timed auctions, and get paid directly to your bank." },
               { icon: "🤝", title: "Connect with fellow growers", body: "Ask questions, share plants, and follow growers you love in the community." },
