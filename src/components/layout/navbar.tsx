@@ -16,6 +16,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Search, Heart, Package, Rss, Sprout, MessageSquare, Users } from "lucide-react";
+import { OrdersBadge } from "@/components/orders-badge";
 import { CartButton } from "@/components/cart-drawer";
 import type { User } from "@supabase/supabase-js";
 
@@ -172,11 +173,7 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
                 <NavIcon href="/wishlist" label="Saved"><Heart size={15} /></NavIcon>
                 <Link href="/orders" className="relative flex flex-col items-center gap-0.5 px-1.5 py-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
                   <Package size={15} />
-                  {(pendingSalesOrders + pendingBuyerPayments) > 0 && (
-                    <span className="absolute top-0.5 right-0.5 w-3.5 h-3.5 rounded-full bg-leaf text-white text-[9px] font-bold flex items-center justify-center">
-                      {(pendingSalesOrders + pendingBuyerPayments) > 9 ? "9+" : (pendingSalesOrders + pendingBuyerPayments)}
-                    </span>
-                  )}
+                  <OrdersBadge initial={pendingSalesOrders + pendingBuyerPayments} />
                   {actionableDisputeCount > 0 && (
                     <span className="absolute top-0.5 left-0.5 w-2.5 h-2.5 rounded-full bg-red-500" />
                   )}
