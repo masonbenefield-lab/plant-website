@@ -74,7 +74,7 @@ export default async function CareSchedulePage() {
         const nextDue = new Date(last.getTime() + interval * 86400000);
         daysUntilDue = Math.round((nextDue.getTime() - today.getTime()) / 86400000);
       } else {
-        daysUntilDue = -interval; // never done — treat as overdue by full interval
+        daysUntilDue = 0; // never logged — show as due today so user can log first event
       }
       entries.push({ plantId: plant.id, plantName: name, image, careType: type, eventKey, interval, lastDate: lastDateStr, daysUntilDue });
     }
