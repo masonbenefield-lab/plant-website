@@ -93,10 +93,10 @@ export default async function DashboardAuctionsPage({
   // Fetch order statuses for ended auctions so we can show outcome labels
   const endedIds = sellingAuctions.filter((a) => a.status === "ended").map((a) => a.id);
   const { data: auctionOrders } = endedIds.length
-    ? await supabase.from("orders").select("auction_id, status").in("auction_id", endedIds)
+    ? await supabase.from("orders").select("id, auction_id, status").in("auction_id", endedIds)
     : { data: [] };
-  const orderStatusByAuction: Record<string, string> = Object.fromEntries(
-    (auctionOrders ?? []).map((o) => [o.auction_id!, o.status])
+  const orderByAuction: Record<string, { id: string; status: string }> = Object.fromEntries(
+    (auctionOrders ?? []).map((o) => [o.auction_id!, { id: o.id, status: o.status }])
   );
 
   // ── Bidding tabs ──────────────────────────────────────────────────────────
@@ -248,12 +248,13 @@ export default async function DashboardAuctionsPage({
                         }
                         {auction.status === "ended" && (() => {
                           const reserveMet = !auction.reserve_price_cents || auction.current_bid_cents >= auction.reserve_price_cents;
-                          const orderStatus = orderStatusByAuction[auction.id];
+                          const order = orderByAuction[auction.id];
+                          const badgeClass = "text-xs font-medium px-2 py-0.5 rounded-full";
                           if (!auction.current_bidder_id) return <span className="text-muted-foreground italic">No bids received</span>;
-                          if (reserveMet && orderStatus === "paid") return <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-[#DFE7D4] text-leaf">Sold — paid</span>;
-                          if (reserveMet && orderStatus === "pending") return <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">Sold — payment pending</span>;
-                          if (reserveMet && orderStatus) return <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-[#DFE7D4] text-leaf">Sold — {orderStatus}</span>;
-                          if (reserveMet) return <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Winner — processing</span>;
+                          if (reserveMet && order?.status === "paid") return <Link href={`/orders?tab=sales`} className={`${badgeClass} bg-[#DFE7D4] text-leaf hover:bg-leaf/20`}>Sold — paid ↗</Link>;
+                          if (reserveMet && order?.status === "pending") return <Link href={`/orders?tab=sales`} className={`${badgeClass} bg-blue-100 text-blue-700 hover:bg-blue-200`}>Sold — payment pending ↗</Link>;
+                          if (reserveMet && order) return <Link href={`/orders?tab=sales`} className={`${badgeClass} bg-[#DFE7D4] text-leaf hover:bg-leaf/20`}>Sold — {order.status} ↗</Link>;
+                          if (reserveMet) return <span className={`${badgeClass} bg-amber-100 text-amber-700`}>Winner — processing</span>;
                           if (!auction.reserve_offer_status) return <span className="text-muted-foreground italic">Reserve not met</span>;
                           return null;
                         })()}
