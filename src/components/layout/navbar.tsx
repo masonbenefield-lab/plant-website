@@ -15,7 +15,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Search, Heart, Package, Rss, Sprout, MessageSquare, Users } from "lucide-react";
+import { Package, Rss, MessageSquare } from "lucide-react";
 import { OrdersBadge } from "@/components/orders-badge";
 import { CartButton } from "@/components/cart-drawer";
 import type { User } from "@supabase/supabase-js";
@@ -169,8 +169,6 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
           <div className="hidden md:flex items-center gap-3">
             {user && (
               <div className="flex items-center gap-0.5 mr-1">
-                <NavIcon href="/search" label="Search"><Search size={15} /></NavIcon>
-                <NavIcon href="/wishlist" label="Saved"><Heart size={15} /></NavIcon>
                 <Link href="/orders" className="relative flex flex-col items-center gap-0.5 px-1.5 py-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
                   <Package size={15} />
                   <OrdersBadge initial={pendingSalesOrders + pendingBuyerPayments} />
@@ -186,8 +184,6 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
                   )}
                   <span className="text-[9px] leading-none font-medium">Feed</span>
                 </Link>
-                <NavIcon href="/garden" label="Garden"><Sprout size={15} /></NavIcon>
-                <NavIcon href="/following" label="Following"><Users size={15} /></NavIcon>
                 <Link href="/messages" className="relative flex flex-col items-center gap-0.5 px-1.5 py-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
                   <MessageSquare size={15} />
                   {liveUnread > 0 && (
@@ -216,19 +212,18 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
                   )}
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem><Link href="/dashboard" className="block w-full">Dashboard</Link></DropdownMenuItem>
-                  <DropdownMenuItem><Link href="/dashboard/inventory" className="block w-full">My Stock</Link></DropdownMenuItem>
-                  <DropdownMenuItem><Link href="/dashboard/offers" className="block w-full">Offers</Link></DropdownMenuItem>
-                  <DropdownMenuItem><Link href="/dashboard/auctions" className="block w-full">Auctions</Link></DropdownMenuItem>
-                  <DropdownMenuItem><Link href="/wishlist" className="block w-full">Saved</Link></DropdownMenuItem>
-                  <DropdownMenuItem><Link href="/orders" className="block w-full">My Purchases</Link></DropdownMenuItem>
-                  <DropdownMenuItem><Link href="/feed" className="block w-full">Feed</Link></DropdownMenuItem>
-                  <DropdownMenuItem><Link href="/messages" className="block w-full">Messages{liveUnread > 0 ? ` (${liveUnread})` : ""}</Link></DropdownMenuItem>
-                  <DropdownMenuItem><Link href="/following" className="block w-full">Following</Link></DropdownMenuItem>
-                  <DropdownMenuItem><Link href="/community" className="block w-full">Community</Link></DropdownMenuItem>
-                  <DropdownMenuItem><Link href="/garden" className="block w-full">My Garden</Link></DropdownMenuItem>
-                  <DropdownMenuItem><Link href={`/sellers/${username}`} className="block w-full">My Storefront</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href="/account" className="block w-full">Account Settings</Link></DropdownMenuItem>
+                  <DropdownMenuItem><Link href="/dashboard" className="block w-full">Dashboard</Link></DropdownMenuItem>
+                  <DropdownMenuItem><Link href="/feed" className="block w-full">Feed</Link></DropdownMenuItem>
+                  <DropdownMenuItem><Link href="/following" className="block w-full">Following</Link></DropdownMenuItem>
+                  <DropdownMenuItem><Link href="/messages" className="block w-full">Messages{liveUnread > 0 ? ` (${liveUnread})` : ""}</Link></DropdownMenuItem>
+                  <DropdownMenuItem><Link href="/dashboard/auctions" className="block w-full">My Auctions</Link></DropdownMenuItem>
+                  <DropdownMenuItem><Link href="/garden" className="block w-full">My Garden</Link></DropdownMenuItem>
+                  <DropdownMenuItem><Link href="/orders" className="block w-full">My Purchases</Link></DropdownMenuItem>
+                  <DropdownMenuItem><Link href="/wishlist" className="block w-full">My Saved</Link></DropdownMenuItem>
+                  <DropdownMenuItem><Link href="/dashboard/inventory" className="block w-full">My Stock</Link></DropdownMenuItem>
+                  <DropdownMenuItem><Link href={`/sellers/${username}`} className="block w-full">My Storefront</Link></DropdownMenuItem>
+                  <DropdownMenuItem><Link href="/dashboard/offers" className="block w-full">Offers</Link></DropdownMenuItem>
                   {isAdmin && (
                     <>
                       <DropdownMenuSeparator />
@@ -306,7 +301,7 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
                 <span className="text-sm font-medium">{username}</span>
               </div>
               <p className="px-3 pt-2 pb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Shopping</p>
-              <MobileLink href="/dashboard/auctions" onClick={closeMenu}>Auctions</MobileLink>
+              <MobileLink href="/dashboard/auctions" onClick={closeMenu}>My Auctions</MobileLink>
               <MobileLink href="/wishlist" onClick={closeMenu}>Saved</MobileLink>
               <MobileLink href="/orders" onClick={closeMenu}>My Purchases</MobileLink>
               <MobileLink href="/messages" onClick={closeMenu}>Messages{liveUnread > 0 ? ` (${liveUnread})` : ""}</MobileLink>
@@ -324,7 +319,6 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
               <MobileLink href="/feed" onClick={closeMenu}>Feed</MobileLink>
               <MobileLink href="/garden" onClick={closeMenu}>My Garden</MobileLink>
               <MobileLink href="/following" onClick={closeMenu}>Following</MobileLink>
-              <MobileLink href="/community" onClick={closeMenu}>Community</MobileLink>
               <MobileLink href="/giveaway" onClick={closeMenu}>Giveaway</MobileLink>
 
               {isAdmin && (
