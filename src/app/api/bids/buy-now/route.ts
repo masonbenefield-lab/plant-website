@@ -103,6 +103,7 @@ export async function POST(request: Request) {
         plantName: displayName,
         auctionId,
         newBidCents: auction.buy_now_price_cents,
+        buyNow: true,
       }).catch(() => {});
     }
   }
@@ -231,7 +232,7 @@ export async function POST(request: Request) {
           plantName: displayName,
           winnerFound: true,
           winnerUsername: "The buyer",
-          amountCents: auction.buy_now_price_cents,
+          amountCents: totalCents,
           ordersUrl: `${appUrl}/orders?tab=sales`,
           autoCharged: true,
         }).catch(() => {});

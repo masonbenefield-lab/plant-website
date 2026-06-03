@@ -695,12 +695,26 @@ export function buildOutbidNotificationHtml({
   plantName,
   auctionId,
   newBidCents,
+  buyNow = false,
 }: {
   plantName: string;
   auctionId: string;
   newBidCents: number;
+  buyNow?: boolean;
 }): string {
   const siteUrl = siteBase();
+  if (buyNow) {
+    return emailBase({
+      title: `${plantName} was purchased via Buy Now`,
+      heading: "Auction sold via Buy Now",
+      subheading: plantName,
+      body: `
+        <p style="margin:0 0 16px;">Another buyer purchased <strong>${plantName}</strong> immediately using the Buy Now option. The auction is now closed.</p>
+        ${infoCard([{ label: "Buy Now price", value: centsToDisplay(newBidCents) }])}
+      `,
+      footerNote: "You're receiving this because you placed a bid on this auction.",
+    });
+  }
   return emailBase({
     title: `You've been outbid on ${plantName}`,
     heading: "You've been outbid",
@@ -719,18 +733,20 @@ export async function sendOutbidNotification({
   plantName,
   auctionId,
   newBidCents,
+  buyNow = false,
 }: {
   bidderEmail: string;
   plantName: string;
   auctionId: string;
   newBidCents: number;
+  buyNow?: boolean;
 }) {
   const resend = getResend();
   await resend.emails.send({
     from: FROM,
     to: bidderEmail,
-    subject: `You've been outbid on ${plantName}`,
-    html: buildOutbidNotificationHtml({ plantName, auctionId, newBidCents }),
+    subject: buyNow ? `${plantName} was purchased via Buy Now` : `You've been outbid on ${plantName}`,
+    html: buildOutbidNotificationHtml({ plantName, auctionId, newBidCents, buyNow }),
   });
 }
 
@@ -831,7 +847,7 @@ export async function sendAuctionEndedSeller({
         <p style="margin:0 0 4px;"><strong>${winnerUsername ?? "The buyer"}</strong> won your auction and their payment has been processed automatically. Time to ship!</p>
         ${infoCard([
           { label: "Item", value: plantName },
-          { label: "Winning bid", value: centsToDisplay(amountCents ?? 0) },
+          { label: "Total received", value: centsToDisplay(amountCents ?? 0) },
         ])}
         ${ctaBtn("View Order to Ship", `${siteUrl}/dashboard/orders`)}
       `,
