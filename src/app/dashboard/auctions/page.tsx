@@ -106,6 +106,7 @@ export default async function DashboardAuctionsPage({
     variety: string | null;
     current_bid_cents: number;
     current_bidder_id: string | null;
+    reserve_price_cents: number | null;
     status: string;
     ends_at: string;
     created_at: string;
@@ -139,7 +140,7 @@ export default async function DashboardAuctionsPage({
     if (auctionIds.length) {
       const { data: allAuctions } = await admin
         .from("auctions")
-        .select("id, plant_name, variety, current_bid_cents, current_bidder_id, status, ends_at, created_at, images, seller_id")
+        .select("id, plant_name, variety, current_bid_cents, current_bidder_id, reserve_price_cents, status, ends_at, created_at, images, seller_id")
         .in("id", auctionIds)
         .order("ends_at", { ascending: true });
 
@@ -372,7 +373,8 @@ export default async function DashboardAuctionsPage({
           ) : (
             <div className="space-y-3">
               {historyAuctions.map((a) => {
-                const won = a.status === "ended" && a.current_bidder_id === user.id;
+                const reserveMet = !a.reserve_price_cents || a.current_bid_cents >= a.reserve_price_cents;
+                const won = a.status === "ended" && a.current_bidder_id === user.id && reserveMet;
                 const noWinner = a.status === "ended" && !a.current_bidder_id;
                 const myBid = highBidMap[a.id];
                 const img = a.images?.[0];
