@@ -35,10 +35,16 @@ const FEATURES = [
   },
 ];
 
-export default async function WelcomePage() {
+export default async function WelcomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ confirmed?: string }>;
+}) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+
+  const { confirmed } = await searchParams;
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -51,6 +57,14 @@ export default async function WelcomePage() {
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4 py-16">
       <div className="max-w-3xl w-full space-y-10">
+
+        {/* Email confirmed banner */}
+        {confirmed && (
+          <div className="flex items-center justify-center gap-2 rounded-xl bg-[#EBF0E6] dark:bg-forest/20 border border-[#C5D4BC] dark:border-forest px-4 py-3 text-sm font-medium text-forest dark:text-sage">
+            <span>✓</span>
+            <span>Email confirmed — you&apos;re all set!</span>
+          </div>
+        )}
 
         {/* Header */}
         <div className="text-center space-y-3">
