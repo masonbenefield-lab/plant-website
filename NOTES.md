@@ -1065,6 +1065,35 @@ CREATE POLICY "Service role only" ON referral_activations FOR ALL USING (false);
 
 ---
 
+## 2026-06-03 — Care Schedule: Bulk Log, Filters, Search, One-time Reminders & Notes
+
+### Features added
+- **Bulk log in Week Ahead**: "Select tasks" button enters per-task selection mode (key = `plantId-careType` for recurring tasks, `reminder-id` for reminders); "Log selected" logs all chosen at once
+- **Manage Schedules filter tabs**: All / Scheduled / Not set — filters the plant list in-place
+- **Manage Schedules search bar**: Live search by plant name with clear button
+- **One-time reminders**: New tab "One-time" inside the plant edit modal; choose task type, date, and optional notes; reminder appears in Week Ahead on the scheduled day
+- **Garden-level notes/reminders**: "+ Add reminder" button in Week Ahead opens a modal with plant (optional), task type, date, and notes fields — no plant required
+- **Reminders in Week Ahead**: `care_reminders` rows merged into section buckets (Overdue, Due Today, etc.) and the 7-day WeekStrip; "Done ✓" marks them complete
+- **care_reminders table**: new Supabase table — run migration `014_care_reminders.sql`
+
+### Files created
+- `supabase/migrations/014_care_reminders.sql` — new table + RLS + index
+- `src/app/api/garden/reminders/route.ts` — POST create reminder
+- `src/app/api/garden/reminders/[id]/route.ts` — PATCH complete + DELETE
+
+### Files modified
+- `src/app/garden/care/page.tsx` — fetches `care_reminders` and passes `reminderEntries` to client
+- `src/app/garden/care/care-schedule-client.tsx` — all UI changes (filters, search, bulk log, reminder cards, add-reminder modal, one-time tab in intervals modal)
+- `src/lib/supabase/types.ts` — added `care_reminders` table type
+
+### SQL migrations required
+- Run `supabase/migrations/014_care_reminders.sql` in the Supabase SQL editor
+
+### Environment variables
+- None
+
+---
+
 ## 2026-06-03 — Care Schedule TypeScript fixes
 
 ### Bugs fixed

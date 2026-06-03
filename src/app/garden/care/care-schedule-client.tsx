@@ -5,7 +5,10 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Droplets, Leaf, Flower2, Scissors, Pencil, Check, ChevronDown } from "lucide-react";
+import {
+  Droplets, Leaf, Flower2, Scissors, Pencil, Check, ChevronDown,
+  StickyNote, Plus, Search, X, Syringe, Wheat,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Dialog,
@@ -30,6 +33,17 @@ type CareEntry = {
   daysUntilDue: number;
 };
 
+export type ReminderEntry = {
+  id: string;
+  plantId: string | null;
+  plantName: string | null;
+  image: string | null;
+  eventType: string;
+  scheduledDate: string;
+  notes: string | null;
+  daysUntilDue: number;
+};
+
 type SimplePlant = { id: string; name: string; image: string | null };
 
 export type PlantWithIntervals = {
@@ -45,11 +59,25 @@ export type PlantWithIntervals = {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const CARE_META: Record<string, { icon: React.ReactNode; color: string; bg: string; border: string }> = {
-  Water:     { icon: <Droplets size={13} />, color: "text-blue-700 dark:text-blue-400",     bg: "bg-blue-100 dark:bg-blue-900/30",     border: "border-blue-200 dark:border-blue-800"    },
-  Fertilize: { icon: <Leaf size={13} />,     color: "text-leaf",                            bg: "bg-[#DFE7D4] dark:bg-forest/30",      border: "border-[#C5D4BC] dark:border-forest"     },
-  Repot:     { icon: <Flower2 size={13} />,  color: "text-amber-700 dark:text-amber-400",   bg: "bg-amber-100 dark:bg-amber-900/30",   border: "border-amber-200 dark:border-amber-800"  },
-  Prune:     { icon: <Scissors size={13} />, color: "text-purple-700 dark:text-purple-400", bg: "bg-purple-100 dark:bg-purple-900/30", border: "border-purple-200 dark:border-purple-800" },
+  Water:     { icon: <Droplets size={13} />,  color: "text-blue-700 dark:text-blue-400",     bg: "bg-blue-100 dark:bg-blue-900/30",     border: "border-blue-200 dark:border-blue-800"    },
+  Fertilize: { icon: <Leaf size={13} />,      color: "text-leaf",                            bg: "bg-[#DFE7D4] dark:bg-forest/30",      border: "border-[#C5D4BC] dark:border-forest"     },
+  Repot:     { icon: <Flower2 size={13} />,   color: "text-amber-700 dark:text-amber-400",   bg: "bg-amber-100 dark:bg-amber-900/30",   border: "border-amber-200 dark:border-amber-800"  },
+  Prune:     { icon: <Scissors size={13} />,  color: "text-purple-700 dark:text-purple-400", bg: "bg-purple-100 dark:bg-purple-900/30", border: "border-purple-200 dark:border-purple-800" },
+  Note:      { icon: <StickyNote size={13} />,color: "text-orange-700 dark:text-orange-400", bg: "bg-orange-100 dark:bg-orange-900/30", border: "border-orange-200 dark:border-orange-800" },
+  Treated:   { icon: <Syringe size={13} />,   color: "text-pink-700 dark:text-pink-400",     bg: "bg-pink-100 dark:bg-pink-900/30",     border: "border-pink-200 dark:border-pink-800"    },
+  Harvested: { icon: <Wheat size={13} />,     color: "text-yellow-700 dark:text-yellow-500", bg: "bg-yellow-100 dark:bg-yellow-900/30", border: "border-yellow-200 dark:border-yellow-800" },
 };
+
+const EVENT_TYPE_TO_DISPLAY: Record<string, string> = {
+  watered: "Water", fertilized: "Fertilize", repotted: "Repot",
+  pruned: "Prune", note: "Note", treated: "Treated", harvested: "Harvested",
+};
+const DISPLAY_TO_EVENT_TYPE: Record<string, string> = {
+  Water: "watered", Fertilize: "fertilized", Repot: "repotted",
+  Prune: "pruned", Note: "note", Treated: "treated", Harvested: "harvested",
+};
+
+const REMINDER_TYPES = ["Water", "Fertilize", "Repot", "Prune", "Treated", "Harvested", "Note"] as const;
 
 const INTERVAL_FIELDS = [
   { key: "waterInterval",     emoji: "💧", label: "Water every"     },
@@ -75,17 +103,25 @@ function fmtShort(d: Date): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+function todayStr(): string {
+  return new Date().toISOString().split("T")[0];
+}
+
 // ─── Misc helpers ─────────────────────────────────────────────────────────────
 
 function urgencyLabel(days: number): { label: string; color: string } {
-  if (days < 0)   return { label: `${Math.abs(days)}d overdue`, color: "text-red-600 dark:text-red-400" };
-  if (days === 0)  return { label: "Due today",                  color: "text-amber-600 dark:text-amber-400" };
-  if (days === 1)  return { label: "Tomorrow",                   color: "text-leaf" };
+  if (days < 0)  return { label: `${Math.abs(days)}d overdue`, color: "text-red-600 dark:text-red-400" };
+  if (days === 0) return { label: "Due today",                  color: "text-amber-600 dark:text-amber-400" };
+  if (days === 1) return { label: "Tomorrow",                   color: "text-leaf" };
   return { label: `In ${days}d`, color: "text-leaf" };
 }
 
 function sortAsc(entries: CareEntry[]): CareEntry[] {
   return [...entries].sort((a, b) => a.daysUntilDue - b.daysUntilDue);
+}
+
+function sortRemindersAsc(reminders: ReminderEntry[]): ReminderEntry[] {
+  return [...reminders].sort((a, b) => a.daysUntilDue - b.daysUntilDue);
 }
 
 function getFieldMeta(values: (number | null)[]): { defaultValue: string; placeholder: string } {
@@ -100,13 +136,21 @@ function getFieldMeta(values: (number | null)[]): { defaultValue: string; placeh
   return { defaultValue: "", placeholder: `Currently: ${parts.join(", ")}` };
 }
 
-// Returns every day offset [0–6] where this entry recurs based on its interval
 function getStripDays(daysUntilDue: number, interval: number): Set<number> {
   const days = new Set<number>();
   let d = daysUntilDue;
   if (d < 0) d += Math.ceil(Math.abs(d) / interval) * interval;
   while (d <= 6) { days.add(d); d += interval; }
   return days;
+}
+
+function reminderDisplayType(eventType: string): string {
+  return EVENT_TYPE_TO_DISPLAY[eventType] ?? eventType;
+}
+
+function reminderMeta(eventType: string) {
+  const display = reminderDisplayType(eventType);
+  return CARE_META[display] ?? CARE_META["Note"];
 }
 
 // ─── Shared sub-components ────────────────────────────────────────────────────
@@ -145,21 +189,56 @@ function QuickLogButton({ plantId, careType, onLogged }: { plantId: string; care
   );
 }
 
+function CompleteReminderButton({ reminderId, onCompleted }: { reminderId: string; onCompleted: () => void }) {
+  const [loading, setLoading] = useState(false);
+  async function complete() {
+    setLoading(true);
+    const res = await fetch(`/api/garden/reminders/${reminderId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ completed: true }),
+    });
+    setLoading(false);
+    if (res.ok) { toast.success("Reminder done!"); onCompleted(); }
+    else toast.error("Failed to complete reminder");
+  }
+  return (
+    <button onClick={complete} disabled={loading} className="text-xs font-medium text-leaf hover:text-forest disabled:opacity-50 transition-colors whitespace-nowrap">
+      {loading ? "…" : "Done ✓"}
+    </button>
+  );
+}
+
 // ─── Intervals Modal ──────────────────────────────────────────────────────────
 
-function IntervalsModal({ plants, onSaved }: { plants: PlantWithIntervals[]; onSaved: () => void }) {
+function IntervalsModal({
+  plants, onSaved, onReminderAdded,
+}: {
+  plants: PlantWithIntervals[];
+  onSaved: () => void;
+  onReminderAdded: (reminder: ReminderEntry) => void;
+}) {
+  const [modalTab, setModalTab] = useState<"intervals" | "onetime">("intervals");
   const fields = INTERVAL_FIELDS.map(({ key, emoji, label }) => ({
     key, emoji, label, meta: getFieldMeta(plants.map((p) => p[key])),
   }));
-  const todayStr = new Date().toISOString().split("T")[0];
+  const isBulk = plants.length > 1;
+  const singlePlant = !isBulk ? plants[0] : null;
+
+  // Intervals tab state
   const [values, setValues] = useState<Record<string, string>>(
     Object.fromEntries(fields.map(({ key, meta }) => [key, meta.defaultValue]))
   );
-  const [startDate, setStartDate] = useState(todayStr);
+  const [startDate, setStartDate] = useState(todayStr());
   const [saving, setSaving] = useState(false);
-  const isBulk = plants.length > 1;
 
-  async function save() {
+  // One-time tab state
+  const [reminderType, setReminderType] = useState<string>("Water");
+  const [reminderDate, setReminderDate] = useState(todayStr());
+  const [reminderNotes, setReminderNotes] = useState("");
+  const [savingReminder, setSavingReminder] = useState(false);
+
+  async function saveIntervals() {
     const body: Record<string, unknown> = { plantIds: plants.map((p) => p.id) };
     for (const { key } of INTERVAL_FIELDS) {
       const raw = values[key].trim();
@@ -180,41 +259,237 @@ function IntervalsModal({ plants, onSaved }: { plants: PlantWithIntervals[]; onS
     } else { toast.error("Failed to save intervals"); }
   }
 
+  async function saveReminder() {
+    if (!reminderDate) { toast.info("Please pick a date"); return; }
+    setSavingReminder(true);
+    const res = await fetch("/api/garden/reminders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        plantId: singlePlant?.id ?? null,
+        eventType: DISPLAY_TO_EVENT_TYPE[reminderType] ?? "note",
+        scheduledDate: reminderDate,
+        notes: reminderNotes.trim() || null,
+      }),
+    });
+    setSavingReminder(false);
+    if (res.ok) {
+      const { reminder } = await res.json() as { reminder: { id: string; plant_id: string | null; event_type: string; scheduled_date: string; notes: string | null } };
+      const scheduled = new Date(reminder.scheduled_date);
+      scheduled.setHours(0, 0, 0, 0);
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const daysUntilDue = Math.round((scheduled.getTime() - today.getTime()) / 86400000);
+      onReminderAdded({
+        id: reminder.id,
+        plantId: reminder.plant_id ?? null,
+        plantName: singlePlant?.name ?? null,
+        image: singlePlant?.image ?? null,
+        eventType: reminder.event_type,
+        scheduledDate: reminder.scheduled_date,
+        notes: reminder.notes,
+        daysUntilDue,
+      });
+      toast.success("Reminder added!");
+      setReminderNotes("");
+      setReminderDate(todayStr());
+    } else { toast.error("Failed to add reminder"); }
+  }
+
   return (
     <DialogContent className="sm:max-w-sm">
       <DialogHeader>
         <DialogTitle>{isBulk ? `Update intervals — ${plants.length} plants` : plants[0].name}</DialogTitle>
-        {isBulk && (
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Fill in a field to apply it to all {plants.length} plants. Leave blank to keep each plant&apos;s current value.
-          </p>
-        )}
       </DialogHeader>
       {!isBulk && plants[0].image && (
         <Image src={plants[0].image} alt={plants[0].name} width={56} height={56} className="rounded-lg object-cover border w-14 h-14" />
       )}
-      <div className="grid gap-3 py-1">
-        {fields.map(({ key, emoji, label, meta }) => (
-          <div key={key} className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground w-36 shrink-0">{emoji} {label}</span>
-            <Input type="number" min={1} value={values[key]} onChange={(e) => setValues((p) => ({ ...p, [key]: e.target.value }))}
-              placeholder={meta.placeholder || "—"} className="h-8 text-sm flex-1 min-w-0" />
-            <span className="text-xs text-muted-foreground shrink-0">days</span>
-          </div>
+
+      {/* Modal tabs */}
+      <div className="flex gap-1 p-0.5 bg-muted/50 rounded-md w-fit">
+        {(["intervals", "onetime"] as const).map((t) => (
+          <button key={t} onClick={() => setModalTab(t)}
+            className={cn("px-3 py-1 rounded text-xs font-medium transition-colors",
+              modalTab === t ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+            )}>
+            {t === "intervals" ? "Recurring" : "One-time"}
+          </button>
         ))}
-        <div className="border-t pt-3 space-y-1.5">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground w-36 shrink-0">📅 Schedule from</span>
-            <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="h-8 text-sm flex-1 min-w-0" />
+      </div>
+
+      {modalTab === "intervals" && (
+        <>
+          {isBulk && (
+            <p className="text-xs text-muted-foreground -mt-1">
+              Fill in a field to apply it to all {plants.length} plants. Leave blank to keep each plant&apos;s current value.
+            </p>
+          )}
+          <div className="grid gap-3 py-1">
+            {fields.map(({ key, emoji, label, meta }) => (
+              <div key={key} className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground w-36 shrink-0">{emoji} {label}</span>
+                <Input type="number" min={1} value={values[key]} onChange={(e) => setValues((p) => ({ ...p, [key]: e.target.value }))}
+                  placeholder={meta.placeholder || "—"} className="h-8 text-sm flex-1 min-w-0" />
+                <span className="text-xs text-muted-foreground shrink-0">days</span>
+              </div>
+            ))}
+            <div className="border-t pt-3 space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground w-36 shrink-0">📅 Schedule from</span>
+                <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="h-8 text-sm flex-1 min-w-0" />
+              </div>
+              <p className="text-xs text-muted-foreground pl-[152px]">
+                Intervals count from this date. Clear to leave open-ended.
+              </p>
+            </div>
           </div>
-          <p className="text-xs text-muted-foreground pl-[152px]">
-            Intervals count from this date. Clear to leave open-ended.
-          </p>
+          <DialogFooter showCloseButton>
+            <Button onClick={saveIntervals} disabled={saving} className="bg-leaf hover:bg-forest text-white">
+              {saving ? "Saving…" : "Save intervals"}
+            </Button>
+          </DialogFooter>
+        </>
+      )}
+
+      {modalTab === "onetime" && (
+        <>
+          <div className="grid gap-3 py-1">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground w-28 shrink-0">Task type</span>
+              <select
+                value={reminderType}
+                onChange={(e) => setReminderType(e.target.value)}
+                className="h-8 text-sm flex-1 min-w-0 rounded-md border border-input bg-background px-2"
+              >
+                {REMINDER_TYPES.map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground w-28 shrink-0">📅 Date</span>
+              <Input type="date" value={reminderDate} onChange={(e) => setReminderDate(e.target.value)} className="h-8 text-sm flex-1 min-w-0" />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <span className="text-sm text-muted-foreground">Notes</span>
+              <textarea
+                value={reminderNotes}
+                onChange={(e) => setReminderNotes(e.target.value)}
+                placeholder={reminderType === "Note" ? "What do you want to remember?" : "Optional notes…"}
+                rows={3}
+                className="text-sm rounded-md border border-input bg-background px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+            </div>
+          </div>
+          <DialogFooter showCloseButton>
+            <Button onClick={saveReminder} disabled={savingReminder} className="bg-leaf hover:bg-forest text-white">
+              {savingReminder ? "Adding…" : "Add reminder"}
+            </Button>
+          </DialogFooter>
+        </>
+      )}
+    </DialogContent>
+  );
+}
+
+// ─── Standalone reminder creation modal (garden-level, no plant) ──────────────
+
+function AddReminderModal({
+  plants,
+  onAdded,
+  onClose,
+}: {
+  plants: PlantWithIntervals[];
+  onAdded: (reminder: ReminderEntry) => void;
+  onClose: () => void;
+}) {
+  const [reminderType, setReminderType] = useState("Note");
+  const [reminderDate, setReminderDate] = useState(todayStr());
+  const [reminderNotes, setReminderNotes] = useState("");
+  const [selectedPlantId, setSelectedPlantId] = useState<string>("");
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    if (!reminderDate) { toast.info("Please pick a date"); return; }
+    setSaving(true);
+    const plantId = selectedPlantId || null;
+    const res = await fetch("/api/garden/reminders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        plantId,
+        eventType: DISPLAY_TO_EVENT_TYPE[reminderType] ?? "note",
+        scheduledDate: reminderDate,
+        notes: reminderNotes.trim() || null,
+      }),
+    });
+    setSaving(false);
+    if (res.ok) {
+      const { reminder } = await res.json() as { reminder: { id: string; plant_id: string | null; event_type: string; scheduled_date: string; notes: string | null } };
+      const plant = plants.find((p) => p.id === reminder.plant_id);
+      const scheduled = new Date(reminder.scheduled_date);
+      scheduled.setHours(0, 0, 0, 0);
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const daysUntilDue = Math.round((scheduled.getTime() - today.getTime()) / 86400000);
+      onAdded({
+        id: reminder.id,
+        plantId: reminder.plant_id ?? null,
+        plantName: plant?.name ?? null,
+        image: plant?.image ?? null,
+        eventType: reminder.event_type,
+        scheduledDate: reminder.scheduled_date,
+        notes: reminder.notes,
+        daysUntilDue,
+      });
+      toast.success("Reminder added!");
+      onClose();
+    } else { toast.error("Failed to add reminder"); }
+  }
+
+  return (
+    <DialogContent className="sm:max-w-sm">
+      <DialogHeader>
+        <DialogTitle>Add reminder</DialogTitle>
+      </DialogHeader>
+      <div className="grid gap-3 py-1">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground w-28 shrink-0">Task type</span>
+          <select
+            value={reminderType}
+            onChange={(e) => setReminderType(e.target.value)}
+            className="h-8 text-sm flex-1 min-w-0 rounded-md border border-input bg-background px-2"
+          >
+            {REMINDER_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground w-28 shrink-0">📅 Date</span>
+          <Input type="date" value={reminderDate} onChange={(e) => setReminderDate(e.target.value)} className="h-8 text-sm flex-1 min-w-0" />
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground w-28 shrink-0">Plant</span>
+          <select
+            value={selectedPlantId}
+            onChange={(e) => setSelectedPlantId(e.target.value)}
+            className="h-8 text-sm flex-1 min-w-0 rounded-md border border-input bg-background px-2"
+          >
+            <option value="">No specific plant</option>
+            {plants.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <span className="text-sm text-muted-foreground">Notes</span>
+          <textarea
+            value={reminderNotes}
+            onChange={(e) => setReminderNotes(e.target.value)}
+            placeholder={reminderType === "Note" ? "What do you want to remember?" : "Optional notes…"}
+            rows={3}
+            className="text-sm rounded-md border border-input bg-background px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-ring"
+          />
         </div>
       </div>
       <DialogFooter showCloseButton>
         <Button onClick={save} disabled={saving} className="bg-leaf hover:bg-forest text-white">
-          {saving ? "Saving…" : "Save intervals"}
+          {saving ? "Adding…" : "Add reminder"}
         </Button>
       </DialogFooter>
     </DialogContent>
@@ -225,9 +500,7 @@ function IntervalsModal({ plants, onSaved }: { plants: PlantWithIntervals[]; onS
 
 function DayEntryRow({ entry, dayOffset, onLogged }: { entry: CareEntry; dayOffset: number; onLogged: () => void }) {
   const meta = CARE_META[entry.careType];
-  const { label, color } = dayOffset === 0
-    ? urgencyLabel(entry.daysUntilDue)
-    : urgencyLabel(dayOffset);
+  const { label, color } = dayOffset === 0 ? urgencyLabel(entry.daysUntilDue) : urgencyLabel(dayOffset);
   return (
     <div className="flex items-center gap-3 rounded-lg border bg-background px-3 py-2">
       <Link href={`/garden/${entry.plantId}`} className="shrink-0">
@@ -237,9 +510,7 @@ function DayEntryRow({ entry, dayOffset, onLogged }: { entry: CareEntry; dayOffs
         }
       </Link>
       <div className="flex-1 min-w-0">
-        <Link href={`/garden/${entry.plantId}`} className="text-xs font-medium hover:text-leaf transition-colors truncate block">
-          {entry.plantName}
-        </Link>
+        <Link href={`/garden/${entry.plantId}`} className="text-xs font-medium hover:text-leaf transition-colors truncate block">{entry.plantName}</Link>
         <div className="flex items-center gap-1.5 mt-0.5">
           <span className={cn("flex items-center gap-1 text-[11px] font-medium px-1.5 py-0.5 rounded-full border", meta.bg, meta.color, meta.border)}>
             {meta.icon} {entry.careType}
@@ -252,26 +523,70 @@ function DayEntryRow({ entry, dayOffset, onLogged }: { entry: CareEntry; dayOffs
   );
 }
 
-function WeekStrip({ entries, onLogged }: { entries: CareEntry[]; onLogged: (plantId: string, careType: string) => void }) {
+function DayReminderRow({ reminder, onCompleted }: { reminder: ReminderEntry; onCompleted: () => void }) {
+  const meta = reminderMeta(reminder.eventType);
+  const displayType = reminderDisplayType(reminder.eventType);
+  return (
+    <div className="flex items-center gap-3 rounded-lg border bg-background px-3 py-2">
+      {reminder.plantId ? (
+        <Link href={`/garden/${reminder.plantId}`} className="shrink-0">
+          {reminder.image
+            ? <Image src={reminder.image} alt={reminder.plantName ?? ""} width={36} height={36} className="rounded-md object-cover border w-9 h-9" />
+            : <div className="w-9 h-9 rounded-md bg-muted border flex items-center justify-center text-sm">🌿</div>
+          }
+        </Link>
+      ) : (
+        <div className="w-9 h-9 rounded-md bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 flex items-center justify-center text-sm shrink-0">📝</div>
+      )}
+      <div className="flex-1 min-w-0">
+        <span className="text-xs font-medium truncate block">
+          {reminder.plantName ?? "Garden note"}
+        </span>
+        <div className="flex items-center gap-1.5 mt-0.5">
+          <span className={cn("flex items-center gap-1 text-[11px] font-medium px-1.5 py-0.5 rounded-full border", meta.bg, meta.color, meta.border)}>
+            {meta.icon} {displayType}
+          </span>
+          {reminder.notes && (
+            <span className="text-[11px] text-muted-foreground truncate max-w-[140px]">{reminder.notes}</span>
+          )}
+        </div>
+      </div>
+      <CompleteReminderButton reminderId={reminder.id} onCompleted={onCompleted} />
+    </div>
+  );
+}
+
+function WeekStrip({
+  entries, reminders, onLogged, onReminderCompleted,
+}: {
+  entries: CareEntry[];
+  reminders: ReminderEntry[];
+  onLogged: (plantId: string, careType: string) => void;
+  onReminderCompleted: (id: string) => void;
+}) {
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
   const days = Array.from({ length: 7 }, (_, i) => {
     const date = addDays(today, i);
-    const count = entries.reduce((sum, e) => sum + (getStripDays(e.daysUntilDue, e.interval).has(i) ? 1 : 0), 0);
+    const careCount = entries.reduce((sum, e) => sum + (getStripDays(e.daysUntilDue, e.interval).has(i) ? 1 : 0), 0);
+    const reminderCount = reminders.filter((r) => r.daysUntilDue === i).length;
     return {
       offset: i,
       dayLabel: date.toLocaleDateString("en-US", { weekday: "short" }),
       dateNum: date.getDate(),
       monthLabel: date.toLocaleDateString("en-US", { month: "short" }),
-      count,
+      count: careCount + reminderCount,
     };
   });
 
   const weekTotal = days.reduce((s, d) => s + d.count, 0);
   const dayEntries = selectedDay !== null
     ? entries.filter((e) => getStripDays(e.daysUntilDue, e.interval).has(selectedDay))
+    : [];
+  const dayReminders = selectedDay !== null
+    ? reminders.filter((r) => r.daysUntilDue === selectedDay)
     : [];
 
   function dayHeading(offset: number, dayLabel: string, monthLabel: string, dateNum: number) {
@@ -330,22 +645,20 @@ function WeekStrip({ entries, onLogged }: { entries: CareEntry[]; onLogged: (pla
         })}
       </div>
 
-      {/* Expanded day panel */}
       {selectedDay !== null && (
         <div className="border-t pt-3 space-y-2">
           <p className="text-xs font-semibold text-muted-foreground">
             {dayHeading(selectedDay, days[selectedDay].dayLabel, days[selectedDay].monthLabel, days[selectedDay].dateNum)}
-            <span className="font-normal ml-1">· {dayEntries.length} task{dayEntries.length !== 1 ? "s" : ""}</span>
+            <span className="font-normal ml-1">· {dayEntries.length + dayReminders.length} task{dayEntries.length + dayReminders.length !== 1 ? "s" : ""}</span>
           </p>
-          {dayEntries.length > 0 ? (
+          {(dayEntries.length > 0 || dayReminders.length > 0) ? (
             <div className="space-y-1.5">
               {dayEntries.map((e, i) => (
-                <DayEntryRow
-                  key={`${e.plantId}-${e.careType}-${i}`}
-                  entry={e}
-                  dayOffset={selectedDay}
-                  onLogged={() => onLogged(e.plantId, e.careType)}
-                />
+                <DayEntryRow key={`${e.plantId}-${e.careType}-${i}`} entry={e} dayOffset={selectedDay}
+                  onLogged={() => onLogged(e.plantId, e.careType)} />
+              ))}
+              {dayReminders.map((r) => (
+                <DayReminderRow key={r.id} reminder={r} onCompleted={() => onReminderCompleted(r.id)} />
               ))}
             </div>
           ) : (
@@ -357,10 +670,11 @@ function WeekStrip({ entries, onLogged }: { entries: CareEntry[]; onLogged: (pla
   );
 }
 
-// ─── Care Card (Week Ahead) ───────────────────────────────────────────────────
+// ─── Care Card (Week Ahead sections) ─────────────────────────────────────────
 
-function CareCard({ entry, selectionMode, selected, onToggle, onEdit, onLogged }: {
+function CareCard({ entry, taskKey, selectionMode, selected, onToggle, onEdit, onLogged }: {
   entry: CareEntry;
+  taskKey: string;
   selectionMode: boolean;
   selected: boolean;
   onToggle: () => void;
@@ -371,7 +685,7 @@ function CareCard({ entry, selectionMode, selected, onToggle, onEdit, onLogged }
   const { label, color } = urgencyLabel(entry.daysUntilDue);
   return (
     <div className={cn("flex items-center gap-3 rounded-xl border bg-card px-4 py-3 transition-colors", selected && "border-leaf/50 bg-leaf/5")}>
-      {(selectionMode || selected) && <SelectCheckbox checked={selected} onToggle={onToggle} />}
+      {selectionMode && <SelectCheckbox checked={selected} onToggle={onToggle} />}
       <Link href={`/garden/${entry.plantId}`} className="shrink-0">
         {entry.image
           ? <Image src={entry.image} alt={entry.plantName} width={44} height={44} className="rounded-lg object-cover border w-11 h-11" />
@@ -397,26 +711,79 @@ function CareCard({ entry, selectionMode, selected, onToggle, onEdit, onLogged }
   );
 }
 
-function Section({ title, subtitle, entries, dotColor, selectionMode, selected, onToggle, onEdit, onLogged }: {
-  title: string; subtitle?: string; entries: CareEntry[]; dotColor: string;
-  selectionMode: boolean; selected: Set<string>;
-  onToggle: (plantId: string) => void; onEdit: (plantId: string) => void;
-  onLogged: (plantId: string, careType: string) => void;
+function ReminderCard({ reminder, selectionMode, selected, onToggle, onCompleted }: {
+  reminder: ReminderEntry;
+  selectionMode: boolean;
+  selected: boolean;
+  onToggle: () => void;
+  onCompleted: () => void;
 }) {
-  if (!entries.length) return null;
+  const meta = reminderMeta(reminder.eventType);
+  const displayType = reminderDisplayType(reminder.eventType);
+  const { label, color } = urgencyLabel(reminder.daysUntilDue);
+  return (
+    <div className={cn("flex items-center gap-3 rounded-xl border bg-card px-4 py-3 transition-colors", selected && "border-leaf/50 bg-leaf/5")}>
+      {selectionMode && <SelectCheckbox checked={selected} onToggle={onToggle} />}
+      {reminder.plantId ? (
+        <Link href={`/garden/${reminder.plantId}`} className="shrink-0">
+          {reminder.image
+            ? <Image src={reminder.image} alt={reminder.plantName ?? ""} width={44} height={44} className="rounded-lg object-cover border w-11 h-11" />
+            : <div className="w-11 h-11 rounded-lg bg-muted border flex items-center justify-center text-lg">🌿</div>
+          }
+        </Link>
+      ) : (
+        <div className="w-11 h-11 rounded-lg bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 flex items-center justify-center text-lg shrink-0">📝</div>
+      )}
+      <div className="flex-1 min-w-0">
+        <span className="text-sm font-medium truncate block">{reminder.plantName ?? "Garden note"}</span>
+        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+          <span className={cn("flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded-full border", meta.bg, meta.color, meta.border)}>
+            {meta.icon} {displayType}
+          </span>
+          <span className={cn("text-xs font-medium", color)}>{label}</span>
+          {reminder.notes && (
+            <span className="text-xs text-muted-foreground truncate max-w-[180px]">{reminder.notes}</span>
+          )}
+        </div>
+      </div>
+      <CompleteReminderButton reminderId={reminder.id} onCompleted={onCompleted} />
+    </div>
+  );
+}
+
+function Section({
+  title, subtitle, entries, reminders, dotColor,
+  selectionMode, selected, onToggle, onEdit, onLogged, onReminderCompleted,
+}: {
+  title: string; subtitle?: string; entries: CareEntry[]; reminders: ReminderEntry[]; dotColor: string;
+  selectionMode: boolean; selected: Set<string>;
+  onToggle: (key: string) => void; onEdit: (plantId: string) => void;
+  onLogged: (plantId: string, careType: string) => void;
+  onReminderCompleted: (id: string) => void;
+}) {
+  const total = entries.length + reminders.length;
+  if (!total) return null;
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
         <span className={cn("w-2 h-2 rounded-full shrink-0", dotColor)} />
         <h2 className="font-semibold text-sm">{title}</h2>
         {subtitle && <span className="text-xs text-muted-foreground">{subtitle}</span>}
-        <span className="text-xs text-muted-foreground ml-auto">({entries.length})</span>
+        <span className="text-xs text-muted-foreground ml-auto">({total})</span>
       </div>
       <div className="space-y-2">
-        {entries.map((e, i) => (
-          <CareCard key={`${e.plantId}-${e.careType}-${i}`} entry={e}
-            selectionMode={selectionMode} selected={selected.has(e.plantId)}
-            onToggle={() => onToggle(e.plantId)} onEdit={() => onEdit(e.plantId)} onLogged={onLogged} />
+        {entries.map((e, i) => {
+          const key = `${e.plantId}-${e.careType}`;
+          return (
+            <CareCard key={`${key}-${i}`} entry={e} taskKey={key}
+              selectionMode={selectionMode} selected={selected.has(key)}
+              onToggle={() => onToggle(key)} onEdit={() => onEdit(e.plantId)} onLogged={onLogged} />
+          );
+        })}
+        {reminders.map((r) => (
+          <ReminderCard key={r.id} reminder={r}
+            selectionMode={selectionMode} selected={selected.has(`reminder-${r.id}`)}
+            onToggle={() => onToggle(`reminder-${r.id}`)} onCompleted={() => onReminderCompleted(r.id)} />
         ))}
       </div>
     </div>
@@ -451,7 +818,7 @@ function ManagePlantRow({ plant, selectionMode, selected, onToggle, onEdit }: {
           <p className="text-xs text-muted-foreground mt-0.5">No schedule set</p>
         )}
       </div>
-      <button onClick={onEdit} className="text-muted-foreground hover:text-foreground transition-colors shrink-0 p-0.5" title="Edit intervals">
+      <button onClick={onEdit} className="text-muted-foreground hover:text-foreground transition-colors shrink-0 p-0.5" title="Edit schedule">
         <Pencil size={13} />
       </button>
     </div>
@@ -462,22 +829,30 @@ function ManagePlantRow({ plant, selectionMode, selected, onToggle, onEdit }: {
 
 export function CareScheduleClient({
   entries: initialEntries,
+  reminderEntries: initialReminders,
   plantsWithoutSchedule: _plantsWithoutSchedule,
   totalWithSchedule,
   plantIntervals,
 }: {
   entries: CareEntry[];
+  reminderEntries: ReminderEntry[];
   plantsWithoutSchedule: SimplePlant[];
   totalWithSchedule: number;
   plantIntervals: PlantWithIntervals[];
 }) {
   const router = useRouter();
   const [entries, setEntries] = useState(initialEntries);
+  const [reminders, setReminders] = useState(initialReminders);
   const [activeTab, setActiveTab] = useState<"week" | "manage">("week");
   const [selectionMode, setSelectionMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [editPlantIds, setEditPlantIds] = useState<string[] | null>(null);
+  const [showAddReminder, setShowAddReminder] = useState(false);
   const [bulkLogging, setBulkLogging] = useState(false);
+
+  // Manage tab filter/search
+  const [manageFilter, setManageFilter] = useState<"all" | "scheduled" | "notset">("all");
+  const [manageSearch, setManageSearch] = useState("");
 
   const intervalMap = Object.fromEntries(plantIntervals.map((p) => [p.id, p]));
   const editPlants = editPlantIds
@@ -488,7 +863,7 @@ export function CareScheduleClient({
   today.setHours(0, 0, 0, 0);
   const rangeLabel = (a: number, b: number) => `${fmtShort(addDays(today, a))} – ${fmtShort(addDays(today, b))}`;
 
-  // Week Ahead buckets
+  // Week Ahead buckets — care entries
   const overdue        = sortAsc(entries.filter((e) => e.daysUntilDue < 0));
   const dueToday       = entries.filter((e) => e.daysUntilDue === 0);
   const thisWeek       = sortAsc(entries.filter((e) => e.daysUntilDue >= 1  && e.daysUntilDue <= 7));
@@ -496,25 +871,53 @@ export function CareScheduleClient({
   const laterThisMonth = sortAsc(entries.filter((e) => e.daysUntilDue >= 15 && e.daysUntilDue <= 30));
   const furtherOut     = sortAsc(entries.filter((e) => e.daysUntilDue > 30));
 
-  // Manage tab — all plants sorted: scheduled first, then unscheduled
+  // Week Ahead buckets — reminders
+  const rOverdue        = sortRemindersAsc(reminders.filter((r) => r.daysUntilDue < 0));
+  const rDueToday       = reminders.filter((r) => r.daysUntilDue === 0);
+  const rThisWeek       = sortRemindersAsc(reminders.filter((r) => r.daysUntilDue >= 1  && r.daysUntilDue <= 7));
+  const rNextWeek       = sortRemindersAsc(reminders.filter((r) => r.daysUntilDue >= 8  && r.daysUntilDue <= 14));
+  const rLaterThisMonth = sortRemindersAsc(reminders.filter((r) => r.daysUntilDue >= 15 && r.daysUntilDue <= 30));
+  const rFurtherOut     = sortRemindersAsc(reminders.filter((r) => r.daysUntilDue > 30));
+
+  // Manage tab — sorted and filtered
+  const scheduledCount   = plantIntervals.filter((p) => p.waterInterval || p.fertilizeInterval || p.repotInterval || p.pruneInterval).length;
+  const unscheduledCount = plantIntervals.length - scheduledCount;
+
   const sortedPlants = [...plantIntervals].sort((a, b) => {
     const aHas = !!(a.waterInterval || a.fertilizeInterval || a.repotInterval || a.pruneInterval);
     const bHas = !!(b.waterInterval || b.fertilizeInterval || b.repotInterval || b.pruneInterval);
     if (aHas !== bHas) return aHas ? -1 : 1;
     return a.name.localeCompare(b.name);
   });
-  const scheduledCount   = sortedPlants.filter((p) => p.waterInterval || p.fertilizeInterval || p.repotInterval || p.pruneInterval).length;
-  const unscheduledCount = sortedPlants.length - scheduledCount;
+
+  const filteredPlants = sortedPlants.filter((p) => {
+    const hasSchedule = !!(p.waterInterval || p.fertilizeInterval || p.repotInterval || p.pruneInterval);
+    if (manageFilter === "scheduled" && !hasSchedule) return false;
+    if (manageFilter === "notset" && hasSchedule) return false;
+    if (manageSearch.trim()) {
+      return p.name.toLowerCase().includes(manageSearch.trim().toLowerCase());
+    }
+    return true;
+  });
 
   function handleLogged(plantId: string, careType: string) {
     setEntries((prev) => prev.filter((e) => !(e.plantId === plantId && e.careType === careType)));
     router.refresh();
   }
 
-  function toggleSelect(plantId: string) {
+  function handleReminderCompleted(id: string) {
+    setReminders((prev) => prev.filter((r) => r.id !== id));
+  }
+
+  function handleReminderAdded(reminder: ReminderEntry) {
+    setReminders((prev) => [...prev, reminder].sort((a, b) => a.daysUntilDue - b.daysUntilDue));
+    setEditPlantIds(null);
+  }
+
+  function toggleSelect(key: string) {
     setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(plantId)) next.delete(plantId); else next.add(plantId);
+      if (next.has(key)) next.delete(key); else next.add(key);
       return next;
     });
   }
@@ -531,25 +934,49 @@ export function CareScheduleClient({
   }
 
   async function handleBulkLog() {
+    // Separate care tasks from reminders in selection
+    const careKeys = [...selected].filter((k) => !k.startsWith("reminder-"));
+    const reminderIds = [...selected].filter((k) => k.startsWith("reminder-")).map((k) => k.replace("reminder-", ""));
+
     const toLog = entries
-      .filter((e) => selected.has(e.plantId))
+      .filter((e) => careKeys.includes(`${e.plantId}-${e.careType}`))
       .map((e) => ({ plantId: e.plantId, careType: e.careType }));
-    if (toLog.length === 0) { toast.info("No care tasks found for selected plants"); return; }
-    setBulkLogging(true);
-    const res = await fetch("/api/garden/bulk-log-care", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: toLog }),
-    });
-    setBulkLogging(false);
-    if (res.ok) {
-      const { logged } = await res.json() as { logged: number };
-      toast.success(`Logged ${logged} care task${logged !== 1 ? "s" : ""}`);
-      const loggedKeys = new Set(toLog.map((i) => `${i.plantId}-${i.careType}`));
-      setEntries((prev) => prev.filter((e) => !loggedKeys.has(`${e.plantId}-${e.careType}`)));
+
+    let totalLogged = 0;
+
+    if (toLog.length > 0) {
+      setBulkLogging(true);
+      const res = await fetch("/api/garden/bulk-log-care", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: toLog }),
+      });
+      setBulkLogging(false);
+      if (res.ok) {
+        const { logged } = await res.json() as { logged: number };
+        totalLogged += logged;
+        const loggedKeys = new Set(toLog.map((i) => `${i.plantId}-${i.careType}`));
+        setEntries((prev) => prev.filter((e) => !loggedKeys.has(`${e.plantId}-${e.careType}`)));
+      } else { toast.error("Failed to log care"); return; }
+    }
+
+    for (const id of reminderIds) {
+      const res = await fetch(`/api/garden/reminders/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ completed: true }),
+      });
+      if (res.ok) {
+        totalLogged++;
+        setReminders((prev) => prev.filter((r) => r.id !== id));
+      }
+    }
+
+    if (totalLogged > 0) {
+      toast.success(`Logged ${totalLogged} task${totalLogged !== 1 ? "s" : ""}`);
       exitSelectionMode();
       router.refresh();
-    } else { toast.error("Failed to log care"); }
+    }
   }
 
   function handleSaved() {
@@ -559,13 +986,16 @@ export function CareScheduleClient({
   }
 
   const sharedSectionProps = {
-    selectionMode, selected,
+    selectionMode,
+    selected,
     onToggle: toggleSelect,
     onEdit: (id: string) => setEditPlantIds([id]),
     onLogged: handleLogged,
+    onReminderCompleted: handleReminderCompleted,
   };
 
   const hasAnyPlants = plantIntervals.length > 0;
+  const hasWeekContent = totalWithSchedule > 0 || reminders.length > 0;
 
   return (
     <>
@@ -592,11 +1022,38 @@ export function CareScheduleClient({
         {/* ── WEEK AHEAD TAB ── */}
         {activeTab === "week" && (
           <div className="space-y-8">
-            {totalWithSchedule > 0 && (
-              <WeekStrip entries={entries} onLogged={handleLogged} />
+            {/* Week Ahead header row */}
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                {hasAnyPlants && (
+                  <Button
+                    variant="outline" size="sm"
+                    onClick={() => selectionMode ? exitSelectionMode() : setSelectionMode(true)}
+                  >
+                    {selectionMode ? "Done" : "Select tasks"}
+                  </Button>
+                )}
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowAddReminder(true)}
+                className="flex items-center gap-1.5"
+              >
+                <Plus size={13} /> Add reminder
+              </Button>
+            </div>
+
+            {hasWeekContent && (
+              <WeekStrip
+                entries={entries}
+                reminders={reminders}
+                onLogged={handleLogged}
+                onReminderCompleted={handleReminderCompleted}
+              />
             )}
 
-            {totalWithSchedule === 0 && hasAnyPlants && (
+            {totalWithSchedule === 0 && !reminders.length && hasAnyPlants && (
               <div className="rounded-xl border bg-muted/30 px-5 py-6 space-y-1.5">
                 <p className="font-semibold text-sm">No care schedules set up yet</p>
                 <p className="text-sm text-muted-foreground">
@@ -609,14 +1066,14 @@ export function CareScheduleClient({
               </div>
             )}
 
-            <Section title="Overdue"    dotColor="bg-red-500"          entries={overdue}        {...sharedSectionProps} />
-            <Section title="Due Today"  dotColor="bg-amber-500"        entries={dueToday}       {...sharedSectionProps} />
-            <Section title="This Week"  dotColor="bg-leaf"             entries={thisWeek}       subtitle={rangeLabel(1, 7)}   {...sharedSectionProps} />
-            <Section title="Next Week"  dotColor="bg-teal-500"         entries={nextWeek}       subtitle={rangeLabel(8, 14)}  {...sharedSectionProps} />
-            <Section title="This Month" dotColor="bg-violet-400"       entries={laterThisMonth} subtitle={rangeLabel(15, 30)} {...sharedSectionProps} />
-            <Section title="Further Out" dotColor="bg-muted-foreground" entries={furtherOut}     subtitle={`after ${fmtShort(addDays(today, 30))}`} {...sharedSectionProps} />
+            <Section title="Overdue"     dotColor="bg-red-500"          entries={overdue}        reminders={rOverdue}        {...sharedSectionProps} />
+            <Section title="Due Today"   dotColor="bg-amber-500"        entries={dueToday}       reminders={rDueToday}       {...sharedSectionProps} />
+            <Section title="This Week"   dotColor="bg-leaf"             entries={thisWeek}       reminders={rThisWeek}       subtitle={rangeLabel(1, 7)}   {...sharedSectionProps} />
+            <Section title="Next Week"   dotColor="bg-teal-500"         entries={nextWeek}       reminders={rNextWeek}       subtitle={rangeLabel(8, 14)}  {...sharedSectionProps} />
+            <Section title="This Month"  dotColor="bg-violet-400"       entries={laterThisMonth} reminders={rLaterThisMonth} subtitle={rangeLabel(15, 30)} {...sharedSectionProps} />
+            <Section title="Further Out" dotColor="bg-muted-foreground" entries={furtherOut}     reminders={rFurtherOut}     subtitle={`after ${fmtShort(addDays(today, 30))}`} {...sharedSectionProps} />
 
-            {!hasAnyPlants && (
+            {!hasAnyPlants && !reminders.length && (
               <div className="text-center py-20 border rounded-xl bg-muted/30">
                 <p className="text-4xl mb-3">🌱</p>
                 <p className="font-semibold mb-1">No plants yet</p>
@@ -631,7 +1088,7 @@ export function CareScheduleClient({
 
         {/* ── MANAGE SCHEDULES TAB ── */}
         {activeTab === "manage" && (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {!hasAnyPlants ? (
               <div className="text-center py-20 border rounded-xl bg-muted/30">
                 <p className="text-4xl mb-3">🌱</p>
@@ -643,47 +1100,78 @@ export function CareScheduleClient({
               </div>
             ) : (
               <>
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-muted-foreground">
-                    {scheduledCount} scheduled · {unscheduledCount} not set up
-                  </p>
+                {/* Search */}
+                <div className="relative">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                  <Input
+                    value={manageSearch}
+                    onChange={(e) => setManageSearch(e.target.value)}
+                    placeholder="Search plants…"
+                    className="pl-8 h-9 text-sm"
+                  />
+                  {manageSearch && (
+                    <button onClick={() => setManageSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                      <X size={13} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Filter tabs + actions */}
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div className="flex gap-1 p-0.5 bg-muted/50 rounded-md">
+                    {(["all", "scheduled", "notset"] as const).map((f) => {
+                      const labels = { all: `All (${plantIntervals.length})`, scheduled: `Scheduled (${scheduledCount})`, notset: `Not set (${unscheduledCount})` };
+                      return (
+                        <button key={f} onClick={() => setManageFilter(f)}
+                          className={cn("px-3 py-1 rounded text-xs font-medium transition-colors",
+                            manageFilter === f ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                          )}>
+                          {labels[f]}
+                        </button>
+                      );
+                    })}
+                  </div>
                   <Button variant="outline" size="sm" onClick={() => selectionMode ? exitSelectionMode() : setSelectionMode(true)}>
                     {selectionMode ? "Done" : "Select plants"}
                   </Button>
                 </div>
 
-                <div className="space-y-2">
-                  {sortedPlants.map((plant) => (
-                    <ManagePlantRow
-                      key={plant.id}
-                      plant={plant}
-                      selectionMode={selectionMode}
-                      selected={selected.has(plant.id)}
-                      onToggle={() => toggleSelect(plant.id)}
-                      onEdit={() => setEditPlantIds([plant.id])}
-                    />
-                  ))}
-                </div>
+                {filteredPlants.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">No plants match your filter.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {filteredPlants.map((plant) => (
+                      <ManagePlantRow
+                        key={plant.id}
+                        plant={plant}
+                        selectionMode={selectionMode}
+                        selected={selected.has(plant.id)}
+                        onToggle={() => toggleSelect(plant.id)}
+                        onEdit={() => setEditPlantIds([plant.id])}
+                      />
+                    ))}
+                  </div>
+                )}
               </>
             )}
           </div>
         )}
       </div>
 
-      {/* Bulk action bar — always visible in selection mode */}
+      {/* Bulk action bar */}
       {selectionMode && (
         <div className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background/95 backdrop-blur-sm shadow-lg px-4 py-3 flex items-center justify-between gap-3">
           <p className="text-sm font-medium text-muted-foreground">
-            {selected.size > 0 ? `${selected.size} plant${selected.size !== 1 ? "s" : ""} selected` : "Select plants"}
+            {selected.size > 0 ? `${selected.size} selected` : "Select items"}
           </p>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={exitSelectionMode}>Cancel</Button>
             {activeTab === "week" && selected.size > 0 && (
               <Button size="sm" variant="outline" onClick={handleBulkLog} disabled={bulkLogging}>
-                {bulkLogging ? "Logging…" : "Log care"}
+                {bulkLogging ? "Logging…" : "Log selected"}
               </Button>
             )}
-            {selected.size > 0 && (
+            {activeTab === "manage" && selected.size > 0 && (
               <Button size="sm" className="bg-leaf hover:bg-forest text-white" onClick={() => setEditPlantIds([...selected])}>
                 Update intervals
               </Button>
@@ -692,9 +1180,22 @@ export function CareScheduleClient({
         </div>
       )}
 
-      {/* Intervals modal */}
+      {/* Intervals + one-time modal */}
       <Dialog open={editPlantIds !== null} onOpenChange={(open: boolean) => { if (!open) setEditPlantIds(null); }}>
-        {editPlants.length > 0 && <IntervalsModal plants={editPlants} onSaved={handleSaved} />}
+        {editPlants.length > 0 && (
+          <IntervalsModal plants={editPlants} onSaved={handleSaved} onReminderAdded={handleReminderAdded} />
+        )}
+      </Dialog>
+
+      {/* Standalone add-reminder modal */}
+      <Dialog open={showAddReminder} onOpenChange={(open: boolean) => { if (!open) setShowAddReminder(false); }}>
+        {showAddReminder && (
+          <AddReminderModal
+            plants={plantIntervals}
+            onAdded={(r) => { handleReminderAdded(r); setShowAddReminder(false); }}
+            onClose={() => setShowAddReminder(false)}
+          />
+        )}
       </Dialog>
     </>
   );

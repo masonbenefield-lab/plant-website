@@ -1250,6 +1250,40 @@ export interface Database {
         Relationships: [];
       };
 
+      care_reminders: {
+        Row: {
+          id: string;
+          user_id: string;
+          plant_id: string | null;
+          event_type: string;
+          scheduled_date: string;
+          notes: string | null;
+          completed: boolean;
+          completed_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          plant_id?: string | null;
+          event_type: string;
+          scheduled_date: string;
+          notes?: string | null;
+          completed?: boolean;
+          completed_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          plant_id?: string | null;
+          event_type?: string;
+          scheduled_date?: string;
+          notes?: string | null;
+          completed?: boolean;
+          completed_at?: string | null;
+        };
+        Relationships: [];
+      };
+
       listing_templates: {
         Row: {
           id: string;
