@@ -451,13 +451,27 @@ export default function AuctionBidPanel({
         </CardContent>
       </Card>
 
-      {isWinner && (existingOrderStatus || orderConfirmed) && (
+      {isWinner && (existingOrderStatus === "paid" || orderConfirmed) && (
         <a
           href="/orders"
           className={cn(buttonVariants({ size: "lg" }), "w-full bg-leaf hover:bg-forest")}
         >
           Order confirmed — View Order →
         </a>
+      )}
+      {isWinner && existingOrderStatus === "pending" && (
+        <div className="space-y-2">
+          <div className="rounded-lg border border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800 px-4 py-3 text-center">
+            <p className="font-semibold text-red-700 dark:text-red-400 text-sm">Payment failed</p>
+            <p className="text-xs text-muted-foreground mt-1">Your saved card could not be charged. Please complete your purchase before the deadline.</p>
+          </div>
+          <a
+            href={`/checkout?auction=${auction.id}`}
+            className={cn(buttonVariants({ size: "lg" }), "w-full bg-leaf hover:bg-forest")}
+          >
+            Complete Purchase →
+          </a>
+        </div>
       )}
       {isWinner && !existingOrderStatus && !orderConfirmed && buyerHasPaymentMethod && (
         <div className="rounded-lg border border-leaf/40 bg-[#EBF0E6] dark:bg-forest/20 px-4 py-3 text-center">
