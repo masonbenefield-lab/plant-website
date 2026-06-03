@@ -41,6 +41,7 @@ export default function OrderStatusSelect({
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [pendingStatus, setPendingStatus] = useState<OrderStatus | null>(null);
+  const [selectValue, setSelectValue] = useState("");
   const [confirming, setConfirming] = useState(false);
 
   async function commitStatus(status: OrderStatus) {
@@ -53,6 +54,7 @@ export default function OrderStatusSelect({
     const data = await res.json();
     setConfirming(false);
     setPendingStatus(null);
+    setSelectValue("");
     if (!res.ok) toast.error(data.error ?? "Failed to update order");
     else {
       toast.success("Order updated");
@@ -62,6 +64,7 @@ export default function OrderStatusSelect({
 
   function handleChange(value: string | null) {
     if (!value) return;
+    setSelectValue(value);
     setPendingStatus(value as OrderStatus);
   }
 
@@ -82,7 +85,7 @@ export default function OrderStatusSelect({
   return (
     <>
       <select
-        defaultValue=""
+        value={selectValue}
         onChange={(e) => handleChange(e.target.value || null)}
         className="h-8 w-36 rounded-lg border border-input bg-white px-2 text-xs text-gray-900 outline-none focus:ring-2 focus:ring-ring/50 cursor-pointer dark:bg-gray-800 dark:text-gray-100"
       >
@@ -92,7 +95,7 @@ export default function OrderStatusSelect({
         ))}
       </select>
 
-      <Dialog open={!!pendingStatus} onOpenChange={(open) => { if (!open) setPendingStatus(null); }}>
+      <Dialog open={!!pendingStatus} onOpenChange={(open) => { if (!open) { setPendingStatus(null); setSelectValue(""); } }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>{confirmMsg?.title}</DialogTitle>
