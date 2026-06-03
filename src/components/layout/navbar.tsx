@@ -27,10 +27,11 @@ interface NavbarProps {
   unreadMessages?: number;
   pendingReports?: number;
   pendingSalesOrders?: number;
+  pendingBuyerPayments?: number;
   actionableDisputeCount?: number;
 }
 
-export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessages = 0, pendingReports = 0, pendingSalesOrders = 0, actionableDisputeCount = 0 }: NavbarProps) {
+export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessages = 0, pendingReports = 0, pendingSalesOrders = 0, pendingBuyerPayments = 0, actionableDisputeCount = 0 }: NavbarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const headerRef = useRef<HTMLElement>(null);
@@ -171,9 +172,9 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
                 <NavIcon href="/wishlist" label="Saved"><Heart size={15} /></NavIcon>
                 <Link href="/orders" className="relative flex flex-col items-center gap-0.5 px-1.5 py-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
                   <Package size={15} />
-                  {pendingSalesOrders > 0 && (
+                  {(pendingSalesOrders + pendingBuyerPayments) > 0 && (
                     <span className="absolute top-0.5 right-0.5 w-3.5 h-3.5 rounded-full bg-leaf text-white text-[9px] font-bold flex items-center justify-center">
-                      {pendingSalesOrders > 9 ? "9+" : pendingSalesOrders}
+                      {(pendingSalesOrders + pendingBuyerPayments) > 9 ? "9+" : (pendingSalesOrders + pendingBuyerPayments)}
                     </span>
                   )}
                   {actionableDisputeCount > 0 && (
