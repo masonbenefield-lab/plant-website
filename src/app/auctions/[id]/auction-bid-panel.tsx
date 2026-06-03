@@ -459,7 +459,13 @@ export default function AuctionBidPanel({
           Order confirmed — View Order →
         </a>
       )}
-      {isWinner && !existingOrderStatus && !orderConfirmed && (
+      {isWinner && !existingOrderStatus && !orderConfirmed && buyerHasPaymentMethod && (
+        <div className="rounded-lg border border-leaf/40 bg-[#EBF0E6] dark:bg-forest/20 px-4 py-3 text-center">
+          <p className="font-semibold text-leaf text-sm">🎉 You won!</p>
+          <p className="text-xs text-muted-foreground mt-1">Your saved card will be charged automatically — you&apos;ll receive a confirmation email shortly.</p>
+        </div>
+      )}
+      {isWinner && !existingOrderStatus && !orderConfirmed && !buyerHasPaymentMethod && (
         <a
           href={`/checkout?auction=${auction.id}`}
           className={cn(buttonVariants({ size: "lg" }), "w-full bg-leaf hover:bg-forest")}

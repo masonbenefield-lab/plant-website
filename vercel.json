@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/auctions/close",
-      "schedule": "*/15 * * * *"
+      "schedule": "* * * * *"
     },
     {
       "path": "/api/cron/cleanup-listings",
