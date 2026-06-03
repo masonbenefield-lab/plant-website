@@ -16,6 +16,7 @@ import NewAuctionDialog from "./new-auction-dialog";
 import { LocalDate } from "@/components/local-date";
 import type { Database } from "@/lib/supabase/types";
 import { AuctionRealtimeRefresh } from "./auction-realtime-refresh";
+import { ActiveBidsList } from "./active-bids-list";
 
 const PAGE_SIZE = 25;
 
@@ -323,64 +324,11 @@ export default async function DashboardAuctionsPage({
 
       {/* ── Active Bids ───────────────────────────────────────────────────── */}
       {tab === "active-bids" && (
-        <>
-          {activeBidAuctions.length === 0 ? (
-            <div className="flex flex-col items-center justify-center text-center py-16 px-4 rounded-lg border border-dashed">
-              <div className="text-4xl mb-3">🏷️</div>
-              <h2 className="text-lg font-semibold mb-1">No active bids</h2>
-              <p className="text-sm text-muted-foreground max-w-sm mb-5">
-                You aren&apos;t currently bidding on any live auctions. Browse the auction house to find something you like.
-              </p>
-              <Link
-                href="/auctions"
-                className="inline-flex items-center justify-center rounded-md bg-leaf hover:bg-forest text-white px-4 py-2 text-sm font-medium transition-colors"
-              >
-                Browse Auctions →
-              </Link>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {activeBidAuctions.map((a) => {
-                const isWinning = a.current_bidder_id === user.id;
-                const myBid = highBidMap[a.id];
-                const img = a.images?.[0];
-                return (
-                  <Link key={a.id} href={`/auctions/${a.id}`}>
-                    <Card className="hover:shadow-md transition-shadow">
-                      <CardContent className="p-4 flex items-center gap-4">
-                        <div className="w-14 h-14 rounded-lg bg-muted overflow-hidden shrink-0 relative">
-                          {img ? (
-                            <Image src={img} alt={a.plant_name} fill className="object-cover" sizes="56px" />
-                          ) : (
-                            <div className="flex items-center justify-center h-full text-xl">🌿</div>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold truncate">
-                            {a.plant_name}{a.variety ? ` ${a.variety}` : ""}
-                          </p>
-                          <div className="flex items-center gap-2 mt-1 flex-wrap text-sm text-muted-foreground">
-                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${isWinning ? "bg-[#DFE7D4] text-leaf dark:bg-forest/40 dark:text-sage" : "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400"}`}>
-                              {isWinning ? "Winning" : "Outbid"}
-                            </span>
-                            <span>Your bid: <span className="font-medium text-foreground">{centsToDisplay(myBid)}</span></span>
-                            {!isWinning && (
-                              <span>Current: <span className="font-medium text-leaf">{centsToDisplay(a.current_bid_cents)}</span></span>
-                            )}
-                            <span>Ends: <LocalDate iso={a.ends_at} /></span>
-                          </div>
-                        </div>
-                        <span className="shrink-0 text-sm font-semibold text-leaf underline underline-offset-2">
-                          {isWinning ? "View →" : "Bid again →"}
-                        </span>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
-        </>
+        <ActiveBidsList
+          initialAuctions={activeBidAuctions}
+          highBidMap={highBidMap}
+          userId={user.id}
+        />
       )}
 
       {/* ── Bid History ───────────────────────────────────────────────────── */}
