@@ -73,7 +73,7 @@ export async function getShippingRates(params: {
       zip: from.zip,
       country: from.country,
       phone: from.phone ?? "",
-      email: from.email ?? "",
+      email: from.email || "noreply@plantet.shop",
       isResidential: false,
     },
     addressTo: {
