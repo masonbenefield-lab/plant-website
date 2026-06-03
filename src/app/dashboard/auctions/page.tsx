@@ -236,7 +236,7 @@ export default async function DashboardAuctionsPage({
                           {(auction as { free_shipping?: boolean | null }).free_shipping
                             ? "Free shipping"
                             : (auction as { shipping_weight_oz?: number | null }).shipping_weight_oz
-                              ? "Weight-based shipping"
+                              ? `Weight-based (${(auction as { shipping_weight_oz: number }).shipping_weight_oz} oz)`
                               : (auction as { shipping_cost_cents?: number | null }).shipping_cost_cents
                                 ? `Shipping: ${centsToDisplay((auction as { shipping_cost_cents: number }).shipping_cost_cents)}`
                                 : "Shipping: not set"}
