@@ -45,9 +45,9 @@ export type PlantWithIntervals = {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const CARE_META: Record<string, { icon: React.ReactNode; color: string; bg: string; border: string }> = {
-  Water:     { icon: <Droplets size={13} />, color: "text-blue-700 dark:text-blue-400",     bg: "bg-blue-100 dark:bg-blue-900/30",    border: "border-blue-200 dark:border-blue-800"   },
-  Fertilize: { icon: <Leaf size={13} />,     color: "text-leaf",                            bg: "bg-[#DFE7D4] dark:bg-forest/30",     border: "border-[#C5D4BC] dark:border-forest"    },
-  Repot:     { icon: <Flower2 size={13} />,  color: "text-amber-700 dark:text-amber-400",   bg: "bg-amber-100 dark:bg-amber-900/30",  border: "border-amber-200 dark:border-amber-800" },
+  Water:     { icon: <Droplets size={13} />, color: "text-blue-700 dark:text-blue-400",     bg: "bg-blue-100 dark:bg-blue-900/30",     border: "border-blue-200 dark:border-blue-800"    },
+  Fertilize: { icon: <Leaf size={13} />,     color: "text-leaf",                            bg: "bg-[#DFE7D4] dark:bg-forest/30",      border: "border-[#C5D4BC] dark:border-forest"     },
+  Repot:     { icon: <Flower2 size={13} />,  color: "text-amber-700 dark:text-amber-400",   bg: "bg-amber-100 dark:bg-amber-900/30",   border: "border-amber-200 dark:border-amber-800"  },
   Prune:     { icon: <Scissors size={13} />, color: "text-purple-700 dark:text-purple-400", bg: "bg-purple-100 dark:bg-purple-900/30", border: "border-purple-200 dark:border-purple-800" },
 };
 
@@ -58,12 +58,27 @@ const INTERVAL_FIELDS = [
   { key: "pruneInterval",     emoji: "✂️", label: "Prune every"     },
 ] as const;
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Date helpers ─────────────────────────────────────────────────────────────
+
+function addDays(d: Date, n: number): Date {
+  return new Date(d.getTime() + n * 86400000);
+}
+
+function fmtShort(d: Date): string {
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+// ─── Misc helpers ─────────────────────────────────────────────────────────────
 
 function urgencyLabel(days: number): { label: string; color: string } {
-  if (days < 0) return { label: `${Math.abs(days)}d overdue`, color: "text-red-600 dark:text-red-400" };
-  if (days === 0) return { label: "Due today", color: "text-amber-600 dark:text-amber-400" };
+  if (days < 0)  return { label: `${Math.abs(days)}d overdue`, color: "text-red-600 dark:text-red-400" };
+  if (days === 0) return { label: "Due today",                  color: "text-amber-600 dark:text-amber-400" };
+  if (days === 1) return { label: "Tomorrow",                   color: "text-leaf" };
   return { label: `In ${days}d`, color: "text-leaf" };
+}
+
+function sortAsc(entries: CareEntry[]): CareEntry[] {
+  return [...entries].sort((a, b) => a.daysUntilDue - b.daysUntilDue);
 }
 
 function getFieldMeta(values: (number | null)[]): { defaultValue: string; placeholder: string } {
@@ -76,6 +91,70 @@ function getFieldMeta(values: (number | null)[]): { defaultValue: string; placeh
   const parts = unique.map((v) => `${v}d`);
   if (nonNull.length < values.length) parts.push("not set");
   return { defaultValue: "", placeholder: `Currently: ${parts.join(", ")}` };
+}
+
+// ─── Week Strip ───────────────────────────────────────────────────────────────
+
+function WeekStrip({ entries }: { entries: CareEntry[] }) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const date = addDays(today, i);
+    const count = entries.filter((e) => e.daysUntilDue === i).length;
+    return {
+      offset: i,
+      dayLabel: date.toLocaleDateString("en-US", { weekday: "short" }),
+      dateNum: date.getDate(),
+      monthLabel: date.toLocaleDateString("en-US", { month: "short" }),
+      count,
+    };
+  });
+
+  const urgentCount = days[0].count; // today
+  const weekTotal   = days.reduce((s, d) => s + d.count, 0);
+
+  return (
+    <div className="rounded-xl border bg-card p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-semibold">Week ahead</p>
+        {weekTotal === 0 ? (
+          <span className="text-xs text-leaf font-medium">All clear this week ✓</span>
+        ) : (
+          <span className="text-xs text-muted-foreground">{weekTotal} task{weekTotal !== 1 ? "s" : ""}</span>
+        )}
+      </div>
+      <div className="grid grid-cols-7 gap-1">
+        {days.map(({ offset, dayLabel, dateNum, monthLabel, count }) => {
+          const isToday = offset === 0;
+          return (
+            <div
+              key={offset}
+              className={cn(
+                "flex flex-col items-center gap-1 rounded-lg py-2 px-0.5",
+                isToday && "bg-muted/60"
+              )}
+            >
+              <span className={cn("text-[10px] font-medium", isToday ? "text-foreground" : "text-muted-foreground")}>
+                {dayLabel}
+              </span>
+              <span className="text-[11px] text-muted-foreground">{monthLabel} {dateNum}</span>
+              {count > 0 ? (
+                <span className={cn(
+                  "text-[11px] font-bold w-6 h-6 rounded-full flex items-center justify-center",
+                  isToday && urgentCount > 0 ? "bg-amber-500 text-white" : "bg-leaf text-white"
+                )}>
+                  {count}
+                </span>
+              ) : (
+                <span className="text-[11px] text-muted-foreground/30 leading-6">—</span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 // ─── Intervals Modal ──────────────────────────────────────────────────────────
@@ -113,12 +192,10 @@ function IntervalsModal({
         if (!isNaN(n) && n >= 1) body[key] = n;
       }
     }
-
     if (Object.keys(body).length === 1) {
       toast.info("No intervals entered");
       return;
     }
-
     setSaving(true);
     const res = await fetch("/api/garden/update-intervals", {
       method: "PATCH",
@@ -126,7 +203,6 @@ function IntervalsModal({
       body: JSON.stringify(body),
     });
     setSaving(false);
-
     if (res.ok) {
       toast.success(isBulk ? `Intervals updated for ${plants.length} plants` : "Intervals updated");
       onSaved();
@@ -298,8 +374,9 @@ function CareCard({
 
 function Section({
   title,
+  subtitle,
   entries,
-  color,
+  dotColor,
   selectionMode,
   selected,
   onToggle,
@@ -307,8 +384,9 @@ function Section({
   onLogged,
 }: {
   title: string;
+  subtitle?: string;
   entries: CareEntry[];
-  color: string;
+  dotColor: string;
   selectionMode: boolean;
   selected: Set<string>;
   onToggle: (plantId: string) => void;
@@ -319,9 +397,10 @@ function Section({
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
-        <span className={cn("w-2 h-2 rounded-full shrink-0", color)} />
+        <span className={cn("w-2 h-2 rounded-full shrink-0", dotColor)} />
         <h2 className="font-semibold text-sm">{title}</h2>
-        <span className="text-xs text-muted-foreground">({entries.length})</span>
+        {subtitle && <span className="text-xs text-muted-foreground">{subtitle}</span>}
+        <span className="text-xs text-muted-foreground ml-auto">({entries.length})</span>
       </div>
       <div className="space-y-2">
         {entries.map((e, i) => (
@@ -409,6 +488,22 @@ export function CareScheduleClient({
     ? (editPlantIds.map((id) => intervalMap[id]).filter(Boolean) as PlantWithIntervals[])
     : [];
 
+  // Date range labels
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const rangeLabel = (a: number, b: number) =>
+    `${fmtShort(addDays(today, a))} – ${fmtShort(addDays(today, b))}`;
+
+  // Entry buckets
+  const overdue          = sortAsc(entries.filter((e) => e.daysUntilDue < 0));
+  const dueToday         = entries.filter((e) => e.daysUntilDue === 0);
+  const thisWeek         = sortAsc(entries.filter((e) => e.daysUntilDue >= 1  && e.daysUntilDue <= 7));
+  const nextWeek         = sortAsc(entries.filter((e) => e.daysUntilDue >= 8  && e.daysUntilDue <= 14));
+  const laterThisMonth   = sortAsc(entries.filter((e) => e.daysUntilDue >= 15 && e.daysUntilDue <= 30));
+  const furtherOut       = sortAsc(entries.filter((e) => e.daysUntilDue > 30));
+
+  const hasAnyPlants = totalWithSchedule > 0 || plantsWithoutSchedule.length > 0;
+
   function handleLogged(plantId: string, careType: string) {
     setEntries((prev) => prev.filter((e) => !(e.plantId === plantId && e.careType === careType)));
     router.refresh();
@@ -434,14 +529,13 @@ export function CareScheduleClient({
     router.refresh();
   }
 
-  const overdue    = entries.filter((e) => e.daysUntilDue < 0).sort((a, b) => a.daysUntilDue - b.daysUntilDue);
-  const dueToday   = entries.filter((e) => e.daysUntilDue === 0);
-  const upcoming   = entries.filter((e) => e.daysUntilDue > 0 && e.daysUntilDue <= 7).sort((a, b) => a.daysUntilDue - b.daysUntilDue);
-  const onSchedule = entries.filter((e) => e.daysUntilDue > 7).sort((a, b) => a.daysUntilDue - b.daysUntilDue);
-  const allClear   = overdue.length === 0 && dueToday.length === 0 && upcoming.length === 0;
-  const hasAnyPlants = totalWithSchedule > 0 || plantsWithoutSchedule.length > 0;
-
-  const sharedSectionProps = { selectionMode, selected, onToggle: toggleSelect, onEdit: (id: string) => setEditPlantIds([id]), onLogged: handleLogged };
+  const sharedSectionProps = {
+    selectionMode,
+    selected,
+    onToggle: toggleSelect,
+    onEdit: (id: string) => setEditPlantIds([id]),
+    onLogged: handleLogged,
+  };
 
   return (
     <>
@@ -460,41 +554,73 @@ export function CareScheduleClient({
           </div>
         )}
 
+        {/* Week strip — always shown when plants have schedules */}
+        {totalWithSchedule > 0 && (
+          <WeekStrip entries={entries} />
+        )}
+
         {/* No schedules at all — prompt */}
         {totalWithSchedule === 0 && plantsWithoutSchedule.length > 0 && (
           <div className="rounded-xl border bg-muted/30 px-5 py-6 space-y-1.5">
             <p className="font-semibold text-sm">Set up care schedules</p>
             <p className="text-sm text-muted-foreground">
-              Select plants below and click <span className="font-medium text-foreground">Update intervals</span> to set watering, fertilizing, repotting, or pruning schedules — or click <span className="font-medium text-foreground">Set up</span> on any plant individually.
+              Select plants below and click{" "}
+              <span className="font-medium text-foreground">Update intervals</span> to set watering,
+              fertilizing, repotting, or pruning schedules — or click{" "}
+              <span className="font-medium text-foreground">Set up</span> on any plant individually.
             </p>
           </div>
         )}
 
-        {/* All clear banner */}
-        {allClear && totalWithSchedule > 0 && (
-          <div className="flex items-center gap-3 rounded-xl border bg-[#EBF0E6] dark:bg-forest/20 border-[#C5D4BC] dark:border-forest px-5 py-4">
-            <span className="text-2xl">✅</span>
-            <div>
-              <p className="font-semibold text-forest dark:text-sage text-sm">All caught up!</p>
-              <p className="text-xs text-forest/70 dark:text-sage/70 mt-0.5">Nothing is due or overdue right now.</p>
-            </div>
-          </div>
-        )}
+        {/* Overdue */}
+        <Section title="Overdue" dotColor="bg-red-500" entries={overdue} {...sharedSectionProps} />
 
-        <Section title="Overdue"                entries={overdue}    color="bg-red-500"          {...sharedSectionProps} />
-        <Section title="Due Today"              entries={dueToday}   color="bg-amber-500"        {...sharedSectionProps} />
-        <Section title="Upcoming — next 7 days" entries={upcoming}   color="bg-leaf"             {...sharedSectionProps} />
-        {onSchedule.length > 0 && (
-          <Section title="On Schedule"          entries={onSchedule} color="bg-muted-foreground" {...sharedSectionProps} />
-        )}
+        {/* Due Today */}
+        <Section title="Due Today" dotColor="bg-amber-500" entries={dueToday} {...sharedSectionProps} />
+
+        {/* This week */}
+        <Section
+          title="This Week"
+          subtitle={rangeLabel(1, 7)}
+          dotColor="bg-leaf"
+          entries={thisWeek}
+          {...sharedSectionProps}
+        />
+
+        {/* Next week */}
+        <Section
+          title="Next Week"
+          subtitle={rangeLabel(8, 14)}
+          dotColor="bg-teal-500"
+          entries={nextWeek}
+          {...sharedSectionProps}
+        />
+
+        {/* Later this month */}
+        <Section
+          title="This Month"
+          subtitle={rangeLabel(15, 30)}
+          dotColor="bg-violet-400"
+          entries={laterThisMonth}
+          {...sharedSectionProps}
+        />
+
+        {/* Further out */}
+        <Section
+          title="Further Out"
+          subtitle={`after ${fmtShort(addDays(today, 30))}`}
+          dotColor="bg-muted-foreground"
+          entries={furtherOut}
+          {...sharedSectionProps}
+        />
 
         {/* Plants without any schedule */}
         {plantsWithoutSchedule.length > 0 && (
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-muted-foreground/50 shrink-0" />
+              <span className="w-2 h-2 rounded-full bg-muted-foreground/40 shrink-0" />
               <h2 className="font-semibold text-sm text-muted-foreground">No schedule set</h2>
-              <span className="text-xs text-muted-foreground">({plantsWithoutSchedule.length})</span>
+              <span className="text-xs text-muted-foreground ml-auto">({plantsWithoutSchedule.length})</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {plantsWithoutSchedule.map((p) => (
@@ -516,8 +642,13 @@ export function CareScheduleClient({
           <div className="text-center py-20 border rounded-xl bg-muted/30">
             <p className="text-4xl mb-3">🌱</p>
             <p className="font-semibold mb-1">No plants yet</p>
-            <p className="text-sm text-muted-foreground mb-4">Add plants to your garden to set up care schedules.</p>
-            <Link href="/garden/new" className="inline-flex items-center justify-center rounded-md bg-leaf hover:bg-forest text-white px-4 py-2 text-sm font-medium transition-colors">
+            <p className="text-sm text-muted-foreground mb-4">
+              Add plants to your garden to set up care schedules.
+            </p>
+            <Link
+              href="/garden/new"
+              className="inline-flex items-center justify-center rounded-md bg-leaf hover:bg-forest text-white px-4 py-2 text-sm font-medium transition-colors"
+            >
               Add your first plant
             </Link>
           </div>
