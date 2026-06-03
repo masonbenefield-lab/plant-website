@@ -140,17 +140,28 @@ export default async function DashboardPage() {
           <NavLink href="/account" label="Account Settings" />
         </div>
 
-        <div className="rounded-xl border bg-[#EBF0E6] dark:bg-forest/20 border-[#C5D4BC] dark:border-forest p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <p className="font-semibold text-forest dark:text-[#C5D4BC]">Want to sell your plants?</p>
-            <p className="text-sm text-forest/70 dark:text-[#A8BF9A]/70 mt-0.5">
-              Open a free storefront and list plants for fixed price or timed auction.
-            </p>
-          </div>
-          <Link href="/account#seller-payments" className={cn(buttonVariants(), "bg-leaf hover:bg-forest shrink-0")}>
-            Start selling
-          </Link>
-        </div>
+        <Card className="border-[#C5D4BC] bg-[#EBF0E6] dark:bg-forest/20 dark:border-forest">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base text-forest dark:text-[#C5D4BC]">Get your shop ready</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <CheckItem done={checks.profile}          label="Complete your profile"                         href="/account"                   hint="Add a bio and profile photo so buyers trust you" />
+            <CheckItem done={checks.stripe}           label="Connect your bank account"                     href="/account#seller-payments"   hint="Required to receive payments — connect your bank via Stripe before listing" />
+            <CheckItem done={checks.shipping}         label="Set up your ship-from address &amp; shipping preferences" href="/account#shipping-settings" hint="Required for calculated shipping rates and auto labels" />
+            <CheckItem done={checks.shippingTimeline} label="Set your shipping timeline"                    href="/account#shipping-days"     hint="Let buyers know how quickly you ship" />
+            <CheckItem done={checks.returnPolicy}     label="Set your return policy"                        href="/account#return-policy"     hint="Let buyers know upfront whether you accept returns" />
+            <CheckItem done={checks.inventory}        label="Add your first item to inventory"              href="/dashboard/inventory"       hint="Everything starts in inventory — add your first plant here" />
+            <CheckItem done={checks.listing}          label="Create your first listing or auction"          href="/dashboard/inventory"       hint="From inventory, list a plant at a fixed price or start a timed auction" />
+            <CheckItem
+              done={checks.storefront}
+              label="Preview your storefront"
+              href={profile?.username ? `/sellers/${profile.username}` : "/account"}
+              hint="See how buyers discover and shop your store"
+              external={!!profile?.username}
+              doneHref={profile?.username ? `/sellers/${profile.username}` : undefined}
+            />
+          </CardContent>
+        </Card>
       </div>
     );
   }
