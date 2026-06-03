@@ -1330,7 +1330,7 @@ export function buildWelcomeHtml({ username }: { username: string }): string {
               <table width="100%" cellpadding="0" cellspacing="0" style="background:#EFE7D6;border:1px solid #DED6C4;border-radius:12px;">
                 <tr>
                   <td style="padding:24px 28px;">
-                    <p style="margin:0 0 12px;font-size:13px;color:#4A6358;line-height:1.8;font-style:italic;">&#8220;When my dad was in college, the campus redid their walkways — beautifully planned paths that looked great on paper. A month later, you could see trails worn into the grass where students had created their own routes. The planners had a vision, but the students made it better.</p>
+                    <p style="margin:0 0 12px;font-size:13px;color:#4A6358;line-height:1.8;font-style:italic;">&#8220;When my dad was in college, the campus redid their walkways — beautifully planned paths that looked great on paper. A month later, you could see trails worn into the grass where students had created their own routes. The planners had a vision, but the students made it even better.</p>
                     <p style="margin:0 0 12px;font-size:13px;color:#4A6358;line-height:1.8;font-style:italic;">Plantet is the same. We have a vision for what this community can be, but you&#8217;re the ones who will shape it. If something doesn&#8217;t work, if something&#8217;s missing, or if you just have an idea — reach out. You&#8217;re helping build this.&#8221;</p>
                     <p style="margin:0;font-size:13px;font-weight:600;color:#1F4736;">— Mason &nbsp;·&nbsp; <a href="${siteUrl}/contact" style="color:#2F7D54;text-decoration:underline;">Send a message →</a></p>
                   </td>

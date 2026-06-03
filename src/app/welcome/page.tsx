@@ -108,7 +108,7 @@ export default async function WelcomePage({
         {/* Mason's story */}
         <div className="rounded-2xl border bg-[#EBF0E6] dark:bg-forest/20 border-[#C5D4BC] dark:border-forest p-6 max-w-2xl mx-auto text-center space-y-4">
           <p className="text-sm text-forest/80 dark:text-sage leading-relaxed italic">
-            &ldquo;When my dad was in college, the campus redid their walkways — beautifully planned paths that looked great on paper. A month later, you could see trails worn into the grass where students had created their own routes. The planners had a vision, but the students made it better.
+            &ldquo;When my dad was in college, the campus redid their walkways — beautifully planned paths that looked great on paper. A month later, you could see trails worn into the grass where students had created their own routes. The planners had a vision, but the students made it even better.
           </p>
           <p className="text-sm text-forest/80 dark:text-sage leading-relaxed italic">
             Plantet is the same. We have a vision for what this community can be, but you&apos;re the ones who will shape it. If something doesn&apos;t work, if something&apos;s missing, or if you just have an idea — reach out. You&apos;re helping build this.&rdquo;
