@@ -340,26 +340,27 @@ function CheckItem({ done, label, href, hint, external, doneHref }: {
 }) {
   const linkTarget = external ? "_blank" : undefined;
   const linkRel    = external ? "noopener noreferrer" : undefined;
-  return (
+
+  const content = (
     <div className="flex items-start gap-3">
       <div className={cn("mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold", done ? "bg-leaf text-white" : "border-2 border-sage text-leaf")}>
         {done ? "✓" : ""}
       </div>
       <div>
-        {done ? (
-          doneHref ? (
-            <Link href={doneHref} target={linkTarget} rel={linkRel} className="text-sm font-medium text-forest/60 line-through hover:text-forest hover:no-underline transition-colors">
-              {label}
-            </Link>
-          ) : (
-            <p className="text-sm font-medium text-forest line-through opacity-60">{label}</p>
-          )
-        ) : (
-          <Link href={href} target={linkTarget} rel={linkRel} className="text-sm font-medium text-forest hover:underline">{label}</Link>
-        )}
+        <p className={cn("text-sm font-medium", done ? "text-forest line-through opacity-60" : "text-forest")}>{label}</p>
         {!done && <p className="text-xs text-forest/70 mt-0.5">{hint}</p>}
       </div>
     </div>
+  );
+
+  if (done && doneHref) {
+    return <Link href={doneHref} target={linkTarget} rel={linkRel} className="block rounded-lg hover:bg-black/5 transition-colors -mx-2 px-2 py-1">{content}</Link>;
+  }
+  if (done) return <div className="py-1">{content}</div>;
+  return (
+    <Link href={href} target={linkTarget} rel={linkRel} className="block rounded-lg hover:bg-black/5 transition-colors -mx-2 px-2 py-1">
+      {content}
+    </Link>
   );
 }
 

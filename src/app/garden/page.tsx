@@ -121,23 +121,36 @@ export default async function GardenPage({
 
       {total === 0 ? (
         <Card>
-          <CardContent className="py-16 text-center space-y-3">
-            <p className="text-4xl">🌱</p>
-            <p className="font-medium text-lg">
-              {status ? `No ${STATUS_LABEL[status as GardenPlantStatus]?.toLowerCase()} plants` : "Your garden is empty"}
-            </p>
+          <CardContent className="py-12 text-center space-y-6">
+            <div>
+              <p className="text-5xl mb-3">🌱</p>
+              <p className="font-semibold text-xl">
+                {status ? `No ${STATUS_LABEL[status as GardenPlantStatus]?.toLowerCase()} plants` : "Your garden is empty"}
+              </p>
+              {!status && (
+                <p className="text-muted-foreground text-sm mt-1 max-w-sm mx-auto">
+                  My Garden is your personal plant journal. Track what you grow, log care, and share your collection with followers.
+                </p>
+              )}
+            </div>
             {!status && (
-              <div className="space-y-2 max-w-sm mx-auto">
-                <p className="text-muted-foreground text-sm">
-                  My Garden is your personal plant journal — track every plant you own, log care events (watering, fertilizing, repotting), and monitor each plant&apos;s health over time.
-                </p>
-                <p className="text-muted-foreground text-sm">
-                  You can make your garden public so followers can browse your collection on your storefront, and optionally share new additions to your followers&apos; feeds.
-                </p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-2xl mx-auto text-left">
+                {[
+                  { icon: "📋", title: "Track your plants", body: "Log every plant you own with photos, health status, and location." },
+                  { icon: "💧", title: "Care reminders", body: "Set watering, fertilizing, and repotting intervals — get reminded when due." },
+                  { icon: "🌍", title: "Public garden", body: "Make your garden public so buyers can see what you grow on your storefront." },
+                  { icon: "📣", title: "Share to feed", body: "Share new additions to your followers' feeds to build your grower reputation." },
+                ].map(({ icon, title, body }) => (
+                  <div key={title} className="rounded-lg border bg-muted/30 p-3 space-y-1">
+                    <p className="text-xl">{icon}</p>
+                    <p className="text-sm font-medium">{title}</p>
+                    <p className="text-xs text-muted-foreground">{body}</p>
+                  </div>
+                ))}
               </div>
             )}
             {!status && (
-              <Link href="/garden/new" className={cn(buttonVariants(), "bg-leaf hover:bg-forest mt-2")}>
+              <Link href="/garden/new" className={cn(buttonVariants(), "bg-leaf hover:bg-forest")}>
                 Add your first plant
               </Link>
             )}
