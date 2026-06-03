@@ -347,7 +347,11 @@ export default function AuctionBidPanel({
     setPlacing(false);
 
     if (!res.ok) {
-      toast.error(data.error ?? "Failed to complete purchase");
+      if (data.error === "payment_declined") {
+        toast.error("Your card was declined. Please update your payment method in Account Settings and try again.", { duration: 6000 });
+      } else {
+        toast.error(data.error ?? "Failed to complete purchase");
+      }
       return;
     }
 
@@ -363,8 +367,6 @@ export default function AuctionBidPanel({
       setOrderConfirmed(true);
       toast.success("Purchase complete — your card has been charged!");
       router.refresh();
-    } else {
-      router.push(`/checkout?auction=${auction.id}`);
     }
   }
 
