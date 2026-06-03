@@ -62,9 +62,9 @@ export const dynamic = "force-dynamic";
 export default async function OrdersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; tab?: string; page?: string; id?: string }>;
+  searchParams: Promise<{ status?: string; tab?: string; page?: string; id?: string; highlight?: string }>;
 }) {
-  const { status = "", tab: tabParam, page: pageParam } = await searchParams;
+  const { status = "", tab: tabParam, page: pageParam, highlight } = await searchParams;
   const activeTab = tabParam === "sales" ? "sales" : tabParam === "disputes" ? "disputes" : "purchases";
 
   const supabase = await createClient();
@@ -741,6 +741,7 @@ export default async function OrdersPage({
         prevHref={page > 1 ? `/orders?tab=sales&page=${page - 1}${statusParam}` : null}
         nextHref={page < totalPages ? `/orders?tab=sales&page=${page + 1}${statusParam}` : null}
         autoLabelsEnabled={autoLabelsEnabled}
+        highlightId={highlight}
       />
     </div>
   );

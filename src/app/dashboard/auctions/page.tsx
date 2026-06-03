@@ -251,9 +251,9 @@ export default async function DashboardAuctionsPage({
                           const order = orderByAuction[auction.id];
                           const badgeClass = "text-xs font-medium px-2 py-0.5 rounded-full";
                           if (!auction.current_bidder_id) return <span className="text-muted-foreground italic">No bids received</span>;
-                          if (reserveMet && order?.status === "paid") return <Link href={`/orders?tab=sales`} className={`${badgeClass} bg-[#DFE7D4] text-leaf hover:bg-leaf/20`}>Sold — paid ↗</Link>;
-                          if (reserveMet && order?.status === "pending") return <Link href={`/orders?tab=sales`} className={`${badgeClass} bg-blue-100 text-blue-700 hover:bg-blue-200`}>Sold — payment pending ↗</Link>;
-                          if (reserveMet && order) return <Link href={`/orders?tab=sales`} className={`${badgeClass} bg-[#DFE7D4] text-leaf hover:bg-leaf/20`}>Sold — {order.status} ↗</Link>;
+                          if (reserveMet && order?.status === "paid") return <Link href={`/orders?tab=sales&highlight=${order.id}`} className={`${badgeClass} bg-[#DFE7D4] text-leaf hover:bg-leaf/20`}>Sold — paid ↗</Link>;
+                          if (reserveMet && order?.status === "pending") return <Link href={`/orders?tab=sales&highlight=${order.id}`} className={`${badgeClass} bg-blue-100 text-blue-700 hover:bg-blue-200`}>Sold — payment pending ↗</Link>;
+                          if (reserveMet && order) return <Link href={`/orders?tab=sales&highlight=${order.id}`} className={`${badgeClass} bg-[#DFE7D4] text-leaf hover:bg-leaf/20`}>Sold — {order.status} ↗</Link>;
                           if (reserveMet) return <span className={`${badgeClass} bg-amber-100 text-amber-700`}>Winner — processing</span>;
                           if (!auction.reserve_offer_status) return <span className="text-muted-foreground italic">Reserve not met</span>;
                           return null;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -193,6 +193,7 @@ export default function OrdersClient({
   prevHref,
   nextHref,
   autoLabelsEnabled = true,
+  highlightId,
 }: {
   orders: OrderRow[];
   listingMap: Record<string, ItemRow>;
@@ -206,8 +207,15 @@ export default function OrdersClient({
   prevHref: string | null;
   nextHref: string | null;
   autoLabelsEnabled?: boolean;
+  highlightId?: string;
 }) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!highlightId) return;
+    const el = document.getElementById(`order-${highlightId}`);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [highlightId]);
 
   function toggleOrder(id: string) {
     setSelectedIds(prev =>
@@ -280,8 +288,9 @@ export default function OrdersClient({
           const cartItems = order.cart_items as { listing_id: string; plant_name: string; variety: string | null; quantity: number; price_cents: number }[] | null;
           const isCartOrder = !!cartItems?.length;
 
+          const isHighlighted = order.id === highlightId;
           return (
-            <Card key={order.id}>
+            <Card key={order.id} id={`order-${order.id}`} className={isHighlighted ? "ring-2 ring-leaf shadow-lg" : ""}>
               <CardContent className="p-5">
                 <div className="flex items-start gap-3">
                   <OrderCheckbox orderId={order.id} selectedIds={selectedIds} onToggle={toggleOrder} />
