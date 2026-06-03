@@ -36,6 +36,9 @@ interface PrefillData {
   free_shipping: boolean;
   shipping_cost_cents: number | null;
   shipping_weight_oz: number | null;
+  box_length_in: number | null;
+  box_width_in: number | null;
+  box_height_in: number | null;
 }
 
 interface Props {
@@ -192,6 +195,9 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
       free_shipping: shippingMode === "free",
       shipping_cost_cents: shippingMode === "flat" ? dollarsToCents(data.get("shipping_cost") as string) : null,
       shipping_weight_oz: shippingMode === "weight" ? Number(data.get("shipping_weight_oz")) : null,
+      box_length_in: shippingMode === "weight" ? (Number(data.get("box_length_in")) || 10) : null,
+      box_width_in: shippingMode === "weight" ? (Number(data.get("box_width_in")) || 8) : null,
+      box_height_in: shippingMode === "weight" ? (Number(data.get("box_height_in")) || 4) : null,
     });
 
     setSaving(false);
@@ -455,22 +461,33 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
               </div>
             )}
             {shippingMode === "weight" && calculatedShippingEnabled && (
-              <div className="flex items-center gap-2">
-                <Input
-                  name="shipping_weight_oz"
-                  type="number"
-                  min={0.1}
-                  step={0.1}
-                  placeholder="e.g. 12"
-                  required
-                  className="max-w-[100px]"
-                  defaultValue={prefill?.shipping_weight_oz ?? ""}
-                />
-                <span className="text-xs text-muted-foreground">oz — rate calculated at checkout</span>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Input
+                    name="shipping_weight_oz"
+                    type="number"
+                    min={0.1}
+                    step={0.1}
+                    placeholder="e.g. 12"
+                    required
+                    className="max-w-[100px]"
+                    defaultValue={prefill?.shipping_weight_oz ?? ""}
+                  />
+                  <span className="text-xs text-muted-foreground">oz packed weight</span>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Box dimensions (inches)</p>
+                  <div className="flex items-center gap-2">
+                    <Input name="box_length_in" type="number" min={1} step={0.5} placeholder="L" className="w-16 text-xs" defaultValue={prefill?.box_length_in ?? 10} />
+                    <span className="text-xs text-muted-foreground">×</span>
+                    <Input name="box_width_in" type="number" min={1} step={0.5} placeholder="W" className="w-16 text-xs" defaultValue={prefill?.box_width_in ?? 8} />
+                    <span className="text-xs text-muted-foreground">×</span>
+                    <Input name="box_height_in" type="number" min={1} step={0.5} placeholder="H" className="w-16 text-xs" defaultValue={prefill?.box_height_in ?? 4} />
+                    <span className="text-xs text-muted-foreground">in</span>
+                  </div>
+                </div>
+                <p className="text-xs text-amber-600 dark:text-amber-400">⚠️ Enter the actual packed weight and box size. Underreporting causes USPS billing adjustments.</p>
               </div>
-            )}
-            {shippingMode === "weight" && calculatedShippingEnabled && (
-              <p className="text-xs text-amber-600 dark:text-amber-400">⚠️ Enter the actual packed weight. Underreporting causes USPS billing adjustments and may result in account suspension.</p>
             )}
           </div>
           {!shippingMode && (

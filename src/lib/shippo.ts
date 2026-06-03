@@ -45,9 +45,12 @@ export async function getShippingRates(params: {
   to: ShipToAddress;
   weightOz: number;
   enabledServices?: string[];
+  lengthIn?: number | null;
+  widthIn?: number | null;
+  heightIn?: number | null;
 }): Promise<ShippoRate[]> {
   const client = getClient();
-  const { from, to, weightOz, enabledServices } = params;
+  const { from, to, weightOz, enabledServices, lengthIn, widthIn, heightIn } = params;
 
   const shipment = await client.shipments.create({
     addressFrom: {
@@ -76,9 +79,9 @@ export async function getShippingRates(params: {
         massUnit: "oz",
         weight: String(Math.max(1, Math.round(weightOz))),
         distanceUnit: "in",
-        length: "10",
-        width: "8",
-        height: "4",
+        length: String(lengthIn ?? 10),
+        width: String(widthIn ?? 8),
+        height: String(heightIn ?? 4),
       },
     ],
     async: false,

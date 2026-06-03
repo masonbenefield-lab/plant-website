@@ -368,6 +368,9 @@ export interface Database {
           scheduled_delete_at: string | null;
           last_activated_at: string | null;
           shipping_weight_oz: number | null;
+          box_length_in: number | null;
+          box_width_in: number | null;
+          box_height_in: number | null;
           shipping_cost_cents: number | null;
           free_shipping: boolean;
           item_type: string | null;
@@ -395,6 +398,9 @@ export interface Database {
           scheduled_delete_at?: string | null;
           last_activated_at?: string | null;
           shipping_weight_oz?: number | null;
+          box_length_in?: number | null;
+          box_width_in?: number | null;
+          box_height_in?: number | null;
           shipping_cost_cents?: number | null;
           free_shipping?: boolean;
           item_type?: string | null;
@@ -421,6 +427,9 @@ export interface Database {
           scheduled_delete_at?: string | null;
           last_activated_at?: string | null;
           shipping_weight_oz?: number | null;
+          box_length_in?: number | null;
+          box_width_in?: number | null;
+          box_height_in?: number | null;
           shipping_cost_cents?: number | null;
           free_shipping?: boolean;
           item_type?: string | null;
@@ -450,6 +459,9 @@ export interface Database {
           reserve_price_cents: number | null;
           starts_at: string | null;
           shipping_weight_oz: number | null;
+          box_length_in: number | null;
+          box_width_in: number | null;
+          box_height_in: number | null;
           shipping_cost_cents: number | null;
           free_shipping: boolean;
           reserve_offer_sent_at: string | null;
@@ -479,6 +491,9 @@ export interface Database {
           reserve_price_cents?: number | null;
           starts_at?: string | null;
           shipping_weight_oz?: number | null;
+          box_length_in?: number | null;
+          box_width_in?: number | null;
+          box_height_in?: number | null;
           shipping_cost_cents?: number | null;
           free_shipping?: boolean;
           reserve_offer_sent_at?: string | null;
@@ -507,6 +522,9 @@ export interface Database {
           reserve_price_cents?: number | null;
           starts_at?: string | null;
           shipping_weight_oz?: number | null;
+          box_length_in?: number | null;
+          box_width_in?: number | null;
+          box_height_in?: number | null;
           shipping_cost_cents?: number | null;
           free_shipping?: boolean;
           reserve_offer_sent_at?: string | null;
@@ -647,6 +665,9 @@ export interface Database {
           category: string | null;
           pot_size: string | null;
           shipping_weight_oz: number | null;
+          box_length_in: number | null;
+          box_width_in: number | null;
+          box_height_in: number | null;
           shipping_cost_cents: number | null;
           free_shipping: boolean;
           item_type: string | null;
@@ -671,6 +692,9 @@ export interface Database {
           category?: string | null;
           pot_size?: string | null;
           shipping_weight_oz?: number | null;
+          box_length_in?: number | null;
+          box_width_in?: number | null;
+          box_height_in?: number | null;
           shipping_cost_cents?: number | null;
           free_shipping?: boolean;
           item_type?: string | null;
@@ -693,6 +717,9 @@ export interface Database {
           category?: string | null;
           pot_size?: string | null;
           shipping_weight_oz?: number | null;
+          box_length_in?: number | null;
+          box_width_in?: number | null;
+          box_height_in?: number | null;
           shipping_cost_cents?: number | null;
           free_shipping?: boolean;
           item_type?: string | null;

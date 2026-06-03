@@ -24,7 +24,7 @@ export async function GET(request: Request) {
 
   const { data: auction } = await admin
     .from("auctions")
-    .select("shipping_weight_oz, seller_id")
+    .select("shipping_weight_oz, box_length_in, box_width_in, box_height_in, seller_id")
     .eq("id", auctionId)
     .single();
 
@@ -64,6 +64,9 @@ export async function GET(request: Request) {
     to: { name: to.name, street1: to.line1, street2: to.line2, city: to.city, state: to.state, zip: to.zip, country: to.country },
     weightOz: auction.shipping_weight_oz,
     enabledServices: seller.shipping_services ?? undefined,
+    lengthIn: auction.box_length_in,
+    widthIn: auction.box_width_in,
+    heightIn: auction.box_height_in,
   });
 
   return NextResponse.json({ rates });
