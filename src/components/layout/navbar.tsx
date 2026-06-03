@@ -148,9 +148,6 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
             <Link href="/auctions" className="text-muted-foreground hover:text-foreground transition-colors">
               Auctions
             </Link>
-            <Link href="/search" className="text-muted-foreground hover:text-foreground transition-colors">
-              Search
-            </Link>
             <Link href="/community" className="text-muted-foreground hover:text-foreground transition-colors">
               Community
             </Link>
@@ -285,7 +282,6 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
           <MobileLink href="/shop" onClick={closeMenu}>Shop</MobileLink>
           <MobileLink href="/auctions" onClick={closeMenu}>Auctions</MobileLink>
           <MobileLink href="/community" onClick={closeMenu}>Community</MobileLink>
-          <MobileLink href="/search" onClick={closeMenu}>Search</MobileLink>
           <MobileLink href="/pricing" onClick={closeMenu}>Pricing</MobileLink>
 
           {user ? (
