@@ -253,6 +253,9 @@ export default function AuctionBidPanel({
     if (isNaN(cents) || cents < minBid) {
       return toast.error(`Minimum bid is ${centsToDisplay(minBid)}`);
     }
+    if (auction.buy_now_price_cents && cents >= auction.buy_now_price_cents) {
+      return toast.error(`Bids must be below the Buy Now price (${centsToDisplay(auction.buy_now_price_cents)}). Use Buy Now to purchase immediately.`);
+    }
 
     let maxCents: number | null = null;
     if (showMaxBid && maxBidAmount.trim()) {
@@ -425,7 +428,7 @@ export default function AuctionBidPanel({
               <p className="text-xs text-muted-foreground mt-0.5">
                 Starting: {centsToDisplay(auction.starting_bid_cents)}
               </p>
-              {auction.buy_now_price_cents && (
+              {auction.buy_now_price_cents && auction.current_bid_cents < auction.buy_now_price_cents && (
                 <p className="text-xs text-orange-600 font-medium mt-0.5">
                   Buy Now: {centsToDisplay(auction.buy_now_price_cents)}
                 </p>
@@ -502,7 +505,7 @@ export default function AuctionBidPanel({
         </div>
       )}
 
-      {!isEnded && auction.buy_now_price_cents && userId && userId !== auction.seller_id && buyerHasPaymentMethod && buyerHasShippingAddress && (
+      {!isEnded && auction.buy_now_price_cents && auction.current_bid_cents < auction.buy_now_price_cents && userId && userId !== auction.seller_id && buyerHasPaymentMethod && buyerHasShippingAddress && (
         <>
           <div className="rounded-lg border border-orange-200 bg-orange-50 dark:bg-orange-900/10 dark:border-orange-800 p-3 flex items-center justify-between gap-3">
             <div>
