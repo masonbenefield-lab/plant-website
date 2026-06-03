@@ -214,6 +214,7 @@ export async function GET(request: Request) {
             metadata: {
               order_id: order?.id ?? "",
               auction_id: auction.id,
+              auto_charged: "true",
               platform_fee_cents: String(feeCents),
               stripe_fee_cents: String(stripeFeeCents),
               tax_cents: String(taxCents),

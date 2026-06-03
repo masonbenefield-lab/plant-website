@@ -158,6 +158,7 @@ export async function POST(request: Request) {
       application_fee_amount: appFeeAmount,
       metadata: {
         auction_id: auctionId,
+        auto_charged: "true",
         platform_fee_cents: String(feeCents),
         stripe_fee_cents: String(stripeFeeCents),
         tax_cents: String(taxCents),
