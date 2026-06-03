@@ -38,6 +38,7 @@ export default function NewListingDialog({ sellerId, planLimit, currentCount, ph
   const [variety, setVariety] = useState("");
   const [potSize, setPotSize] = useState("");
   const [shippingMode, setShippingMode] = useState<"" | "free" | "flat" | "weight">("");
+  const [packageType, setPackageType] = useState("box");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const atListingLimit = planLimit !== null && currentCount >= planLimit;
@@ -86,9 +87,10 @@ export default function NewListingDialog({ sellerId, planLimit, currentCount, ph
       free_shipping: shippingMode === "free",
       shipping_cost_cents: shippingMode === "flat" ? dollarsToCents(data.get("shipping_cost") as string) : null,
       shipping_weight_oz: shippingMode === "weight" ? Number(data.get("shipping_weight_oz")) : null,
-      box_length_in: shippingMode === "weight" ? (Number(data.get("box_length_in")) || 10) : null,
-      box_width_in: shippingMode === "weight" ? (Number(data.get("box_width_in")) || 8) : null,
-      box_height_in: shippingMode === "weight" ? (Number(data.get("box_height_in")) || 4) : null,
+      box_length_in: shippingMode === "weight" && packageType === "box" ? (Number(data.get("box_length_in")) || 10) : null,
+      box_width_in: shippingMode === "weight" && packageType === "box" ? (Number(data.get("box_width_in")) || 8) : null,
+      box_height_in: shippingMode === "weight" && packageType === "box" ? (Number(data.get("box_height_in")) || 4) : null,
+      package_type: shippingMode === "weight" ? packageType : null,
     });
 
     setSaving(false);
@@ -265,17 +267,31 @@ export default function NewListingDialog({ sellerId, planLimit, currentCount, ph
                   <span className="text-xs text-muted-foreground">oz packed weight</span>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Box dimensions (inches)</p>
-                  <div className="flex items-center gap-2">
-                    <Input name="box_length_in" type="number" min={1} step={0.5} placeholder="L" className="w-16 text-xs" defaultValue={10} />
-                    <span className="text-xs text-muted-foreground">×</span>
-                    <Input name="box_width_in" type="number" min={1} step={0.5} placeholder="W" className="w-16 text-xs" defaultValue={8} />
-                    <span className="text-xs text-muted-foreground">×</span>
-                    <Input name="box_height_in" type="number" min={1} step={0.5} placeholder="H" className="w-16 text-xs" defaultValue={4} />
-                    <span className="text-xs text-muted-foreground">in</span>
-                  </div>
+                  <p className="text-xs text-muted-foreground">Package type</p>
+                  <select
+                    value={packageType}
+                    onChange={(e) => setPackageType(e.target.value)}
+                    className="h-8 w-full rounded-lg border border-input bg-transparent px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring/50"
+                  >
+                    <option value="box">Box (custom dimensions)</option>
+                    <option value="padded_envelope">Padded envelope (12.5 × 9.5 × 1 in)</option>
+                    <option value="poly_mailer">Poly mailer (12 × 15 × 0.25 in)</option>
+                  </select>
                 </div>
-                <p className="text-xs text-amber-600 dark:text-amber-400">⚠️ Enter the actual packed weight and box size. Underreporting causes USPS billing adjustments.</p>
+                {packageType === "box" && (
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Box dimensions (inches)</p>
+                    <div className="flex items-center gap-2">
+                      <Input name="box_length_in" type="number" min={1} step={0.5} placeholder="L" className="w-16 text-xs" defaultValue={10} />
+                      <span className="text-xs text-muted-foreground">×</span>
+                      <Input name="box_width_in" type="number" min={1} step={0.5} placeholder="W" className="w-16 text-xs" defaultValue={8} />
+                      <span className="text-xs text-muted-foreground">×</span>
+                      <Input name="box_height_in" type="number" min={1} step={0.5} placeholder="H" className="w-16 text-xs" defaultValue={4} />
+                      <span className="text-xs text-muted-foreground">in</span>
+                    </div>
+                  </div>
+                )}
+                <p className="text-xs text-amber-600 dark:text-amber-400">⚠️ Enter the actual packed weight. Underreporting causes USPS billing adjustments.</p>
               </div>
             )}
           </div>

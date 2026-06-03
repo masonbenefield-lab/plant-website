@@ -40,17 +40,29 @@ export interface ShippoRate {
   estimatedDays: number | null;
 }
 
+const PACKAGE_DIMS: Record<string, { l: number; w: number; h: number }> = {
+  padded_envelope: { l: 12.5, w: 9.5, h: 1 },
+  poly_mailer:     { l: 12,   w: 15,  h: 0.25 },
+};
+
 export async function getShippingRates(params: {
   from: ShipFromAddress;
   to: ShipToAddress;
   weightOz: number;
   enabledServices?: string[];
+  packageType?: string | null;
   lengthIn?: number | null;
   widthIn?: number | null;
   heightIn?: number | null;
 }): Promise<ShippoRate[]> {
   const client = getClient();
-  const { from, to, weightOz, enabledServices, lengthIn, widthIn, heightIn } = params;
+  const { from, to, weightOz, enabledServices, packageType, lengthIn, widthIn, heightIn } = params;
+  const preset = packageType ? PACKAGE_DIMS[packageType] : null;
+  const dims = {
+    l: preset?.l ?? lengthIn ?? 10,
+    w: preset?.w ?? widthIn ?? 8,
+    h: preset?.h ?? heightIn ?? 4,
+  };
 
   const shipment = await client.shipments.create({
     addressFrom: {
@@ -79,9 +91,9 @@ export async function getShippingRates(params: {
         massUnit: "oz",
         weight: String(Math.max(1, Math.round(weightOz))),
         distanceUnit: "in",
-        length: String(lengthIn ?? 10),
-        width: String(widthIn ?? 8),
-        height: String(heightIn ?? 4),
+        length: String(dims.l),
+        width: String(dims.w),
+        height: String(dims.h),
       },
     ],
     async: false,

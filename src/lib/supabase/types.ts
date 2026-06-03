@@ -371,6 +371,7 @@ export interface Database {
           box_length_in: number | null;
           box_width_in: number | null;
           box_height_in: number | null;
+          package_type: string | null;
           shipping_cost_cents: number | null;
           free_shipping: boolean;
           item_type: string | null;
@@ -401,6 +402,7 @@ export interface Database {
           box_length_in?: number | null;
           box_width_in?: number | null;
           box_height_in?: number | null;
+          package_type?: string | null;
           shipping_cost_cents?: number | null;
           free_shipping?: boolean;
           item_type?: string | null;
@@ -430,6 +432,7 @@ export interface Database {
           box_length_in?: number | null;
           box_width_in?: number | null;
           box_height_in?: number | null;
+          package_type?: string | null;
           shipping_cost_cents?: number | null;
           free_shipping?: boolean;
           item_type?: string | null;
@@ -462,6 +465,7 @@ export interface Database {
           box_length_in: number | null;
           box_width_in: number | null;
           box_height_in: number | null;
+          package_type: string | null;
           shipping_cost_cents: number | null;
           free_shipping: boolean;
           reserve_offer_sent_at: string | null;
@@ -494,6 +498,7 @@ export interface Database {
           box_length_in?: number | null;
           box_width_in?: number | null;
           box_height_in?: number | null;
+          package_type?: string | null;
           shipping_cost_cents?: number | null;
           free_shipping?: boolean;
           reserve_offer_sent_at?: string | null;
@@ -525,6 +530,7 @@ export interface Database {
           box_length_in?: number | null;
           box_width_in?: number | null;
           box_height_in?: number | null;
+          package_type?: string | null;
           shipping_cost_cents?: number | null;
           free_shipping?: boolean;
           reserve_offer_sent_at?: string | null;
@@ -668,6 +674,7 @@ export interface Database {
           box_length_in: number | null;
           box_width_in: number | null;
           box_height_in: number | null;
+          package_type: string | null;
           shipping_cost_cents: number | null;
           free_shipping: boolean;
           item_type: string | null;
@@ -695,6 +702,7 @@ export interface Database {
           box_length_in?: number | null;
           box_width_in?: number | null;
           box_height_in?: number | null;
+          package_type?: string | null;
           shipping_cost_cents?: number | null;
           free_shipping?: boolean;
           item_type?: string | null;
@@ -720,6 +728,7 @@ export interface Database {
           box_length_in?: number | null;
           box_width_in?: number | null;
           box_height_in?: number | null;
+          package_type?: string | null;
           shipping_cost_cents?: number | null;
           free_shipping?: boolean;
           item_type?: string | null;
