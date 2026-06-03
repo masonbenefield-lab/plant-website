@@ -238,13 +238,21 @@ export default async function OrdersPage({
                               ))}
                             </div>
                           ) : (
-                            <p className="font-semibold">
-                              {item
+                            (() => {
+                              const href = order.listing_id ? `/shop/${order.listing_id}` : order.auction_id ? `/auctions/${order.auction_id}` : null;
+                              const name = item
                                 ? `${item.plant_name}${item.variety ? ` — ${item.variety}` : ""}`
                                 : snapshot
                                 ? `${snapshot.plant_name}${snapshot.variety ? ` — ${snapshot.variety}` : ""}`
-                                : "Item details unavailable"}
-                            </p>
+                                : "Item details unavailable";
+                              return href ? (
+                                <Link href={href} className="font-semibold hover:text-leaf hover:underline">
+                                  {name}
+                                </Link>
+                              ) : (
+                                <p className="font-semibold">{name}</p>
+                              );
+                            })()
                           )}
                           <p className="text-sm text-muted-foreground mt-0.5">
                             Seller:{" "}
