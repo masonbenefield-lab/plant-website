@@ -275,7 +275,7 @@ function IntervalsModal({
     setSavingReminder(false);
     if (res.ok) {
       const { reminder } = await res.json() as { reminder: { id: string; plant_id: string | null; event_type: string; scheduled_date: string; notes: string | null } };
-      const scheduled = new Date(reminder.scheduled_date);
+      const scheduled = new Date(reminder.scheduled_date + "T00:00:00");
       scheduled.setHours(0, 0, 0, 0);
       const today = new Date(); today.setHours(0, 0, 0, 0);
       const daysUntilDue = Math.round((scheduled.getTime() - today.getTime()) / 86400000);
@@ -426,7 +426,7 @@ function AddReminderModal({
     if (res.ok) {
       const { reminder } = await res.json() as { reminder: { id: string; plant_id: string | null; event_type: string; scheduled_date: string; notes: string | null } };
       const plant = plants.find((p) => p.id === reminder.plant_id);
-      const scheduled = new Date(reminder.scheduled_date);
+      const scheduled = new Date(reminder.scheduled_date + "T00:00:00");
       scheduled.setHours(0, 0, 0, 0);
       const today = new Date(); today.setHours(0, 0, 0, 0);
       const daysUntilDue = Math.round((scheduled.getTime() - today.getTime()) / 86400000);

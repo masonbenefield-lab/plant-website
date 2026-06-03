@@ -95,7 +95,7 @@ export default async function CareSchedulePage() {
     const plant = r.plant_id ? plantMap[r.plant_id] : null;
     const plantName = plant ? (plant.variety ? `${plant.name} — ${plant.variety}` : plant.name) : null;
     const image = plant ? ((plant.images as string[] | null)?.[0] ?? null) : null;
-    const scheduled = new Date(r.scheduled_date);
+    const scheduled = new Date(r.scheduled_date + "T00:00:00");
     scheduled.setHours(0, 0, 0, 0);
     const daysUntilDue = Math.round((scheduled.getTime() - today.getTime()) / 86400000);
     return {
