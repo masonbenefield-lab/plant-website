@@ -63,13 +63,14 @@ export default async function AuctionPage({
 
   if (!auction) notFound();
 
-  const [{ data: seller }, { data: bids }, { data: { user } }, { data: invShipping }] = await Promise.all([
-    supabase.from("profiles").select("id, username, display_name, avatar_url, shipping_days, shipping_days_max, return_policy_type, return_policy_notes, calculated_shipping_enabled").eq("id", auction.seller_id).single(),
+  const [{ data: seller }, { data: bids }, { data: { user } }, { data: invShipping }, { data: sellerRatings }] = await Promise.all([
+    supabase.from("profiles").select("id, username, display_name, avatar_url, bio, shipping_days, shipping_days_max, return_policy_type, return_policy_notes, calculated_shipping_enabled").eq("id", auction.seller_id).single(),
     supabase.from("bids").select("id, amount_cents, created_at, bidder_id").eq("auction_id", id).order("created_at", { ascending: false }).limit(10),
     supabase.auth.getUser(),
     auction.inventory_id
       ? supabase.from("inventory").select("free_shipping, shipping_cost_cents, shipping_weight_oz").eq("id", auction.inventory_id).single()
       : Promise.resolve({ data: null }),
+    supabase.from("ratings").select("score").eq("seller_id", auction.seller_id),
   ]);
 
   const shippingFree = invShipping?.free_shipping ?? auction.free_shipping;
@@ -178,21 +179,39 @@ export default async function AuctionPage({
             }
           />
 
-          {seller && (
-            <Link
-              href={`/sellers/${seller.username}`}
-              className="inline-flex items-center gap-2 mb-4 text-sm hover:underline"
-            >
-              <Avatar className="h-6 w-6">
-                <AvatarImage src={seller.avatar_url ?? undefined} />
-                <AvatarFallback className="bg-[#DFE7D4] text-leaf text-xs">
-                  {(seller.display_name ?? seller.username).slice(0, 1).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <span className="font-medium">{seller.display_name ?? seller.username}</span>
-              <span className="text-muted-foreground">· View storefront →</span>
-            </Link>
-          )}
+          {seller && (() => {
+            const ratingCount = sellerRatings?.length ?? 0;
+            const avgRating = ratingCount > 0
+              ? (sellerRatings!.reduce((s, r) => s + r.score, 0) / ratingCount).toFixed(1)
+              : null;
+            return (
+              <Link
+                href={`/sellers/${seller.username}`}
+                className="block mb-4 p-3 rounded-lg border hover:bg-muted transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <Avatar className="h-8 w-8 shrink-0">
+                    <AvatarImage src={seller.avatar_url ?? undefined} />
+                    <AvatarFallback className="bg-[#DFE7D4] text-leaf text-xs">
+                      {(seller.display_name ?? seller.username).slice(0, 1).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">{seller.display_name ?? seller.username}</p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {avgRating && (
+                        <span className="text-xs text-amber-600 dark:text-amber-400">★ {avgRating} ({ratingCount})</span>
+                      )}
+                      <span className="text-xs text-muted-foreground">View storefront →</span>
+                    </div>
+                  </div>
+                </div>
+                {(seller as { bio?: string | null }).bio && (
+                  <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{(seller as { bio?: string | null }).bio}</p>
+                )}
+              </Link>
+            );
+          })()}
 
           <div className="mb-4 space-y-2">
             {seller?.shipping_days && (
