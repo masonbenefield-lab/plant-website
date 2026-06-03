@@ -181,6 +181,11 @@ export async function POST(request: Request) {
         shippo_rate_id: shippoRateId ?? null,
         platform_fee_cents: feeCents,
         tax_cents: taxCents,
+        item_snapshot: {
+          plant_name: listing.plant_name,
+          variety: listing.variety ?? null,
+          image: (listing.images as string[] | null)?.[0] ?? null,
+        },
       })
       .select()
       .single();
@@ -408,6 +413,11 @@ export async function POST(request: Request) {
         platform_fee_cents: feeCents,
         tax_cents: auctionTaxCents,
         payment_deadline_at: paymentDeadline,
+        item_snapshot: {
+          plant_name: auction.plant_name,
+          variety: auction.variety ?? null,
+          image: (auction.images as string[] | null)?.[0] ?? null,
+        },
       })
       .select()
       .single();

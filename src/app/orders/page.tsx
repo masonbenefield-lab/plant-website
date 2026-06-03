@@ -198,6 +198,7 @@ export default async function OrdersPage({
               : order.auction_id
               ? auctionMap[order.auction_id]
               : null;
+            const snapshot = order.item_snapshot as { plant_name: string; variety: string | null; image: string | null } | null;
             const seller = sellerMap[order.seller_id];
             const cartItems = order.cart_items as { listing_id: string; plant_name: string; variety: string | null; quantity: number; price_cents: number }[] | null;
             const isCartOrder = !!cartItems?.length;
@@ -209,12 +210,12 @@ export default async function OrdersPage({
                     {isCartOrder ? (
                       <div className="w-16 h-16 rounded-lg bg-muted border shrink-0 flex items-center justify-center text-2xl">🛒</div>
                     ) : (() => {
-                      const img = (item as { images?: string[] } | null)?.images?.[0];
+                      const img = (item as { images?: string[] } | null)?.images?.[0] ?? snapshot?.image ?? null;
                       return img ? (
                         <Link href={order.listing_id ? `/shop/${order.listing_id}` : `/auctions/${order.auction_id}`}>
                           <Image
                             src={img}
-                            alt={item?.plant_name ?? ""}
+                            alt={item?.plant_name ?? snapshot?.plant_name ?? ""}
                             width={64}
                             height={64}
                             className="rounded-lg object-cover border shrink-0 hover:opacity-90 transition-opacity"
@@ -239,6 +240,8 @@ export default async function OrdersPage({
                             <p className="font-semibold">
                               {item
                                 ? `${item.plant_name}${item.variety ? ` — ${item.variety}` : ""}`
+                                : snapshot
+                                ? `${snapshot.plant_name}${snapshot.variety ? ` — ${snapshot.variety}` : ""}`
                                 : "Item details unavailable"}
                             </p>
                           )}

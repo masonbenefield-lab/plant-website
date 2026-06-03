@@ -25,13 +25,13 @@ export async function POST(
 
   const admin = adminClient();
 
-  const { data: auction } = await admin
+  const { data: auction, error: auctionError } = await admin
     .from("auctions")
     .select("id, seller_id, plant_name, variety, status, current_bid_cents, current_bidder_id, reserve_price_cents, reserve_offer_status, free_shipping, shipping_cost_cents, shipping_weight_oz")
     .eq("id", auctionId)
     .single();
 
-  if (!auction) return NextResponse.json({ error: "Auction not found" }, { status: 404 });
+  if (!auction) return NextResponse.json({ error: auctionError?.message ?? "Auction not found" }, { status: 404 });
   if (auction.seller_id !== user.id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   if (auction.status !== "ended") return NextResponse.json({ error: "Auction must be ended" }, { status: 400 });
   if (!auction.current_bidder_id) return NextResponse.json({ error: "No bids on this auction" }, { status: 400 });

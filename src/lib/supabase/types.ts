@@ -566,6 +566,7 @@ export interface Database {
           tax_cents: number;
           payment_deadline_at: string | null;
           payment_reminder_sent: boolean;
+          item_snapshot: { plant_name: string; variety: string | null; image: string | null } | null;
           created_at: string;
         };
         Insert: {
@@ -594,6 +595,7 @@ export interface Database {
           tax_cents?: number;
           payment_deadline_at?: string | null;
           payment_reminder_sent?: boolean;
+          item_snapshot?: { plant_name: string; variety: string | null; image: string | null } | null;
           created_at?: string;
         };
         Update: {
@@ -622,6 +624,7 @@ export interface Database {
           tax_cents?: number;
           payment_deadline_at?: string | null;
           payment_reminder_sent?: boolean;
+          item_snapshot?: { plant_name: string; variety: string | null; image: string | null } | null;
         };
         Relationships: [];
       };

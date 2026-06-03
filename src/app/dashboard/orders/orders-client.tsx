@@ -55,6 +55,7 @@ type OrderRow = {
   label_url: string | null;
   shipping_cost_cents: number | null;
   shipping_service: string | null;
+  item_snapshot: { plant_name: string; variety: string | null; image: string | null } | null;
   created_at: string;
 };
 
@@ -230,7 +231,9 @@ export default function OrdersClient({
           label = cartItems.map((ci) => `${ci.plant_name}${ci.variety ? ` — ${ci.variety}` : ""} ×${ci.quantity}`).join(", ");
         } else {
           const item = o.listing_id ? listingMap[o.listing_id] : o.auction_id ? auctionMap[o.auction_id] : null;
-          label = item ? `${item.plant_name}${item.variety ? ` — ${item.variety}` : ""}` : o.id.slice(0, 8);
+          const snap = o.item_snapshot;
+          const resolved = item ?? snap ?? null;
+          label = resolved ? `${resolved.plant_name}${resolved.variety ? ` — ${resolved.variety}` : ""}` : o.id.slice(0, 8);
         }
         return { id: o.id, label, status: o.status };
       });
@@ -263,6 +266,8 @@ export default function OrdersClient({
             : order.auction_id
             ? auctionMap[order.auction_id]
             : null;
+          const snap = order.item_snapshot;
+          const resolvedItem = item ?? snap ?? null;
           const buyer = buyerMap[order.buyer_id];
           const dispute = disputeMap[order.id];
           const addr = order.shipping_address as {
@@ -291,11 +296,11 @@ export default function OrdersClient({
                           <>
                             {order.auction_id ? (
                               <Link href={`/auctions/${order.auction_id}`} className="font-semibold hover:underline underline-offset-2">
-                                {item?.plant_name}{item?.variety ? ` — ${item.variety}` : ""}
+                                {resolvedItem?.plant_name}{resolvedItem?.variety ? ` — ${resolvedItem.variety}` : ""}
                               </Link>
                             ) : (
                               <span className="font-semibold">
-                                {item?.plant_name}{item?.variety ? ` — ${item.variety}` : ""}
+                                {resolvedItem?.plant_name}{resolvedItem?.variety ? ` — ${resolvedItem.variety}` : ""}
                               </span>
                             )}
                             <span className="text-xs text-muted-foreground">

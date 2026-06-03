@@ -41,7 +41,7 @@ export async function POST(request: Request) {
 
   const [{ data: buyer }, { data: auction, error: auctionErr }] = await Promise.all([
     admin.from("profiles").select("stripe_customer_id, default_payment_method_id, saved_shipping_address").eq("id", user.id).single(),
-    admin.from("auctions").select("id, seller_id, plant_name, variety, current_bid_cents, current_bidder_id, buy_now_price_cents, status, ends_at, free_shipping, shipping_cost_cents, shipping_weight_oz, inventory_id").eq("id", auctionId).single(),
+    admin.from("auctions").select("id, seller_id, plant_name, variety, images, current_bid_cents, current_bidder_id, buy_now_price_cents, status, ends_at, free_shipping, shipping_cost_cents, shipping_weight_oz, inventory_id").eq("id", auctionId).single(),
   ]);
 
   if (auctionErr || !auction) return NextResponse.json({ error: "Auction not found" }, { status: 404 });
@@ -184,6 +184,11 @@ export async function POST(request: Request) {
         shippo_rate_id: shippingRateId ?? null,
         payment_deadline_at: deadline.toISOString(),
         status: "pending",
+        item_snapshot: {
+          plant_name: auction.plant_name,
+          variety: auction.variety ?? null,
+          image: (auction.images as string[] | null)?.[0] ?? null,
+        },
       }).select("id").single();
 
       const pi = await getStripe().paymentIntents.create({
@@ -250,6 +255,11 @@ export async function POST(request: Request) {
       amount_cents: auction.buy_now_price_cents,
       payment_deadline_at: deadline.toISOString(),
       status: "pending",
+      item_snapshot: {
+        plant_name: auction.plant_name,
+        variety: auction.variety ?? null,
+        image: (auction.images as string[] | null)?.[0] ?? null,
+      },
     });
   } catch { /* best-effort */ }
 

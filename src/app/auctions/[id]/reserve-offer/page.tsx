@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import { centsToDisplay } from "@/lib/stripe";
+import { createStripeTaxCalculation } from "@/lib/tax";
 import ReserveOfferActions from "./reserve-offer-actions";
 
 function adminClient() {
@@ -57,7 +58,31 @@ export default async function ReserveOfferPage({
     }
   }
 
-  const estTotal = auction.current_bid_cents + shippingCents;
+  // Calculate tax using the buyer's saved shipping address
+  const { data: buyerProfile } = await admin
+    .from("profiles")
+    .select("saved_shipping_address")
+    .eq("id", user.id)
+    .single();
+
+  const shippingAddr = (buyerProfile?.saved_shipping_address ?? {}) as Record<string, string>;
+  const stripeAddr = {
+    line1: shippingAddr.line1 ?? "",
+    line2: shippingAddr.line2 ?? undefined,
+    city: shippingAddr.city ?? "",
+    state: shippingAddr.state ?? "",
+    zip: shippingAddr.zip ?? "",
+    country: shippingAddr.country ?? "US",
+  };
+
+  const { taxCents } = await createStripeTaxCalculation(
+    auction.current_bid_cents,
+    shippingCents,
+    stripeAddr,
+    auction.id
+  ).catch(() => ({ taxCents: 0, calculationId: null }));
+
+  const estTotal = auction.current_bid_cents + shippingCents + taxCents;
   const image = auction.images?.[0] ?? null;
 
   const offerStatus = auction.reserve_offer_status;
@@ -97,14 +122,11 @@ export default async function ReserveOfferPage({
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Tax</span>
-              <span className="text-muted-foreground text-xs italic">Calculated at settlement</span>
+              <span className="font-medium">{taxCents > 0 ? centsToDisplay(taxCents) : "—"}</span>
             </div>
             <div className="flex justify-between border-t pt-2 font-semibold">
-              <span>Est. Total</span>
-              <span>
-                {centsToDisplay(estTotal)}
-                <span className="text-xs font-normal text-muted-foreground"> + tax</span>
-              </span>
+              <span>Total</span>
+              <span>{centsToDisplay(estTotal)}</span>
             </div>
           </div>
 

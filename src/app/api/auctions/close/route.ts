@@ -79,7 +79,7 @@ export async function GET(request: Request) {
   // ── 3. Close expired active auctions ─────────────────────────────────────────
   const { data: expiredAuctions, error } = await supabase
     .from("auctions")
-    .select("id, current_bidder_id, seller_id, current_bid_cents, plant_name, variety, inventory_id, reserve_price_cents, free_shipping, shipping_cost_cents, shipping_weight_oz")
+    .select("id, current_bidder_id, seller_id, current_bid_cents, plant_name, variety, images, inventory_id, reserve_price_cents, free_shipping, shipping_cost_cents, shipping_weight_oz")
     .eq("status", "active")
     .lt("ends_at", now.toISOString());
 
@@ -194,6 +194,11 @@ export async function GET(request: Request) {
             shippo_rate_id: shippoRateId,
             payment_deadline_at: deadline.toISOString(),
             status: "pending",
+            item_snapshot: {
+              plant_name: auction.plant_name,
+              variety: auction.variety ?? null,
+              image: (auction.images as string[] | null)?.[0] ?? null,
+            },
           }).select("id").single();
 
           const pi = await getStripe().paymentIntents.create({
@@ -266,7 +271,7 @@ export async function GET(request: Request) {
 
       // Email seller that their auction ended with no winner
       if (sellerEmail) {
-        const hadBids = (auction.bid_count ?? 0) > 0;
+        const hadBids = !!auction.current_bidder_id;
         const reserveNotMet = !!(auction.reserve_price_cents && auction.current_bid_cents < auction.reserve_price_cents);
         await sendAuctionEndedSeller({
           sellerEmail,
@@ -403,7 +408,7 @@ export async function GET(request: Request) {
 
 async function fallbackToManualCheckout(
   supabase: ReturnType<typeof adminClient>,
-  auction: { id: string; current_bidder_id: string | null; seller_id: string; current_bid_cents: number; plant_name: string; variety?: string | null },
+  auction: { id: string; current_bidder_id: string | null; seller_id: string; current_bid_cents: number; plant_name: string; variety?: string | null; images?: string[] | null },
   now: Date,
   appUrl: string,
   winnerEmail: string | undefined,
@@ -432,6 +437,11 @@ async function fallbackToManualCheckout(
       amount_cents: auction.current_bid_cents,
       payment_deadline_at: deadline.toISOString(),
       status: "pending",
+      item_snapshot: {
+        plant_name: auction.plant_name,
+        variety: auction.variety ?? null,
+        image: auction.images?.[0] ?? null,
+      },
     });
   }
 
