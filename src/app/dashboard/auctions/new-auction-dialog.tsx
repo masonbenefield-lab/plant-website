@@ -67,7 +67,15 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
     prefill ? (prefill.free_shipping ? "free" : prefill.shipping_weight_oz ? "weight" : prefill.shipping_cost_cents ? "flat" : "") : ""
   );
   const [packageType, setPackageType] = useState(prefill?.package_type ?? "box");
+  const [weightOz, setWeightOz] = useState(prefill?.shipping_weight_oz ?? 16);
+  const [boxL, setBoxL] = useState(prefill?.box_length_in ?? 10);
+  const [boxW, setBoxW] = useState(prefill?.box_width_in ?? 8);
+  const [boxH, setBoxH] = useState(prefill?.box_height_in ?? 4);
   const [startingBidVal, setStartingBidVal] = useState(prefill ? prefill.starting_bid_cents / 100 : 0);
+
+  const dimWeightLbs = Math.round((boxL * boxW * boxH) / 166 * 10) / 10;
+  const actualWeightLbs = weightOz / 16;
+  const showDimWarning = packageType === "box" && shippingMode === "weight" && dimWeightLbs > actualWeightLbs && dimWeightLbs > 2;
   const [buyNowVal, setBuyNowVal] = useState(prefill ? (prefill.buy_now_price_cents ?? 0) / 100 : 0);
   const [reserveVal, setReserveVal] = useState(prefill ? (prefill.reserve_price_cents ?? 0) / 100 : 0);
   const [startsAt, setStartsAt] = useState("");
@@ -483,7 +491,8 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
                     placeholder="e.g. 12"
                     required
                     className="max-w-[100px]"
-                    defaultValue={prefill?.shipping_weight_oz ?? ""}
+                    value={weightOz}
+                    onChange={(e) => setWeightOz(Number(e.target.value) || 0)}
                   />
                   <span className="text-xs text-muted-foreground">oz packed weight</span>
                 </div>
@@ -503,14 +512,17 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
                   <div className="space-y-1">
                     <p className="text-xs text-muted-foreground">Box dimensions (inches)</p>
                     <div className="flex items-center gap-2">
-                      <Input name="box_length_in" type="number" min={1} max={48} step={0.5} placeholder="L" className="w-16 text-xs" defaultValue={prefill?.box_length_in ?? 10} />
+                      <Input name="box_length_in" type="number" min={1} max={48} step={0.5} placeholder="L" className="w-16 text-xs" value={boxL} onChange={(e) => setBoxL(Number(e.target.value) || 0)} />
                       <span className="text-xs text-muted-foreground">×</span>
-                      <Input name="box_width_in" type="number" min={1} max={24} step={0.5} placeholder="W" className="w-16 text-xs" defaultValue={prefill?.box_width_in ?? 8} />
+                      <Input name="box_width_in" type="number" min={1} max={24} step={0.5} placeholder="W" className="w-16 text-xs" value={boxW} onChange={(e) => setBoxW(Number(e.target.value) || 0)} />
                       <span className="text-xs text-muted-foreground">×</span>
-                      <Input name="box_height_in" type="number" min={1} max={24} step={0.5} placeholder="H" className="w-16 text-xs" defaultValue={prefill?.box_height_in ?? 4} />
+                      <Input name="box_height_in" type="number" min={1} max={24} step={0.5} placeholder="H" className="w-16 text-xs" value={boxH} onChange={(e) => setBoxH(Number(e.target.value) || 0)} />
                       <span className="text-xs text-muted-foreground">in</span>
                     </div>
                   </div>
+                )}
+                {showDimWarning && (
+                  <p className="text-xs text-orange-600 dark:text-orange-400">⚠ Box dimensions give a ~{dimWeightLbs} lb billable weight. USPS charges whichever is higher — actual or dimensional. Consider a smaller box.</p>
                 )}
                 <p className="text-xs text-amber-600 dark:text-amber-400">⚠️ Enter the actual packed weight. Max box size: 48 × 24 × 24 in. Underreporting causes USPS billing adjustments.</p>
               </div>
