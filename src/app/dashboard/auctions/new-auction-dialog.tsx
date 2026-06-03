@@ -123,10 +123,15 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (atAuctionLimit) return;
-    setSaving(true);
     const form = e.currentTarget;
     const data = new FormData(form);
-
+    if (!(data.get("plant_name") as string)?.trim()) { toast.error("Plant type is required."); return; }
+    if (!(data.get("variety") as string)?.trim()) { toast.error("Variety is required."); return; }
+    if (!(data.get("description") as string)?.trim()) { toast.error("Description is required."); return; }
+    if (!dollarsToCents(data.get("starting_bid") as string)) { toast.error("Starting bid is required."); return; }
+    if (!shippingMode) { toast.error("Select a shipping method."); return; }
+    if (shippingMode === "weight" && !Number(data.get("shipping_weight_oz"))) { toast.error("Enter a shipping weight."); return; }
+    setSaving(true);
     const durationHours = Number(data.get("duration_hours"));
     const startsAtRaw = data.get("starts_at") as string;
     const startsAt = startsAtRaw ? new Date(startsAtRaw).toISOString() : null;
@@ -169,12 +174,6 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
       }
     }
     if (shippingMode === "weight") {
-      const weightOz = Number(data.get("shipping_weight_oz"));
-      if (!weightOz || weightOz <= 0) {
-        toast.error("Enter a valid shipping weight.");
-        setSaving(false);
-        return;
-      }
       if (packageType === "box") {
         const l = Number(data.get("box_length_in"));
         const w = Number(data.get("box_width_in"));

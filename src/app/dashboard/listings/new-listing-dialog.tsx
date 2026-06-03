@@ -72,6 +72,12 @@ export default function NewListingDialog({ sellerId, planLimit, currentCount, ph
     if (atListingLimit) return;
     const form = e.currentTarget;
     const data = new FormData(form);
+    if (!(data.get("plant_name") as string)?.trim()) { toast.error("Plant type is required."); return; }
+    if (!(data.get("variety") as string)?.trim()) { toast.error("Variety is required."); return; }
+    if (!(data.get("description") as string)?.trim()) { toast.error("Description is required."); return; }
+    if (!dollarsToCents(data.get("price") as string)) { toast.error("Price is required."); return; }
+    if (!shippingMode) { toast.error("Select a shipping method."); return; }
+    if (shippingMode === "weight" && !Number(data.get("shipping_weight_oz"))) { toast.error("Enter a shipping weight."); return; }
     if (shippingMode === "weight" && packageType === "box") {
       const l = Number(data.get("box_length_in"));
       const w = Number(data.get("box_width_in"));
