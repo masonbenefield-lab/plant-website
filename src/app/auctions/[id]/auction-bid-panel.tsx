@@ -91,6 +91,7 @@ export default function AuctionBidPanel({
   const [orderConfirmed, setOrderConfirmed] = useState(false);
   const [pendingBuyNow, setPendingBuyNow] = useState(false);
   const [buyNowDeclined, setBuyNowDeclined] = useState(false);
+  const [liveOrderStatus, setLiveOrderStatus] = useState<string | null>(existingOrderStatus);
 
   useEffect(() => {
     const supabase = createClient();
@@ -99,8 +100,20 @@ export default function AuctionBidPanel({
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "auctions", filter: `id=eq.${auction.id}` },
-        (payload) => {
-          setAuction((prev) => ({ ...prev, ...payload.new as Partial<AuctionData> }));
+        async (payload) => {
+          const updated = payload.new as Partial<AuctionData>;
+          setAuction((prev) => ({ ...prev, ...updated }));
+          // When the auction ends and we're the winner, re-fetch order status so
+          // the UI correctly reflects auto-charge success, failure, or pending manual checkout
+          if (updated.status === "ended" && updated.current_bidder_id === userId && !liveOrderStatus) {
+            const { data: order } = await supabase
+              .from("orders")
+              .select("status")
+              .eq("auction_id", auction.id)
+              .eq("buyer_id", userId!)
+              .maybeSingle();
+            if (order?.status) setLiveOrderStatus(order.status);
+          }
         }
       )
       .on(
@@ -462,7 +475,7 @@ export default function AuctionBidPanel({
         </CardContent>
       </Card>
 
-      {isWinner && (existingOrderStatus === "paid" || orderConfirmed) && (
+      {isWinner && (liveOrderStatus === "paid" || orderConfirmed) && (
         <a
           href="/orders"
           className={cn(buttonVariants({ size: "lg" }), "w-full bg-leaf hover:bg-forest")}
@@ -470,7 +483,7 @@ export default function AuctionBidPanel({
           Order confirmed — View Order →
         </a>
       )}
-      {isWinner && existingOrderStatus === "pending" && (
+      {isWinner && liveOrderStatus === "pending" && (
         <div className="space-y-2">
           <div className="rounded-lg border border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800 px-4 py-3 text-center">
             <p className="font-semibold text-red-700 dark:text-red-400 text-sm">Payment failed</p>
@@ -484,13 +497,13 @@ export default function AuctionBidPanel({
           </a>
         </div>
       )}
-      {isWinner && !existingOrderStatus && !orderConfirmed && buyerHasPaymentMethod && (
+      {isWinner && !liveOrderStatus && !orderConfirmed && buyerHasPaymentMethod && (
         <div className="rounded-lg border border-leaf/40 bg-[#EBF0E6] dark:bg-forest/20 px-4 py-3 text-center">
           <p className="font-semibold text-leaf text-sm">🎉 You won!</p>
           <p className="text-xs text-muted-foreground mt-1">Your saved card will be charged automatically — you&apos;ll receive a confirmation email shortly.</p>
         </div>
       )}
-      {isWinner && !existingOrderStatus && !orderConfirmed && !buyerHasPaymentMethod && (
+      {isWinner && !liveOrderStatus && !orderConfirmed && !buyerHasPaymentMethod && (
         <a
           href={`/checkout?auction=${auction.id}`}
           className={cn(buttonVariants({ size: "lg" }), "w-full bg-leaf hover:bg-forest")}
@@ -499,7 +512,7 @@ export default function AuctionBidPanel({
         </a>
       )}
 
-      {isEnded && auction.current_bidder_id === userId && !reserveMet && !existingOrderStatus && !orderConfirmed && (
+      {isEnded && auction.current_bidder_id === userId && !reserveMet && !liveOrderStatus && !orderConfirmed && (
         <div className="rounded-md border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
           <p className="font-medium">Reserve not met — you had the highest bid</p>
           <p className="text-xs mt-0.5">The seller may offer to sell at your bid price. You&apos;ll receive an email if they do.</p>
