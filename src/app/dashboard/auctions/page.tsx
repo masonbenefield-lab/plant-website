@@ -115,11 +115,12 @@ export default async function DashboardAuctionsPage({
   let activeBidAuctions: BidAuction[] = [];
   let historyAuctions: BidAuction[] = [];
   let highBidMap: Record<string, number> = {};
+  let maxBidMap: Record<string, number> = {};
 
   if (tab === "active-bids" || tab === "history") {
     const { data: bids } = await admin
       .from("bids")
-      .select("auction_id, amount_cents")
+      .select("auction_id, amount_cents, max_bid_cents")
       .eq("bidder_id", user.id)
       .order("created_at", { ascending: false });
 
@@ -128,6 +129,10 @@ export default async function DashboardAuctionsPage({
     for (const b of bids ?? []) {
       if (!highBidMap[b.auction_id] || b.amount_cents > highBidMap[b.auction_id]) {
         highBidMap[b.auction_id] = b.amount_cents;
+      }
+      const bMax = (b as { max_bid_cents?: number | null }).max_bid_cents;
+      if (bMax && (!maxBidMap[b.auction_id] || bMax > maxBidMap[b.auction_id])) {
+        maxBidMap[b.auction_id] = bMax;
       }
     }
 
@@ -347,6 +352,7 @@ export default async function DashboardAuctionsPage({
         <ActiveBidsList
           initialAuctions={activeBidAuctions}
           highBidMap={highBidMap}
+          maxBidMap={maxBidMap}
           userId={user.id}
         />
       )}

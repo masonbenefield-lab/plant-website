@@ -322,10 +322,14 @@ export default function AuctionBidPanel({
         `Your bid of ${centsToDisplay(cents)} was placed but immediately outbid by a proxy bid (${centsToDisplay(data.proxyBid)}).`,
         { duration: 6000 }
       );
+    } else if (data.wonProxyWar) {
+      const extendedNote = data.extended ? " — auction extended 2 min" : "";
+      const maxNote = maxCents ? ` · Auto-bidding up to ${centsToDisplay(maxCents)}` : "";
+      toast.success(`You won the proxy war! Leading at ${centsToDisplay(data.finalBid)}${extendedNote}${maxNote}`, { duration: 6000 });
     } else {
       const extendedNote = data.extended ? " — auction extended by 2 minutes" : "";
-      toast.success(`Bid of ${centsToDisplay(cents)} placed!${extendedNote}`);
-      if (maxCents) toast.info(`Auto-bidding enabled up to ${centsToDisplay(maxCents)}`, { duration: 4000 });
+      const maxNote = maxCents ? ` · Auto-bidding up to ${centsToDisplay(maxCents)}` : "";
+      toast.success(`Bid of ${centsToDisplay(cents)} placed!${extendedNote}${maxNote}`);
     }
     setBidAmount("");
     setMaxBidAmount("");

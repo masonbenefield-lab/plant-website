@@ -179,23 +179,48 @@ export async function POST(request: Request) {
         const extended = endsAt.getTime() - now.getTime() < SNIPE_WINDOW_MS;
         const newEndsAt = extended ? new Date(now.getTime() + SNIPE_WINDOW_MS).toISOString() : undefined;
 
+        // Resolve proxy war: if the incoming bidder also has a max bid, determine
+        // the final winner now rather than stopping after one proxy counter.
+        let finalLeaderId = auction.current_bidder_id!;
+        let finalBidCents = counterCents;
+
+        if (maxBidCents && maxBidCents > counterCents) {
+          if (maxBidCents > proxyMax) {
+            // Incoming bidder's max beats the leader's max — incoming bidder wins
+            // at one increment above the leader's max
+            finalBidCents = Math.min(proxyMax + getMinIncrement(proxyMax), maxBidCents);
+            finalLeaderId = user.id;
+          } else {
+            // Leader's max still beats incoming — settle at one increment above incoming max
+            finalBidCents = Math.min(maxBidCents + getMinIncrement(maxBidCents), proxyMax);
+          }
+          // Record the final proxy bid
+          await admin.from("bids").insert({
+            auction_id: auctionId,
+            bidder_id: finalLeaderId,
+            amount_cents: finalBidCents,
+          });
+        }
+
         const { error: proxyUpdateError } = await admin.from("auctions").update({
-          current_bid_cents: counterCents,
-          current_bidder_id: auction.current_bidder_id,
+          current_bid_cents: finalBidCents,
+          current_bidder_id: finalLeaderId,
           ...(extended ? { ends_at: newEndsAt } : {}),
         }).eq("id", auctionId);
 
         if (proxyUpdateError) return NextResponse.json({ error: proxyUpdateError.message }, { status: 500 });
 
-        // The incoming bidder was outbid by proxy — notify them server-side
         const proxyDisplayName = auction.variety ? `${auction.plant_name} — ${auction.variety}` : auction.plant_name;
-        notifyOutbid(admin, user.id, proxyDisplayName, auctionId, counterCents);
 
-        return NextResponse.json({
-          ok: true,
-          outbidByProxy: true,
-          proxyBid: counterCents,
-        });
+        if (finalLeaderId === user.id) {
+          // Incoming bidder won the proxy war — notify the displaced leader
+          notifyOutbid(admin, auction.current_bidder_id!, proxyDisplayName, auctionId, finalBidCents);
+          return NextResponse.json({ ok: true, extended, wonProxyWar: true, finalBid: finalBidCents });
+        }
+
+        // Leader's proxy held — notify incoming bidder they were outbid
+        notifyOutbid(admin, user.id, proxyDisplayName, auctionId, finalBidCents);
+        return NextResponse.json({ ok: true, outbidByProxy: true, proxyBid: finalBidCents });
       }
     }
   }

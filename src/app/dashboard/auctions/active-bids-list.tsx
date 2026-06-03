@@ -69,10 +69,12 @@ function EndsBadge({ endsAt }: { endsAt: string }) {
 export function ActiveBidsList({
   initialAuctions,
   highBidMap,
+  maxBidMap,
   userId,
 }: {
   initialAuctions: BidAuction[];
   highBidMap: Record<string, number>;
+  maxBidMap: Record<string, number>;
   userId: string;
 }) {
   const router = useRouter();
@@ -118,6 +120,7 @@ export function ActiveBidsList({
       {initialAuctions.map((a) => {
         const isWinning = a.current_bidder_id === userId;
         const myBid = highBidMap[a.id];
+        const myMax = maxBidMap[a.id];
         const img = a.images?.[0];
         return (
           <Link key={a.id} href={`/auctions/${a.id}`}>
@@ -139,6 +142,9 @@ export function ActiveBidsList({
                       {isWinning ? "Winning" : "Outbid"}
                     </span>
                     <span>Your bid: <span className="font-medium text-foreground">{centsToDisplay(myBid)}</span></span>
+                    {myMax && (
+                      <span>Max: <span className="font-medium text-foreground">{centsToDisplay(myMax)}</span></span>
+                    )}
                     {!isWinning && (
                       <span>Current: <span className="font-medium text-leaf">{centsToDisplay(a.current_bid_cents)}</span></span>
                     )}
