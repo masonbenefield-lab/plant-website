@@ -90,6 +90,7 @@ export default function AuctionBidPanel({
   const [savedShippingState, setSavedShippingState] = useState<string | null>(null);
   const [orderConfirmed, setOrderConfirmed] = useState(false);
   const [pendingBuyNow, setPendingBuyNow] = useState(false);
+  const [buyNowDeclined, setBuyNowDeclined] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
@@ -348,12 +349,13 @@ export default function AuctionBidPanel({
 
     if (!res.ok) {
       if (data.error === "payment_declined") {
-        toast.error("Your card was declined. Please update your payment method in Account Settings and try again.", { duration: 6000 });
+        setBuyNowDeclined(true);
       } else {
         toast.error(data.error ?? "Failed to complete purchase");
       }
       return;
     }
+    setBuyNowDeclined(false);
 
     if (data.previousBidderId && data.previousBidderId !== userId) {
       fetch("/api/bids/notify", {
@@ -542,6 +544,16 @@ export default function AuctionBidPanel({
               {placing ? "…" : `${centsToDisplay(auction.buy_now_price_cents)}`}
             </Button>
           </div>
+
+          {buyNowDeclined && (
+            <div className="rounded-lg border border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800 px-4 py-3">
+              <p className="text-sm font-semibold text-red-700 dark:text-red-400">Card declined</p>
+              <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">Your saved card was declined. The auction is still open — update your card and try again.</p>
+              <a href="/account#bidding" className="text-xs font-semibold underline underline-offset-2 mt-1.5 inline-block text-red-700 dark:text-red-400">
+                Update payment method →
+              </a>
+            </div>
+          )}
 
           {/* Buy Now confirmation dialog */}
           {pendingBuyNow && (() => {
