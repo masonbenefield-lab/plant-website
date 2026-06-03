@@ -15,6 +15,7 @@ import type { OrderStatus } from "@/lib/supabase/types";
 import { toast } from "sonner";
 import { Printer, ExternalLink, AlertTriangle } from "lucide-react";
 import GetLabelModal from "./get-label-modal";
+import { PriceBreakdown } from "@/components/price-breakdown";
 
 function detectCarrier(tracking: string): string {
   if (/^1Z[0-9A-Z]{16}$/i.test(tracking)) return "UPS";
@@ -54,6 +55,7 @@ type OrderRow = {
   shippo_rate_id: string | null;
   label_url: string | null;
   shipping_cost_cents: number | null;
+  tax_cents: number | null;
   shipping_service: string | null;
   item_snapshot: { plant_name: string; variety: string | null; image: string | null } | null;
   created_at: string;
@@ -310,7 +312,7 @@ export default function OrdersClient({
                         )}
                       </div>
                       <p className="text-sm text-muted-foreground mb-3">
-                        Buyer: <strong>{buyer?.username}</strong> · {centsToDisplay(order.amount_cents)}
+                        Buyer: <strong>{buyer?.username}</strong> · <PriceBreakdown totalCents={order.amount_cents} shippingCents={order.shipping_cost_cents} taxCents={order.tax_cents} />
                       </p>
                       <div className="bg-muted rounded-lg p-3 text-sm">
                         <p className="font-medium mb-1">

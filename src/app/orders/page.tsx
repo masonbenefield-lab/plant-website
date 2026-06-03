@@ -14,6 +14,7 @@ import DisputeThread from "./dispute-thread";
 import type { DisputeMessage } from "./dispute-thread";
 import OrdersClient from "@/app/dashboard/orders/orders-client";
 import { ExpiredAuctionBanner } from "./expired-auction-banner";
+import { PriceBreakdown } from "@/components/price-breakdown";
 
 function adminClient() {
   return createSupabaseAdmin<Database>(
@@ -252,7 +253,7 @@ export default async function OrdersPage({
                                 {seller.display_name ?? seller.username}
                               </Link>
                             ) : "—"}
-                            {" "}· {centsToDisplay(order.amount_cents)}
+                            {" "}· <PriceBreakdown totalCents={order.amount_cents} shippingCents={order.shipping_cost_cents ?? null} taxCents={order.tax_cents ?? null} />
                           </p>
                           <p className="text-xs text-muted-foreground mt-0.5">
                             {new Date(order.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
