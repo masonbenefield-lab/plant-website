@@ -99,6 +99,18 @@ export default async function OrderConfirmedPage({
         </CardContent>
       </Card>
 
+      {order.auction_id && (
+        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800 px-4 py-3 text-left">
+          <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">Keep your bidding card up to date</p>
+          <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
+            Future auctions you win are charged automatically. If your saved card is outdated or declined, you&apos;ll need to complete payment manually again.
+          </p>
+          <Link href="/account#bidding" className="text-xs font-semibold underline underline-offset-2 mt-1.5 inline-block text-amber-800 dark:text-amber-300">
+            Review your saved card →
+          </Link>
+        </div>
+      )}
+
       <p className="text-xs text-muted-foreground mb-6">
         Once your order is delivered, you can leave a review from{" "}
         <Link href="/orders" className="text-leaf hover:underline">My Orders</Link>.
