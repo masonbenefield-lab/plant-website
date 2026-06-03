@@ -287,6 +287,18 @@ export default async function DashboardAuctionsPage({
                               triggerLabel="Relist"
                             />
                           )}
+                          {(auction.status === "ended" && auction.current_bidder_id) || auction.status === "cancelled" ? (
+                            <NewAuctionDialog
+                              sellerId={user.id}
+                              planLimit={planLimits.auctions}
+                              currentCount={activeAuctionCount}
+                              photoLimit={planLimits.photos}
+                              calculatedShippingEnabled={calculatedShippingEnabled}
+                              prefill={auction}
+                              triggerLabel="Duplicate"
+                              keepOriginal
+                            />
+                          ) : null}
                           <DeleteEndedAuctionButton auctionId={auction.id} />
                         </div>
                       )}

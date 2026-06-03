@@ -46,9 +46,10 @@ interface Props {
   calculatedShippingEnabled: boolean;
   prefill?: PrefillData;
   triggerLabel?: string;
+  keepOriginal?: boolean;
 }
 
-export default function NewAuctionDialog({ sellerId, planLimit, currentCount, photoLimit, calculatedShippingEnabled, prefill, triggerLabel }: Props) {
+export default function NewAuctionDialog({ sellerId, planLimit, currentCount, photoLimit, calculatedShippingEnabled, prefill, triggerLabel, keepOriginal }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -191,9 +192,11 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
     if (error) {
       toast.error(error.message);
     } else {
-      if (prefill) {
+      if (prefill && !keepOriginal) {
         await supabase.from("auctions").delete().eq("id", prefill.id);
         toast.success("Auction relisted!");
+      } else if (prefill && keepOriginal) {
+        toast.success("Auction duplicated!");
       } else {
         toast.success("Auction created!");
       }
@@ -219,7 +222,7 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
       <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{prefill ? "Relist Auction" : "Create an Auction"}</DialogTitle>
+          <DialogTitle>{prefill ? (keepOriginal ? "Duplicate Auction" : "Relist Auction") : "Create an Auction"}</DialogTitle>
         </DialogHeader>
 
         {atAuctionLimit && (
@@ -470,7 +473,7 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
             <Button type="submit" disabled={saving || atAuctionLimit || !shippingMode || (shippingMode === "weight" && !calculatedShippingEnabled) || buyNowError || reserveError} className="bg-leaf hover:bg-forest">
-              {saving ? "Saving…" : prefill ? "Relist auction" : "Create auction"}
+              {saving ? "Saving…" : prefill ? (keepOriginal ? "Duplicate auction" : "Relist auction") : "Create auction"}
             </Button>
           </div>
         </form>
