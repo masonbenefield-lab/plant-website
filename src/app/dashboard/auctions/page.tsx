@@ -15,6 +15,7 @@ import AuctionActions from "./auction-actions";
 import NewAuctionDialog from "./new-auction-dialog";
 import { LocalDate } from "@/components/local-date";
 import type { Database } from "@/lib/supabase/types";
+import { AuctionRealtimeRefresh } from "./auction-realtime-refresh";
 
 const PAGE_SIZE = 25;
 
@@ -149,6 +150,7 @@ export default async function DashboardAuctionsPage({
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-10">
+      <AuctionRealtimeRefresh sellerId={user.id} />
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Auctions</h1>
