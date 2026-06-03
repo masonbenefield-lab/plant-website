@@ -6,6 +6,8 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { centsToDisplay } from "@/lib/stripe";
 import { TrendingUp, TrendingDown } from "lucide-react";
+import { GroundbreakerBanner } from "@/components/groundbreaker-banner";
+import { GROUNDBREAKER_CAP } from "@/lib/plan-limits";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -30,6 +32,7 @@ export default async function DashboardPage() {
     { count: purchaseCount },
     { count: wishlistCount },
     { count: followingCount },
+    { count: groundbreakerCount },
   ] = await Promise.all([
     supabase.from("profiles").select("username, bio, avatar_url, stripe_onboarded, plan, garden_public, groundbreaker, groundbreaker_number, ship_from_address, return_policy_type, shipping_days").eq("id", user.id).single(),
     supabase.from("listings").select("*", { count: "exact", head: true }).eq("seller_id", user.id).eq("status", "active"),
@@ -44,6 +47,7 @@ export default async function DashboardPage() {
     supabase.from("orders").select("*", { count: "exact", head: true }).eq("buyer_id", user.id),
     supabase.from("wishlists").select("*", { count: "exact", head: true }).eq("user_id", user.id),
     supabase.from("follows").select("*", { count: "exact", head: true }).eq("follower_id", user.id),
+    supabase.from("profiles").select("*", { count: "exact", head: true }).eq("groundbreaker", true),
   ]);
 
   const paidCount = paidOrders?.length ?? 0;
@@ -56,6 +60,8 @@ export default async function DashboardPage() {
 
   const plan = profile?.plan ?? "seedling";
   const isSellerMode = !!profile?.stripe_onboarded || (inventoryCount ?? 0) > 0 || (listingCount ?? 0) > 0 || (auctionCount ?? 0) > 0;
+  const spotsLeft = GROUNDBREAKER_CAP - (groundbreakerCount ?? 0);
+  const showGroundbreakerBanner = !profile?.groundbreaker && spotsLeft > 0;
 
   // Resolve item names and buyer usernames for recent orders
   let recentOrders: {
@@ -123,6 +129,8 @@ export default async function DashboardPage() {
           )}
         </div>
 
+        {showGroundbreakerBanner && <GroundbreakerBanner spotsLeft={spotsLeft} />}
+
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <StatCard label="My Purchases" value={purchaseCount ?? 0} href="/orders" />
           <StatCard label="Wishlist" value={wishlistCount ?? 0} href="/wishlist" />
@@ -188,6 +196,8 @@ export default async function DashboardPage() {
           + Add Inventory
         </Link>
       </div>
+
+      {showGroundbreakerBanner && <GroundbreakerBanner spotsLeft={spotsLeft} />}
 
       {/* Onboarding checklist */}
       {!allDone && (
