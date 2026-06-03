@@ -95,13 +95,29 @@ function getFieldMeta(values: (number | null)[]): { defaultValue: string; placeh
 
 // ─── Week Strip ───────────────────────────────────────────────────────────────
 
+// Returns every day offset [0–6] where this entry recurs based on its interval
+function getStripDays(daysUntilDue: number, interval: number): Set<number> {
+  const days = new Set<number>();
+  let d = daysUntilDue;
+  // Advance past any overdue days to the first occurrence >= 0
+  if (d < 0) d += Math.ceil(Math.abs(d) / interval) * interval;
+  while (d <= 6) {
+    days.add(d);
+    d += interval;
+  }
+  return days;
+}
+
 function WeekStrip({ entries }: { entries: CareEntry[] }) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
   const days = Array.from({ length: 7 }, (_, i) => {
     const date = addDays(today, i);
-    const count = entries.filter((e) => e.daysUntilDue === i).length;
+    // Count all recurring occurrences that land on this day
+    const count = entries.reduce((sum, e) => {
+      return sum + (getStripDays(e.daysUntilDue, e.interval).has(i) ? 1 : 0);
+    }, 0);
     return {
       offset: i,
       dayLabel: date.toLocaleDateString("en-US", { weekday: "short" }),
@@ -501,6 +517,7 @@ export function CareScheduleClient({
   const [selectionMode, setSelectionMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [editPlantIds, setEditPlantIds] = useState<string[] | null>(null);
+  const [bulkLogging, setBulkLogging] = useState(false);
 
   const intervalMap = Object.fromEntries(plantIntervals.map((p) => [p.id, p]));
   const editPlants = editPlantIds
@@ -540,6 +557,36 @@ export function CareScheduleClient({
   function exitSelectionMode() {
     setSelectionMode(false);
     setSelected(new Set());
+  }
+
+  async function handleBulkLog() {
+    const toLog = entries
+      .filter((e) => selected.has(e.plantId))
+      .map((e) => ({ plantId: e.plantId, careType: e.careType }));
+
+    if (toLog.length === 0) {
+      toast.info("No care tasks found for selected plants");
+      return;
+    }
+
+    setBulkLogging(true);
+    const res = await fetch("/api/garden/bulk-log-care", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: toLog }),
+    });
+    setBulkLogging(false);
+
+    if (res.ok) {
+      const { logged } = await res.json() as { logged: number };
+      toast.success(`Logged ${logged} care task${logged !== 1 ? "s" : ""}`);
+      const loggedKeys = new Set(toLog.map((i) => `${i.plantId}-${i.careType}`));
+      setEntries((prev) => prev.filter((e) => !loggedKeys.has(`${e.plantId}-${e.careType}`)));
+      exitSelectionMode();
+      router.refresh();
+    } else {
+      toast.error("Failed to log care");
+    }
   }
 
   function handleSaved() {
@@ -683,6 +730,14 @@ export function CareScheduleClient({
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={exitSelectionMode}>
               Clear
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleBulkLog}
+              disabled={bulkLogging}
+            >
+              {bulkLogging ? "Logging…" : "Log care"}
             </Button>
             <Button
               size="sm"
