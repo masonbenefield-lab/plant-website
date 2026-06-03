@@ -142,7 +142,7 @@ export default async function DashboardPage() {
 
         <Card className="border-[#C5D4BC] bg-[#EBF0E6]">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base text-forest dark:text-[#C5D4BC]">Get your shop ready</CardTitle>
+            <CardTitle className="text-base text-forest">Get your shop ready</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             <CheckItem done={checks.profile}          label="Complete your profile"                         href="/account"                   hint="Add a bio and profile photo so buyers trust you" />
@@ -347,7 +347,7 @@ function CheckItem({ done, label, href, hint, external, doneHref }: {
         ) : (
           <Link href={href} target={linkTarget} rel={linkRel} className="text-sm font-medium text-forest hover:underline">{label}</Link>
         )}
-        {!done && <p className="text-xs text-leaf/70 mt-0.5">{hint}</p>}
+        {!done && <p className="text-xs text-forest/70 mt-0.5">{hint}</p>}
       </div>
     </div>
   );
