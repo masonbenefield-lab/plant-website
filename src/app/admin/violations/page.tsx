@@ -42,6 +42,7 @@ export default async function AdminViolationsPage() {
   }>();
 
   for (const v of violations ?? []) {
+    if (!v.user_id || !v.created_at) continue;
     if (!byUser.has(v.user_id)) {
       byUser.set(v.user_id, {
         userId: v.user_id,
