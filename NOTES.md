@@ -1105,3 +1105,26 @@ CREATE POLICY "Service role only" ON referral_activations FOR ALL USING (false);
 
 ### Environment variables
 - None
+
+---
+
+## 2026-06-04 — Care Schedule: Notes dialog, date-accurate logging, next-task preview, quick presets
+
+### Features added
+- **`/api/garden/log-notes` route** — POST endpoint accepts `{ events: { eventId, notes }[] }` and batch-saves notes to existing `garden_events` rows; skips rows with empty notes; enforces user ownership via `user_id` check
+- **Notes pop-out dialog after logging** — After any single or bulk log action in Week Ahead, a `LogNotesDialog` appears with a per-event textarea for each logged item; "Save notes" calls `/api/garden/log-notes`; dialog can be skipped via the close button
+- **Date-accurate logging for past days** — `DayTaskRow` and all bulk-log calls now include the viewed day's date as `date:` in the API body so past tasks are logged on their actual date instead of always today; single log also passes `logDate`
+- **Next upcoming task date when week is all clear** — When the current week has zero pending tasks, the strip header shows "Next: [short date]" (e.g. "Next: Jun 11") by computing the earliest future occurrence across all entries and reminders; falls back to "All clear ✓" when no future tasks exist
+- **Quick water interval presets on unscheduled plants** — Plants with no intervals set in Manage Schedules now show "💧 water: 3d / 7d / 14d" inline preset buttons instead of "No schedule set"; clicking calls `/api/garden/update-intervals` directly and refreshes
+
+### Files created
+- `src/app/api/garden/log-notes/route.ts`
+
+### Files modified
+- `src/app/garden/care/care-schedule-client.tsx` — `LogNotesDialog` component; `logDate` computation; `nextTaskOffset` computation; `DayTaskRow` updated props; `handleLog`, `logSelected`, `logAll` updated; `ManagePlantRow` quick preset buttons; `handleQuickWater` in `CareScheduleClient`
+
+### SQL migrations required
+- None
+
+### Environment variables
+- None

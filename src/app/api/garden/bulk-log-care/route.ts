@@ -14,37 +14,54 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { items } = await request.json() as { items: { plantId: string; careType: string }[] };
+  const { items, date } = await request.json() as {
+    items: { plantId: string; careType: string }[];
+    date?: string;
+  };
   if (!Array.isArray(items) || items.length === 0) {
     return NextResponse.json({ error: "No items provided" }, { status: 400 });
   }
 
-  // Verify all plants belong to this user
   const plantIds = [...new Set(items.map((i) => i.plantId))];
   const { data: plants } = await supabase
     .from("garden_plants")
-    .select("id")
+    .select("id, name, variety")
     .in("id", plantIds)
     .eq("user_id", user.id);
 
   const validIds = new Set((plants ?? []).map((p) => p.id));
-  const today = new Date().toISOString().split("T")[0];
+  const plantNames = Object.fromEntries(
+    (plants ?? []).map((p) => [p.id, p.variety ? `${p.name} — ${p.variety}` : p.name])
+  );
 
-  const events = items
-    .filter((i) => validIds.has(i.plantId) && CARE_EVENT_MAP[i.careType])
-    .map((i) => ({
-      plant_id:   i.plantId,
-      user_id:    user.id,
-      event_type: CARE_EVENT_MAP[i.careType],
-      event_date: today,
-    }));
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  const eventDate = date ?? todayStr;
 
-  if (events.length === 0) {
-    return NextResponse.json({ error: "No valid items" }, { status: 400 });
-  }
+  const validItems = items.filter((i) => validIds.has(i.plantId) && CARE_EVENT_MAP[i.careType]);
+  if (validItems.length === 0) return NextResponse.json({ error: "No valid items" }, { status: 400 });
 
-  const { error } = await supabase.from("garden_events").insert(events);
+  const events = validItems.map((i) => ({
+    plant_id:   i.plantId,
+    user_id:    user.id,
+    event_type: CARE_EVENT_MAP[i.careType],
+    event_date: eventDate,
+    notes:      null as string | null,
+  }));
+
+  const { data: inserted, error } = await supabase
+    .from("garden_events")
+    .insert(events)
+    .select("id, plant_id, event_type");
+
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  return NextResponse.json({ ok: true, logged: events.length });
+  const loggedEvents = (inserted ?? []).map((ev, idx) => ({
+    eventId:   ev.id,
+    plantId:   ev.plant_id,
+    plantName: plantNames[ev.plant_id] ?? ev.plant_id,
+    careType:  validItems[idx]?.careType ?? "",
+  }));
+
+  return NextResponse.json({ ok: true, logged: loggedEvents.length, events: loggedEvents });
 }
