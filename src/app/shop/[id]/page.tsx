@@ -243,13 +243,10 @@ export default async function ListingPage({
                 notes={(seller as { return_policy_notes?: string | null }).return_policy_notes}
               />
             )}
-            {(seller as { calculated_shipping_enabled?: boolean } | null)?.calculated_shipping_enabled !== false && (
-              <ShippingEstimate
-                listingId={listing.id}
-                freeShipping={shippingFree}
-                shippingCostCents={shippingCostCents}
-              />
-            )}
+            <ShippingEstimate
+              freeShipping={shippingFree}
+              shippingCostCents={shippingCostCents}
+            />
           </div>
 
           {seller?.vacation_mode && (

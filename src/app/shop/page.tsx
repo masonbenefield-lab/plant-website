@@ -289,8 +289,6 @@ export default async function ShopPage({
                         <p className="text-xs text-leaf dark:text-sage font-medium mt-1.5">Free shipping</p>
                       ) : listing.shipping_cost_cents ? (
                         <p className="text-xs text-muted-foreground mt-1.5">+ {centsToDisplay(listing.shipping_cost_cents)} shipping</p>
-                      ) : listing.shipping_weight_oz ? (
-                        <p className="text-xs text-muted-foreground mt-1.5">Calculated shipping</p>
                       ) : null}
                     </CardContent>
                   </Link>
