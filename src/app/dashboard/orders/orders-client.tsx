@@ -57,7 +57,7 @@ type OrderRow = {
   tax_cents: number | null;
   shipping_service: string | null;
   item_snapshot: unknown;
-  buyer_note: string | null;
+  buyer_note?: string | null;
   created_at: string;
 };
 
