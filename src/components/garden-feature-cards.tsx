@@ -11,18 +11,20 @@ const features = [
     title: "Photo journal",
     desc: "Add photos over time and watch your plants grow. Multiple images per plant.",
     example: (
-      <div className="space-y-3">
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Monstera deliciosa — photo timeline</p>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { date: "Jan 2024", note: "Just got it — 3 leaves, very small", color: "bg-blue-100 dark:bg-blue-900/30" },
-          { date: "Mar 2024", note: "New leaf unfurling! Up to 5 leaves now", color: "bg-green-100 dark:bg-green-900/30" },
-          { date: "Jun 2024", note: "8 leaves, starting to fenestrate 🎉", color: "bg-emerald-100 dark:bg-emerald-900/30" },
+          { emoji: "🌿", name: "Pakistan Mulberry", species: "Mulberry", status: "Thriving", planted: "Planted May 2026" },
+          { emoji: "🌳", name: "Viollete De Sollies", species: "Fig", status: "Growing", planted: "" },
+          { emoji: "🌟", name: "Karey", species: "Starfruit", status: "Growing", planted: "" },
+          { emoji: "🍌", name: "Blue Java", species: "Banana", status: "Growing", planted: "Planted Mar 2026" },
         ].map((p) => (
-          <div key={p.date} className={`flex items-start gap-3 rounded-lg px-3 py-2.5 ${p.color}`}>
-            <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center text-xl shrink-0">🌿</div>
-            <div>
-              <p className="text-xs font-semibold">{p.date}</p>
-              <p className="text-xs text-muted-foreground">{p.note}</p>
+          <div key={p.name} className="rounded-xl border bg-card overflow-hidden">
+            <div className="aspect-square bg-muted flex items-center justify-center text-4xl">{p.emoji}</div>
+            <div className="p-2">
+              <p className="text-xs font-semibold leading-tight truncate">{p.name}</p>
+              <p className="text-[10px] text-muted-foreground">{p.species}</p>
+              <span className="inline-block mt-1 text-[10px] bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.5 rounded-full font-medium">{p.status}</span>
+              {p.planted && <p className="text-[10px] text-muted-foreground mt-0.5">{p.planted}</p>}
             </div>
           </div>
         ))}
@@ -34,25 +36,56 @@ const features = [
     title: "Care schedule",
     desc: "Set intervals for watering, fertilizing, repotting, and pruning.",
     example: (
-      <div className="space-y-2">
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Fiddle Leaf Fig — upcoming care</p>
-        {[
-          { icon: "💧", task: "Watering",    interval: "Every 7 days",  next: "Tomorrow",  color: "text-blue-600 dark:text-blue-400" },
-          { icon: "🌱", task: "Fertilizing", interval: "Every 30 days", next: "In 12 days", color: "text-green-600 dark:text-green-400" },
-          { icon: "🪣", task: "Repotting",   interval: "Every 365 days",next: "In 4 months", color: "text-amber-600 dark:text-amber-400" },
-          { icon: "✂️", task: "Pruning",     interval: "Every 90 days", next: "In 6 weeks",  color: "text-purple-600 dark:text-purple-400" },
-        ].map((t) => (
-          <div key={t.task} className="flex items-center justify-between rounded-lg border bg-card px-3 py-2">
-            <div className="flex items-center gap-2">
-              <span className="text-base">{t.icon}</span>
-              <div>
-                <p className="text-xs font-medium">{t.task}</p>
-                <p className="text-[10px] text-muted-foreground">{t.interval}</p>
-              </div>
-            </div>
-            <span className={`text-xs font-semibold ${t.color}`}>{t.next}</span>
+      <div className="space-y-3">
+        {/* Week calendar */}
+        <div className="rounded-lg border bg-card p-3">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-semibold">Week ahead</p>
+            <p className="text-[10px] text-muted-foreground">10 remaining</p>
           </div>
-        ))}
+          <div className="grid grid-cols-7 gap-1 text-center">
+            {[
+              { day: "Today", date: "Jun 4", count: 3 },
+              { day: "Fri",   date: "Jun 5", count: 0 },
+              { day: "Sat",   date: "Jun 6", count: 0 },
+              { day: "Sun",   date: "Jun 7", count: 3 },
+              { day: "Mon",   date: "Jun 8", count: 0 },
+              { day: "Tue",   date: "Jun 9", count: 1 },
+              { day: "Wed",   date: "Jun 10", count: 3 },
+            ].map((d) => (
+              <div key={d.date} className={`rounded-md py-1 ${d.day === "Today" ? "bg-muted" : ""}`}>
+                <p className="text-[9px] text-muted-foreground">{d.day}</p>
+                <p className="text-[9px] text-muted-foreground">{d.date}</p>
+                {d.count > 0
+                  ? <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-leaf text-white text-[9px] font-bold mt-0.5">{d.count}</span>
+                  : <span className="inline-block w-4 h-4 mt-0.5 text-[9px] text-muted-foreground">—</span>
+                }
+              </div>
+            ))}
+          </div>
+        </div>
+        {/* Today's tasks */}
+        <div className="rounded-lg border bg-card p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold">Today · 3 tasks</p>
+            <p className="text-[10px] text-leaf font-medium cursor-pointer">Log all</p>
+          </div>
+          {[
+            { name: "Azores Dark Fig",  emoji: "🌳" },
+            { name: "Banana — Blue Java", emoji: "🍌" },
+            { name: "Black Madeira Fig", emoji: "🌿" },
+          ].map((t) => (
+            <div key={t.name} className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded border border-muted-foreground/40 shrink-0" />
+              <div className="w-7 h-7 rounded-md bg-muted flex items-center justify-center text-sm shrink-0">{t.emoji}</div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] font-medium truncate">{t.name}</p>
+                <span className="inline-block text-[9px] bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-1.5 py-0.5 rounded-full font-medium">Water</span>
+              </div>
+              <p className="text-[10px] text-leaf font-medium shrink-0">Log ✓</p>
+            </div>
+          ))}
+        </div>
       </div>
     ),
   },
@@ -88,31 +121,29 @@ const features = [
     title: "Share your garden",
     desc: "Make your garden public and share the link. Others can browse your collection.",
     example: (
-      <div className="rounded-xl border bg-card p-4 space-y-3">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-full bg-[#DFE7D4] flex items-center justify-center text-2xl">🌿</div>
+      <div className="space-y-3">
+        <div className="flex items-center gap-3 pb-2 border-b">
+          <div className="w-10 h-10 rounded-full bg-[#DFE7D4] flex items-center justify-center text-xl shrink-0">🌿</div>
           <div>
-            <p className="font-semibold text-sm">Mason&apos;s Garden</p>
-            <p className="text-xs text-muted-foreground">plantet.shop/gardens/mason</p>
+            <p className="text-sm font-semibold">Mason&apos;s Garden</p>
+            <p className="text-[10px] text-muted-foreground">42 plants · plantet.shop/gardens/mason</p>
           </div>
         </div>
-        <div className="flex gap-4 text-center border-t pt-3">
-          <div className="flex-1">
-            <p className="font-bold text-lg">24</p>
-            <p className="text-xs text-muted-foreground">Plants</p>
-          </div>
-          <div className="flex-1">
-            <p className="font-bold text-lg">47</p>
-            <p className="text-xs text-muted-foreground">Followers</p>
-          </div>
-          <div className="flex-1">
-            <p className="font-bold text-lg">138</p>
-            <p className="text-xs text-muted-foreground">Care logs</p>
-          </div>
-        </div>
-        <div className="flex gap-1.5 flex-wrap">
-          {["🌿 Monstera", "🌵 Cactus mix", "🌸 Orchids", "🪴 Pothos"].map(t => (
-            <span key={t} className="text-xs bg-[#DFE7D4] dark:bg-forest/40 text-leaf dark:text-sage px-2 py-0.5 rounded-full">{t}</span>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {[
+            { emoji: "🌿", name: "Pakistan Mulberry", species: "Mulberry", status: "Growing" },
+            { emoji: "🌳", name: "Viollete De Sollies", species: "Fig", status: "Growing" },
+            { emoji: "🌟", name: "Karey", species: "Starfruit", status: "Growing" },
+            { emoji: "🍌", name: "Blue Java", species: "Banana", status: "Growing" },
+          ].map((p) => (
+            <div key={p.name} className="rounded-xl border bg-card overflow-hidden">
+              <div className="aspect-square bg-muted flex items-center justify-center text-3xl">{p.emoji}</div>
+              <div className="p-1.5">
+                <p className="text-[10px] font-semibold leading-tight truncate">{p.name}</p>
+                <p className="text-[9px] text-muted-foreground">{p.species}</p>
+                <span className="inline-block mt-0.5 text-[9px] bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.5 rounded-full font-medium">{p.status}</span>
+              </div>
+            </div>
           ))}
         </div>
       </div>
