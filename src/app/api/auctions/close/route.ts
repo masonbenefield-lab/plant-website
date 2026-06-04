@@ -409,6 +409,7 @@ async function fallbackToManualCheckout(
       seller_id: auction.seller_id,
       auction_id: auction.id,
       amount_cents: auction.current_bid_cents,
+      shipping_address: {},
       payment_deadline_at: deadline.toISOString(),
       status: "pending",
       item_snapshot: {
