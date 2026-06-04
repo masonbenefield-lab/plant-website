@@ -8,7 +8,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import type { OrderStatus } from "@/lib/supabase/types";
+import type { OrderStatus } from "@/lib/order-types";
 
 export type BulkOrderInfo = {
   id: string;

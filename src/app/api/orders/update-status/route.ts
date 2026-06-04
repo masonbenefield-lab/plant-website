@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
-import type { Database, OrderStatus } from "@/lib/supabase/types";
+import type { Database } from "@/lib/supabase/types";
+import type { OrderStatus } from "@/lib/order-types";
 import { sendOrderDelivered } from "@/lib/email";
 
 function adminClient() {

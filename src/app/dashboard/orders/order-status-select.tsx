@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import type { OrderStatus } from "@/lib/supabase/types";
+import type { OrderStatus } from "@/lib/order-types";
 
 const SELLER_STATUSES: OrderStatus[] = ["shipped", "delivered"];
 const STATUS_RANK: Record<string, number> = { pending: 0, paid: 1, shipped: 2, delivered: 3 };

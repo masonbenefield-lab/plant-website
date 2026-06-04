@@ -11,7 +11,7 @@ import { Pagination } from "@/components/pagination";
 import OrderStatusSelect from "./order-status-select";
 import TrackingInput from "./tracking-input";
 import { BulkOrderActions, OrderCheckbox, type BulkOrderInfo } from "./bulk-order-actions";
-import type { OrderStatus } from "@/lib/supabase/types";
+import type { OrderStatus } from "@/lib/order-types";
 import { toast } from "sonner";
 import { ExternalLink, AlertTriangle } from "lucide-react";
 import { PriceBreakdown } from "@/components/price-breakdown";

@@ -620,7 +620,7 @@ export default async function OrdersPage({
     .eq("seller_id", user.id)
     .order("created_at", { ascending: false });
 
-  if (activeStatus) salesQuery = salesQuery.eq("status", activeStatus as import("@/lib/supabase/types").OrderStatus);
+  if (activeStatus) salesQuery = salesQuery.eq("status", activeStatus as import("@/lib/order-types").OrderStatus);
 
   const { data: salesOrders, count } = await salesQuery.range(from, to);
 
