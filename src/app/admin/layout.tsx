@@ -22,10 +22,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  const [{ count: pendingReports }, { count: pendingReviewReports }, { data: violationUsers }, { data: adjustmentRows }] = await Promise.all([
+  const [{ count: pendingReports }, { count: pendingReviewReports, }, { data: violationUsers }, { data: adjustmentRows }] = await Promise.all([
     supabase.from("reports").select("*", { count: "exact", head: true }).eq("status", "pending"),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (admin as any).from("review_reports").select("*", { count: "exact", head: true }).eq("status", "pending") as Promise<{ count: number }>,
+    admin.from("review_reports").select("*", { count: "exact", head: true }).eq("status", "pending"),
     supabase.from("word_violations").select("user_id"),
     admin.from("shipping_adjustments").select("seller_id"),
   ]);

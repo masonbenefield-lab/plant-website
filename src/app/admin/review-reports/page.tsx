@@ -33,20 +33,9 @@ export default async function ReviewReportsPage({
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  type ReportRow = {
-    id: string;
-    rating_id: string | null;
-    reporter_id: string;
-    reason: string;
-    details: string | null;
-    status: string;
-    created_at: string;
-  };
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const rr = (admin as any).from("review_reports");
-
-  let query = rr.select("id, rating_id, reporter_id, reason, details, status, created_at").order("created_at", { ascending: false });
+  let query = admin.from("review_reports")
+    .select("id, rating_id, reporter_id, reason, details, status, created_at")
+    .order("created_at", { ascending: false });
   if (!showAll) query = query.eq("status", "pending");
 
   const [
@@ -54,11 +43,9 @@ export default async function ReviewReportsPage({
     { count: pendingCount },
     { count: totalCount },
   ] = await Promise.all([
-    query as Promise<{ data: ReportRow[] }>,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (admin as any).from("review_reports").select("*", { count: "exact", head: true }).eq("status", "pending") as Promise<{ count: number }>,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (admin as any).from("review_reports").select("*", { count: "exact", head: true }) as Promise<{ count: number }>,
+    query,
+    admin.from("review_reports").select("*", { count: "exact", head: true }).eq("status", "pending"),
+    admin.from("review_reports").select("*", { count: "exact", head: true }),
   ]);
 
   const ratingIds   = [...new Set((reports ?? []).map((r) => r.rating_id).filter(Boolean))] as string[];
