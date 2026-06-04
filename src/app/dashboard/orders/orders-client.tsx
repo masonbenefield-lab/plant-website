@@ -56,7 +56,7 @@ type OrderRow = {
   shipping_cost_cents: number | null;
   tax_cents: number | null;
   shipping_service: string | null;
-  item_snapshot: { plant_name: string; variety: string | null; image: string | null } | null;
+  item_snapshot: unknown;
   created_at: string;
 };
 
@@ -156,7 +156,7 @@ export default function OrdersClient({
           label = cartItems.map((ci) => `${ci.plant_name}${ci.variety ? ` — ${ci.variety}` : ""} ×${ci.quantity}`).join(", ");
         } else {
           const item = o.listing_id ? listingMap[o.listing_id] : o.auction_id ? auctionMap[o.auction_id] : null;
-          const snap = o.item_snapshot;
+          const snap = o.item_snapshot as { plant_name: string; variety: string | null } | null;
           const resolved = item ?? snap ?? null;
           label = resolved ? `${resolved.plant_name}${resolved.variety ? ` — ${resolved.variety}` : ""}` : o.id.slice(0, 8);
         }
@@ -191,7 +191,7 @@ export default function OrdersClient({
             : order.auction_id
             ? auctionMap[order.auction_id]
             : null;
-          const snap = order.item_snapshot;
+          const snap = order.item_snapshot as { plant_name: string; variety: string | null; image: string | null } | null;
           const resolvedItem = item ?? snap ?? null;
           const buyer = buyerMap[order.buyer_id];
           const dispute = disputeMap[order.id];
