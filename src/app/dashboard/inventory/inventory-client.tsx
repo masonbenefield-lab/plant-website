@@ -2557,7 +2557,7 @@ export default function InventoryClient({
 
             <div className="space-y-1.5">
               <p className="font-semibold">Listing in the Shop</p>
-              <p className="text-muted-foreground">Click <strong>List in Shop</strong> on any row to set a price and go live. Once listed, click <strong>Edit</strong> to update the price or quantity, or <strong>Pause</strong> to hide it from buyers temporarily. When a buyer purchases, your stock decrements automatically.</p>
+              <p className="text-muted-foreground">Click <strong>List in Shop</strong> on any row to set a price and go live. Once listed, click <strong>Edit</strong> to update the price or quantity, or <strong>Pause</strong> to hide it from buyers temporarily. When a buyer purchases, your stock decrements automatically. When stock hits zero, the listing stays visible in the shop marked as <strong>Out of stock</strong> — restock it anytime to bring it back as available.</p>
             </div>
 
             <div className="space-y-1.5">
@@ -2567,7 +2567,7 @@ export default function InventoryClient({
 
             <div className="space-y-1.5">
               <p className="font-semibold">Archiving</p>
-              <p className="text-muted-foreground">Archive removes an item from your active inventory. Archived items are held for 30 days (visible at the bottom of the page) so you can restore them if needed. Items that sell out are archived automatically.</p>
+              <p className="text-muted-foreground">Archive removes an item from your active inventory. Archived items are held for 30 days (visible at the bottom of the page) so you can restore them if needed. Sold-out listings remain visible in the shop as Out of stock until you restock them — archive is for items you no longer want listed at all.</p>
             </div>
 
           </div>
