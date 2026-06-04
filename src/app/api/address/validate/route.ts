@@ -1,12 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 
-function escapeXml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;");
+async function getUspsToken(clientId: string, clientSecret: string): Promise<string> {
+  const res = await fetch("https://api.usps.com/oauth2/v3/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "client_credentials",
+      client_id: clientId,
+      client_secret: clientSecret,
+    }),
+  });
+  if (!res.ok) throw new Error("Failed to get USPS token");
+  const data = await res.json();
+  return data.access_token as string;
 }
 
 export async function POST(req: NextRequest) {
@@ -24,40 +30,37 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ valid: true });
   }
 
-  const userId = process.env.USPS_USER_ID;
-  if (!userId) {
+  const clientId = process.env.USPS_CLIENT_ID;
+  const clientSecret = process.env.USPS_CLIENT_SECRET;
+  if (!clientId || !clientSecret) {
     return NextResponse.json({ valid: true });
   }
 
-  // USPS Web Tools: Address1 = apt/suite (line2), Address2 = street (line1)
-  const xml = [
-    `<AddressValidateRequest USERID="${escapeXml(userId)}">`,
-    `<Revision>1</Revision>`,
-    `<Address ID="0">`,
-    `<Address1>${escapeXml(line2 ?? "")}</Address1>`,
-    `<Address2>${escapeXml(line1)}</Address2>`,
-    `<City>${escapeXml(city)}</City>`,
-    `<State>${escapeXml(state)}</State>`,
-    `<Zip5>${escapeXml(zip.slice(0, 5))}</Zip5>`,
-    `<Zip4></Zip4>`,
-    `</Address>`,
-    `</AddressValidateRequest>`,
-  ].join("");
-
-  const uspsUrl = `https://secure.shippingapis.com/ShippingAPI.dll?API=Verify&XML=${encodeURIComponent(xml)}`;
-
   try {
-    const res = await fetch(uspsUrl);
-    const text = await res.text();
+    const token = await getUspsToken(clientId, clientSecret);
 
-    const errorMatch = text.match(/<Description>(.*?)<\/Description>/);
-    if (errorMatch) {
-      return NextResponse.json({ valid: false, messages: [errorMatch[1]] });
+    const params = new URLSearchParams({
+      streetAddress: line1,
+      city,
+      state,
+      ZIPCode: zip.slice(0, 5),
+    });
+    if (line2) params.set("secondaryAddress", line2);
+
+    const res = await fetch(`https://api.usps.com/addresses/v3/address?${params}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      const message = (err as { error?: { message?: string } })?.error?.message
+        ?? "Address could not be verified. Please check and try again.";
+      return NextResponse.json({ valid: false, messages: [message] });
     }
 
     return NextResponse.json({ valid: true });
   } catch {
-    // If USPS is unreachable, don't block the user from saving
+    // If USPS is unreachable, don't block the save
     return NextResponse.json({ valid: true });
   }
 }
