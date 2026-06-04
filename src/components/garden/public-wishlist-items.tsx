@@ -23,7 +23,7 @@ type WishlistItem = {
   name: string;
   variety: string | null;
   notes: string | null;
-  priority: string;
+  priority: string | null;
 };
 
 type WishlistRef = { id: string; name: string; variety: string | null };
