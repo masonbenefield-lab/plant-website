@@ -16,6 +16,13 @@ const SORT_OPTIONS = [
   { value: "newest",      label: "Newest" },
 ];
 
+const SOLD_SORT_OPTIONS = [
+  { value: "",         label: "Recently Sold" },
+  { value: "bid_desc", label: "Price: High to Low" },
+  { value: "bid_asc",  label: "Price: Low to High" },
+  { value: "most_bids", label: "Most Bids" },
+];
+
 const ENDS_WITHIN_OPTIONS = [
   { value: "",    label: "Any time" },
   { value: "1h",  label: "Ending in 1 hour" },
@@ -38,13 +45,14 @@ export default function AuctionFilterBar() {
   const noBids     = params.get("no_bids") === "1";
   const endsWithin = params.get("ends_within") ?? "";
   const potSize    = params.get("pot_size") ?? "";
+  const sold       = params.get("sold") === "1";
 
-  const hasFilters = q || sort || maxBid || category || location || hasBuyNow || noBids || endsWithin || potSize;
+  const hasFilters = q || sort || maxBid || category || location || hasBuyNow || noBids || endsWithin || potSize || sold;
 
   const update = useCallback(
     (patch: Record<string, string>) => {
       const next = new URLSearchParams(params.toString());
-      next.delete("page"); // reset to page 1 on filter change
+      next.delete("page");
       for (const [k, v] of Object.entries(patch)) {
         if (v) next.set(k, v);
         else next.delete(k);
@@ -54,11 +62,29 @@ export default function AuctionFilterBar() {
     [params, pathname, router]
   );
 
+  function toggleSold() {
+    if (sold) {
+      update({ sold: "" });
+    } else {
+      // Clear live-only filters when switching to sold view
+      const next = new URLSearchParams(params.toString());
+      next.delete("page");
+      next.delete("has_buy_now");
+      next.delete("no_bids");
+      next.delete("ends_within");
+      next.delete("sort");
+      next.set("sold", "1");
+      startTransition(() => router.replace(`${pathname}?${next.toString()}`));
+    }
+  }
+
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   function debounce(fn: () => void, ms = 400) {
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
     debounceTimer.current = setTimeout(fn, ms);
   }
+
+  const sortOptions = sold ? SOLD_SORT_OPTIONS : SORT_OPTIONS;
 
   return (
     <div className="space-y-3 mb-6">
@@ -69,7 +95,7 @@ export default function AuctionFilterBar() {
           <label htmlFor="auction-search" className="sr-only">Search auctions or varieties</label>
           <Input
             id="auction-search"
-            placeholder="Search auctions or varieties…"
+            placeholder={sold ? "Search sold auctions…" : "Search auctions or varieties…"}
             defaultValue={q}
             onChange={(e) => debounce(() => update({ q: e.target.value }))}
           />
@@ -84,8 +110,8 @@ export default function AuctionFilterBar() {
             onChange={(e) => update({ sort: e.target.value })}
             className="h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           >
-            <option value="">Sort by...</option>
-            {SORT_OPTIONS.map((o) => (
+            {!sold && <option value="">Sort by...</option>}
+            {sortOptions.map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>
             ))}
           </select>
@@ -107,16 +133,16 @@ export default function AuctionFilterBar() {
           </select>
         </div>
 
-        {/* Max bid */}
+        {/* Max bid / max price */}
         <div>
-          <label htmlFor="auction-max-bid" className="sr-only">Maximum bid</label>
+          <label htmlFor="auction-max-bid" className="sr-only">{sold ? "Max sold price" : "Maximum bid"}</label>
           <Input
             id="auction-max-bid"
             type="number"
-            placeholder="Budget under $"
+            placeholder={sold ? "Max sold price $" : "Budget under $"}
             min={0}
             defaultValue={maxBid}
-            className="w-32"
+            className="w-36"
             onChange={(e) => debounce(() => update({ max_bid: e.target.value }))}
           />
         </div>
@@ -134,20 +160,22 @@ export default function AuctionFilterBar() {
           />
         </div>
 
-        {/* Ending within */}
-        <div>
-          <label htmlFor="auction-ends-within" className="sr-only">Ending within</label>
-          <select
-            id="auction-ends-within"
-            value={endsWithin}
-            onChange={(e) => update({ ends_within: e.target.value })}
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            {ENDS_WITHIN_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
-        </div>
+        {/* Ending within — hidden in sold mode */}
+        {!sold && (
+          <div>
+            <label htmlFor="auction-ends-within" className="sr-only">Ending within</label>
+            <select
+              id="auction-ends-within"
+              value={endsWithin}
+              onChange={(e) => update({ ends_within: e.target.value })}
+              className="h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              {ENDS_WITHIN_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* Pot size */}
         <div>
@@ -165,30 +193,47 @@ export default function AuctionFilterBar() {
           </select>
         </div>
 
-        {/* Has Buy Now toggle */}
-        <button
-          onClick={() => update({ has_buy_now: hasBuyNow ? "" : "1" })}
-          className={cn(
-            "h-10 px-4 rounded-md border text-sm font-medium transition-colors whitespace-nowrap",
-            hasBuyNow
-              ? "bg-leaf text-white border-leaf"
-              : "border-input bg-background text-muted-foreground hover:text-foreground hover:border-foreground"
-          )}
-        >
-          Has Buy Now
-        </button>
+        {/* Has Buy Now — hidden in sold mode */}
+        {!sold && (
+          <button
+            onClick={() => update({ has_buy_now: hasBuyNow ? "" : "1" })}
+            className={cn(
+              "h-10 px-4 rounded-md border text-sm font-medium transition-colors whitespace-nowrap",
+              hasBuyNow
+                ? "bg-leaf text-white border-leaf"
+                : "border-input bg-background text-muted-foreground hover:text-foreground hover:border-foreground"
+            )}
+          >
+            Has Buy Now
+          </button>
+        )}
 
-        {/* No Bids toggle */}
+        {/* No Bids Yet — hidden in sold mode */}
+        {!sold && (
+          <button
+            onClick={() => update({ no_bids: noBids ? "" : "1" })}
+            className={cn(
+              "h-10 px-4 rounded-md border text-sm font-medium transition-colors whitespace-nowrap",
+              noBids
+                ? "bg-leaf text-white border-leaf"
+                : "border-input bg-background text-muted-foreground hover:text-foreground hover:border-foreground"
+            )}
+          >
+            No Bids Yet
+          </button>
+        )}
+
+        {/* Sold toggle */}
         <button
-          onClick={() => update({ no_bids: noBids ? "" : "1" })}
+          onClick={toggleSold}
           className={cn(
             "h-10 px-4 rounded-md border text-sm font-medium transition-colors whitespace-nowrap",
-            noBids
-              ? "bg-leaf text-white border-leaf"
+            sold
+              ? "bg-gray-700 text-white border-gray-700 dark:bg-gray-600 dark:border-gray-600"
               : "border-input bg-background text-muted-foreground hover:text-foreground hover:border-foreground"
           )}
         >
-          No Bids Yet
+          Sold
         </button>
 
       </div>
@@ -203,11 +248,11 @@ export default function AuctionFilterBar() {
           {q && (
             <Chip label={`"${q}"`} onRemove={() => update({ q: "" })} />
           )}
-          {sort !== "ending_soon" && (
-            <Chip label={SORT_OPTIONS.find((o) => o.value === sort)?.label ?? sort} onRemove={() => update({ sort: "" })} />
+          {sort && (
+            <Chip label={[...SORT_OPTIONS, ...SOLD_SORT_OPTIONS].find((o) => o.value === sort)?.label ?? sort} onRemove={() => update({ sort: "" })} />
           )}
           {maxBid && (
-            <Chip label={`Max bid $${maxBid}`} onRemove={() => update({ max_bid: "" })} />
+            <Chip label={sold ? `Max price $${maxBid}` : `Max bid $${maxBid}`} onRemove={() => update({ max_bid: "" })} />
           )}
           {category && (
             <Chip label={category} onRemove={() => update({ category: "" })} />
@@ -226,6 +271,9 @@ export default function AuctionFilterBar() {
           )}
           {potSize && (
             <Chip label={`Pot: ${potSize}`} onRemove={() => update({ pot_size: "" })} />
+          )}
+          {sold && (
+            <Chip label="Sold" onRemove={() => update({ sold: "" })} />
           )}
           <button
             onClick={() => router.replace(pathname)}

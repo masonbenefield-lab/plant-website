@@ -14,9 +14,10 @@ const PAGE_SIZE = 24;
 export default async function AuctionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; sort?: string; max_bid?: string; category?: string; location?: string; has_buy_now?: string; no_bids?: string; ends_within?: string; pot_size?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; sort?: string; max_bid?: string; category?: string; location?: string; has_buy_now?: string; no_bids?: string; ends_within?: string; pot_size?: string; page?: string; sold?: string }>;
 }) {
-  const { q, sort, max_bid, category, location, has_buy_now, no_bids, ends_within, pot_size, page: pageParam } = await searchParams;
+  const { q, sort, max_bid, category, location, has_buy_now, no_bids, ends_within, pot_size, page: pageParam, sold: soldParam } = await searchParams;
+  const isSoldView = soldParam === "1";
   const page = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
   const from = (page - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
@@ -45,10 +46,14 @@ export default async function AuctionsPage({
   let query = supabase
     .from("auctions")
     .select("*", { count: "exact" })
-    .eq("status", "active")
-    .gt("ends_at", new Date().toISOString())
     .or("category.neq.Hidden,category.is.null")
     .in("seller_id", onboardedSellerIds.length ? onboardedSellerIds : ["00000000-0000-0000-0000-000000000000"]);
+
+  if (isSoldView) {
+    query = query.eq("status", "ended").not("current_bidder_id", "is", null);
+  } else {
+    query = query.eq("status", "active").gt("ends_at", new Date().toISOString());
+  }
 
   if (q) query = query.or(`plant_name.ilike.%${q}%,variety.ilike.%${q}%,description.ilike.%${q}%,category.ilike.%${q}%`);
   if (category) query = query.eq("category", category);
@@ -60,18 +65,23 @@ export default async function AuctionsPage({
     }
   }
   if (max_bid) query = query.lte("current_bid_cents", Math.round(Number(max_bid) * 100));
-  if (has_buy_now === "1") query = query.not("buy_now_price_cents", "is", null);
-  if (no_bids === "1") query = query.is("current_bidder_id", null);
   if (pot_size) query = query.eq("pot_size", pot_size);
-  if (ends_within) {
-    const ms: Record<string, number> = { "1h": 3600000, "24h": 86400000, "3d": 259200000, "7d": 604800000 };
-    if (ms[ends_within]) query = query.lt("ends_at", new Date(Date.now() + ms[ends_within]).toISOString());
+
+  if (!isSoldView) {
+    if (has_buy_now === "1") query = query.not("buy_now_price_cents", "is", null);
+    if (no_bids === "1") query = query.is("current_bidder_id", null);
+    if (ends_within) {
+      const ms: Record<string, number> = { "1h": 3600000, "24h": 86400000, "3d": 259200000, "7d": 604800000 };
+      if (ms[ends_within]) query = query.lt("ends_at", new Date(Date.now() + ms[ends_within]).toISOString());
+    }
   }
 
-  if (sort === "bid_asc")        query = query.order("current_bid_cents", { ascending: true });
-  else if (sort === "bid_desc")  query = query.order("current_bid_cents", { ascending: false });
-  else if (sort === "newest")    query = query.order("created_at", { ascending: false });
-  else                           query = query.order("ends_at", { ascending: true });
+  if (sort === "bid_asc")         query = query.order("current_bid_cents", { ascending: true });
+  else if (sort === "bid_desc")   query = query.order("current_bid_cents", { ascending: false });
+  else if (sort === "most_bids")  query = query.order("bid_count", { ascending: false });
+  else if (sort === "newest")     query = query.order("created_at", { ascending: false });
+  else if (isSoldView)            query = query.order("ends_at", { ascending: false });
+  else                            query = query.order("ends_at", { ascending: true });
 
   const { data: auctions, count } = await query.range(from, to);
 
@@ -79,18 +89,19 @@ export default async function AuctionsPage({
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
   function buildPageHref(p: number) {
-    const params = new URLSearchParams();
-    if (q) params.set("q", q);
-    if (sort && sort !== "ending_soon") params.set("sort", sort);
-    if (max_bid) params.set("max_bid", max_bid);
-    if (category) params.set("category", category);
-    if (location) params.set("location", location);
-    if (has_buy_now === "1") params.set("has_buy_now", "1");
-    if (no_bids === "1") params.set("no_bids", "1");
-    if (ends_within) params.set("ends_within", ends_within);
-    if (pot_size) params.set("pot_size", pot_size);
-    if (p > 1) params.set("page", String(p));
-    const s = params.toString();
+    const ps = new URLSearchParams();
+    if (q) ps.set("q", q);
+    if (sort) ps.set("sort", sort);
+    if (max_bid) ps.set("max_bid", max_bid);
+    if (category) ps.set("category", category);
+    if (location) ps.set("location", location);
+    if (!isSoldView && has_buy_now === "1") ps.set("has_buy_now", "1");
+    if (!isSoldView && no_bids === "1") ps.set("no_bids", "1");
+    if (!isSoldView && ends_within) ps.set("ends_within", ends_within);
+    if (pot_size) ps.set("pot_size", pot_size);
+    if (isSoldView) ps.set("sold", "1");
+    if (p > 1) ps.set("page", String(p));
+    const s = ps.toString();
     return s ? `/auctions?${s}` : "/auctions";
   }
 
@@ -160,7 +171,7 @@ export default async function AuctionsPage({
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-10">
-      <h1 className="text-2xl font-bold mb-6">Live Auctions</h1>
+      <h1 className="text-2xl font-bold mb-6">{isSoldView ? "Sold Auctions" : "Live Auctions"}</h1>
 
       <Suspense>
         <AuctionFilterBar />
@@ -174,7 +185,7 @@ export default async function AuctionsPage({
         </div>
       ) : (
         <>
-          <p className="text-sm text-muted-foreground mb-4">{total} auction{total !== 1 ? "s" : ""}</p>
+          <p className="text-sm text-muted-foreground mb-4">{total} {isSoldView ? "sold auction" : "auction"}{total !== 1 ? "s" : ""}</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
             {sortedAuctions.map((auction) => {
               const seller = sellerMap[auction.seller_id];
@@ -192,16 +203,24 @@ export default async function AuctionsPage({
                       ) : (
                         <div className="flex items-center justify-center h-full text-4xl">🌿</div>
                       )}
-                      <WishlistButton
-                        userId={user?.id ?? null}
-                        auctionId={auction.id}
-                        initialWishlisted={wishlistedSet.has(auction.id)}
-                        compact
-                        className="absolute top-2 left-2 z-10"
-                      />
-                      <Badge className="absolute top-2 right-2 bg-red-600">
-                        {hoursLeft > 0 ? `${hoursLeft}h ${minutesLeft}m` : `${minutesLeft}m`} left
-                      </Badge>
+                      {!isSoldView && (
+                        <WishlistButton
+                          userId={user?.id ?? null}
+                          auctionId={auction.id}
+                          initialWishlisted={wishlistedSet.has(auction.id)}
+                          compact
+                          className="absolute top-2 left-2 z-10"
+                        />
+                      )}
+                      {isSoldView ? (
+                        <Badge className="absolute top-2 right-2 bg-gray-700">
+                          Sold · {timeAgo(auction.ends_at)}
+                        </Badge>
+                      ) : (
+                        <Badge className="absolute top-2 right-2 bg-red-600">
+                          {hoursLeft > 0 ? `${hoursLeft}h ${minutesLeft}m` : `${minutesLeft}m`} left
+                        </Badge>
+                      )}
                     </div>
                     <CardContent className="p-4">
                       {auction.category && (
@@ -216,13 +235,19 @@ export default async function AuctionsPage({
                       <div className="mt-2 flex items-end justify-between gap-2">
                         <div>
                           <p className="text-xs text-muted-foreground">
-                            {auction.bid_count > 0 ? `${auction.bid_count} bid${auction.bid_count !== 1 ? "s" : ""}` : "Starting bid"}
+                            {isSoldView
+                              ? `${auction.bid_count} bid${auction.bid_count !== 1 ? "s" : ""}`
+                              : auction.bid_count > 0 ? `${auction.bid_count} bid${auction.bid_count !== 1 ? "s" : ""}` : "Starting bid"}
                           </p>
-                          <span className={`font-bold ${auction.bid_count > 0 ? "text-leaf" : "text-muted-foreground"}`}>
-                            {centsToDisplay(auction.current_bid_cents)}
+                          <span className="font-bold text-leaf">
+                            {isSoldView ? `Sold for ${centsToDisplay(auction.current_bid_cents)}` : (
+                              <span className={auction.bid_count > 0 ? "text-leaf" : "text-muted-foreground"}>
+                                {centsToDisplay(auction.current_bid_cents)}
+                              </span>
+                            )}
                           </span>
                         </div>
-                        {auction.buy_now_price_cents && (
+                        {!isSoldView && auction.buy_now_price_cents && (
                           <div className="text-right">
                             <p className="text-xs text-muted-foreground">Buy Now</p>
                             <span className="font-bold text-orange-600">
@@ -231,11 +256,13 @@ export default async function AuctionsPage({
                           </div>
                         )}
                       </div>
-                      {auction.free_shipping ? (
-                        <p className="text-xs text-leaf dark:text-sage font-medium mt-1.5">Free shipping</p>
-                      ) : auction.shipping_cost_cents ? (
-                        <p className="text-xs text-muted-foreground mt-1.5">+ {centsToDisplay(auction.shipping_cost_cents)} shipping</p>
-                      ) : null}
+                      {!isSoldView && (
+                        auction.free_shipping ? (
+                          <p className="text-xs text-leaf dark:text-sage font-medium mt-1.5">Free shipping</p>
+                        ) : auction.shipping_cost_cents ? (
+                          <p className="text-xs text-muted-foreground mt-1.5">+ {centsToDisplay(auction.shipping_cost_cents)} shipping</p>
+                        ) : null
+                      )}
                     </CardContent>
                   </Link>
                   {seller && (
@@ -268,7 +295,7 @@ export default async function AuctionsPage({
         </>
       )}
       {/* ── Recently sold ─────────────────────────────────────────────────── */}
-      {soldAuctions && soldAuctions.length > 0 && (
+      {!isSoldView && soldAuctions && soldAuctions.length > 0 && (
         <div className="mt-16">
           <div className="flex items-center gap-3 mb-5">
             <h2 className="text-lg font-bold">Recently Sold</h2>
