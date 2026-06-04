@@ -273,6 +273,9 @@ export default function InventoryClient({
   const [editLowStockThreshold, setEditLowStockThreshold] = useState("");
   const [editShippingMode, setEditShippingMode] = useState<"" | "free" | "flat">("");
   const [editShippingCost, setEditShippingCost] = useState("");
+  const [editBuyerNoteEnabled, setEditBuyerNoteEnabled] = useState(false);
+  const [editBuyerNotePrompt, setEditBuyerNotePrompt] = useState("");
+  const [editBuyerNoteRequired, setEditBuyerNoteRequired] = useState(false);
   const [dragPhotoIdx, setDragPhotoIdx] = useState<number | null>(null);
 
   // Sold modal
@@ -411,6 +414,11 @@ export default function InventoryClient({
       }
       setDragPhotoIdx(null);
       setSaveTemplateName("");
+      const notePrompt = (m.row as any).buyer_note_prompt ?? "";
+      const noteRequired = (m.row as any).buyer_note_required ?? false;
+      setEditBuyerNoteEnabled(!!notePrompt);
+      setEditBuyerNotePrompt(notePrompt);
+      setEditBuyerNoteRequired(noteRequired);
       // Load seller's templates
       createClient().from("listing_templates").select("id, name, plant_name, variety, category, pot_size, description, price_cents").then(({ data }) => {
         if (data) setTemplates(data);
@@ -670,7 +678,8 @@ export default function InventoryClient({
     }).eq("id", modal.row.id);
     if (error) { toast.error(error.message); setSubmitting(false); return; }
     if (modal.row.listing_id) {
-      await supabase.from("listings").update({
+      const notePrompt = editBuyerNoteEnabled && editBuyerNotePrompt.trim() ? editBuyerNotePrompt.trim() : null;
+      await (supabase.from("listings") as any).update({
         plant_name: editPlantName.trim(),
         variety: editVariety.trim() || null,
         description: editDescription.trim() || null,
@@ -679,7 +688,9 @@ export default function InventoryClient({
         pot_size: editPotSize || null,
         free_shipping: editShippingMode === "free",
         shipping_cost_cents: editShippingMode === "flat" ? dollarsToCents(editShippingCost) : null,
-        }).eq("id", modal.row.listing_id);
+        buyer_note_prompt: notePrompt,
+        buyer_note_required: notePrompt ? editBuyerNoteRequired : false,
+      }).eq("id", modal.row.listing_id);
     }
     setSubmitting(false);
     toast.success("Item updated.");
@@ -2294,7 +2305,7 @@ export default function InventoryClient({
 
       {/* ── Edit Item ── */}
       <Dialog open={modal?.type === "edit"} onOpenChange={o => !o && setModal(null)}>
-        <DialogContent className="max-w-sm max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-sm sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Edit Item</DialogTitle></DialogHeader>
           {modal?.type === "edit" && (() => {
             const supply = isSupply(modal.row);
@@ -2316,7 +2327,7 @@ export default function InventoryClient({
               <div className="grid grid-cols-2 gap-3">
                 {supply ? (
                   <div className="space-y-1">
-                    <Label htmlFor="edit-variant">Variant <span className="font-normal text-muted-foreground">(optional)</span></Label>
+                    <Label htmlFor="edit-variant">Option <span className="font-normal text-muted-foreground">(optional)</span></Label>
                     <Input id="edit-variant" value={editVariety} onChange={e => setEditVariety(e.target.value)} placeholder='e.g. "1 lb bag"' />
                   </div>
                 ) : (
@@ -2348,6 +2359,44 @@ export default function InventoryClient({
                 <Label htmlFor="edit-notes">Private notes</Label>
                 <Textarea id="edit-notes" value={editNotes} onChange={e => setEditNotes(e.target.value)} rows={2} placeholder="Not visible to buyers…" />
               </div>
+              {modal?.row.listing_id && (
+                <div className="space-y-2 border rounded-lg p-3 bg-muted/20">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-medium">Require buyer note</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Ask buyers a question at checkout (e.g. custom text for tags)</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setEditBuyerNoteEnabled(v => !v)}
+                      className={cn("relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none", editBuyerNoteEnabled ? "bg-leaf" : "bg-muted-foreground/30")}
+                    >
+                      <span className={cn("pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform transition-transform", editBuyerNoteEnabled ? "translate-x-5" : "translate-x-0")} />
+                    </button>
+                  </div>
+                  {editBuyerNoteEnabled && (
+                    <div className="space-y-2 pt-1">
+                      <input
+                        className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-leaf"
+                        placeholder='e.g. "What names would you like on your tags?"'
+                        value={editBuyerNotePrompt}
+                        onChange={e => setEditBuyerNotePrompt(e.target.value)}
+                        maxLength={200}
+                      />
+                      <div className="flex gap-2">
+                        {(["required", "optional"] as const).map(opt => (
+                          <button key={opt} type="button"
+                            onClick={() => setEditBuyerNoteRequired(opt === "required")}
+                            className={cn("px-3 py-1 rounded-md border text-xs font-medium transition-colors", (opt === "required") === editBuyerNoteRequired ? "border-leaf bg-[#EBF0E6] text-forest dark:bg-forest/40 dark:text-[#A8BF9A] dark:border-leaf" : "border-input hover:bg-muted")}
+                          >
+                            {opt.charAt(0).toUpperCase() + opt.slice(1)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label>Photos {planLimits.photos !== null && <span className="font-normal text-muted-foreground text-xs">({editImages.length}/{planLimits.photos})</span>}</Label>
