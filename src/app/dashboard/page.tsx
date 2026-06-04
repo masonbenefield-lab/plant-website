@@ -112,7 +112,7 @@ export default async function DashboardPage() {
     returnPolicy:     !!(profile as { return_policy_type?: string | null } | null)?.return_policy_type,
     inventory:     (inventoryCount ?? 0) > 0,
     listing:       hasListing,
-    storefront:    !!profile?.username && hasListing,
+    storefront:    !!profile?.username,
     garden:        (gardenPlantCount ?? 0) > 0 && !!profile?.garden_public,
   };
   // garden is optional — don't block allDone on it
@@ -158,8 +158,8 @@ export default async function DashboardPage() {
             <CheckItem done={checks.stripe}           label="Connect your bank account"                     href="/account#seller-payments"   hint="Required to receive payments — connect your bank via Stripe before listing" />
             <CheckItem done={checks.shippingTimeline} label="Set your shipping timeline"                    href="/account#shipping-days"     hint="Let buyers know how quickly you ship" />
             <CheckItem done={checks.returnPolicy}     label="Set your return policy"                        href="/account#return-policy"     hint="Let buyers know upfront whether you accept returns" />
-            <CheckItem done={checks.inventory}        label="Add your first item to inventory"              href="/dashboard/inventory"       hint="Everything starts in inventory — add your first plant here" />
-            <CheckItem done={checks.listing}          label="Create your first listing or auction"          href="/dashboard/inventory"       hint="From inventory, list a plant at a fixed price or start a timed auction" />
+            <CheckItem done={checks.inventory}        label="Add your first item to My Stock"               href="/dashboard/inventory"       hint="Everything starts in My Stock — add your first plant here" />
+            <CheckItem done={checks.listing}          label="Create your first listing or auction"          href="/dashboard/inventory"       hint="From My Stock, list a plant at a fixed price or start a timed auction" />
             <CheckItem
               done={checks.storefront}
               label="Preview your storefront"
@@ -211,8 +211,8 @@ export default async function DashboardPage() {
             <CheckItem done={checks.stripe}           label="Connect your bank account"                     href="/account#seller-payments"         hint="Required to receive payments — connect your bank via Stripe before listing" />
             <CheckItem done={checks.shippingTimeline} label="Set your shipping timeline"         href="/account#shipping-days"      hint="Let buyers know how quickly you ship so they know what to expect" />
             <CheckItem done={checks.returnPolicy}     label="Set your return policy"              href="/account#return-policy"      hint="Let buyers know upfront whether you accept returns, offer a DOA guarantee, or handle issues case by case" />
-            <CheckItem done={checks.inventory}     label="Add your first item to inventory"    href="/dashboard/inventory"        hint="Everything starts in inventory — add your first plant here" />
-            <CheckItem done={checks.listing}    label="Create your first listing or auction" href="/dashboard/inventory"  hint="From inventory, list a plant at a fixed price or start a timed auction" />
+            <CheckItem done={checks.inventory}     label="Add your first item to My Stock"     href="/dashboard/inventory"        hint="Everything starts in My Stock — add your first plant here" />
+            <CheckItem done={checks.listing}    label="Create your first listing or auction" href="/dashboard/inventory"  hint="From My Stock, list a plant at a fixed price or start a timed auction" />
             <CheckItem
               done={checks.storefront}
               label="Preview your storefront"
