@@ -163,7 +163,7 @@ export function EnterButton({ monthLabel, initialEntered, referralCode, userCoun
           <Link href="/giveaway/rules" target="_blank" className="underline hover:text-foreground font-medium">
             Official Giveaway Rules
           </Link>
-          . No purchase necessary. Open to US and Canada residents 18+.
+          . No purchase necessary. Open to US residents 18+.
         </span>
       </label>
       <Button

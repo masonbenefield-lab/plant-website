@@ -34,7 +34,7 @@ export default function GiveawayRulesPage() {
         <section className="space-y-2">
           <h2 className="font-semibold text-base">Eligibility</h2>
           <p className="text-muted-foreground">
-            Open to legal residents of the United States and Canada who are 18 years of age or older at the time of entry. Employees, officers, and directors of Plantet, prize donors, and their immediate family members are not eligible. Void where prohibited by law.
+            Open to legal residents of the United States who are 18 years of age or older at the time of entry. Employees, officers, and directors of Plantet, prize donors, and their immediate family members are not eligible. Void where prohibited by law.
           </p>
         </section>
 
