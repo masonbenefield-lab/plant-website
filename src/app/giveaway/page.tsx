@@ -66,7 +66,8 @@ export default async function GiveawayPage() {
         : Promise.resolve({ data: null }),
       supabase.from("giveaway_sponsor_requests").select("id").eq("user_id", user.id).eq("status", "open").maybeSingle(),
       admin.from("profiles").select("referral_code, saved_shipping_address").eq("id", user.id).single(),
-      admin.from("referral_activations").select("type")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (admin as any).from("referral_activations").select("type")
         .eq("referrer_id", user.id)
         .gte("activated_at", monthStart),
     ]);
@@ -74,7 +75,7 @@ export default async function GiveawayPage() {
     alreadyEntered = !!entry;
     hasOpenSponsorRequest = !!sponsorReq;
     bonusEntriesThisMonth = (bonusActivations ?? []).reduce(
-      (sum, a) => sum + ((a as { type: string }).type === "first_sale" ? 2 : 1), 0
+      (sum, a) => sum + ((a as unknown as { type: string }).type === "first_sale" ? 2 : 1), 0
     );
     savedAddress = (profile?.saved_shipping_address as typeof savedAddress) ?? null;
 
