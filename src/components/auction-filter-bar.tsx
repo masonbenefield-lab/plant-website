@@ -1,8 +1,8 @@
 "use client";
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { useCallback, useTransition, useState, useEffect, useRef, Suspense } from "react";
-import { X, MapPin, Leaf } from "lucide-react";
+import { useCallback, useTransition, useRef, Suspense } from "react";
+import { X, MapPin } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { PLANT_CATEGORIES } from "@/lib/categories";
@@ -29,20 +29,6 @@ export default function AuctionFilterBar() {
   const pathname = usePathname();
   const params = useSearchParams();
   const [, startTransition] = useTransition();
-  const [showGuide, setShowGuide] = useState(true);
-
-  useEffect(() => {
-    const stored = localStorage.getItem("plant-guide-visible");
-    if (stored === "false") setShowGuide(false);
-  }, []);
-
-  function toggleGuide() {
-    setShowGuide((v) => {
-      localStorage.setItem("plant-guide-visible", String(!v));
-      return !v;
-    });
-  }
-
   const q          = params.get("q") ?? "";
   const sort       = params.get("sort") ?? "";
   const maxBid     = params.get("max_bid") ?? "";
@@ -205,27 +191,11 @@ export default function AuctionFilterBar() {
           No Bids Yet
         </button>
 
-        {/* Plant Guide toggle */}
-        <button
-          onClick={toggleGuide}
-          title={showGuide ? "Hide plant guide" : "Show plant guide"}
-          className={cn(
-            "h-10 px-3 rounded-md border text-sm font-medium transition-colors flex items-center gap-1.5 whitespace-nowrap",
-            showGuide
-              ? "bg-leaf text-white border-leaf"
-              : "border-input bg-background text-muted-foreground hover:text-foreground hover:border-foreground"
-          )}
-        >
-          <Leaf size={14} />
-          Plant Guide
-        </button>
       </div>
 
-      {showGuide && (
-        <Suspense>
-          <PlantInfoCard />
-        </Suspense>
-      )}
+      <Suspense>
+        <PlantInfoCard />
+      </Suspense>
 
       {/* Active filter chips */}
       {hasFilters && (
