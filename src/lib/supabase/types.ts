@@ -59,6 +59,7 @@ export interface Database {
           country: string | null;
           wishlist_public: boolean;
           social_links: Json | null;
+          daily_care_emails: boolean;
           created_at: string;
         };
         Insert: {
@@ -108,6 +109,7 @@ export interface Database {
           country?: string | null;
           wishlist_public?: boolean;
           social_links?: Json | null;
+          daily_care_emails?: boolean;
           created_at?: string;
         };
         Update: {
@@ -158,6 +160,7 @@ export interface Database {
           country?: string | null;
           wishlist_public?: boolean;
           social_links?: Json | null;
+          daily_care_emails?: boolean;
         };
         Relationships: [];
       };

@@ -2448,3 +2448,98 @@ export async function sendRefundIssuedToSeller({
     }),
   });
 }
+
+// ─── Daily garden care reminder ──────────────────────────────────────────────
+
+export type DailyCareItem = {
+  plantName: string;
+  careType: string;
+  daysOverdue: number;
+};
+
+function careTypeEmoji(careType: string): string {
+  const map: Record<string, string> = {
+    Water: "💧", Fertilize: "🌿", Repot: "🪴", Prune: "✂️",
+  };
+  return map[careType] ?? "🌱";
+}
+
+export function buildDailyCareReminderHtml({
+  username,
+  userId,
+  items,
+}: {
+  username: string;
+  userId: string;
+  items: DailyCareItem[];
+}): string {
+  const siteUrl = siteBase();
+  const dueToday = items.filter((i) => i.daysOverdue === 0);
+  const overdue  = items.filter((i) => i.daysOverdue > 0);
+
+  function itemRow(item: DailyCareItem, highlight: boolean) {
+    const bg = highlight ? "#FBF9F3" : "#F5F0E8";
+    const statusText = item.daysOverdue === 0
+      ? `<span style="color:#D97706;font-size:12px;font-weight:600;">Due today</span>`
+      : `<span style="color:#DC2626;font-size:12px;font-weight:600;">${item.daysOverdue}d overdue</span>`;
+    return `<tr style="background:${bg};">
+      <td style="padding:11px 16px;font-size:14px;color:#16201B;border-bottom:1px solid #DED6C4;">
+        ${careTypeEmoji(item.careType)} <strong>${item.plantName}</strong>
+      </td>
+      <td style="padding:11px 16px;font-size:13px;color:#4B5563;border-bottom:1px solid #DED6C4;">${item.careType}</td>
+      <td style="padding:11px 16px;border-bottom:1px solid #DED6C4;">${statusText}</td>
+    </tr>`;
+  }
+
+  const allRows = [
+    ...dueToday.map((i) => itemRow(i, false)),
+    ...overdue.map((i) => itemRow(i, true)),
+  ].join("");
+
+  const heading = items.length === 1
+    ? `1 plant needs care today`
+    : `${items.length} plants need care today`;
+
+  return emailBase({
+    title: heading,
+    heading: `🌱 ${heading}`,
+    subheading: `${username}'s garden`,
+    body: `
+      <p style="margin:0 0 20px;font-size:14px;color:#6B7E72;line-height:1.65;">
+        Good morning! Here's what needs attention in your garden today.
+      </p>
+      <table width="100%" cellpadding="0" cellspacing="0" style="border-radius:10px;overflow:hidden;border:1px solid #DED6C4;margin-bottom:28px;">
+        <tr style="background:#EFE7D6;">
+          <th style="padding:9px 16px;text-align:left;font-size:11px;font-weight:700;color:#6B7E72;text-transform:uppercase;letter-spacing:0.06em;">Plant</th>
+          <th style="padding:9px 16px;text-align:left;font-size:11px;font-weight:700;color:#6B7E72;text-transform:uppercase;letter-spacing:0.06em;">Care</th>
+          <th style="padding:9px 16px;text-align:left;font-size:11px;font-weight:700;color:#6B7E72;text-transform:uppercase;letter-spacing:0.06em;">Status</th>
+        </tr>
+        ${allRows}
+      </table>
+      ${ctaBtn("Open care schedule", `${siteUrl}/garden/care`)}
+    `,
+    footerNote: "You're receiving this because you have garden care reminders enabled on Plantet.",
+    unsubLink: `${siteUrl}/account#email-preferences`,
+  });
+}
+
+export async function sendDailyCareReminder({
+  recipientEmail,
+  username,
+  userId,
+  items,
+}: {
+  recipientEmail: string;
+  username: string;
+  userId: string;
+  items: DailyCareItem[];
+}) {
+  const resend = getResend();
+  const count = items.length;
+  await resend.emails.send({
+    from: FROM,
+    to: recipientEmail,
+    subject: count === 1 ? "🌱 1 plant needs care today" : `🌱 ${count} plants need care today`,
+    html: buildDailyCareReminderHtml({ username, userId, items }),
+  });
+}

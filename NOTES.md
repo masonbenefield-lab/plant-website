@@ -1128,3 +1128,44 @@ CREATE POLICY "Service role only" ON referral_activations FOR ALL USING (false);
 
 ### Environment variables
 - None
+
+---
+
+## 2026-06-04 — Daily care reminder emails + quick setup wizard
+
+### Features added
+
+#### Daily garden care reminder email
+- New `/api/cron/daily-care-reminder` cron route: fetches all users with `daily_care_emails = true`, computes which plants are due or overdue for each, sends a branded morning email via Resend listing plant name, care type, and days overdue
+- Runs daily at 1 PM UTC (`0 13 * * *`) — fires only when the user has at least one task due that day
+- `sendDailyCareReminder()` + `buildDailyCareReminderHtml()` added to `src/lib/email.ts` with full Plantet brand template
+- `daily_care_emails boolean NOT NULL DEFAULT true` added to profiles table (users opted in by default)
+- "Daily garden care reminders" toggle added to Account → Email Preferences — saved with the rest of the profile form
+
+#### Quick setup wizard (`/garden/care/setup`)
+- New server-rendered page + `SetupClient` component at `/garden/care/setup`
+- Shows all plants that have zero intervals set — one card per plant with name, image, location
+- Water interval chips: 3d / 7d / 14d / 30d — tap to select, tap again to deselect; clear button on set plants
+- Sticky footer shows "X plants set up" count with "Save & continue" / "Skip for now" button
+- On save: groups plants by chosen interval, calls `/api/garden/update-intervals` once per unique interval value, then navigates to `/garden/care`
+- Care schedule "No schedules yet" empty state now shows a green "💧 Quick setup" button linking to the wizard
+
+### Files created
+- `src/app/api/cron/daily-care-reminder/route.ts`
+- `src/app/garden/care/setup/page.tsx`
+- `src/app/garden/care/setup/setup-client.tsx`
+
+### Files modified
+- `src/lib/email.ts` — `DailyCareItem` type, `buildDailyCareReminderHtml()`, `sendDailyCareReminder()`
+- `src/lib/supabase/types.ts` — `daily_care_emails: boolean` on profiles Row, Insert, Update
+- `vercel.json` — added `0 13 * * *` cron for daily-care-reminder
+- `src/app/account/account-form.tsx` — `dailyCareEmails` state + toggle UI + save payload
+- `src/app/garden/care/care-schedule-client.tsx` — updated empty state with Quick setup CTA
+
+### SQL migrations required
+```sql
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS daily_care_emails boolean NOT NULL DEFAULT true;
+```
+
+### Environment variables
+- None new

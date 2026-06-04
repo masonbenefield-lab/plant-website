@@ -51,6 +51,7 @@ export default function AccountForm({
   const [announcement, setAnnouncement] = useState((profile as { announcement?: string | null } | null)?.announcement ?? "");
   const [announcementExpiresAt, setAnnouncementExpiresAt] = useState((profile as { announcement_expires_at?: string | null } | null)?.announcement_expires_at?.split("T")[0] ?? "");
   const [emailOptIn, setEmailOptIn] = useState(profile?.email_marketing_opt_in ?? false);
+  const [dailyCareEmails, setDailyCareEmails] = useState(profile?.daily_care_emails ?? true);
   const [socialLinks, setSocialLinks] = useState<Record<string, string>>(
     (profile?.social_links as Record<string, string> | null) ?? {}
   );
@@ -190,6 +191,7 @@ export default function AccountForm({
         announcement: announcement.trim() || null,
         announcement_expires_at: announcement.trim() && announcementExpiresAt ? announcementExpiresAt : null,
         email_marketing_opt_in: emailOptIn,
+        daily_care_emails: dailyCareEmails,
         social_links: Object.fromEntries(
           Object.entries(socialLinks).filter(([, v]) => v.trim().length > 0)
         ),
@@ -892,6 +894,23 @@ export default function AccountForm({
               className={`mt-0.5 relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${emailOptIn ? "bg-leaf" : "bg-input"}`}
             >
               <span className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition-transform ${emailOptIn ? "translate-x-5" : "translate-x-0"}`} />
+            </button>
+          </div>
+          <div className="flex items-start justify-between gap-4 rounded-lg border px-4 py-4 mt-3">
+            <div>
+              <p className="text-sm font-medium">Daily garden care reminders</p>
+              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                Receive a morning email listing plants that need watering, fertilizing, or other care that day. Only sent when you have tasks due.
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={dailyCareEmails}
+              onClick={() => setDailyCareEmails((v) => !v)}
+              className={`mt-0.5 relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${dailyCareEmails ? "bg-leaf" : "bg-input"}`}
+            >
+              <span className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition-transform ${dailyCareEmails ? "translate-x-5" : "translate-x-0"}`} />
             </button>
           </div>
           <p className="text-xs text-muted-foreground mt-3">

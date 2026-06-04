@@ -1340,15 +1340,27 @@ export function CareScheduleClient({
                 onReminderUncompleted={handleReminderUncompleted}
               />
             ) : hasAnyPlants ? (
-              <div className="rounded-xl border bg-muted/30 px-5 py-6 space-y-1.5">
-                <p className="font-semibold text-sm">No care schedules set up yet</p>
-                <p className="text-sm text-muted-foreground">
-                  Switch to{" "}
-                  <button onClick={() => switchTab("manage")} className="font-medium text-foreground underline underline-offset-2">
+              <div className="rounded-xl border bg-muted/30 px-5 py-6 space-y-3">
+                <div className="space-y-1">
+                  <p className="font-semibold text-sm">No care schedules set up yet</p>
+                  <p className="text-sm text-muted-foreground">
+                    Set up watering intervals so you never forget to care for your plants.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Link
+                    href="/garden/care/setup"
+                    className="inline-flex items-center gap-1.5 text-sm font-medium bg-leaf hover:bg-forest text-white px-4 py-2 rounded-lg transition-colors"
+                  >
+                    💧 Quick setup
+                  </Link>
+                  <button
+                    onClick={() => switchTab("manage")}
+                    className="inline-flex items-center gap-1.5 text-sm font-medium border rounded-lg px-4 py-2 hover:bg-muted/50 transition-colors"
+                  >
                     Manage Schedules
-                  </button>{" "}
-                  to set up watering, fertilizing, repotting, or pruning intervals for your plants.
-                </p>
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="text-center py-20 border rounded-xl bg-muted/30">
