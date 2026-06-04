@@ -3,7 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
-import { ArrowLeftRight, MessageSquare, Store } from "lucide-react";
+import { ArrowLeftRight, Store } from "lucide-react";
 import type { Metadata } from "next";
 import type { Database } from "@/lib/supabase/types";
 import { GardenPublicGrid } from "@/components/garden/garden-public-grid";
@@ -124,17 +124,20 @@ export default async function PublicGardenPage({
           )}
           {profile.open_to_trades && (
             <div className="flex items-center gap-1.5 mt-2">
-              <span className="flex items-center gap-1.5 text-xs font-medium text-leaf bg-[#DFE7D4] dark:bg-forest/40 dark:text-sage px-2.5 py-1 rounded-full">
-                <ArrowLeftRight size={11} />
-                Open to trades
-              </span>
-              <Link
-                href={`/messages?to=${profile.username}`}
-                className="text-xs text-muted-foreground hover:text-leaf hover:underline flex items-center gap-1"
-              >
-                <MessageSquare size={11} />
-                Message to arrange
-              </Link>
+              {isVisitor ? (
+                <Link
+                  href={`/messages?to=${profile.username}`}
+                  className="flex items-center gap-1.5 text-xs font-medium text-leaf bg-[#DFE7D4] dark:bg-forest/40 dark:text-sage px-2.5 py-1 rounded-full hover:bg-[#c8d8bc] dark:hover:bg-forest/60 transition-colors"
+                >
+                  <ArrowLeftRight size={11} />
+                  Open to trades · Message to arrange
+                </Link>
+              ) : (
+                <span className="flex items-center gap-1.5 text-xs font-medium text-leaf bg-[#DFE7D4] dark:bg-forest/40 dark:text-sage px-2.5 py-1 rounded-full">
+                  <ArrowLeftRight size={11} />
+                  Open to trades
+                </span>
+              )}
             </div>
           )}
         </div>

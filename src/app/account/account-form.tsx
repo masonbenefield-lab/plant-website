@@ -22,6 +22,7 @@ import { findProhibitedWord, censorWord, logViolation } from "@/lib/profanity";
 import { MapPin, Lock, Mail, KeyRound } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { OpenToTradesToggle } from "@/components/garden/open-to-trades-toggle";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 
@@ -681,6 +682,18 @@ export default function AccountForm({
               {saving ? "Saving…" : "Save profile"}
             </Button>
           </form>
+        </CardContent>
+      </Card>
+
+      <Card id="garden-trading" className="scroll-mt-24">
+        <CardHeader>
+          <CardTitle>Garden &amp; Trading</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <OpenToTradesToggle
+            initialOpenToTrades={profile?.open_to_trades ?? false}
+            disclaimerAccepted={profile?.trades_disclaimer_accepted ?? false}
+          />
         </CardContent>
       </Card>
 

@@ -1,11 +1,52 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { MessagesClient } from "./messages-client";
+import type { Database } from "@/lib/supabase/types";
 
-export default async function MessagesPage() {
+export default async function MessagesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ to?: string }>;
+}) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+
+  const { to } = await searchParams;
+  if (to) {
+    const { data: recipient } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("username", to)
+      .neq("id", user.id)
+      .single();
+
+    if (recipient) {
+      const [a, b] = [user.id, recipient.id].sort();
+      const admin = createAdminClient<Database>(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+      const { data: existing } = await admin
+        .from("conversations")
+        .select("id")
+        .eq("participant_a", a)
+        .eq("participant_b", b)
+        .maybeSingle();
+
+      if (existing) {
+        redirect(`/messages/${existing.id}`);
+      } else {
+        const { data: created } = await admin
+          .from("conversations")
+          .insert({ participant_a: a, participant_b: b })
+          .select("id")
+          .single();
+        if (created) redirect(`/messages/${created.id}`);
+      }
+    }
+  }
 
   const { data: conversations } = await supabase
     .from("conversations")

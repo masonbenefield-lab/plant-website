@@ -112,10 +112,21 @@ export default function CommunityGardensGrid({
                       </Avatar>
                       <p className="font-semibold text-sm leading-tight truncate">{name}</p>
                       {profile.open_to_trades && (
-                        <span className="ml-auto shrink-0 flex items-center gap-1 text-[10px] font-medium text-leaf bg-[#DFE7D4] dark:bg-forest/40 dark:text-sage px-1.5 py-0.5 rounded-full whitespace-nowrap">
-                          <ArrowLeftRight size={9} />
-                          Trades
-                        </span>
+                        !isOwnGarden ? (
+                          <Link
+                            href={`/messages?to=${profile.username}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="ml-auto shrink-0 flex items-center gap-1 text-[10px] font-medium text-leaf bg-[#DFE7D4] dark:bg-forest/40 dark:text-sage px-1.5 py-0.5 rounded-full whitespace-nowrap hover:bg-[#c8d8bc] dark:hover:bg-forest/60 transition-colors"
+                          >
+                            <ArrowLeftRight size={9} />
+                            Trades
+                          </Link>
+                        ) : (
+                          <span className="ml-auto shrink-0 flex items-center gap-1 text-[10px] font-medium text-leaf bg-[#DFE7D4] dark:bg-forest/40 dark:text-sage px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                            <ArrowLeftRight size={9} />
+                            Trades
+                          </span>
+                        )
                       )}
                     </div>
                     {profile.garden_bio && (

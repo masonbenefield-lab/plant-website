@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
@@ -268,10 +269,20 @@ export default async function SellerStorefront({
           {/* Secondary metadata: trades */}
           {(profile as { open_to_trades?: boolean }).open_to_trades && (
             <div className="flex flex-wrap items-center gap-2 mt-2">
-              <span className="flex items-center gap-1 text-xs font-medium text-leaf bg-[#DFE7D4] dark:bg-forest/40 dark:text-sage px-2.5 py-1 rounded-full">
-                <ArrowLeftRight size={11} />
-                Open to trades
-              </span>
+              {user && user.id !== profile.id ? (
+                <Link
+                  href={`/messages?to=${profile.username}`}
+                  className="flex items-center gap-1 text-xs font-medium text-leaf bg-[#DFE7D4] dark:bg-forest/40 dark:text-sage px-2.5 py-1 rounded-full hover:bg-[#c8d8bc] dark:hover:bg-forest/60 transition-colors"
+                >
+                  <ArrowLeftRight size={11} />
+                  Open to trades
+                </Link>
+              ) : (
+                <span className="flex items-center gap-1 text-xs font-medium text-leaf bg-[#DFE7D4] dark:bg-forest/40 dark:text-sage px-2.5 py-1 rounded-full">
+                  <ArrowLeftRight size={11} />
+                  Open to trades
+                </span>
+              )}
             </div>
           )}
           {avgScore !== null && (
