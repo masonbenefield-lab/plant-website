@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 
-  const { items, shippingAddress, shippingCostCents, shippoRateId, shippingService } = await request.json() as {
+  const { items, shippingAddress, shippingCostCents, shippingService } = await request.json() as {
     items: CartItem[];
     shippingAddress: {
       name: string; line1: string; line2?: string;
@@ -37,7 +37,6 @@ export async function POST(request: Request) {
       is_gift?: boolean; gift_message?: string | null;
     };
     shippingCostCents?: number;
-    shippoRateId?: string;
     shippingService?: string;
   };
 
@@ -119,7 +118,7 @@ export async function POST(request: Request) {
   const grandTotalCents = totalCents + shippingCents + taxCents;
   const feeCents = Math.round(totalCents * (feePercent / 100));
   const stripeFeeCents = Math.round(grandTotalCents * 0.029) + 30;
-  const applicationFeeCents = feeCents + stripeFeeCents + taxCents + shippingCents;
+  const applicationFeeCents = feeCents + stripeFeeCents + taxCents;
 
   const admin = adminClient();
 
@@ -151,7 +150,6 @@ export async function POST(request: Request) {
       cart_items: cartItemsForOrder,
       shipping_cost_cents: shippingCents,
       shipping_service: shippingService ?? null,
-      shippo_rate_id: shippoRateId ?? null,
       platform_fee_cents: feeCents,
       tax_cents: taxCents,
     })

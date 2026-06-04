@@ -27,17 +27,6 @@ interface AuctionData {
   current_bidder_id: string | null;
   free_shipping: boolean | null;
   shipping_cost_cents: number | null;
-  shipping_weight_oz: number | null;
-}
-
-interface ShippingRate {
-  objectId: string;
-  provider: string;
-  servicelevelName: string;
-  servicelevelToken: string;
-  amount: string;
-  currency: string;
-  estimatedDays: number | null;
 }
 
 interface Bid {
@@ -83,9 +72,6 @@ export default function AuctionBidPanel({
   const [loadingAllBids, setLoadingAllBids] = useState(false);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
-  const [shippingRates, setShippingRates] = useState<ShippingRate[]>([]);
-  const [selectedRateId, setSelectedRateId] = useState<string | null>(null);
-  const [loadingRates, setLoadingRates] = useState(false);
   const [savedCard, setSavedCard] = useState<{ brand: string; last4: string } | null>(null);
   const [savedShippingState, setSavedShippingState] = useState<string | null>(null);
   const [orderConfirmed, setOrderConfirmed] = useState(false);
@@ -228,21 +214,6 @@ export default function AuctionBidPanel({
       .catch(() => {});
   }, [userId]);
 
-  useEffect(() => {
-    const ended = auction.status !== "active" || new Date(auction.ends_at) <= new Date();
-    if (ended || !userId || !auction.shipping_weight_oz || !buyerHasPaymentMethod || !buyerHasShippingAddress) return;
-    setLoadingRates(true);
-    fetch(`/api/shipping/auction-rates?auctionId=${auction.id}`)
-      .then((r) => r.json())
-      .then((data) => {
-        const rates: ShippingRate[] = data.rates ?? [];
-        setShippingRates(rates);
-        if (rates.length > 0) setSelectedRateId(rates[0].objectId);
-      })
-      .catch(() => {})
-      .finally(() => setLoadingRates(false));
-  }, [auction.id, auction.status, auction.ends_at, auction.shipping_weight_oz, userId, buyerHasPaymentMethod, buyerHasShippingAddress]);
-
   function getMinIncrement(currentBidCents: number): number {
     if (currentBidCents < 1000)  return 100;
     if (currentBidCents < 5000)  return 200;
@@ -288,19 +259,10 @@ export default function AuctionBidPanel({
     setPendingConfirm(null);
     setPlacing(true);
 
-    const selectedRate = shippingRates.find((r) => r.objectId === selectedRateId);
-    const shippingPayload = selectedRate && auction.shipping_weight_oz ? {
-      shippingRateId: selectedRate.objectId,
-      shippingService: selectedRate.servicelevelName,
-      shippingCarrier: selectedRate.provider,
-      shippingCostCents: Math.round(parseFloat(selectedRate.amount) * 100),
-      estimatedDays: selectedRate.estimatedDays,
-    } : {};
-
     const res = await fetch("/api/bids/place", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ auctionId: auction.id, amountCents: cents, maxBidCents: maxCents, ...shippingPayload }),
+      body: JSON.stringify({ auctionId: auction.id, amountCents: cents, maxBidCents: maxCents }),
     });
     const data = await res.json();
     setPlacing(false);
@@ -354,19 +316,11 @@ export default function AuctionBidPanel({
   async function confirmBuyNow() {
     setPendingBuyNow(false);
     setPlacing(true);
-    const selectedRate = shippingRates.find((r) => r.objectId === selectedRateId);
-    const shippingPayload = selectedRate && auction.shipping_weight_oz ? {
-      shippingRateId: selectedRate.objectId,
-      shippingService: selectedRate.servicelevelName,
-      shippingCarrier: selectedRate.provider,
-      shippingCostCents: Math.round(parseFloat(selectedRate.amount) * 100),
-      estimatedDays: selectedRate.estimatedDays,
-    } : {};
 
     const res = await fetch("/api/bids/buy-now", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ auctionId: auction.id, ...shippingPayload }),
+      body: JSON.stringify({ auctionId: auction.id }),
     });
     const data = await res.json();
     setPlacing(false);
@@ -581,19 +535,13 @@ export default function AuctionBidPanel({
 
           {/* Buy Now confirmation dialog */}
           {pendingBuyNow && (() => {
-            const selectedRate = shippingRates.find((r) => r.objectId === selectedRateId);
-            const bnShippingCents = auction.free_shipping
-              ? 0
-              : auction.shipping_weight_oz
-                ? (selectedRate ? Math.round(parseFloat(selectedRate.amount) * 100) : null)
-                : (auction.shipping_cost_cents ?? 0);
+            const bnShippingCents = auction.free_shipping ? 0 : (auction.shipping_cost_cents ?? 0);
             const bnTaxEstimate = estimateTaxCents(
-              auction.buy_now_price_cents + (bnShippingCents ?? 0),
+              auction.buy_now_price_cents + bnShippingCents,
               savedShippingState
             );
             const bnTaxCents = bnTaxEstimate ?? 0;
-            const bnTotal = bnShippingCents !== null ? auction.buy_now_price_cents + bnShippingCents + bnTaxCents : null;
-            const bnCanConfirm = !auction.shipping_weight_oz || !!selectedRate;
+            const bnTotal = auction.buy_now_price_cents + bnShippingCents + bnTaxCents;
             return (
               <div className="rounded-lg border border-orange-200 bg-orange-50 dark:bg-orange-900/20 dark:border-orange-800 px-4 py-3 space-y-3">
                 <p className="text-sm font-semibold">Confirm Buy Now</p>
@@ -604,41 +552,13 @@ export default function AuctionBidPanel({
                     <span className="font-medium">{centsToDisplay(auction.buy_now_price_cents)}</span>
                   </div>
 
-                  {auction.free_shipping ? (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Shipping</span>
-                      <span className="font-medium text-leaf">Free</span>
-                    </div>
-                  ) : auction.shipping_weight_oz ? (
-                    <div className="space-y-1.5">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Shipping</span>
-                        {selectedRate
-                          ? <span className="font-medium">{centsToDisplay(Math.round(parseFloat(selectedRate.amount) * 100))}</span>
-                          : <span className="text-muted-foreground text-xs italic">Select a method below</span>
-                        }
-                      </div>
-                      <div className="rounded-md border bg-background/60 divide-y">
-                        {loadingRates && <p className="text-xs text-muted-foreground px-3 py-2">Loading rates…</p>}
-                        {!loadingRates && shippingRates.length === 0 && <p className="text-xs text-muted-foreground px-3 py-2">No rates available — contact the seller.</p>}
-                        {shippingRates.map((rate) => (
-                          <label key={rate.objectId} className="flex items-center gap-2.5 cursor-pointer px-3 py-2 hover:bg-muted/40 transition-colors">
-                            <input type="radio" name="bnShippingRate" value={rate.objectId} checked={selectedRateId === rate.objectId} onChange={() => setSelectedRateId(rate.objectId)} className="accent-leaf shrink-0" />
-                            <span className="text-xs flex-1">
-                              <span className="font-medium">{rate.provider} {rate.servicelevelName}</span>
-                              {rate.estimatedDays ? <span className="text-muted-foreground"> · {rate.estimatedDays}d</span> : null}
-                            </span>
-                            <span className="text-xs font-semibold shrink-0">${rate.amount}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Shipping</span>
-                      <span className="font-medium">{centsToDisplay(auction.shipping_cost_cents ?? 0)}</span>
-                    </div>
-                  )}
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Shipping</span>
+                    {auction.free_shipping
+                      ? <span className="font-medium text-leaf">Free</span>
+                      : <span className="font-medium">{centsToDisplay(bnShippingCents)}</span>
+                    }
+                  </div>
 
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Tax</span>
@@ -651,8 +571,8 @@ export default function AuctionBidPanel({
                   <div className="flex justify-between border-t pt-1.5 font-semibold">
                     <span>Total</span>
                     <span>
-                      {bnTotal !== null ? centsToDisplay(bnTotal) : "—"}
-                      {bnTotal !== null && bnTaxEstimate === null && <span className="text-xs font-normal text-muted-foreground"> + tax</span>}
+                      {centsToDisplay(bnTotal)}
+                      {bnTaxEstimate === null && <span className="text-xs font-normal text-muted-foreground"> + tax</span>}
                     </span>
                   </div>
                 </div>
@@ -666,7 +586,7 @@ export default function AuctionBidPanel({
 
                 <div className="flex gap-2 justify-end">
                   <Button size="sm" variant="outline" onClick={() => setPendingBuyNow(false)}>Cancel</Button>
-                  <Button size="sm" disabled={!bnCanConfirm || placing} onClick={confirmBuyNow} className="bg-orange-600 hover:bg-orange-700 text-white">
+                  <Button size="sm" disabled={placing} onClick={confirmBuyNow} className="bg-orange-600 hover:bg-orange-700 text-white">
                     {placing ? "Processing…" : "Confirm Purchase"}
                   </Button>
                 </div>
@@ -771,22 +691,14 @@ export default function AuctionBidPanel({
 
           {/* Confirmation step */}
           {pendingConfirm !== null && (() => {
-            const selectedRate = shippingRates.find((r) => r.objectId === selectedRateId);
-            const shippingCents = auction.free_shipping
-              ? 0
-              : auction.shipping_weight_oz
-                ? (selectedRate ? Math.round(parseFloat(selectedRate.amount) * 100) : null)
-                : (auction.shipping_cost_cents ?? 0);
-            const canConfirm = !auction.shipping_weight_oz || !!selectedRate;
+            const shippingCents = auction.free_shipping ? 0 : (auction.shipping_cost_cents ?? 0);
             const taxEstimate = estimateTaxCents(
-              pendingConfirm.cents + (shippingCents ?? 0),
+              pendingConfirm.cents + shippingCents,
               savedShippingState
             );
             const hasTaxEstimate = taxEstimate !== null;
             const taxEstimateCents = taxEstimate ?? 0;
-            const totalCents = shippingCents !== null
-              ? pendingConfirm.cents + shippingCents + taxEstimateCents
-              : null;
+            const totalCents = pendingConfirm.cents + shippingCents + taxEstimateCents;
             const reserveNotMet = !!(auction.reserve_price_cents && pendingConfirm.cents < auction.reserve_price_cents);
             const isSelfOutbid = !!userId && auction.current_bidder_id === userId;
             const isWarning = isSafetyWarning(pendingConfirm.cents) || reserveNotMet || isSelfOutbid;
@@ -834,53 +746,13 @@ export default function AuctionBidPanel({
                   </div>
 
                   {/* Shipping */}
-                  {auction.free_shipping ? (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Shipping</span>
-                      <span className="font-medium text-leaf">Free</span>
-                    </div>
-                  ) : auction.shipping_weight_oz ? (
-                    <div className="space-y-1.5">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Shipping</span>
-                        {selectedRate
-                          ? <span className="font-medium">{centsToDisplay(Math.round(parseFloat(selectedRate.amount) * 100))}</span>
-                          : <span className="text-muted-foreground text-xs italic">Select a method below</span>
-                        }
-                      </div>
-                      {/* Rate picker inside dialog */}
-                      <div className="rounded-md border bg-background/60 divide-y">
-                        {loadingRates && (
-                          <p className="text-xs text-muted-foreground px-3 py-2">Loading shipping rates…</p>
-                        )}
-                        {!loadingRates && shippingRates.length === 0 && (
-                          <p className="text-xs text-muted-foreground px-3 py-2">No rates available — contact the seller.</p>
-                        )}
-                        {shippingRates.map((rate) => (
-                          <label key={rate.objectId} className="flex items-center gap-2.5 cursor-pointer px-3 py-2 hover:bg-muted/40 transition-colors">
-                            <input
-                              type="radio"
-                              name="shippingRateConfirm"
-                              value={rate.objectId}
-                              checked={selectedRateId === rate.objectId}
-                              onChange={() => setSelectedRateId(rate.objectId)}
-                              className="accent-leaf shrink-0"
-                            />
-                            <span className="text-xs flex-1">
-                              <span className="font-medium">{rate.provider} {rate.servicelevelName}</span>
-                              {rate.estimatedDays ? <span className="text-muted-foreground"> · {rate.estimatedDays} day{rate.estimatedDays !== 1 ? "s" : ""}</span> : null}
-                            </span>
-                            <span className="text-xs font-semibold text-leaf shrink-0">${rate.amount}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Shipping</span>
-                      <span className="font-medium">{centsToDisplay(auction.shipping_cost_cents ?? 0)}</span>
-                    </div>
-                  )}
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Shipping</span>
+                    {auction.free_shipping
+                      ? <span className="font-medium text-leaf">Free</span>
+                      : <span className="font-medium">{centsToDisplay(shippingCents)}</span>
+                    }
+                  </div>
 
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Tax</span>
@@ -893,8 +765,8 @@ export default function AuctionBidPanel({
                   <div className="flex justify-between border-t pt-1.5 font-semibold">
                     <span>Est. Total</span>
                     <span>
-                      {totalCents !== null ? centsToDisplay(totalCents) : "—"}
-                      {totalCents !== null && !hasTaxEstimate && (
+                      {centsToDisplay(totalCents)}
+                      {!hasTaxEstimate && (
                         <span className="text-xs font-normal text-muted-foreground"> + tax</span>
                       )}
                     </span>
@@ -911,7 +783,6 @@ export default function AuctionBidPanel({
                   <Button size="sm" variant="outline" onClick={() => setPendingConfirm(null)}>Cancel</Button>
                   <Button
                     size="sm"
-                    disabled={!canConfirm}
                     onClick={confirmBid}
                     className={isWarning
                       ? "bg-amber-600 hover:bg-amber-700"

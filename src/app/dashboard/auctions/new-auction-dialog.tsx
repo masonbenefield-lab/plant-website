@@ -35,11 +35,6 @@ interface PrefillData {
   pot_size: string | null;
   free_shipping: boolean;
   shipping_cost_cents: number | null;
-  shipping_weight_oz: number | null;
-  box_length_in: number | null;
-  box_width_in: number | null;
-  box_height_in: number | null;
-  package_type: string | null;
 }
 
 interface Props {
@@ -47,13 +42,12 @@ interface Props {
   planLimit: number | null;
   currentCount: number;
   photoLimit: number | null;
-  calculatedShippingEnabled: boolean;
   prefill?: PrefillData;
   triggerLabel?: string;
   keepOriginal?: boolean;
 }
 
-export default function NewAuctionDialog({ sellerId, planLimit, currentCount, photoLimit, calculatedShippingEnabled, prefill, triggerLabel, keepOriginal }: Props) {
+export default function NewAuctionDialog({ sellerId, planLimit, currentCount, photoLimit, prefill, triggerLabel, keepOriginal }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -63,19 +57,10 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
   const [variety, setVariety] = useState(prefill?.variety ?? "");
   const [potSize, setPotSize] = useState(prefill?.pot_size ?? "");
   const [category, setCategory] = useState(prefill?.category ?? "");
-  const [shippingMode, setShippingMode] = useState<"" | "free" | "flat" | "weight">(
-    prefill ? (prefill.free_shipping ? "free" : prefill.shipping_weight_oz ? "weight" : prefill.shipping_cost_cents ? "flat" : "") : ""
+  const [shippingMode, setShippingMode] = useState<"" | "free" | "flat">(
+    prefill ? (prefill.free_shipping ? "free" : prefill.shipping_cost_cents ? "flat" : "") : ""
   );
-  const [packageType, setPackageType] = useState(prefill?.package_type ?? "box");
-  const [weightOz, setWeightOz] = useState(prefill?.shipping_weight_oz ?? 16);
-  const [boxL, setBoxL] = useState(prefill?.box_length_in ?? 10);
-  const [boxW, setBoxW] = useState(prefill?.box_width_in ?? 8);
-  const [boxH, setBoxH] = useState(prefill?.box_height_in ?? 4);
   const [startingBidVal, setStartingBidVal] = useState(prefill ? prefill.starting_bid_cents / 100 : 0);
-
-  const dimWeightLbs = Math.round((boxL * boxW * boxH) / 166 * 10) / 10;
-  const actualWeightLbs = weightOz / 16;
-  const showDimWarning = packageType === "box" && shippingMode === "weight" && dimWeightLbs > actualWeightLbs && dimWeightLbs > 2;
   const [buyNowVal, setBuyNowVal] = useState(prefill ? (prefill.buy_now_price_cents ?? 0) / 100 : 0);
   const [reserveVal, setReserveVal] = useState(prefill ? (prefill.reserve_price_cents ?? 0) / 100 : 0);
   const [startsAt, setStartsAt] = useState("");
@@ -138,7 +123,6 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
     if (!(data.get("description") as string)?.trim()) { toast.error("Description is required."); return; }
     if (!dollarsToCents(data.get("starting_bid") as string)) { toast.error("Starting bid is required."); return; }
     if (!shippingMode) { toast.error("Select a shipping method."); return; }
-    if (shippingMode === "weight" && !Number(data.get("shipping_weight_oz"))) { toast.error("Enter a shipping weight."); return; }
     setSaving(true);
     const durationHours = Number(data.get("duration_hours"));
     const startsAtRaw = data.get("starts_at") as string;
@@ -181,19 +165,6 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
         return;
       }
     }
-    if (shippingMode === "weight") {
-      if (packageType === "box") {
-        const l = Number(data.get("box_length_in"));
-        const w = Number(data.get("box_width_in"));
-        const h = Number(data.get("box_height_in"));
-        if (l > 48 || w > 24 || h > 24) {
-          toast.error("Box dimensions exceed carrier limits (max 48 × 24 × 24 in).");
-          setSaving(false);
-          return;
-        }
-      }
-    }
-
     const supabase = createClient();
     const { error } = await supabase.from("auctions").insert({
       seller_id: sellerId,
@@ -213,11 +184,6 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
       pot_size: potSize || null,
       free_shipping: shippingMode === "free",
       shipping_cost_cents: shippingMode === "flat" ? dollarsToCents(data.get("shipping_cost") as string) : null,
-      shipping_weight_oz: shippingMode === "weight" ? Number(data.get("shipping_weight_oz")) : null,
-      box_length_in: shippingMode === "weight" && packageType === "box" ? (Number(data.get("box_length_in")) || 10) : null,
-      box_width_in: shippingMode === "weight" && packageType === "box" ? (Number(data.get("box_width_in")) || 8) : null,
-      box_height_in: shippingMode === "weight" && packageType === "box" ? (Number(data.get("box_height_in")) || 4) : null,
-      package_type: shippingMode === "weight" ? packageType : null,
     });
 
     setSaving(false);
@@ -438,8 +404,8 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
           </div>
           <div className="space-y-2">
             <Label>Shipping <span className="text-destructive">*</span></Label>
-            <div className="grid grid-cols-3 gap-2">
-              {(["free", "flat", "weight"] as const).map((mode) => (
+            <div className="grid grid-cols-2 gap-2">
+              {(["free", "flat"] as const).map((mode) => (
                 <button
                   key={mode}
                   type="button"
@@ -451,7 +417,7 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
                       : "border-input hover:bg-muted"
                   }`}
                 >
-                  {mode === "free" ? "Free" : mode === "flat" ? "Flat rate" : "By weight"}
+                  {mode === "free" ? "Free" : "Flat rate"}
                 </button>
               ))}
             </div>
@@ -471,68 +437,13 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
                 <span className="text-xs text-muted-foreground">flat rate charged to buyer</span>
               </div>
             )}
-            {shippingMode === "weight" && !calculatedShippingEnabled && (
-              <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 px-3 py-2.5 text-xs text-amber-800 dark:text-amber-300">
-                <strong>Ship-from address required.</strong> Weight-based rates need a verified address and calculated shipping enabled.{" "}
-                <a href="/account#shipping-settings" className="underline font-medium hover:opacity-80" onClick={() => setOpen(false)}>
-                  Set it up in Account Settings →
-                </a>
-              </div>
-            )}
-            {shippingMode === "weight" && calculatedShippingEnabled && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Input
-                    name="shipping_weight_oz"
-                    type="number"
-                    min={0.1}
-                    step={0.1}
-                    placeholder="e.g. 12"
-                    required
-                    className="max-w-[100px]"
-                    value={weightOz}
-                    onChange={(e) => setWeightOz(Number(e.target.value) || 0)}
-                  />
-                  <span className="text-xs text-muted-foreground">oz packed weight</span>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Package type</p>
-                  <select
-                    value={packageType}
-                    onChange={(e) => setPackageType(e.target.value)}
-                    className="h-8 w-full rounded-lg border border-input bg-white px-2 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-ring/50 dark:bg-gray-800 dark:text-gray-100"
-                  >
-                    <option value="box">Box (custom dimensions)</option>
-                    <option value="padded_envelope">Padded envelope (12.5 × 9.5 × 1 in)</option>
-                    <option value="poly_mailer">Poly mailer (12 × 15 × 0.25 in)</option>
-                  </select>
-                </div>
-                {packageType === "box" && (
-                  <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground">Box dimensions (inches)</p>
-                    <div className="flex items-center gap-2">
-                      <Input name="box_length_in" type="number" min={1} max={48} step={0.5} placeholder="L" className="w-16 text-xs" value={boxL} onChange={(e) => setBoxL(Number(e.target.value) || 0)} />
-                      <span className="text-xs text-muted-foreground">×</span>
-                      <Input name="box_width_in" type="number" min={1} max={24} step={0.5} placeholder="W" className="w-16 text-xs" value={boxW} onChange={(e) => setBoxW(Number(e.target.value) || 0)} />
-                      <span className="text-xs text-muted-foreground">×</span>
-                      <Input name="box_height_in" type="number" min={1} max={24} step={0.5} placeholder="H" className="w-16 text-xs" value={boxH} onChange={(e) => setBoxH(Number(e.target.value) || 0)} />
-                      <span className="text-xs text-muted-foreground">in</span>
-                    </div>
-                  </div>
-                )}
-                {showDimWarning && (
-                  <p className="text-xs text-orange-600 dark:text-orange-400">⚠ Box dimensions give a ~{dimWeightLbs} lb billable weight. USPS charges whichever is higher — actual or dimensional. Consider a smaller box.</p>
-                )}
-                <p className="text-xs text-amber-600 dark:text-amber-400">⚠️ Enter the actual packed weight. Max box size: 48 × 24 × 24 in. Underreporting causes USPS billing adjustments.</p>
-              </div>
-            )}
           </div>
           {!shippingMode && (
             <p className="text-xs text-amber-700 dark:text-amber-400">Choose a shipping option above to continue.</p>
           )}
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={saving || atAuctionLimit || !shippingMode || (shippingMode === "weight" && !calculatedShippingEnabled) || buyNowError || reserveError} className="bg-leaf hover:bg-forest">
+            <Button type="submit" disabled={saving || atAuctionLimit || !shippingMode || buyNowError || reserveError} className="bg-leaf hover:bg-forest">
               {saving ? "Saving…" : prefill ? (keepOriginal ? "Duplicate auction" : "Relist auction") : "Create auction"}
             </Button>
           </div>

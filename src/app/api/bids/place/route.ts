@@ -45,16 +45,10 @@ export async function POST(request: Request) {
 
   const {
     auctionId, amountCents, maxBidCents,
-    shippingRateId, shippingService, shippingCarrier, shippingCostCents, estimatedDays,
   } = await request.json() as {
     auctionId: string;
     amountCents: number;
     maxBidCents?: number | null;
-    shippingRateId?: string | null;
-    shippingService?: string | null;
-    shippingCarrier?: string | null;
-    shippingCostCents?: number | null;
-    estimatedDays?: number | null;
   };
 
   const admin = adminClient();
@@ -91,18 +85,12 @@ export async function POST(request: Request) {
 
   const { data: auction, error: auctionErr } = await admin
     .from("auctions")
-    .select("id, seller_id, plant_name, variety, current_bid_cents, current_bidder_id, status, ends_at, shipping_weight_oz")
+    .select("id, seller_id, plant_name, variety, current_bid_cents, current_bidder_id, status, ends_at")
     .eq("id", auctionId)
     .single();
 
   if (!bidderProfile.saved_shipping_address) {
     return NextResponse.json({ error: "shipping_address_required" }, { status: 403 });
-  }
-
-  if (auction?.shipping_weight_oz) {
-    if (!shippingRateId || shippingCostCents == null) {
-      return NextResponse.json({ error: "shipping_rate_required" }, { status: 400 });
-    }
   }
 
   if (auctionErr || !auction) return NextResponse.json({ error: "Auction not found" }, { status: 404 });
@@ -133,20 +121,6 @@ export async function POST(request: Request) {
     max_bid_cents: maxBidCents ?? null,
   });
   if (bidError) return NextResponse.json({ error: bidError.message }, { status: 500 });
-
-  // Save shipping selection for weight-based auctions
-  if (auction.shipping_weight_oz && shippingRateId && shippingCostCents != null) {
-    await admin.from("auction_shipping_selections").upsert({
-      auction_id: auctionId,
-      bidder_id: user.id,
-      rate_id: shippingRateId,
-      service: shippingService ?? null,
-      carrier: shippingCarrier ?? null,
-      cost_cents: shippingCostCents,
-      estimated_days: estimatedDays ?? null,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: "auction_id,bidder_id" });
-  }
 
   // Check if the current leader has a proxy max that can auto-respond
   if (auction.current_bidder_id && auction.current_bidder_id !== user.id) {

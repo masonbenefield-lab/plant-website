@@ -60,7 +60,6 @@ type Row = {
   listing_sold_out_behavior: "mark_sold_out" | "auto_pause";
   listing_care_guide_pdf_url: string | null;
   listing_last_activated_at: string | null;
-  shipping_weight_oz: number | null;
   shipping_cost_cents: number | null;
   free_shipping: boolean;
   low_stock_threshold: number | null;
@@ -174,8 +173,7 @@ export default function InventoryClient({
   stripeOnboarded = false,
   hasReturnPolicy = true,
   hasShippingTimeline = true,
-  hasShipFrom = true,
-  calculatedShippingEnabled = true,
+
   planLimits = { listings: null, auctions: 5, photos: 5 },
 }: {
   activeRows: Row[];
@@ -189,8 +187,7 @@ export default function InventoryClient({
   stripeOnboarded?: boolean;
   hasReturnPolicy?: boolean;
   hasShippingTimeline?: boolean;
-  hasShipFrom?: boolean;
-  calculatedShippingEnabled?: boolean;
+
   planLimits?: PlanLimits;
 }) {
   const router = useRouter();
@@ -254,9 +251,8 @@ export default function InventoryClient({
   const [price, setPrice] = useState("");
   const [listQty, setListQty] = useState("");
   const [listModalStockQty, setListModalStockQty] = useState("");
-  const [listingShippingMode, setListingShippingMode] = useState<"" | "free" | "flat" | "weight">("");
+  const [listingShippingMode, setListingShippingMode] = useState<"" | "free" | "flat">("");
   const [listingShippingCost, setListingShippingCost] = useState("");
-  const [listingShippingWeightOz, setListingShippingWeightOz] = useState("");
 
   // Listing templates
   type ListingTemplate = { id: string; name: string; plant_name: string; variety: string | null; category: string | null; pot_size: string | null; description: string | null; price_cents: number | null };
@@ -275,9 +271,8 @@ export default function InventoryClient({
   const [editImages, setEditImages] = useState<string[]>([]);
   const [imageUploading, setImageUploading] = useState(false);
   const [editLowStockThreshold, setEditLowStockThreshold] = useState("");
-  const [editShippingMode, setEditShippingMode] = useState<"" | "free" | "flat" | "weight">("");
+  const [editShippingMode, setEditShippingMode] = useState<"" | "free" | "flat">("");
   const [editShippingCost, setEditShippingCost] = useState("");
-  const [editWeightOz, setEditWeightOz] = useState("");
   const [dragPhotoIdx, setDragPhotoIdx] = useState<number | null>(null);
 
   // Sold modal
@@ -312,7 +307,7 @@ export default function InventoryClient({
   const [editCostPrice, setEditCostPrice] = useState("");
   const [viewMode, setViewMode] = useState<"grouped" | "flat">("grouped");
   const categories = isAdmin ? ADMIN_CATEGORIES : BASE_CATEGORIES;
-  const shippingModes = ["free", "flat", "weight"] as const;
+  const shippingModes = ["free", "flat"] as const;
   const [stockTab, setStockTab] = useState<"plants" | "supplies">("plants");
 
   useEffect(() => {
@@ -379,33 +374,18 @@ export default function InventoryClient({
       return;
     }
     if (m.type === "listing") {
-      if (!hasShipFrom) {
-        toast.error("Ship-from address required", {
-          description: "Add your ship-from address in Account Settings before listing items.",
-          action: { label: "Account Settings", onClick: () => window.location.href = "/account#shipping-settings" },
-          duration: 6000,
-        });
-        return;
-      }
       setPrice(m.row.listing_price_cents ? (m.row.listing_price_cents / 100).toFixed(2) : "");
       setListQty(String(Math.max(1, avail(m.row))));
       setListModalStockQty(String(m.row.quantity));
       if (m.row.free_shipping) {
         setListingShippingMode("free");
         setListingShippingCost("");
-        setListingShippingWeightOz("");
       } else if (m.row.shipping_cost_cents) {
         setListingShippingMode("flat");
         setListingShippingCost((m.row.shipping_cost_cents / 100).toFixed(2));
-        setListingShippingWeightOz("");
-      } else if (m.row.shipping_weight_oz) {
-        setListingShippingMode("weight");
-        setListingShippingWeightOz(String(m.row.shipping_weight_oz));
-        setListingShippingCost("");
       } else {
         setListingShippingMode("");
         setListingShippingCost("");
-        setListingShippingWeightOz("");
       }
     }
     if (m.type === "edit") {
@@ -421,19 +401,12 @@ export default function InventoryClient({
       setEditCostPrice(m.row.cost_cents != null ? String(m.row.cost_cents / 100) : "");
       if (m.row.free_shipping) {
         setEditShippingMode("free");
-        setEditWeightOz("");
         setEditShippingCost("");
       } else if (m.row.shipping_cost_cents) {
         setEditShippingMode("flat");
         setEditShippingCost(String(m.row.shipping_cost_cents / 100));
-        setEditWeightOz("");
-      } else if (m.row.shipping_weight_oz) {
-        setEditShippingMode("weight");
-        setEditWeightOz(String(m.row.shipping_weight_oz));
-        setEditShippingCost("");
       } else {
         setEditShippingMode("");
-        setEditWeightOz("");
         setEditShippingCost("");
       }
       setDragPhotoIdx(null);
@@ -446,7 +419,7 @@ export default function InventoryClient({
     if (m.type === "edit") {
       const hasAdvanced = !!(
         m.row.cost_cents || m.row.low_stock_threshold ||
-        m.row.free_shipping || m.row.shipping_cost_cents || m.row.shipping_weight_oz
+        m.row.free_shipping || m.row.shipping_cost_cents
       );
       setShowEditAdvanced(hasAdvanced);
     }
@@ -558,29 +531,6 @@ export default function InventoryClient({
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { toast.error("Not logged in"); setSubmitting(false); return; }
 
-    const { data: profile } = await supabase.from("profiles").select("ship_from_address, calculated_shipping_enabled").eq("id", user.id).single();
-    const addr = profile?.ship_from_address as { street1?: string; city?: string; zip?: string } | null;
-    const hasShipFrom = !!(addr?.street1?.trim() && addr?.city?.trim() && addr?.zip?.trim());
-    const calcShippingOk = (profile as { calculated_shipping_enabled?: boolean | null } | null)?.calculated_shipping_enabled === true;
-
-    if (!hasShipFrom) {
-      toast.error("Ship-from address required", {
-        description: "Add your ship-from address in Account Settings before creating a listing.",
-        action: { label: "Account Settings", onClick: () => router.push("/account#shipping-settings") },
-      });
-      setSubmitting(false);
-      return;
-    }
-
-    if (listingShippingMode === "weight" && !calcShippingOk) {
-      toast.error("Enable calculated shipping first", {
-        description: "Complete your ship-from address and turn on calculated shipping in Shipping Settings.",
-        action: { label: "Shipping Settings", onClick: () => router.push("/account#shipping-settings") },
-      });
-      setSubmitting(false);
-      return;
-    }
-
     if (planLimits.listings !== null) {
       const { count } = await supabase.from("listings").select("id", { count: "exact", head: true }).eq("seller_id", user.id).eq("status", "active");
       if ((count ?? 0) >= planLimits.listings) {
@@ -613,7 +563,6 @@ export default function InventoryClient({
       item_type: modal.row.item_type || null,
       free_shipping: listingShippingMode === "free",
       shipping_cost_cents: listingShippingMode === "flat" ? dollarsToCents(listingShippingCost) : null,
-      shipping_weight_oz: listingShippingMode === "weight" ? Number(listingShippingWeightOz) : null,
     }).select("id").single();
     if (error) { toast.error(error.message); setSubmitting(false); return; }
     await supabase.from("inventory").update({
@@ -622,7 +571,6 @@ export default function InventoryClient({
       ...(newTotalStock !== modal.row.quantity ? { quantity: newTotalStock } : {}),
       free_shipping: listingShippingMode === "free",
       shipping_cost_cents: listingShippingMode === "flat" ? dollarsToCents(listingShippingCost) : null,
-      shipping_weight_oz: listingShippingMode === "weight" ? Number(listingShippingWeightOz) : null,
     }).eq("id", modal.row.id);
     setSubmitting(false);
     toast.success(`${modal.row.plant_name} is live in your shop!`);
@@ -719,7 +667,6 @@ export default function InventoryClient({
       cost_cents: editCostPrice !== "" ? dollarsToCents(editCostPrice) : null,
       free_shipping: editShippingMode === "free",
       shipping_cost_cents: editShippingMode === "flat" ? dollarsToCents(editShippingCost) : null,
-      shipping_weight_oz: editShippingMode === "weight" && editWeightOz !== "" ? Math.max(1, Math.round(parseFloat(editWeightOz))) : null,
     }).eq("id", modal.row.id);
     if (error) { toast.error(error.message); setSubmitting(false); return; }
     if (modal.row.listing_id) {
@@ -732,8 +679,7 @@ export default function InventoryClient({
         pot_size: editPotSize || null,
         free_shipping: editShippingMode === "free",
         shipping_cost_cents: editShippingMode === "flat" ? dollarsToCents(editShippingCost) : null,
-        shipping_weight_oz: editShippingMode === "weight" && editWeightOz !== "" ? Math.max(1, Math.round(parseFloat(editWeightOz))) : null,
-      }).eq("id", modal.row.listing_id);
+        }).eq("id", modal.row.listing_id);
     }
     setSubmitting(false);
     toast.success("Item updated.");
@@ -1386,7 +1332,7 @@ export default function InventoryClient({
             </div>
             <div className="flex items-center justify-between gap-2 pl-5">
               <span className="text-xs text-muted-foreground">
-                {row.free_shipping ? "Free shipping" : row.shipping_cost_cents ? `${centsToDisplay(row.shipping_cost_cents)} shipping` : row.shipping_weight_oz ? "Calculated shipping" : ""}
+                {row.free_shipping ? "Free shipping" : row.shipping_cost_cents ? `${centsToDisplay(row.shipping_cost_cents)} shipping` : ""}
               </span>
               {row.listing_status !== "sold_out" && (
                 <button
@@ -1583,7 +1529,7 @@ export default function InventoryClient({
               )}
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs text-muted-foreground">
-                  {row.free_shipping ? "Free shipping" : row.shipping_cost_cents ? `${centsToDisplay(row.shipping_cost_cents)} shipping` : row.shipping_weight_oz ? "Calculated shipping" : ""}
+                  {row.free_shipping ? "Free shipping" : row.shipping_cost_cents ? `${centsToDisplay(row.shipping_cost_cents)} shipping` : ""}
                 </span>
                 {row.listing_status !== "sold_out" && (
                   <button
@@ -1803,14 +1749,6 @@ export default function InventoryClient({
           <strong>Set your return policy before listing.</strong>{" "}
           Buyers expect to know your policy upfront.{" "}
           <a href="/account#return-policy" className="underline font-medium hover:opacity-80">Set it now →</a>
-        </div>
-      )}
-
-      {!calculatedShippingEnabled && activeRows.some(i => (i.shipping_weight_oz ?? 0) > 0) && (
-        <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
-          <strong>Shipping setup incomplete.</strong>{" "}
-          You have items using weight-based shipping but your ship-from address isn&apos;t verified or calculated shipping isn&apos;t enabled.{" "}
-          <a href="/account#shipping-settings" className="underline font-medium hover:opacity-80">Fix it now →</a>
         </div>
       )}
 
@@ -2265,7 +2203,7 @@ export default function InventoryClient({
                 )}
                 <div className="space-y-2">
                   <Label>Shipping <span className="text-destructive">*</span></Label>
-                  <div className={`grid gap-2 grid-cols-3`}>
+                  <div className={`grid gap-2 grid-cols-2`}>
                     {shippingModes.map((mode) => (
                       <button
                         key={mode}
@@ -2277,7 +2215,7 @@ export default function InventoryClient({
                             : "border-input hover:bg-muted"
                         }`}
                       >
-                        {mode === "free" ? "Free" : mode === "flat" ? "Flat rate" : "By weight"}
+                        {mode === "free" ? "Free" : "Flat rate"}
                       </button>
                     ))}
                   </div>
@@ -2295,27 +2233,6 @@ export default function InventoryClient({
                       <span className="text-xs text-muted-foreground">flat rate</span>
                     </div>
                   )}
-                  {listingShippingMode === "weight" && (
-                    calculatedShippingEnabled ? (
-                      <div className="flex items-center gap-2">
-                        <Input
-                          type="number"
-                          min={0.1}
-                          step={0.1}
-                          placeholder="oz"
-                          value={listingShippingWeightOz}
-                          onChange={e => setListingShippingWeightOz(e.target.value)}
-                          className="max-w-[90px]"
-                        />
-                        <span className="text-xs text-muted-foreground">oz — rate calculated at checkout</span>
-                      </div>
-                    ) : (
-                      <p className="text-xs text-amber-700 dark:text-amber-400">
-                        To use weight-based rates, complete your ship-from address and enable calculated shipping in{" "}
-                        <a href="/account#shipping-settings" className="underline hover:text-foreground font-medium">Shipping Settings →</a>
-                      </p>
-                    )
-                  )}
                 </div>
                 {!listingShippingMode && (
                   <p className="text-xs text-amber-700 dark:text-amber-400">Choose a shipping option above to continue.</p>
@@ -2326,7 +2243,6 @@ export default function InventoryClient({
                     onClick={submitListing}
                     disabled={
                       submitting || !price || !listQty || !listingShippingMode || overStock ||
-                      (listingShippingMode === "weight" && !listingShippingWeightOz) ||
                       (listingShippingMode === "flat" && !listingShippingCost)
                     }
                     className="flex-1 bg-leaf hover:bg-forest"
@@ -2518,12 +2434,12 @@ export default function InventoryClient({
                     </div>
                     <div className="space-y-1">
                       <Label>Shipping <span className="font-normal text-muted-foreground text-xs">(optional — required to list)</span></Label>
-                      <div className={`grid gap-2 grid-cols-3`}>
+                      <div className={`grid gap-2 grid-cols-2`}>
                         {shippingModes.map((mode) => (
                           <button key={mode} type="button" onClick={() => setEditShippingMode(editShippingMode === mode ? "" : mode)}
                             className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors ${editShippingMode === mode ? "border-leaf bg-[#EBF0E6] text-forest dark:bg-forest/40 dark:text-[#A8BF9A] dark:border-leaf" : "border-input hover:bg-muted"}`}
                           >
-                            {mode === "free" ? "Free" : mode === "flat" ? "Flat rate" : "By weight"}
+                            {mode === "free" ? "Free" : "Flat rate"}
                           </button>
                         ))}
                       </div>
@@ -2533,19 +2449,6 @@ export default function InventoryClient({
                           <Input type="number" min={0.01} step={0.01} placeholder="e.g. 6.99" value={editShippingCost} onChange={e => setEditShippingCost(e.target.value)} className="max-w-[120px]" />
                           <span className="text-xs text-muted-foreground">charged to buyer</span>
                         </div>
-                      )}
-                      {editShippingMode === "weight" && (
-                        calculatedShippingEnabled ? (
-                          <div className="flex items-center gap-2 pt-1">
-                            <Input type="number" min={0.1} step={0.1} placeholder="e.g. 16" value={editWeightOz} onChange={e => setEditWeightOz(e.target.value)} className="max-w-[100px]" />
-                            <span className="text-xs text-muted-foreground">oz — rate calculated at checkout</span>
-                          </div>
-                        ) : (
-                          <p className="text-xs text-amber-700 dark:text-amber-400 pt-1">
-                            To use weight-based rates, complete your ship-from address and enable calculated shipping in{" "}
-                            <a href="/account#shipping-settings" className="underline hover:text-foreground font-medium">Shipping Settings →</a>
-                          </p>
-                        )
                       )}
                     </div>
                     {/* Templates */}

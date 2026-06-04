@@ -26,7 +26,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { listingId, auctionId, offerId, quantity: rawQty, shippingAddress, shippingCostCents, shippoRateId, shippingService } = body as {
+  const { listingId, auctionId, offerId, quantity: rawQty, shippingAddress, shippingCostCents, shippingService } = body as {
     listingId?: string;
     auctionId?: string;
     offerId?: string;
@@ -41,7 +41,6 @@ export async function POST(request: Request) {
       country: string;
     };
     shippingCostCents?: number;
-    shippoRateId?: string;
     shippingService?: string;
   };
 
@@ -121,11 +120,7 @@ export async function POST(request: Request) {
     const feeCents = Math.round(itemAmountCents * (feePercent / 100));
     // Stripe processing fee estimate (2.9% + $0.30) — passed through to seller via application fee
     const stripeFeeCents = Math.round(amountCents * 0.029) + 30;
-    // Hold shipping in platform account when buyer paid a Shippo-calculated rate — used to cover label purchase
-    // Tax is always held by the platform for remittance to the state
-    const applicationFeeCents = shippoRateId
-      ? feeCents + shippingCents + stripeFeeCents + taxCents
-      : feeCents + stripeFeeCents + taxCents;
+    const applicationFeeCents = feeCents + stripeFeeCents + taxCents;
 
     const admin = adminClient();
     const newListingQty = listing.quantity - quantity;
@@ -178,7 +173,6 @@ export async function POST(request: Request) {
         amount_cents: amountCents,
         shipping_cost_cents: shippingCents,
         shipping_service: shippingService ?? null,
-        shippo_rate_id: shippoRateId ?? null,
         platform_fee_cents: feeCents,
         tax_cents: taxCents,
         item_snapshot: {
@@ -283,9 +277,7 @@ export async function POST(request: Request) {
       const offerTotalCents = offerOrder.amount_cents + offerShippingCents + offerTaxCents;
       const offerFeeCents = Math.round(offerOrder.amount_cents * (feePercent / 100));
       const offerStripeFeeCents = Math.round(offerTotalCents * 0.029) + 30;
-      const offerApplicationFeeCents = shippoRateId
-        ? offerFeeCents + offerShippingCents + offerStripeFeeCents + offerTaxCents
-        : offerFeeCents + offerStripeFeeCents + offerTaxCents;
+      const offerApplicationFeeCents = offerFeeCents + offerStripeFeeCents + offerTaxCents;
 
       const paymentIntent = await getStripe().paymentIntents.create({
         amount: offerTotalCents,
@@ -310,7 +302,6 @@ export async function POST(request: Request) {
           amount_cents: offerTotalCents,
           shipping_cost_cents: offerShippingCents,
           shipping_service: shippingService ?? null,
-          shippo_rate_id: shippoRateId ?? null,
           platform_fee_cents: offerFeeCents,
           tax_cents: offerTaxCents,
         })
@@ -377,9 +368,7 @@ export async function POST(request: Request) {
     const amountCents = auction.current_bid_cents + auctionShippingCents + auctionTaxCents;
     const feeCents = Math.round(auction.current_bid_cents * (feePercent / 100));
     const stripeFeeCents = Math.round(amountCents * 0.029) + 30;
-    const auctionApplicationFeeCents = shippoRateId
-      ? feeCents + auctionShippingCents + stripeFeeCents + auctionTaxCents
-      : feeCents + stripeFeeCents + auctionTaxCents;
+    const auctionApplicationFeeCents = feeCents + stripeFeeCents + auctionTaxCents;
 
     const paymentDeadline = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
 
@@ -409,7 +398,6 @@ export async function POST(request: Request) {
         amount_cents: amountCents,
         shipping_cost_cents: auctionShippingCents,
         shipping_service: shippingService ?? null,
-        shippo_rate_id: shippoRateId ?? null,
         platform_fee_cents: feeCents,
         tax_cents: auctionTaxCents,
         payment_deadline_at: paymentDeadline,

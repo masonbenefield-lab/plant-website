@@ -79,7 +79,7 @@ export async function GET(request: Request) {
   // ── 3. Close expired active auctions ─────────────────────────────────────────
   const { data: expiredAuctions, error } = await supabase
     .from("auctions")
-    .select("id, current_bidder_id, seller_id, current_bid_cents, plant_name, variety, images, inventory_id, reserve_price_cents, free_shipping, shipping_cost_cents, shipping_weight_oz")
+    .select("id, current_bidder_id, seller_id, current_bid_cents, plant_name, variety, images, inventory_id, reserve_price_cents, free_shipping, shipping_cost_cents")
     .eq("status", "active")
     .lt("ends_at", now.toISOString());
 
@@ -126,20 +126,7 @@ export async function GET(request: Request) {
 
       if (canAutoCharge) {
         // Calculate shipping cost
-        let shippingCents = 0;
-        if (auction.free_shipping) {
-          shippingCents = 0;
-        } else if (auction.shipping_cost_cents) {
-          shippingCents = auction.shipping_cost_cents;
-        } else if (auction.shipping_weight_oz) {
-          const { data: shippingSelection } = await supabase
-            .from("auction_shipping_selections")
-            .select("cost_cents, rate_id, service, carrier")
-            .eq("auction_id", auction.id)
-            .eq("bidder_id", auction.current_bidder_id!)
-            .single();
-          shippingCents = shippingSelection?.cost_cents ?? 0;
-        }
+        const shippingCents = auction.free_shipping ? 0 : (auction.shipping_cost_cents ?? 0);
 
         const shippingAddr = (buyer!.saved_shipping_address ?? {}) as Record<string, string>;
         const stripeShippingAddr = {
@@ -162,20 +149,9 @@ export async function GET(request: Request) {
         const feePercent = planFeePercent(sellerProfile!.plan, !!sellerProfile!.is_admin, !!sellerProfile!.groundbreaker);
         const feeCents = Math.round(auction.current_bid_cents * (feePercent / 100));
         const stripeFeeCents = Math.round(totalCents * 0.029) + 30;
-        const platformShipping = auction.shipping_weight_oz ? shippingCents : 0;
-        const appFeeAmount = feeCents + stripeFeeCents + taxCents + platformShipping;
+        const appFeeAmount = feeCents + stripeFeeCents + taxCents;
 
         const deadline = new Date(now.getTime() + PAYMENT_DEADLINE_HOURS * 60 * 60 * 1000);
-        let shippoRateId: string | null = null;
-        if (auction.shipping_weight_oz) {
-          const { data: sel } = await supabase
-            .from("auction_shipping_selections")
-            .select("rate_id")
-            .eq("auction_id", auction.id)
-            .eq("bidder_id", auction.current_bidder_id!)
-            .single();
-          shippoRateId = sel?.rate_id ?? null;
-        }
 
         // Create order before charging — if order insert fails, fall back without
         // touching the buyer's card (internal error, not a payment failure)
@@ -188,7 +164,6 @@ export async function GET(request: Request) {
           shipping_cost_cents: shippingCents,
           tax_cents: taxCents,
           platform_fee_cents: feeCents,
-          shippo_rate_id: shippoRateId,
           payment_deadline_at: deadline.toISOString(),
           status: "pending",
           item_snapshot: {

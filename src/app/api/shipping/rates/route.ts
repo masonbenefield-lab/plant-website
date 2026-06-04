@@ -1,35 +1,22 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { getShippingRates } from "@/lib/shippo";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { listingId, listingIds, auctionId, toAddress } = await request.json() as {
+  const { listingId, listingIds, auctionId } = await request.json() as {
     listingId?: string;
-    listingIds?: string[];   // cart: multiple listings from one seller
+    listingIds?: string[];
     auctionId?: string;
-    toAddress: { name: string; street1: string; street2?: string | null; city: string; state: string; zip: string; country: string };
   };
 
   if (!listingId && !listingIds?.length && !auctionId) {
     return NextResponse.json({ error: "listing or auction required" }, { status: 400 });
   }
 
-  let sellerId: string;
-  let weightOz: number;
-  let boxLengthIn: number | null = null;
-  let boxWidthIn: number | null = null;
-  let boxHeightIn: number | null = null;
-  let packageType: string | null = null;
-  let extraFlatCents = 0; // flat-rate portion to add on top of Shippo rates (cart mixed-mode)
-  type ItemBreakdown = { listingId: string; mode: "free" | "flat" | "calculated"; flatCents?: number };
-  let itemBreakdown: ItemBreakdown[] | undefined;
-
   if (listingIds?.length) {
-    // Cart: multiple listings from one seller — resolve shipping per listing
     const { data: listings } = await supabase
       .from("listings")
       .select("id, seller_id, inventory_id, free_shipping, shipping_cost_cents")
@@ -39,158 +26,85 @@ export async function POST(request: Request) {
 
     const sellerIds = [...new Set(listings.map((l) => l.seller_id))];
     if (sellerIds.length > 1) return NextResponse.json({ error: "Cart items must be from one seller" }, { status: 400 });
-    sellerId = sellerIds[0];
 
     const invIds = listings.map((l) => l.inventory_id).filter(Boolean) as string[];
-    type InvRow = { id: string; shipping_weight_oz: number | null; free_shipping: boolean | null; shipping_cost_cents: number | null };
+    type InvRow = { id: string; free_shipping: boolean | null; shipping_cost_cents: number | null };
     let invMap: Record<string, InvRow> = {};
     if (invIds.length) {
       const { data: invs } = await supabase
         .from("inventory")
-        .select("id, shipping_weight_oz, free_shipping, shipping_cost_cents")
+        .select("id, free_shipping, shipping_cost_cents")
         .in("id", invIds);
       invMap = Object.fromEntries((invs ?? []).map((inv) => [inv.id, inv as InvRow]));
     }
 
-    // Resolve per-listing shipping — one pass, all combinations handled
     let totalFlatCents = 0;
-    let needsCalculated = false;
-    weightOz = 0;
-    itemBreakdown = [];
+    type ItemBreakdown = { listingId: string; mode: "free" | "flat"; flatCents?: number };
+    const itemBreakdown: ItemBreakdown[] = [];
 
     for (const listing of listings) {
       const inv = listing.inventory_id ? invMap[listing.inventory_id] : null;
-      const isFree = inv?.free_shipping ?? (listing as { free_shipping?: boolean | null }).free_shipping ?? false;
-      const flatCents = inv?.shipping_cost_cents ?? (listing as { shipping_cost_cents?: number | null }).shipping_cost_cents ?? null;
-      const itemWeight = inv?.shipping_weight_oz ?? 16;
+      const isFree = inv?.free_shipping ?? listing.free_shipping ?? false;
+      const flatCents = inv?.shipping_cost_cents ?? listing.shipping_cost_cents ?? null;
 
-      weightOz += itemWeight; // always accumulate weight in case Shippo is needed
       if (isFree) {
         itemBreakdown.push({ listingId: listing.id, mode: "free" });
       } else if (flatCents) {
         totalFlatCents += flatCents;
         itemBreakdown.push({ listingId: listing.id, mode: "flat", flatCents });
-      } else {
-        needsCalculated = true;
-        itemBreakdown.push({ listingId: listing.id, mode: "calculated" });
       }
     }
 
-    // free+free → freeShipping, free+flat → flatRate, flat+flat → flatRate, any+Shippo → Shippo
-    if (!needsCalculated) {
-      if (totalFlatCents === 0) return NextResponse.json({ rates: [], freeShipping: true, itemBreakdown });
-      return NextResponse.json({ rates: [], flatRate: true, flatRateCents: totalFlatCents, itemBreakdown });
-    }
-    // Mixed flat+Shippo: Shippo calculates weight-based rates; pass flat surplus so client can add it on top
-    extraFlatCents = totalFlatCents;
-    // itemBreakdown is returned below alongside rates
-  } else if (listingId) {
+    if (totalFlatCents === 0) return NextResponse.json({ rates: [], freeShipping: true, itemBreakdown });
+    return NextResponse.json({ rates: [], flatRate: true, flatRateCents: totalFlatCents, itemBreakdown });
+  }
+
+  if (listingId) {
     const { data: listing } = await supabase
       .from("listings")
-      .select("seller_id, inventory_id, free_shipping, shipping_cost_cents, shipping_weight_oz, box_length_in, box_width_in, box_height_in, package_type")
+      .select("inventory_id, free_shipping, shipping_cost_cents")
       .eq("id", listingId)
       .single();
     if (!listing) return NextResponse.json({ error: "Listing not found" }, { status: 404 });
-    sellerId = listing.seller_id;
 
     if (listing.inventory_id) {
       const { data: inv } = await supabase
         .from("inventory")
-        .select("shipping_weight_oz, free_shipping, shipping_cost_cents, box_length_in, box_width_in, box_height_in, package_type")
+        .select("free_shipping, shipping_cost_cents")
         .eq("id", listing.inventory_id)
         .single();
       const flatCents = inv?.shipping_cost_cents ?? listing.shipping_cost_cents;
       if (inv?.free_shipping || listing.free_shipping) return NextResponse.json({ rates: [], freeShipping: true });
       if (flatCents) return NextResponse.json({ rates: [], flatRate: true, flatRateCents: flatCents });
-      weightOz = inv?.shipping_weight_oz ?? listing.shipping_weight_oz ?? 16;
-      boxLengthIn = inv?.box_length_in ?? listing.box_length_in ?? null;
-      boxWidthIn = inv?.box_width_in ?? listing.box_width_in ?? null;
-      boxHeightIn = inv?.box_height_in ?? listing.box_height_in ?? null;
-      packageType = inv?.package_type ?? listing.package_type ?? null;
     } else {
       if (listing.free_shipping) return NextResponse.json({ rates: [], freeShipping: true });
       if (listing.shipping_cost_cents) return NextResponse.json({ rates: [], flatRate: true, flatRateCents: listing.shipping_cost_cents });
-      weightOz = listing.shipping_weight_oz ?? 16;
-      boxLengthIn = listing.box_length_in ?? null;
-      boxWidthIn = listing.box_width_in ?? null;
-      boxHeightIn = listing.box_height_in ?? null;
-      packageType = listing.package_type ?? null;
     }
-  } else {
-    const { data: auction } = await supabase
-      .from("auctions")
-      .select("seller_id, inventory_id, free_shipping, shipping_cost_cents, shipping_weight_oz, box_length_in, box_width_in, box_height_in, package_type")
-      .eq("id", auctionId!)
-      .single();
-    if (!auction) return NextResponse.json({ error: "Auction not found" }, { status: 404 });
-    sellerId = auction.seller_id;
 
-    if (auction.inventory_id) {
-      const { data: inv } = await supabase
-        .from("inventory")
-        .select("shipping_weight_oz, free_shipping, shipping_cost_cents, box_length_in, box_width_in, box_height_in, package_type")
-        .eq("id", auction.inventory_id)
-        .single();
-      const flatCents = inv?.shipping_cost_cents ?? auction.shipping_cost_cents;
-      if (inv?.free_shipping || auction.free_shipping) return NextResponse.json({ rates: [], freeShipping: true });
-      if (flatCents) return NextResponse.json({ rates: [], flatRate: true, flatRateCents: flatCents });
-      weightOz = inv?.shipping_weight_oz ?? auction.shipping_weight_oz ?? 16;
-      boxLengthIn = inv?.box_length_in ?? auction.box_length_in ?? null;
-      boxWidthIn = inv?.box_width_in ?? auction.box_width_in ?? null;
-      boxHeightIn = inv?.box_height_in ?? auction.box_height_in ?? null;
-      packageType = inv?.package_type ?? auction.package_type ?? null;
-    } else {
-      if (auction.free_shipping) return NextResponse.json({ rates: [], freeShipping: true });
-      if (auction.shipping_cost_cents) return NextResponse.json({ rates: [], flatRate: true, flatRateCents: auction.shipping_cost_cents });
-      weightOz = auction.shipping_weight_oz ?? 16;
-      boxLengthIn = auction.box_length_in ?? null;
-      boxWidthIn = auction.box_width_in ?? null;
-      boxHeightIn = auction.box_height_in ?? null;
-      packageType = auction.package_type ?? null;
-    }
+    return NextResponse.json({ error: "No shipping rate configured for this listing" }, { status: 400 });
   }
 
-  const { data: seller } = await supabase
-    .from("profiles")
-    .select("ship_from_address, shipping_services")
-    .eq("id", sellerId)
+  // auctionId
+  const { data: auction } = await supabase
+    .from("auctions")
+    .select("inventory_id, free_shipping, shipping_cost_cents")
+    .eq("id", auctionId!)
     .single();
+  if (!auction) return NextResponse.json({ error: "Auction not found" }, { status: 404 });
 
-  if (!seller?.ship_from_address) {
-    return NextResponse.json({ error: "Seller has not configured a ship-from address" }, { status: 400 });
+  if (auction.inventory_id) {
+    const { data: inv } = await supabase
+      .from("inventory")
+      .select("free_shipping, shipping_cost_cents")
+      .eq("id", auction.inventory_id)
+      .single();
+    const flatCents = inv?.shipping_cost_cents ?? auction.shipping_cost_cents;
+    if (inv?.free_shipping || auction.free_shipping) return NextResponse.json({ rates: [], freeShipping: true });
+    if (flatCents) return NextResponse.json({ rates: [], flatRate: true, flatRateCents: flatCents });
+  } else {
+    if (auction.free_shipping) return NextResponse.json({ rates: [], freeShipping: true });
+    if (auction.shipping_cost_cents) return NextResponse.json({ rates: [], flatRate: true, flatRateCents: auction.shipping_cost_cents });
   }
 
-  const from = seller.ship_from_address as {
-    name: string; street1: string; city: string; state: string; zip: string; country: string; phone?: string;
-  };
-
-  if (!from.city?.trim() || !from.zip?.trim()) {
-    return NextResponse.json({ error: "Seller's ship-from address is incomplete — city and ZIP are required" }, { status: 400 });
-  }
-
-  // Domestic-only enforcement
-  if (from.country !== toAddress.country) {
-    return NextResponse.json({ error: `This seller only ships within ${from.country}` }, { status: 400 });
-  }
-
-  const enabledServices = (seller.shipping_services as string[] | null) ?? undefined;
-
-  try {
-    const rates = await getShippingRates({ from, to: toAddress, weightOz, enabledServices, packageType, lengthIn: boxLengthIn, widthIn: boxWidthIn, heightIn: boxHeightIn });
-
-    if (!rates.length) {
-      console.error("[ShippingRates] No rates returned. weightOz:", weightOz, "enabledServices:", enabledServices, "from:", from.zip, "to:", toAddress.zip);
-      return NextResponse.json({ error: "No shipping rates available for this destination" }, { status: 400 });
-    }
-
-    return NextResponse.json({
-      rates,
-      ...(extraFlatCents > 0 ? { extraFlatCents } : {}),
-      ...(itemBreakdown ? { itemBreakdown } : {}),
-    });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "Failed to fetch shipping rates";
-    console.error("[ShippingRates] Error:", msg);
-    return NextResponse.json({ error: msg }, { status: 500 });
-  }
+  return NextResponse.json({ error: "No shipping rate configured for this auction" }, { status: 400 });
 }

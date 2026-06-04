@@ -1169,3 +1169,48 @@ ALTER TABLE profiles ADD COLUMN IF NOT EXISTS daily_care_emails boolean NOT NULL
 
 ### Environment variables
 - None new
+
+---
+
+## 2026-06-04 — Remove Shippo / weight-based shipping (flat rate + free only)
+
+### Why
+Weight-based shipping via Shippo created financial risk: if a seller enters the wrong weight (e.g. 16 oz instead of 160 oz), the platform absorbs the difference in postage cost, potentially wiping out commission profits.
+
+### Files deleted
+- `src/lib/shippo.ts`
+- `src/app/api/shipping/estimate/route.ts`
+- `src/app/api/shipping/auction-rates/route.ts`
+- `src/app/api/shipping/rates-for-order/route.ts`
+- `src/app/api/shipping/purchase-label/route.ts`
+- `src/app/api/shippo/webhook/route.ts`
+- `src/app/api/shippo/validate-address/route.ts`
+- `src/app/api/address/validate/route.ts`
+- `src/app/dashboard/orders/get-label-modal.tsx`
+- `src/app/api/profile/update-shipping/route.ts`
+- `src/app/admin/shipping-adjustments/page.tsx`
+
+### Files changed
+- `src/app/api/shipping/rates/route.ts` — rewritten, free/flat only (no Shippo)
+- `src/app/dashboard/auctions/new-auction-dialog.tsx` — removed weight mode, calculatedShippingEnabled prop, weight state
+- `src/app/dashboard/listings/new-listing-dialog.tsx` — same as above
+- `src/app/account/account-form.tsx` — removed entire Shipping Settings card (ship-from address, services, calculated shipping, auto-labels toggles)
+- `src/app/dashboard/orders/orders-client.tsx` — removed BuyLabelModal, BuyLabelButton, autoLabelsEnabled, shippo_rate_id
+- `src/app/dashboard/auctions/page.tsx` — removed ship_from_address/calculated_shipping_enabled from profile fetch, removed calculatedShippingEnabled prop
+- `src/app/api/auctions/close/route.ts` — removed auction_shipping_selections lookup, platformShipping, shippoRateId
+- `src/app/api/bids/buy-now/route.ts` — removed shippingRateId params, auction_shipping_selections upsert, platformShipping
+- `src/app/api/bids/place/route.ts` — removed shippingRateId params, auction_shipping_selections upsert, weight requirement check
+- `src/app/auctions/[id]/auction-bid-panel.tsx` — removed ShippingRate interface, shippingRates state, weight UI in confirm dialogs
+- `src/app/auctions/[id]/page.tsx` — removed shipping_weight_oz from AuctionData prop
+- `src/app/api/stripe/checkout/route.ts` — removed shippoRateId, simplified applicationFeeCents (no longer holds shipping)
+- `src/app/api/stripe/cart-checkout/route.ts` — removed shippoRateId, fixed applicationFeeCents (removed shippingCents from fee)
+- `src/app/dashboard/inventory/inventory-client.tsx` — removed weight mode from all shipping UIs, calculatedShippingEnabled/hasShipFrom props
+- `src/app/dashboard/inventory/page.tsx` — removed ship_from_address/calculated_shipping_enabled from profile fetch
+- `src/app/dashboard/create/create-form.tsx` — removed weight ShippingMode, weightOz from SizeEntry, calculatedShippingEnabled state
+- `src/app/orders/page.tsx` — removed autoLabelsEnabled
+
+### SQL migrations needed
+None — DB columns (shipping_weight_oz, box_length_in, box_width_in, box_height_in, package_type, ship_from_address, calculated_shipping_enabled, auto_labels_enabled) are left in place but unused.
+
+### Environment variables
+- `SHIPPO_API_KEY` is no longer used (can be removed from .env.local and Vercel, but not urgent)

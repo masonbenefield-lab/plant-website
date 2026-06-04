@@ -21,7 +21,7 @@ export default async function InventoryPage({
     { data: activeInventory },
     { data: archivedInventory },
   ] = await Promise.all([
-    supabase.from("profiles").select("seller_terms_accepted_at, is_admin, stripe_onboarded, plan, return_policy_type, shipping_days, ship_from_address, calculated_shipping_enabled").eq("id", user.id).single(),
+    supabase.from("profiles").select("seller_terms_accepted_at, is_admin, stripe_onboarded, plan, return_policy_type, shipping_days").eq("id", user.id).single(),
     supabase.from("inventory").select("*").eq("seller_id", user.id).is("archived_at", null).order("created_at", { ascending: false }),
     supabase.from("inventory").select("*").eq("seller_id", user.id).not("archived_at", "is", null).gte("archived_at", thirtyDaysAgo).order("archived_at", { ascending: false }),
   ]);
@@ -122,11 +122,6 @@ export default async function InventoryPage({
   const stripeOnboarded = !!(profile as { stripe_onboarded?: boolean } | null)?.stripe_onboarded;
   const hasReturnPolicy = !!(profile as { return_policy_type?: string | null } | null)?.return_policy_type;
   const hasShippingTimeline = !!(profile as { shipping_days?: number | null } | null)?.shipping_days;
-  const shipFromAddr = (profile as { ship_from_address?: { street1?: string; city?: string; zip?: string } | null } | null)?.ship_from_address;
-  const hasShipFrom = !!(shipFromAddr?.street1?.trim() && shipFromAddr?.city?.trim() && shipFromAddr?.zip?.trim());
-  // Require a complete address AND explicit opt-in (null/undefined = not enabled)
-  const calculatedShippingEnabled = hasShipFrom && (profile as { calculated_shipping_enabled?: boolean | null } | null)?.calculated_shipping_enabled === true;
-
   const { getPlanLimits } = await import("@/lib/plan-limits");
   const planLimits = getPlanLimits((profile as { plan?: string } | null)?.plan as "seedling" | "grower" | "nursery" | null, isAdmin);
 
@@ -141,8 +136,7 @@ export default async function InventoryPage({
       stripeOnboarded={stripeOnboarded}
       hasReturnPolicy={hasReturnPolicy}
       hasShippingTimeline={hasShippingTimeline}
-      hasShipFrom={hasShipFrom}
-      calculatedShippingEnabled={calculatedShippingEnabled}
+
       unlinkedListings={(unlinkedListings ?? []).map(l => ({
         id: l.id,
         plant_name: l.plant_name,

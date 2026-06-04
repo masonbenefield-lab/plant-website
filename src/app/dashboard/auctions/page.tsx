@@ -47,7 +47,7 @@ export default async function DashboardAuctionsPage({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("seller_terms_accepted_at, stripe_onboarded, plan, is_admin, ship_from_address, calculated_shipping_enabled")
+    .select("seller_terms_accepted_at, stripe_onboarded, plan, is_admin")
     .eq("id", user.id)
     .single();
 
@@ -57,9 +57,6 @@ export default async function DashboardAuctionsPage({
 
   const stripeOnboarded = !!profile?.stripe_onboarded;
   const isAdmin = !!(profile as { is_admin?: boolean } | null)?.is_admin;
-  const shipFromAddr = (profile as { ship_from_address?: { street1?: string; city?: string; zip?: string } | null } | null)?.ship_from_address;
-  const hasShipFrom = !!(shipFromAddr?.street1?.trim() && shipFromAddr?.city?.trim() && shipFromAddr?.zip?.trim());
-  const calculatedShippingEnabled = hasShipFrom && (profile as { calculated_shipping_enabled?: boolean | null } | null)?.calculated_shipping_enabled === true;
   const admin = adminClient();
 
   const { getPlanLimits } = await import("@/lib/plan-limits");
@@ -178,7 +175,7 @@ export default async function DashboardAuctionsPage({
             planLimit={planLimits.auctions}
             currentCount={activeAuctionCount}
             photoLimit={planLimits.photos}
-            calculatedShippingEnabled={calculatedShippingEnabled}
+
           />
         )}
       </div>
@@ -242,11 +239,9 @@ export default async function DashboardAuctionsPage({
                         <span>
                           {(auction as { free_shipping?: boolean | null }).free_shipping
                             ? "Free shipping"
-                            : (auction as { shipping_weight_oz?: number | null }).shipping_weight_oz
-                              ? `Weight-based (${(auction as { shipping_weight_oz: number }).shipping_weight_oz} oz)`
-                              : (auction as { shipping_cost_cents?: number | null }).shipping_cost_cents
-                                ? `Shipping: ${centsToDisplay((auction as { shipping_cost_cents: number }).shipping_cost_cents)}`
-                                : "Shipping: not set"}
+                            : (auction as { shipping_cost_cents?: number | null }).shipping_cost_cents
+                              ? `Shipping: ${centsToDisplay((auction as { shipping_cost_cents: number }).shipping_cost_cents)}`
+                              : "Shipping: not set"}
                         </span>
                         <span>Started: <LocalDate iso={auction.created_at} /></span>
                         {auction.status === "scheduled" && (auction as { starts_at?: string | null }).starts_at
@@ -312,7 +307,7 @@ export default async function DashboardAuctionsPage({
                               planLimit={planLimits.auctions}
                               currentCount={activeAuctionCount}
                               photoLimit={planLimits.photos}
-                              calculatedShippingEnabled={calculatedShippingEnabled}
+                  
                               prefill={auction}
                               triggerLabel="Relist"
                             />
@@ -323,7 +318,7 @@ export default async function DashboardAuctionsPage({
                               planLimit={planLimits.auctions}
                               currentCount={activeAuctionCount}
                               photoLimit={planLimits.photos}
-                              calculatedShippingEnabled={calculatedShippingEnabled}
+                  
                               prefill={auction}
                               triggerLabel="Duplicate"
                               keepOriginal

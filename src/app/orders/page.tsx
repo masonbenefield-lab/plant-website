@@ -697,7 +697,6 @@ export default async function OrdersPage({
   const listingMap = Object.fromEntries((listings ?? []).map((l) => [l.id, l]));
   const auctionMap = Object.fromEntries((auctionItems ?? []).map((a) => [a.id, a]));
   const buyerMap = Object.fromEntries((buyers ?? []).map((b) => [b.id, b]));
-  const autoLabelsEnabled = (sellerProfile as { auto_labels_enabled?: boolean } | null)?.auto_labels_enabled !== false;
   const salesDisputeMap = Object.fromEntries((salesDisputes ?? []).map((d) => [d.order_id, d]));
 
   const statusFilters = [
@@ -748,7 +747,7 @@ export default async function OrdersPage({
         pageSize={PAGE_SIZE_SALES}
         prevHref={page > 1 ? `/orders?tab=sales&page=${page - 1}${statusParam}` : null}
         nextHref={page < totalPages ? `/orders?tab=sales&page=${page + 1}${statusParam}` : null}
-        autoLabelsEnabled={autoLabelsEnabled}
+
         highlightId={highlight}
       />
     </div>

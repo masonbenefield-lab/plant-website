@@ -21,8 +21,8 @@ import { getPlanLimits, type PlanLimits } from "@/lib/plan-limits";
 import { cn } from "@/lib/utils";
 
 type ItemType = "plant" | "supply";
-type ShippingMode = "" | "free" | "flat" | "weight";
-type SizeEntry = { id: number; potSize: string; quantity: string; weightOz: string; listInShop: boolean; shopPrice: string; shopQuantity: string; shippingMode: ShippingMode; shippingCost: string };
+type ShippingMode = "" | "free" | "flat";
+type SizeEntry = { id: number; potSize: string; quantity: string; listInShop: boolean; shopPrice: string; shopQuantity: string; shippingMode: ShippingMode; shippingCost: string };
 
 let nextId = 1;
 
@@ -35,9 +35,6 @@ export default function CreateInventoryPage() {
   const [dragging, setDragging] = useState(false);
   const [profileWarning, setProfileWarning] = useState<"incomplete" | "unverified" | null>(null);
   const [planLimits, setPlanLimits] = useState<PlanLimits>({ listings: null, auctions: null, photos: null });
-  const [hasShipFrom, setHasShipFrom] = useState(false);
-  const [calculatedShippingEnabled, setCalculatedShippingEnabled] = useState(false);
-
   const [itemType, setItemType] = useState<ItemType>("plant");
   const [plantName, setPlantName] = useState("");
   const [variety, setVariety] = useState("");
@@ -45,9 +42,7 @@ export default function CreateInventoryPage() {
   const [category, setCategory] = useState("Other");
   const [existingGroup, setExistingGroup] = useState<{ plant_name: string; count: number } | null>(null);
 
-  const [sizes, setSizes] = useState<SizeEntry[]>([{ id: 0, potSize: "", quantity: "1", weightOz: "", listInShop: false, shopPrice: "", shopQuantity: "", shippingMode: "" as ShippingMode, shippingCost: "" }]);
-  const [highlightWeightId, setHighlightWeightId] = useState<number | null>(null);
-
+  const [sizes, setSizes] = useState<SizeEntry[]>([{ id: 0, potSize: "", quantity: "1", listInShop: false, shopPrice: "", shopQuantity: "", shippingMode: "" as ShippingMode, shippingCost: "" }]);
   function switchType(type: ItemType) {
     setItemType(type);
     setCategory("Other");
@@ -73,13 +68,10 @@ export default function CreateInventoryPage() {
       if (!user) return;
       if (!user.email_confirmed_at) { setProfileWarning("unverified"); return; }
       const [{ data: profile }, { data: planProfile }] = await Promise.all([
-        supabase.from("profiles").select("bio, avatar_url, ship_from_address, calculated_shipping_enabled").eq("id", user.id).single(),
+        supabase.from("profiles").select("bio, avatar_url").eq("id", user.id).single(),
         supabase.from("profiles").select("plan, is_admin").eq("id", user.id).single(),
       ]);
       if (!profile?.bio?.trim() || !profile?.avatar_url) setProfileWarning("incomplete");
-      const addr = profile?.ship_from_address as { street1?: string; city?: string; zip?: string } | null;
-      setHasShipFrom(!!(addr?.street1?.trim() && addr?.city?.trim() && addr?.zip?.trim()));
-      setCalculatedShippingEnabled((profile as { calculated_shipping_enabled?: boolean | null } | null)?.calculated_shipping_enabled === true);
       setPlanLimits(getPlanLimits(planProfile?.plan, !!planProfile?.is_admin));
     }
     checkProfile();
@@ -158,36 +150,11 @@ export default function CreateInventoryPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { toast.error("Not logged in"); setSaving(false); return; }
 
-    // Always fetch fresh from DB — never trust state for security checks
-    const { data: freshProfile } = await supabase
-      .from("profiles")
-      .select("ship_from_address, calculated_shipping_enabled")
-      .eq("id", user.id)
-      .single();
-    const freshAddr = freshProfile?.ship_from_address as { street1?: string; city?: string; zip?: string } | null;
-    const freshCalcOk = (freshProfile as { calculated_shipping_enabled?: boolean | null } | null)?.calculated_shipping_enabled === true
-      && !!(freshAddr?.street1?.trim() && freshAddr?.city?.trim() && freshAddr?.zip?.trim());
-
     const anyListing = sizes.some(s => s.listInShop && s.shopPrice);
 
     for (const s of sizes) {
       if (s.listInShop && s.shopPrice && !s.shippingMode) {
         toast.error("Choose a shipping option for each item you're listing in the shop");
-        setSaving(false);
-        return;
-      }
-      if (s.shippingMode === "weight" && !freshCalcOk) {
-        toast.error("Complete your shipping setup first", {
-          description: "Add a verified ship-from address and enable calculated shipping in Shipping Settings.",
-          action: { label: "Go to Shipping Settings", onClick: () => router.push("/account#shipping-settings") },
-        });
-        setSaving(false);
-        return;
-      }
-      if (s.shippingMode === "weight" && (!s.weightOz || parseFloat(s.weightOz) <= 0)) {
-        toast.error("Enter a weight greater than 0 oz for calculated shipping");
-        setHighlightWeightId(s.id);
-        setTimeout(() => setHighlightWeightId(null), 2000);
         setSaving(false);
         return;
       }
@@ -204,7 +171,6 @@ export default function CreateInventoryPage() {
       pot_size: itemType === "plant" ? (s.potSize || null) : null,
       free_shipping: s.listInShop && s.shippingMode === "free",
       shipping_cost_cents: s.listInShop && s.shippingMode === "flat" && s.shippingCost ? dollarsToCents(s.shippingCost) : null,
-      shipping_weight_oz: s.shippingMode === "weight" && s.weightOz ? Math.max(1, Math.round(parseFloat(s.weightOz))) : null,
       item_type: itemType,
     }));
 
@@ -241,7 +207,6 @@ export default function CreateInventoryPage() {
             item_type: itemType,
             free_shipping: s.shippingMode === "free",
             shipping_cost_cents: s.shippingMode === "flat" && s.shippingCost ? dollarsToCents(s.shippingCost) : null,
-            shipping_weight_oz: s.shippingMode === "weight" && s.weightOz ? Math.max(1, Math.round(parseFloat(s.weightOz))) : null,
           })
           .select("id")
           .single();
@@ -256,7 +221,6 @@ export default function CreateInventoryPage() {
           listing_quantity: listedQty,
           free_shipping: s.shippingMode === "free",
           shipping_cost_cents: s.shippingMode === "flat" && s.shippingCost ? dollarsToCents(s.shippingCost) : null,
-          shipping_weight_oz: s.shippingMode === "weight" && s.weightOz ? Math.max(1, Math.round(parseFloat(s.weightOz))) : null,
         }).eq("id", inventoryId);
 
         if (linkErr) {
@@ -280,8 +244,7 @@ export default function CreateInventoryPage() {
   const anyListing = sizes.some(s => s.listInShop && s.shopPrice);
   const hasIncompleteListings = sizes.some(s => s.listInShop && (!s.shopPrice || !s.shippingMode));
   const hasOverQty = sizes.some(s => s.listInShop && s.shopQuantity !== "" && Number(s.shopQuantity) > (Number(s.quantity) || 1));
-  const hasWeightWithoutSetup = sizes.some(s => s.listInShop && s.shippingMode === "weight" && !calculatedShippingEnabled);
-  const canSubmit = !!plantName.trim() && sizes.every(s => Number(s.quantity) >= 1) && !hasIncompleteListings && !hasOverQty && !hasWeightWithoutSetup;
+  const canSubmit = !!plantName.trim() && sizes.every(s => Number(s.quantity) >= 1) && !hasIncompleteListings && !hasOverQty;
   const isSupply = itemType === "supply";
   const categories = isSupply ? SUPPLY_CATEGORIES : PLANT_CATEGORIES;
   const unitWord = isSupply ? "variant" : "size";
@@ -568,34 +531,22 @@ export default function CreateInventoryPage() {
                       </div>
                       <div className="space-y-2">
                         <Label className="text-xs">Shipping <span className="text-destructive">*</span></Label>
-                        <div className="grid gap-2 grid-cols-3">
-                          {(["free", "flat", "weight"] as const).map((mode) => {
-                            const weightLocked = mode === "weight" && !calculatedShippingEnabled;
-                            return (
-                              <button
-                                key={mode}
-                                type="button"
-                                disabled={weightLocked}
-                                onClick={() => updateSize(size.id, "shippingMode", mode)}
-                                title={weightLocked ? "Complete shipping setup to use weight-based rates" : undefined}
-                                className={`rounded-md border px-3 py-2 text-xs font-medium transition-colors ${
-                                  weightLocked
-                                    ? "border-input opacity-40 cursor-not-allowed"
-                                    : size.shippingMode === mode
-                                    ? "border-leaf bg-[#EBF0E6] text-forest dark:bg-forest/40 dark:text-[#A8BF9A] dark:border-leaf"
-                                    : "border-input hover:bg-muted"
-                                }`}
-                              >
-                                {mode === "free" ? "Free" : mode === "flat" ? "Flat rate" : "By weight"}
-                              </button>
-                            );
-                          })}
+                        <div className="grid gap-2 grid-cols-2">
+                          {(["free", "flat"] as const).map((mode) => (
+                            <button
+                              key={mode}
+                              type="button"
+                              onClick={() => updateSize(size.id, "shippingMode", mode)}
+                              className={`rounded-md border px-3 py-2 text-xs font-medium transition-colors ${
+                                size.shippingMode === mode
+                                  ? "border-leaf bg-[#EBF0E6] text-forest dark:bg-forest/40 dark:text-[#A8BF9A] dark:border-leaf"
+                                  : "border-input hover:bg-muted"
+                              }`}
+                            >
+                              {mode === "free" ? "Free" : "Flat rate"}
+                            </button>
+                          ))}
                         </div>
-                        {!calculatedShippingEnabled && (
-                          <p className="text-xs text-muted-foreground">
-                            <a href="/account#shipping-settings" className="underline hover:text-foreground">Set up calculated shipping</a> to unlock weight-based rates.
-                          </p>
-                        )}
                         {size.shippingMode === "flat" && (
                           <div className="flex items-center gap-2">
                             <span className="text-xs text-muted-foreground">$</span>
@@ -610,25 +561,6 @@ export default function CreateInventoryPage() {
                               className="max-w-[120px]"
                             />
                             <span className="text-xs text-muted-foreground">flat rate</span>
-                          </div>
-                        )}
-                        {size.shippingMode === "weight" && (
-                          <div className="flex items-center gap-2">
-                            <Input
-                              type="number"
-                              min={0.1}
-                              step={0.1}
-                              placeholder="oz"
-                              value={size.weightOz}
-                              onChange={(e) => { updateSize(size.id, "weightOz", e.target.value); if (highlightWeightId === size.id) setHighlightWeightId(null); }}
-                              className={cn(
-                                "max-w-[90px] transition-all",
-                                highlightWeightId === size.id && "ring-2 ring-destructive border-destructive"
-                              )}
-                            />
-                            <span className={cn("text-xs", highlightWeightId === size.id ? "text-destructive font-medium" : "text-muted-foreground")}>
-                              oz — rate calculated at checkout
-                            </span>
                           </div>
                         )}
                         {!size.shippingMode && (
@@ -658,9 +590,7 @@ export default function CreateInventoryPage() {
           </Button>
           {!canSubmit && (
             <p className="text-xs text-muted-foreground">
-              {hasWeightWithoutSetup
-                ? <>Complete your <a href="/account#shipping-settings" className="underline">shipping setup</a> before using weight-based rates.</>
-                : hasOverQty
+              {hasOverQty
                 ? "Listed qty can't exceed stock quantity."
                 : hasIncompleteListings
                 ? "Add a price and shipping option for each item listed in shop."

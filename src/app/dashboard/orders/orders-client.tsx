@@ -13,8 +13,7 @@ import TrackingInput from "./tracking-input";
 import { BulkOrderActions, OrderCheckbox, type BulkOrderInfo } from "./bulk-order-actions";
 import type { OrderStatus } from "@/lib/supabase/types";
 import { toast } from "sonner";
-import { Printer, ExternalLink, AlertTriangle } from "lucide-react";
-import GetLabelModal from "./get-label-modal";
+import { ExternalLink, AlertTriangle } from "lucide-react";
 import { PriceBreakdown } from "@/components/price-breakdown";
 
 function detectCarrier(tracking: string): string {
@@ -52,7 +51,7 @@ type OrderRow = {
   shipping_address: unknown;
   cart_items: unknown;
   tracking_number: string | null;
-  shippo_rate_id: string | null;
+
   label_url: string | null;
   shipping_cost_cents: number | null;
   tax_cents: number | null;
@@ -64,90 +63,6 @@ type OrderRow = {
 type ItemRow = { id: string; plant_name: string; variety: string | null };
 type BuyerRow = { id: string; username: string };
 
-function BuyLabelButton({ orderId, labelUrl: initialLabelUrl, createdAt }: { orderId: string; labelUrl: string | null; createdAt: string }) {
-  const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [labelUrl, setLabelUrl] = useState(initialLabelUrl);
-  const [useModal, setUseModal] = useState(false);
-
-  const ageMs = Date.now() - new Date(createdAt).getTime();
-  const ageDays = ageMs / (1000 * 60 * 60 * 24);
-  const daysLeft = Math.max(0, 7 - ageDays);
-  const rateExpired = ageDays >= 7;
-  const rateExpiringSoon = !rateExpired && ageDays >= 5;
-
-  if (labelUrl) {
-    return (
-      <a
-        href={labelUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex items-center gap-1.5 text-xs font-medium text-leaf hover:text-forest hover:underline"
-      >
-        <Printer size={13} /> View label
-      </a>
-    );
-  }
-
-  async function handleBuyLabel() {
-    setLoading(true);
-    const res = await fetch("/api/shipping/purchase-label", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ orderId }),
-    });
-    const data = await res.json();
-    setLoading(false);
-    if (data.error) {
-      const isStaleRate = /phone|email or phone/i.test(data.error);
-      if (isStaleRate) {
-        setUseModal(true);
-        toast.info("Re-select a shipping rate to get your label.");
-      } else {
-        toast.error(data.error);
-      }
-      return;
-    }
-    setLabelUrl(data.labelUrl);
-    router.refresh();
-    toast.success("Label purchased!", {
-      description: "Tracking number added. Click 'View label' to print.",
-    });
-    if (data.labelUrl) window.open(data.labelUrl, "_blank");
-  }
-
-  if (useModal) {
-    return <GetLabelModal orderId={orderId} initialLabelUrl={labelUrl} />;
-  }
-
-  if (rateExpired) {
-    return (
-      <p className="text-xs text-red-600 font-medium">
-        Shipping rate expired — enter tracking manually after shipping
-      </p>
-    );
-  }
-
-  return (
-    <div className="flex items-center gap-2 flex-wrap">
-      <Button
-        size="sm"
-        variant="outline"
-        className="h-7 text-xs gap-1.5"
-        disabled={loading}
-        onClick={handleBuyLabel}
-      >
-        <Printer size={13} />
-        {loading ? "Purchasing…" : "Buy Label"}
-      </Button>
-      {rateExpiringSoon && (
-        <p className="text-xs text-amber-600 font-medium">
-          Rate expires in ~{Math.ceil(daysLeft)} day{Math.ceil(daysLeft) !== 1 ? "s" : ""} — buy soon
-        </p>
-      )}
-    </div>
-  );
-}
 
 type DisputeRow = {
   id: string;
@@ -192,7 +107,7 @@ export default function OrdersClient({
   pageSize,
   prevHref,
   nextHref,
-  autoLabelsEnabled = true,
+
   highlightId,
 }: {
   orders: OrderRow[];
@@ -206,7 +121,7 @@ export default function OrdersClient({
   pageSize: number;
   prevHref: string | null;
   nextHref: string | null;
-  autoLabelsEnabled?: boolean;
+
   highlightId?: string;
 }) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -353,9 +268,6 @@ export default function OrdersClient({
                   )}
                   <div className="flex items-center gap-3 flex-wrap">
                     <TrackingInput orderId={order.id} initialValue={order.tracking_number ?? null} />
-                    {autoLabelsEnabled && order.shippo_rate_id && (
-                      <BuyLabelButton orderId={order.id} labelUrl={order.label_url} createdAt={order.created_at} />
-                    )}
                   </div>
                   {order.tracking_number && (
                     <a

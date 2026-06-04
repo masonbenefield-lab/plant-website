@@ -21,25 +21,15 @@ export async function POST(request: Request) {
 
   const {
     auctionId,
-    shippingRateId,
-    shippingService,
-    shippingCarrier,
-    shippingCostCents: bodyShippingCents,
-    estimatedDays,
   } = await request.json() as {
     auctionId: string;
-    shippingRateId?: string | null;
-    shippingService?: string | null;
-    shippingCarrier?: string | null;
-    shippingCostCents?: number | null;
-    estimatedDays?: number | null;
   };
 
   const admin = adminClient();
 
   const [{ data: buyer }, { data: auction, error: auctionErr }] = await Promise.all([
     admin.from("profiles").select("stripe_customer_id, default_payment_method_id, saved_shipping_address").eq("id", user.id).single(),
-    admin.from("auctions").select("id, seller_id, plant_name, variety, images, current_bid_cents, current_bidder_id, buy_now_price_cents, status, ends_at, free_shipping, shipping_cost_cents, shipping_weight_oz, inventory_id").eq("id", auctionId).single(),
+    admin.from("auctions").select("id, seller_id, plant_name, variety, images, current_bid_cents, current_bidder_id, buy_now_price_cents, status, ends_at, free_shipping, shipping_cost_cents, inventory_id").eq("id", auctionId).single(),
   ]);
 
   if (auctionErr || !auction) return NextResponse.json({ error: "Auction not found" }, { status: 404 });
@@ -53,22 +43,6 @@ export async function POST(request: Request) {
   if (!auction.free_shipping && !buyer.saved_shipping_address) {
     return NextResponse.json({ error: "Add a shipping address in Account Settings before buying" }, { status: 403 });
   }
-  if (auction.shipping_weight_oz) {
-    if (!shippingRateId || bodyShippingCents == null) {
-      return NextResponse.json({ error: "Select a shipping rate before buying" }, { status: 400 });
-    }
-    await admin.from("auction_shipping_selections").upsert({
-      auction_id: auctionId,
-      bidder_id: user.id,
-      rate_id: shippingRateId,
-      service: shippingService ?? null,
-      carrier: shippingCarrier ?? null,
-      cost_cents: bodyShippingCents,
-      estimated_days: estimatedDays ?? null,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: "auction_id,bidder_id" });
-  }
-
   // Fetch seller profile before locking the auction — if they have no Stripe account
   // we can't charge, so block buy now before touching auction state
   const { data: sellerProfile } = await admin
@@ -107,20 +81,7 @@ export async function POST(request: Request) {
   if (bidError) return NextResponse.json({ error: bidError.message }, { status: 500 });
 
   // Calculate amounts
-  let shippingCents = 0;
-  if (auction.free_shipping) {
-    shippingCents = 0;
-  } else if (auction.shipping_cost_cents) {
-    shippingCents = auction.shipping_cost_cents;
-  } else if (auction.shipping_weight_oz) {
-    const { data: sel } = await admin
-      .from("auction_shipping_selections")
-      .select("cost_cents")
-      .eq("auction_id", auctionId)
-      .eq("bidder_id", user.id)
-      .single();
-    shippingCents = sel?.cost_cents ?? 0;
-  }
+  const shippingCents = auction.free_shipping ? 0 : (auction.shipping_cost_cents ?? 0);
 
   const shippingAddr = (buyer.saved_shipping_address ?? {}) as Record<string, string>;
   const stripeShippingAddr = {
@@ -143,8 +104,7 @@ export async function POST(request: Request) {
   const feePercent = planFeePercent(sellerProfile.plan, !!sellerProfile.is_admin, !!sellerProfile.groundbreaker);
   const feeCents = Math.round(auction.buy_now_price_cents * (feePercent / 100));
   const stripeFeeCents = Math.round(totalCents * 0.029) + 30;
-  const platformShipping = auction.shipping_weight_oz ? shippingCents : 0;
-  const appFeeAmount = feeCents + stripeFeeCents + taxCents + platformShipping;
+  const appFeeAmount = feeCents + stripeFeeCents + taxCents;
 
   // Attempt charge
   try {
@@ -179,7 +139,6 @@ export async function POST(request: Request) {
       shipping_cost_cents: shippingCents,
       tax_cents: taxCents,
       platform_fee_cents: feeCents,
-      shippo_rate_id: shippingRateId ?? null,
       status: "pending",
       item_snapshot: {
         plant_name: auction.plant_name,
