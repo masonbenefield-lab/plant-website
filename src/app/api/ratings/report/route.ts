@@ -40,12 +40,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Not authorized to report this review" }, { status: 403 });
   }
 
-  const { error } = await admin.from("review_reports").insert({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (admin as any).from("review_reports").insert({
     rating_id: ratingId,
     reporter_id: user.id,
     reason,
     details: details?.trim() || null,
-  } as never);
+  });
 
   if (error) {
     if (error.code === "23505") return NextResponse.json({ error: "You already reported this review" }, { status: 409 });

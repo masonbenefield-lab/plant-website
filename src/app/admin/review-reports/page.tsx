@@ -43,21 +43,22 @@ export default async function ReviewReportsPage({
     created_at: string;
   };
 
-  let query = admin
-    .from("review_reports" as never)
-    .select("id, rating_id, reporter_id, reason, details, status, created_at")
-    .order("created_at", { ascending: false });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rr = (admin as any).from("review_reports");
 
-  if (!showAll) (query as { eq: (col: string, val: string) => typeof query }).eq("status", "pending");
+  let query = rr.select("id, rating_id, reporter_id, reason, details, status, created_at").order("created_at", { ascending: false });
+  if (!showAll) query = query.eq("status", "pending");
 
   const [
     { data: reports },
     { count: pendingCount },
     { count: totalCount },
   ] = await Promise.all([
-    query as unknown as Promise<{ data: ReportRow[] }>,
-    admin.from("review_reports" as never).select("*", { count: "exact", head: true }).eq("status", "pending") as unknown as Promise<{ count: number }>,
-    admin.from("review_reports" as never).select("*", { count: "exact", head: true }) as unknown as Promise<{ count: number }>,
+    query as Promise<{ data: ReportRow[] }>,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (admin as any).from("review_reports").select("*", { count: "exact", head: true }).eq("status", "pending") as Promise<{ count: number }>,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (admin as any).from("review_reports").select("*", { count: "exact", head: true }) as Promise<{ count: number }>,
   ]);
 
   const ratingIds   = [...new Set((reports ?? []).map((r) => r.rating_id).filter(Boolean))] as string[];

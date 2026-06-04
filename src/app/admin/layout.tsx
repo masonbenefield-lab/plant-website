@@ -24,7 +24,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   const [{ count: pendingReports }, { count: pendingReviewReports }, { data: violationUsers }, { data: adjustmentRows }] = await Promise.all([
     supabase.from("reports").select("*", { count: "exact", head: true }).eq("status", "pending"),
-    admin.from("review_reports" as never).select("*", { count: "exact", head: true }).eq("status", "pending") as unknown as Promise<{ count: number }>,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (admin as any).from("review_reports").select("*", { count: "exact", head: true }).eq("status", "pending") as Promise<{ count: number }>,
     supabase.from("word_violations").select("user_id"),
     admin.from("shipping_adjustments").select("seller_id"),
   ]);

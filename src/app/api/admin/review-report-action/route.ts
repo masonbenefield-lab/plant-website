@@ -3,6 +3,11 @@ import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 
+// review_reports is not in the generated types yet — use a raw typed helper
+type RRClient = ReturnType<typeof createAdminClient<Database>>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const rr = (admin: RRClient) => (admin as any).from("review_reports");
+
 export async function POST(req: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -22,25 +27,14 @@ export async function POST(req: Request) {
   );
 
   if (action === "dismiss") {
-    const { error } = await admin
-      .from("review_reports" as never)
-      .update({ status: "dismissed" })
-      .eq("id", reportId);
+    const { error } = await rr(admin).update({ status: "dismissed" }).eq("id", reportId);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   } else {
-    // Fetch rating_id, mark report as deleted, then delete the rating
-    const { data: report } = await admin
-      .from("review_reports" as never)
-      .select("rating_id")
-      .eq("id", reportId)
-      .single() as { data: { rating_id: string } | null };
-
+    const { data: report } = await rr(admin).select("rating_id").eq("id", reportId).single() as { data: { rating_id: string } | null };
     if (!report) return NextResponse.json({ error: "Report not found" }, { status: 404 });
 
-    // Mark the report deleted before the cascade wipes it
-    await admin.from("review_reports" as never).update({ status: "deleted" }).eq("id", reportId);
+    await rr(admin).update({ status: "deleted" }).eq("id", reportId);
 
-    // Delete the rating — the ON DELETE SET NULL constraint keeps the report row intact
     const { error } = await admin.from("ratings").delete().eq("id", report.rating_id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   }

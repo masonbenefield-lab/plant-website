@@ -114,8 +114,9 @@ export default async function SellerStorefront({
   // Fetch which reviews the seller has already reported (only needed on their own profile)
   const reportedRatingIds = new Set<string>();
   if (user?.id === profile.id && (ratings?.length ?? 0) > 0) {
-    const { data: existingReports } = await adminClient
-      .from("review_reports" as never)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: existingReports } = await (adminClient as any)
+      .from("review_reports")
       .select("rating_id")
       .eq("reporter_id", user.id)
       .in("rating_id", ratings!.map((r) => r.id));
