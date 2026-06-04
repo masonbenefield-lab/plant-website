@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import CheckoutForm from "./checkout-form";
 import { centsToDisplay } from "@/lib/stripe";
 import { notFound } from "next/navigation";
+import BackButton from "@/components/back-button";
 
 export default async function CheckoutPage({
   searchParams,
@@ -109,6 +110,7 @@ export default async function CheckoutPage({
 
   return (
     <div className="max-w-lg mx-auto px-4 py-10">
+      <BackButton className="mb-4" />
       <h1 className="text-2xl font-bold mb-6">Checkout</h1>
 
       <div className="rounded-lg border bg-muted/30 p-4 mb-8 space-y-2">
