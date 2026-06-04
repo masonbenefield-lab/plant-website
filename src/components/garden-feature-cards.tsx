@@ -71,16 +71,16 @@ const features = [
             <p className="text-[10px] text-leaf font-medium cursor-pointer">Log all</p>
           </div>
           {[
-            { name: "Azores Dark Fig",  emoji: "🌳" },
-            { name: "Banana — Blue Java", emoji: "🍌" },
-            { name: "Black Madeira Fig", emoji: "🌿" },
+            { name: "Azores Dark Fig",   emoji: "🌳", task: "Water",     badge: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400" },
+            { name: "Banana — Blue Java", emoji: "🍌", task: "Fertilize", badge: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400" },
+            { name: "Black Madeira Fig", emoji: "🌿", task: "Prune",      badge: "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400" },
           ].map((t) => (
             <div key={t.name} className="flex items-center gap-2">
               <div className="w-4 h-4 rounded border border-muted-foreground/40 shrink-0" />
               <div className="w-7 h-7 rounded-md bg-muted flex items-center justify-center text-sm shrink-0">{t.emoji}</div>
               <div className="flex-1 min-w-0">
                 <p className="text-[11px] font-medium truncate">{t.name}</p>
-                <span className="inline-block text-[9px] bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-1.5 py-0.5 rounded-full font-medium">Water</span>
+                <span className={`inline-block text-[9px] px-1.5 py-0.5 rounded-full font-medium ${t.badge}`}>{t.task}</span>
               </div>
               <p className="text-[10px] text-leaf font-medium shrink-0">Log ✓</p>
             </div>
