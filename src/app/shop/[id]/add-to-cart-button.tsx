@@ -2,8 +2,11 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ShoppingCart } from "lucide-react";
+import { toast } from "sonner";
 import { useCart } from "@/lib/cart";
 import type { CartItem } from "@/lib/cart";
 
@@ -18,6 +21,8 @@ export default function AddToCartButton({
   sellerDisplayName,
   maxQty,
   bundleDiscountPct,
+  buyerNotePrompt,
+  buyerNoteRequired,
 }: {
   listingId: string;
   plantName: string;
@@ -29,9 +34,12 @@ export default function AddToCartButton({
   sellerDisplayName: string;
   maxQty: number;
   bundleDiscountPct?: number | null;
+  buyerNotePrompt?: string | null;
+  buyerNoteRequired?: boolean;
 }) {
   const { addItem, clearCart, openCart, items, sellerDisplayName: cartSellerName } = useCart();
   const [showConflict, setShowConflict] = useState(false);
+  const [buyerNote, setBuyerNote] = useState("");
   const inCart = items.find((i) => i.listingId === listingId)?.quantity ?? 0;
   const atMax = inCart >= maxQty;
 
@@ -39,10 +47,17 @@ export default function AddToCartButton({
     listingId, plantName, variety, priceCents, quantity: 1,
     imageUrl, sellerId, sellerUsername, sellerDisplayName,
     bundleDiscountPct: bundleDiscountPct ?? null, maxQty,
+    buyerNote: buyerNote.trim() || null,
+    buyerNotePrompt: buyerNotePrompt ?? null,
+    buyerNoteRequired: buyerNoteRequired ?? false,
   };
 
   function handleAdd() {
     if (atMax) return;
+    if (buyerNoteRequired && !buyerNote.trim()) {
+      toast.error("Please add a note for the seller");
+      return;
+    }
     const result = addItem(pendingItem);
     if (result === "seller_conflict") {
       setShowConflict(true);
@@ -60,6 +75,25 @@ export default function AddToCartButton({
 
   return (
     <>
+      {buyerNotePrompt && (
+        <div className="space-y-1">
+          <Label htmlFor="cart-buyer-note">
+            {buyerNoteRequired ? (
+              <>{buyerNotePrompt} <span className="text-destructive">*</span></>
+            ) : (
+              <>{buyerNotePrompt} <span className="text-muted-foreground text-xs">(optional)</span></>
+            )}
+          </Label>
+          <Textarea
+            id="cart-buyer-note"
+            value={buyerNote}
+            onChange={(e) => setBuyerNote(e.target.value)}
+            placeholder={buyerNotePrompt}
+            rows={2}
+            maxLength={500}
+          />
+        </div>
+      )}
       <Button
         variant="outline"
         onClick={handleAdd}

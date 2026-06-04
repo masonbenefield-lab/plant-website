@@ -277,7 +277,12 @@ export default async function ListingPage({
                 <Button disabled variant="outline">This is your listing</Button>
               ) : (
                 <>
-                  <BuyButton listingId={listing.id} maxQty={listing.quantity} />
+                  <BuyButton
+                    listingId={listing.id}
+                    maxQty={listing.quantity}
+                    buyerNotePrompt={(listing as any).buyer_note_prompt ?? null}
+                    buyerNoteRequired={(listing as any).buyer_note_required ?? false}
+                  />
                   <AddToCartButton
                     listingId={listing.id}
                     plantName={listing.plant_name}
@@ -289,6 +294,8 @@ export default async function ListingPage({
                     sellerDisplayName={seller?.display_name ?? seller?.username ?? ""}
                     maxQty={listing.quantity}
                     bundleDiscountPct={(listing as { bundle_discount_pct?: number | null }).bundle_discount_pct ?? null}
+                    buyerNotePrompt={(listing as any).buyer_note_prompt ?? null}
+                    buyerNoteRequired={(listing as any).buyer_note_required ?? false}
                   />
                   {sellerOffersEnabled && (
                     <OfferButton

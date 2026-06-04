@@ -14,6 +14,9 @@ export interface CartItem {
   sellerDisplayName: string;
   bundleDiscountPct: number | null;
   maxQty?: number; // stock limit at time of adding; used to cap +/Add to Cart
+  buyerNotePrompt?: string | null;
+  buyerNoteRequired?: boolean;
+  buyerNote?: string | null;
 }
 
 export function effectivePrice(item: CartItem): number {

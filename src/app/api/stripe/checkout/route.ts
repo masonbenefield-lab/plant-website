@@ -26,7 +26,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { listingId, auctionId, offerId, quantity: rawQty, shippingAddress, shippingCostCents, shippingService } = body as {
+  const { listingId, auctionId, offerId, quantity: rawQty, shippingAddress, shippingCostCents, shippingService, buyerNote } = body as {
     listingId?: string;
     auctionId?: string;
     offerId?: string;
@@ -42,6 +42,7 @@ export async function POST(request: Request) {
     };
     shippingCostCents?: number;
     shippingService?: string;
+    buyerNote?: string;
   };
 
   const quantity = Math.max(1, Math.floor(rawQty ?? 1));
@@ -175,6 +176,7 @@ export async function POST(request: Request) {
         shipping_service: shippingService ?? null,
         platform_fee_cents: feeCents,
         tax_cents: taxCents,
+        buyer_note: buyerNote?.trim() || null,
         item_snapshot: {
           plant_name: listing.plant_name,
           variety: listing.variety ?? null,

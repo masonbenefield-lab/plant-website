@@ -18,6 +18,7 @@ interface CartItem {
   listingId: string;
   quantity: number;
   priceCents: number; // client-supplied, re-validated server-side
+  buyerNote?: string | null;
 }
 
 export async function POST(request: Request) {
@@ -152,6 +153,7 @@ export async function POST(request: Request) {
       shipping_service: shippingService ?? null,
       platform_fee_cents: feeCents,
       tax_cents: taxCents,
+      buyer_note: items.map(i => i.buyerNote?.trim()).filter(Boolean).join(" | ") || null,
     })
     .select()
     .single();

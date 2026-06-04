@@ -55,6 +55,8 @@ interface CheckoutFormProps {
   priceCents: number;
   quantity?: number;
   savedAddress?: ShippingAddressData | null;
+  buyerNotePrompt?: string | null;
+  buyerNoteRequired?: boolean;
 }
 
 function PaymentStep({
@@ -130,7 +132,7 @@ function PaymentStep({
 
 const SAVED_ADDRESS_KEY = "checkout_saved_address";
 
-export default function CheckoutForm({ listingId, auctionId, offerId, priceCents, quantity = 1, savedAddress }: CheckoutFormProps) {
+export default function CheckoutForm({ listingId, auctionId, offerId, priceCents, quantity = 1, savedAddress, buyerNotePrompt, buyerNoteRequired }: CheckoutFormProps) {
   const router = useRouter();
   const { resolvedTheme } = useTheme();
   const [step, setStep] = useState<"address" | "shipping" | "payment">("address");
@@ -150,6 +152,16 @@ export default function CheckoutForm({ listingId, auctionId, offerId, priceCents
   const [totalCents, setTotalCents] = useState(priceCents);
   const [taxCents, setTaxCents] = useState(0);
   const [paidShippingCents, setPaidShippingCents] = useState(0);
+  const [buyerNote, setBuyerNote] = useState("");
+
+  // Read buyer note from sessionStorage (set by BuyButton for direct checkout)
+  useEffect(() => {
+    if (!listingId) return;
+    try {
+      const stored = sessionStorage.getItem(`buyer_note_${listingId}`);
+      if (stored) { setBuyerNote(stored); sessionStorage.removeItem(`buyer_note_${listingId}`); }
+    } catch { /* ignore */ }
+  }, [listingId]);
 
   function previewTaxCents(itemCents: number): number {
     const rate = STATE_TAX_RATES[address.state.trim().toUpperCase()] ?? 0;
@@ -167,6 +179,10 @@ export default function CheckoutForm({ listingId, auctionId, offerId, priceCents
 
   async function handleAddressSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (buyerNoteRequired && !buyerNote.trim()) {
+      toast.error("Please add a note for the seller before continuing.");
+      return;
+    }
     if (isGift && giftMessage) {
       const hit = findProhibitedWord(giftMessage);
       if (hit) {
@@ -260,6 +276,7 @@ export default function CheckoutForm({ listingId, auctionId, offerId, priceCents
         shippingCostCents,
         shippoRateId,
         shippingService,
+        buyerNote: buyerNote.trim() || null,
       }),
     });
 
@@ -435,6 +452,25 @@ export default function CheckoutForm({ listingId, auctionId, offerId, priceCents
       </CardHeader>
       <CardContent>
         <form onSubmit={handleAddressSubmit} className="space-y-4">
+          {buyerNotePrompt && (
+            <div className="space-y-1.5 mb-4 p-4 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-900/10 dark:border-amber-800">
+              <Label htmlFor="buyer-note">
+                {buyerNoteRequired ? (
+                  <>{buyerNotePrompt} <span className="text-destructive">*</span></>
+                ) : (
+                  <>{buyerNotePrompt} <span className="text-muted-foreground text-xs">(optional)</span></>
+                )}
+              </Label>
+              <Textarea
+                id="buyer-note"
+                value={buyerNote}
+                onChange={(e) => setBuyerNote(e.target.value)}
+                rows={2}
+                maxLength={500}
+                placeholder="Your note to the seller…"
+              />
+            </div>
+          )}
           {/* Gift option */}
           <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
             <input

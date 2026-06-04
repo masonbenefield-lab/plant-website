@@ -18,6 +18,8 @@ export default async function CheckoutPage({
   let itemName = "";
   let priceCents = 0;
   let offerNote: string | null = null;
+  let buyerNotePrompt: string | null = null;
+  let buyerNoteRequired: boolean = false;
 
   if (listingId) {
     if (offerId) {
@@ -44,7 +46,7 @@ export default async function CheckoutPage({
     } else {
       const { data } = await supabase
         .from("listings")
-        .select("plant_name, variety, price_cents, sale_price_cents, sale_ends_at")
+        .select("plant_name, variety, price_cents, sale_price_cents, sale_ends_at, buyer_note_prompt, buyer_note_required")
         .eq("id", listingId)
         .eq("status", "active")
         .single();
@@ -52,6 +54,8 @@ export default async function CheckoutPage({
       itemName = data.variety ? `${data.plant_name} — ${data.variety}` : data.plant_name;
       const onSale = !!(data.sale_price_cents && data.sale_ends_at && new Date(data.sale_ends_at) > new Date());
       priceCents = (onSale ? data.sale_price_cents! : data.price_cents) * quantity;
+      buyerNotePrompt = (data as any).buyer_note_prompt ?? null;
+      buyerNoteRequired = (data as any).buyer_note_required ?? false;
     }
   } else if (auctionId) {
     if (offerId) {
@@ -131,6 +135,8 @@ export default async function CheckoutPage({
         priceCents={priceCents}
         quantity={quantity}
         savedAddress={savedAddress}
+        buyerNotePrompt={buyerNotePrompt}
+        buyerNoteRequired={buyerNoteRequired}
       />
     </div>
   );

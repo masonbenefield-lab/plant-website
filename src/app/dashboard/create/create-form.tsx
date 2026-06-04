@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils";
 
 type ItemType = "plant" | "supply";
 type ShippingMode = "" | "free" | "flat";
-type SizeEntry = { id: number; potSize: string; quantity: string; listInShop: boolean; shopPrice: string; shopQuantity: string; shippingMode: ShippingMode; shippingCost: string; sizeImages: string[] };
+type SizeEntry = { id: number; potSize: string; quantity: string; listInShop: boolean; shopPrice: string; shopQuantity: string; shippingMode: ShippingMode; shippingCost: string; sizeImages: string[]; buyerNoteEnabled: boolean; buyerNotePrompt: string; buyerNoteRequired: boolean };
 
 let nextId = 1;
 
@@ -42,7 +42,7 @@ export default function CreateInventoryPage() {
   const [category, setCategory] = useState("Other");
   const [existingGroup, setExistingGroup] = useState<{ plant_name: string; count: number } | null>(null);
 
-  const [sizes, setSizes] = useState<SizeEntry[]>([{ id: 0, potSize: "", quantity: "1", listInShop: false, shopPrice: "", shopQuantity: "", shippingMode: "" as ShippingMode, shippingCost: "", sizeImages: [] }]);
+  const [sizes, setSizes] = useState<SizeEntry[]>([{ id: 0, potSize: "", quantity: "1", listInShop: false, shopPrice: "", shopQuantity: "", shippingMode: "" as ShippingMode, shippingCost: "", sizeImages: [], buyerNoteEnabled: false, buyerNotePrompt: "", buyerNoteRequired: false }]);
   const [uploadingForSize, setUploadingForSize] = useState<number | null>(null);
   function switchType(type: ItemType) {
     setItemType(type);
@@ -51,7 +51,7 @@ export default function CreateInventoryPage() {
   }
 
   function addSize() {
-    setSizes(prev => [...prev, { id: nextId++, potSize: "", quantity: "1", listInShop: false, shopPrice: "", shopQuantity: "", shippingMode: "" as ShippingMode, shippingCost: "", sizeImages: [] }]);
+    setSizes(prev => [...prev, { id: nextId++, potSize: "", quantity: "1", listInShop: false, shopPrice: "", shopQuantity: "", shippingMode: "" as ShippingMode, shippingCost: "", sizeImages: [], buyerNoteEnabled: false, buyerNotePrompt: "", buyerNoteRequired: false }]);
   }
 
   function removeSize(id: number) {
@@ -239,6 +239,8 @@ export default function CreateInventoryPage() {
             item_type: itemType,
             free_shipping: s.shippingMode === "free",
             shipping_cost_cents: s.shippingMode === "flat" && s.shippingCost ? dollarsToCents(s.shippingCost) : null,
+            buyer_note_prompt: s.buyerNoteEnabled && s.buyerNotePrompt.trim() ? s.buyerNotePrompt.trim() : null,
+            buyer_note_required: s.buyerNoteEnabled && !!s.buyerNotePrompt.trim() ? s.buyerNoteRequired : false,
           })
           .select("id")
           .single();
@@ -648,6 +650,57 @@ export default function CreateInventoryPage() {
                         )}
                         {!size.shippingMode && (
                           <p className="text-xs text-amber-700 dark:text-amber-400">Choose a shipping option above to continue.</p>
+                        )}
+                      </div>
+
+                      {/* Buyer note */}
+                      <div className="space-y-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => updateSize(size.id, "buyerNoteEnabled", !size.buyerNoteEnabled)}
+                          className="flex items-center gap-2.5 text-left"
+                        >
+                          <div className={`w-8 h-5 rounded-full transition-colors flex items-center px-0.5 ${size.buyerNoteEnabled ? "bg-leaf" : "bg-muted-foreground/30"}`}>
+                            <div className={`w-4 h-4 rounded-full bg-white shadow transition-transform ${size.buyerNoteEnabled ? "translate-x-3" : "translate-x-0"}`} />
+                          </div>
+                          <span className="text-xs font-medium">Require buyer note</span>
+                        </button>
+                        {size.buyerNoteEnabled && (
+                          <div className="space-y-2 pl-1">
+                            <div className="space-y-1">
+                              <Label className="text-xs" htmlFor={`note-prompt-${size.id}`}>Your question for the buyer</Label>
+                              <Input
+                                id={`note-prompt-${size.id}`}
+                                value={size.buyerNotePrompt}
+                                onChange={(e) => updateSize(size.id, "buyerNotePrompt", e.target.value)}
+                                placeholder='e.g. "What names would you like on your tags?"'
+                                maxLength={200}
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Note type</Label>
+                              <div className="flex gap-2">
+                                {(["Required", "Optional"] as const).map((opt) => {
+                                  const isReq = opt === "Required";
+                                  const active = isReq ? size.buyerNoteRequired : !size.buyerNoteRequired;
+                                  return (
+                                    <button
+                                      key={opt}
+                                      type="button"
+                                      onClick={() => updateSize(size.id, "buyerNoteRequired", isReq)}
+                                      className={`rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
+                                        active
+                                          ? "border-leaf bg-[#EBF0E6] text-forest dark:bg-forest/40 dark:text-[#A8BF9A] dark:border-leaf"
+                                          : "border-input hover:bg-muted"
+                                      }`}
+                                    >
+                                      {opt}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </div>
                         )}
                       </div>
                     </div>

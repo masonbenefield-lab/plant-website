@@ -57,6 +57,7 @@ type OrderRow = {
   tax_cents: number | null;
   shipping_service: string | null;
   item_snapshot: unknown;
+  buyer_note: string | null;
   created_at: string;
 };
 
@@ -260,6 +261,12 @@ export default function OrdersClient({
                     </div>
                   </div>
                 </div>
+                {order.buyer_note && (
+                  <div className="mt-2 ml-7 p-2 rounded bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 text-xs">
+                    <span className="font-semibold text-amber-800 dark:text-amber-400">Buyer note: </span>
+                    <span className="text-amber-700 dark:text-amber-300">{order.buyer_note}</span>
+                  </div>
+                )}
                 <div className="mt-3 ml-7 space-y-2">
                   {order.shipping_cost_cents != null && order.shipping_cost_cents > 0 && (
                     <p className="text-xs text-muted-foreground">

@@ -243,7 +243,7 @@ export default function CartCheckoutPage() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        items: items.map((i) => ({ listingId: i.listingId, quantity: i.quantity, priceCents: i.priceCents })),
+        items: items.map((i) => ({ listingId: i.listingId, quantity: i.quantity, priceCents: i.priceCents, buyerNote: i.buyerNote ?? null })),
         shippingAddress: isGift ? { ...address, is_gift: true, gift_message: giftMessage || null } : address,
         shippingCostCents,
         shippoRateId,
