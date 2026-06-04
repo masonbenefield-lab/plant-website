@@ -170,13 +170,21 @@ export default async function DashboardAuctionsPage({
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Auctions</h1>
         {tab === "selling" && (
-          <NewAuctionDialog
-            sellerId={user.id}
-            planLimit={planLimits.auctions}
-            currentCount={activeAuctionCount}
-            photoLimit={planLimits.photos}
-
-          />
+          stripeOnboarded ? (
+            <NewAuctionDialog
+              sellerId={user.id}
+              planLimit={planLimits.auctions}
+              currentCount={activeAuctionCount}
+              photoLimit={planLimits.photos}
+            />
+          ) : (
+            <a
+              href="/account#seller-payments"
+              className="inline-flex items-center gap-1.5 rounded-md bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium px-4 py-2 transition-colors"
+            >
+              Connect Stripe to create auctions
+            </a>
+          )
         )}
       </div>
 
@@ -195,12 +203,6 @@ export default async function DashboardAuctionsPage({
           <div className="mb-6">
             <DashboardSearch placeholder="Search auctions…" basePath="/dashboard/auctions" />
           </div>
-          {!stripeOnboarded && sellingAuctions.length > 0 && (
-            <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
-              <strong>Your auctions are not visible to buyers yet.</strong> They appear on your personal storefront, but won&apos;t show in the public auctions page and cannot be bid on until you{" "}
-              <a href="/account#seller-payments" className="underline font-medium hover:opacity-80">connect your Stripe account</a>.
-            </div>
-          )}
           {sellingAuctions.length === 0 ? (
             <div className="flex flex-col items-center justify-center text-center py-16 px-4 rounded-lg border border-dashed">
               <div className="text-4xl mb-3">🔨</div>
