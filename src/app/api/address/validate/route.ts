@@ -1,5 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 
+const STATE_ABBR: Record<string, string> = {
+  alabama: "AL", alaska: "AK", arizona: "AZ", arkansas: "AR", california: "CA",
+  colorado: "CO", connecticut: "CT", delaware: "DE", florida: "FL", georgia: "GA",
+  hawaii: "HI", idaho: "ID", illinois: "IL", indiana: "IN", iowa: "IA",
+  kansas: "KS", kentucky: "KY", louisiana: "LA", maine: "ME", maryland: "MD",
+  massachusetts: "MA", michigan: "MI", minnesota: "MN", mississippi: "MS",
+  missouri: "MO", montana: "MT", nebraska: "NE", nevada: "NV",
+  "new hampshire": "NH", "new jersey": "NJ", "new mexico": "NM", "new york": "NY",
+  "north carolina": "NC", "north dakota": "ND", ohio: "OH", oklahoma: "OK",
+  oregon: "OR", pennsylvania: "PA", "rhode island": "RI", "south carolina": "SC",
+  "south dakota": "SD", tennessee: "TN", texas: "TX", utah: "UT", vermont: "VT",
+  virginia: "VA", washington: "WA", "west virginia": "WV", wisconsin: "WI",
+  wyoming: "WY", "district of columbia": "DC",
+};
+
+function toStateAbbr(state: string): string {
+  if (state.length === 2) return state.toUpperCase();
+  return STATE_ABBR[state.toLowerCase()] ?? state;
+}
+
 async function getUspsToken(clientId: string, clientSecret: string): Promise<string> {
   const res = await fetch("https://api.usps.com/oauth2/v3/token", {
     method: "POST",
@@ -42,7 +62,7 @@ export async function POST(req: NextRequest) {
     const params = new URLSearchParams({
       streetAddress: line1,
       city,
-      state,
+      state: toStateAbbr(state),
       ZIPCode: zip.slice(0, 5),
     });
     if (line2) params.set("secondaryAddress", line2);
