@@ -13,7 +13,7 @@ export type DisputeMessage = {
   sender_id: string;
   message: string;
   images: string[];
-  created_at: string;
+  created_at: string | null;
 };
 
 const STATUS_LABEL: Record<string, { label: string; color: string }> = {
