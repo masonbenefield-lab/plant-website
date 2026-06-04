@@ -13,8 +13,8 @@ interface WishlistItem {
   name: string;
   variety: string | null;
   notes: string | null;
-  priority: Priority;
-  created_at: string;
+  priority: Priority | null;
+  created_at: string | null;
 }
 
 const PRIORITY_LABEL: Record<Priority, string> = {
@@ -78,7 +78,7 @@ export function WishlistClient({ initialItems }: { initialItems: WishlistItem[] 
     setEditName(item.name);
     setEditVariety(item.variety ?? "");
     setEditNotes(item.notes ?? "");
-    setEditPriority(item.priority);
+    setEditPriority(item.priority ?? "want");
   }
 
   async function handleEdit(id: string) {
@@ -329,8 +329,8 @@ export function WishlistClient({ initialItems }: { initialItems: WishlistItem[] 
                       {item.variety && (
                         <p className="text-xs text-muted-foreground">{item.name}</p>
                       )}
-                      <span className={cn("text-xs px-2 py-0.5 rounded-full font-medium", PRIORITY_COLOR[item.priority])}>
-                        {PRIORITY_LABEL[item.priority]}
+                      <span className={cn("text-xs px-2 py-0.5 rounded-full font-medium", item.priority ? PRIORITY_COLOR[item.priority] : "")}>
+                        {item.priority ? PRIORITY_LABEL[item.priority] : ""}
                       </span>
                     </div>
                     {item.notes && (
