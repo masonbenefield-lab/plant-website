@@ -17,7 +17,7 @@ import { AlertTriangle, Plus, X, Store, Leaf, Package, HelpCircle } from "lucide
 import { dollarsToCents } from "@/lib/stripe";
 import PotSizePicker from "@/components/pot-size-picker";
 import { findProhibitedWord, censorWord, logViolation } from "@/lib/profanity";
-import { getPlanLimits, type PlanLimits } from "@/lib/plan-limits";
+import { getPlanLimits, type Plan, type PlanLimits } from "@/lib/plan-limits";
 import { cn } from "@/lib/utils";
 
 type ItemType = "plant" | "supply";
@@ -72,7 +72,7 @@ export default function CreateInventoryPage() {
         supabase.from("profiles").select("plan, is_admin").eq("id", user.id).single(),
       ]);
       if (!profile?.bio?.trim() || !profile?.avatar_url) setProfileWarning("incomplete");
-      setPlanLimits(getPlanLimits(planProfile?.plan, !!planProfile?.is_admin));
+      setPlanLimits(getPlanLimits(planProfile?.plan as Plan | null, !!planProfile?.is_admin));
     }
     checkProfile();
   }, []);
