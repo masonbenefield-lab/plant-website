@@ -4,7 +4,7 @@ import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import { sendOutbidNotification, sendAuctionAutoCharged, sendAuctionEndedSeller } from "@/lib/email";
 import { getStripe } from "@/lib/stripe";
-import { planFeePercent } from "@/lib/plan-limits";
+import { planFeePercent, type Plan } from "@/lib/plan-limits";
 import { createStripeTaxCalculation } from "@/lib/tax";
 
 function adminClient() {
@@ -101,7 +101,7 @@ export async function POST(request: Request) {
   ).catch(() => ({ taxCents: 0, calculationId: null }));
 
   const totalCents = auction.buy_now_price_cents + shippingCents + taxCents;
-  const feePercent = planFeePercent(sellerProfile.plan, !!sellerProfile.is_admin, !!sellerProfile.groundbreaker);
+  const feePercent = planFeePercent(sellerProfile.plan as Plan | null, !!sellerProfile.is_admin, !!sellerProfile.groundbreaker);
   const feeCents = Math.round(auction.buy_now_price_cents * (feePercent / 100));
   const stripeFeeCents = Math.round(totalCents * 0.029) + 30;
   const appFeeAmount = feeCents + stripeFeeCents + taxCents;

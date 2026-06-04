@@ -12,7 +12,7 @@ import {
   sendReserveOfferExpired,
 } from "@/lib/email";
 import { getStripe } from "@/lib/stripe";
-import { planFeePercent } from "@/lib/plan-limits";
+import { planFeePercent, type Plan } from "@/lib/plan-limits";
 import { createStripeTaxCalculation } from "@/lib/tax";
 
 const PAYMENT_DEADLINE_HOURS = 24; // fallback manual window (was 48)
@@ -146,7 +146,7 @@ export async function GET(request: Request) {
         ).catch(() => ({ taxCents: 0, calculationId: null }));
 
         const totalCents = auction.current_bid_cents + shippingCents + taxCents;
-        const feePercent = planFeePercent(sellerProfile!.plan, !!sellerProfile!.is_admin, !!sellerProfile!.groundbreaker);
+        const feePercent = planFeePercent(sellerProfile!.plan as Plan | null, !!sellerProfile!.is_admin, !!sellerProfile!.groundbreaker);
         const feeCents = Math.round(auction.current_bid_cents * (feePercent / 100));
         const stripeFeeCents = Math.round(totalCents * 0.029) + 30;
         const appFeeAmount = feeCents + stripeFeeCents + taxCents;

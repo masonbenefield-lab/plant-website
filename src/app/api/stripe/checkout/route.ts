@@ -4,7 +4,7 @@ import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import { getStripe } from "@/lib/stripe";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { planFeePercent } from "@/lib/plan-limits";
+import { planFeePercent, type Plan } from "@/lib/plan-limits";
 import { sendLowStockAlert } from "@/lib/email";
 import { isBlocked } from "@/lib/blocks";
 import { createStripeTaxCalculation } from "@/lib/tax";
@@ -90,7 +90,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Seller not set up for payments" }, { status: 400 });
     }
 
-    const feePercent = planFeePercent(sellerPlan?.plan, !!sellerPlan?.is_admin, !!sellerPlan?.groundbreaker);
+    const feePercent = planFeePercent(sellerPlan?.plan as Plan | null, !!sellerPlan?.is_admin, !!sellerPlan?.groundbreaker);
     // If checking out with an accepted offer, use offer price
     let effectivePriceCents: number;
     if (offerId) {
@@ -266,7 +266,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Seller not set up for payments" }, { status: 400 });
       }
 
-      const feePercent = planFeePercent(sellerPlan?.plan, !!sellerPlan?.is_admin, !!sellerPlan?.groundbreaker);
+      const feePercent = planFeePercent(sellerPlan?.plan as Plan | null, !!sellerPlan?.is_admin, !!sellerPlan?.groundbreaker);
       const offerShippingCents = Math.max(0, Math.round(shippingCostCents ?? 0));
       const { taxCents: offerTaxCents, calculationId: offerCalcId } = await createStripeTaxCalculation(
         offerOrder.amount_cents,
@@ -357,7 +357,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Seller not set up for payments" }, { status: 400 });
     }
 
-    const feePercent = planFeePercent(sellerPlan?.plan, !!sellerPlan?.is_admin, !!sellerPlan?.groundbreaker);
+    const feePercent = planFeePercent(sellerPlan?.plan as Plan | null, !!sellerPlan?.is_admin, !!sellerPlan?.groundbreaker);
     const auctionShippingCents = Math.max(0, Math.round(shippingCostCents ?? 0));
     const { taxCents: auctionTaxCents, calculationId: auctionCalcId } = await createStripeTaxCalculation(
       auction.current_bid_cents,
