@@ -140,8 +140,11 @@ export async function POST(request: Request) {
     },
   });
 
+  const buyerNote = items.map(i => i.buyerNote?.trim()).filter(Boolean).join(" | ") || null;
+
   const { data: order, error: orderError } = await supabase
     .from("orders")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     .insert({
       buyer_id: user.id,
       seller_id: sellerId,
@@ -153,8 +156,8 @@ export async function POST(request: Request) {
       shipping_service: shippingService ?? null,
       platform_fee_cents: feeCents,
       tax_cents: taxCents,
-      buyer_note: items.map(i => i.buyerNote?.trim()).filter(Boolean).join(" | ") || null,
-    })
+      ...(buyerNote ? { buyer_note: buyerNote } : {}),
+    } as any)
     .select()
     .single();
 

@@ -165,6 +165,7 @@ export async function POST(request: Request) {
 
     const { data: order, error: orderError } = await supabase
       .from("orders")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .insert({
         buyer_id: user.id,
         seller_id: listing.seller_id,
@@ -176,13 +177,13 @@ export async function POST(request: Request) {
         shipping_service: shippingService ?? null,
         platform_fee_cents: feeCents,
         tax_cents: taxCents,
-        buyer_note: buyerNote?.trim() || null,
+        ...(buyerNote?.trim() ? { buyer_note: buyerNote.trim() } : {}),
         item_snapshot: {
           plant_name: listing.plant_name,
           variety: listing.variety ?? null,
           image: (listing.images as string[] | null)?.[0] ?? null,
         },
-      })
+      } as any)
       .select()
       .single();
 
