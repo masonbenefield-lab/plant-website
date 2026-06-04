@@ -53,20 +53,24 @@ export async function PATCH(request: Request) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Log a care event on startDate for each interval that was set, for each plant
+  // Log a care event on startDate for each interval that was set, for each plant.
+  // Only create events for past dates — today's date would auto-populate the
+  // Completed section and make it look like care was already done today.
   if (startDate) {
-    const intervalKeys = Object.keys(INTERVAL_TO_EVENT).filter((k) => k in body);
-    if (intervalKeys.length > 0) {
-      const events = plantIds.flatMap((plantId) =>
-        intervalKeys.map((k) => ({
-          plant_id:   plantId,
-          user_id:    user.id,
-          event_type: INTERVAL_TO_EVENT[k],
-          event_date: startDate,
-        }))
-      );
-      // Non-fatal — intervals are saved; a log failure shouldn't block the user
-      await supabase.from("garden_events").insert(events);
+    const todayStr = new Date().toISOString().split("T")[0];
+    if (startDate < todayStr) {
+      const intervalKeys = Object.keys(INTERVAL_TO_EVENT).filter((k) => k in body);
+      if (intervalKeys.length > 0) {
+        const events = plantIds.flatMap((plantId) =>
+          intervalKeys.map((k) => ({
+            plant_id:   plantId,
+            user_id:    user.id,
+            event_type: INTERVAL_TO_EVENT[k],
+            event_date: startDate,
+          }))
+        );
+        await supabase.from("garden_events").insert(events);
+      }
     }
   }
 

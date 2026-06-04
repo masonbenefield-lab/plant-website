@@ -407,12 +407,13 @@ function WeekStrip({
     const isToday = actualOffset === 0;
 
     const careCount = entries.reduce((sum, e) => {
-      if (loggedKeys.has(`${e.plantId}-${e.careType}`)) return sum;
+      // Only filter logged tasks while they still show as due-today/overdue.
+      // After router.refresh() daysUntilDue becomes interval (> 0) and they
+      // should reappear in their future strip slot.
+      if (loggedKeys.has(`${e.plantId}-${e.careType}`) && e.daysUntilDue <= 0) return sum;
       if (isPast) {
-        // Past days: only show tasks whose exact due date is this day
         return e.daysUntilDue === actualOffset ? sum + 1 : sum;
       }
-      // Today / future: use interval-based calculation (overdue tasks float to next occurrence)
       return sum + (getStripDays(e.daysUntilDue, e.interval).has(actualOffset) ? 1 : 0);
     }, 0);
 
@@ -438,7 +439,8 @@ function WeekStrip({
   // Day panel: active tasks
   const dayEntries = actualSelectedOffset !== null
     ? entries.filter((e) => {
-        if (loggedKeys.has(`${e.plantId}-${e.careType}`)) return false;
+        // Same rule as strip counts: only hide while daysUntilDue ≤ 0
+        if (loggedKeys.has(`${e.plantId}-${e.careType}`) && e.daysUntilDue <= 0) return false;
         if (actualSelectedOffset < 0) return e.daysUntilDue === actualSelectedOffset;
         return getStripDays(e.daysUntilDue, e.interval).has(actualSelectedOffset);
       })
