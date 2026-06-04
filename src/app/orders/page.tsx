@@ -541,7 +541,7 @@ export default async function OrdersPage({
 
             const lastActivity = d.last_replied_at ?? d.created_at;
             const isSellersTurn = d.last_replied_by_role === "buyer" || d.last_replied_by_role === null;
-            const sellerWindowExpired = Date.now() - new Date(lastActivity).getTime() >= 5 * 24 * 60 * 60 * 1000;
+            const sellerWindowExpired = lastActivity ? Date.now() - new Date(lastActivity).getTime() >= 5 * 24 * 60 * 60 * 1000 : false;
             const canEscalate = isBuyer &&
               effectiveStatus !== "resolved" &&
               effectiveStatus !== "escalated" &&
