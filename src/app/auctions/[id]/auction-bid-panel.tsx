@@ -13,7 +13,7 @@ import { centsToDisplay, dollarsToCents } from "@/lib/stripe";
 import Link from "next/link";
 import { ChevronDown, ChevronUp, AlertTriangle, CreditCard } from "lucide-react";
 import { ShippingEstimate } from "@/components/shipping-estimate";
-import type { AuctionStatus } from "@/lib/supabase/types";
+import type { AuctionStatus } from "@/lib/order-types";
 
 interface AuctionData {
   id: string;
