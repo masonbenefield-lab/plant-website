@@ -126,7 +126,7 @@ export default async function ReviewReportsPage({
                       {report.status}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      Reported {new Date(report.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                      {report.created_at ? <>Reported {new Date(report.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</> : null}
                     </span>
                   </div>
                   <p className="text-sm">
@@ -156,7 +156,7 @@ export default async function ReviewReportsPage({
                       <span className="text-xs text-muted-foreground">
                         by <span className="font-medium">{reviewer ?? "unknown"}</span>
                         {" · "}
-                        {new Date(rating.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                        {rating.created_at ? new Date(rating.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : null}
                       </span>
                     </div>
                     {rating.comment ? (

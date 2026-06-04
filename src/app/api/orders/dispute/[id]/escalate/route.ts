@@ -32,7 +32,7 @@ export async function POST(
   if (dispute.status === "escalated") return NextResponse.json({ error: "Already escalated" }, { status: 400 });
 
   // Must be at least 5 days old OR seller hasn't responded — buyer can always escalate after seller responds
-  const createdAt = new Date(dispute.created_at);
+  const createdAt = dispute.created_at ? new Date(dispute.created_at) : new Date();
   const daysSinceFiled = (Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24);
   const sellerHasResponded = dispute.status === "seller_responded";
   if (!sellerHasResponded && daysSinceFiled < 5) {

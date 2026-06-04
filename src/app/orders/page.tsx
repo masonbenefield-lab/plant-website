@@ -579,7 +579,7 @@ export default async function OrdersPage({
                         </Link>
                       ) : "—"}
                       {order && <span> · {centsToDisplay(order.amount_cents)}</span>}
-                      <span className="ml-2">· Filed {new Date(d.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+                      {d.created_at && <span className="ml-2">· Filed {new Date(d.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>}
                     </p>
                   </div>
 

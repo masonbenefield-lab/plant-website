@@ -201,7 +201,7 @@ export default async function AdminReportsPage({
                     {reporter?.username ?? "—"}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">
-                    {new Date(r.created_at).toLocaleDateString()}
+                    {r.created_at ? new Date(r.created_at).toLocaleDateString() : "—"}
                   </td>
                   {showAll && (
                     <td className="px-4 py-3">

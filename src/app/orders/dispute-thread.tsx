@@ -177,11 +177,13 @@ export default function DisputeThread({
                   </div>
                 )}
               </div>
-              <p className="text-[10px] text-muted-foreground px-1">
-                {new Date(msg.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                {" · "}
-                {new Date(msg.created_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
-              </p>
+              {msg.created_at && (
+                <p className="text-[10px] text-muted-foreground px-1">
+                  {new Date(msg.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                  {" · "}
+                  {new Date(msg.created_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+                </p>
+              )}
             </div>
           );
         })}

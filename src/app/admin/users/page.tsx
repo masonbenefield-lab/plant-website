@@ -148,7 +148,7 @@ export default async function AdminUsersPage({
                 {!showArchived && (
                   <>
                     <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">
-                      {new Date(p.created_at).toLocaleDateString()}
+                      {p.created_at ? new Date(p.created_at).toLocaleDateString() : "—"}
                     </td>
                     <td className="px-4 py-3">{listingMap[p.id] ?? 0}</td>
                     <td className="px-4 py-3">{auctionMap[p.id] ?? 0}</td>

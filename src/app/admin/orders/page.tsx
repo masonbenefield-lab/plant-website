@@ -61,7 +61,7 @@ export default async function AdminOrdersPage() {
                     {addr ? `${addr.name}, ${addr.city}, ${addr.state}` : "—"}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">
-                    {new Date(o.created_at).toLocaleDateString()}
+                    {o.created_at ? new Date(o.created_at).toLocaleDateString() : "—"}
                   </td>
                 </tr>
               );

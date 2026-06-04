@@ -176,7 +176,7 @@ export default async function AdminViolationsPage() {
                     {v.content_snippet ?? "—"}
                   </td>
                   <td className="px-4 py-2.5 text-muted-foreground text-xs">
-                    {new Date(v.created_at).toLocaleDateString()}
+                    {v.created_at ? new Date(v.created_at).toLocaleDateString() : "—"}
                   </td>
                 </tr>
               ))}

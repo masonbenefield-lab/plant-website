@@ -66,7 +66,7 @@ export default async function AdminListingsPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">
-                    {new Date(l.created_at).toLocaleDateString()}
+                    {l.created_at ? new Date(l.created_at).toLocaleDateString() : "—"}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">

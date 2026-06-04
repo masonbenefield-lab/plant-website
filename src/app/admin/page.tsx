@@ -58,7 +58,7 @@ export default async function AdminOverviewPage() {
                 <div>
                   <p className="text-sm font-medium">{u.username}</p>
                   <p className="text-xs text-muted-foreground">
-                    Joined {new Date(u.created_at).toLocaleDateString()}
+                    {u.created_at ? <>Joined {new Date(u.created_at).toLocaleDateString()}</> : null}
                   </p>
                 </div>
                 {u.stripe_onboarded && (
