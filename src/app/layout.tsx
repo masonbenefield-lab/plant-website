@@ -75,9 +75,6 @@ export default async function RootLayout({
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <ThemeProvider>
           <CartProvider>
-            <div className="w-full bg-sand text-forest text-center text-sm font-medium py-2 px-4">
-              🚧 Plantet is currently in development — payments are not active yet. Stay tuned!
-            </div>
             <Navbar
               user={user}
               avatarUrl={profile?.avatar_url}
