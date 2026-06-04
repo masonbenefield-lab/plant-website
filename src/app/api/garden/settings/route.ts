@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import type { Database } from "@/lib/supabase/types";
+
+type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"];
 
 export async function POST(req: Request) {
   const supabase = await createClient();
@@ -13,7 +16,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "You must accept the disclaimer to enable trades." }, { status: 400 });
   }
 
-  const update: Record<string, unknown> = { open_to_trades: !!open_to_trades };
+  const update: ProfileUpdate = { open_to_trades: !!open_to_trades };
   if ("garden_bio" in body) update.garden_bio = garden_bio?.trim() || null;
   if (open_to_trades && disclaimer_accepted) update.trades_disclaimer_accepted = true;
 
