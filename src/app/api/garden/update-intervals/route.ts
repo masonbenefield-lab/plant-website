@@ -70,33 +70,33 @@ export async function PATCH(request: Request) {
     });
 
     if (intervalKeys.length > 0) {
-      const eventTypes = intervalKeys.map((k) => INTERVAL_TO_EVENT[k]);
+      // For each care type, delete all events at or after the new baseline date.
+      // This clears any stale baselines from previous setups (both past and future).
+      // Real historical events before the baseline date are preserved.
+      for (const k of intervalKeys) {
+        const intervalVal = (body as Record<string, unknown>)[k] as number;
+        const lastDone = new Date(startLocal.getTime() - intervalVal * 86400000);
+        const y = lastDone.getFullYear();
+        const m = String(lastDone.getMonth() + 1).padStart(2, "0");
+        const day = String(lastDone.getDate()).padStart(2, "0");
+        const baselineDateStr = `${y}-${m}-${day}`;
 
-      // Delete future-dated events (stale baselines from previous setups with later startDates)
-      await supabase
-        .from("garden_events")
-        .delete()
-        .in("plant_id", plantIds)
-        .in("event_type", eventTypes)
-        .gt("event_date", todayStr);
+        await supabase
+          .from("garden_events")
+          .delete()
+          .in("plant_id", plantIds)
+          .eq("event_type", INTERVAL_TO_EVENT[k])
+          .gte("event_date", baselineDateStr);
 
-      // Insert new baseline: "last done" = startDate - interval → nextDue = startDate
-      const events = plantIds.flatMap((plantId) =>
-        intervalKeys.map((k) => {
-          const intervalVal = (body as Record<string, unknown>)[k] as number;
-          const lastDone = new Date(startLocal.getTime() - intervalVal * 86400000);
-          const y = lastDone.getFullYear();
-          const m = String(lastDone.getMonth() + 1).padStart(2, "0");
-          const day = String(lastDone.getDate()).padStart(2, "0");
-          return {
+        await supabase.from("garden_events").insert(
+          plantIds.map((plantId) => ({
             plant_id:   plantId,
             user_id:    user.id,
             event_type: INTERVAL_TO_EVENT[k],
-            event_date: `${y}-${m}-${day}`,
-          };
-        })
-      );
-      await supabase.from("garden_events").insert(events);
+            event_date: baselineDateStr,
+          }))
+        );
+      }
     }
   }
 
