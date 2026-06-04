@@ -1641,7 +1641,7 @@ export default function InventoryClient({
               </span>
             )}
             <span className="text-sm text-muted-foreground whitespace-nowrap">
-              {group.variants.length} {first && isSupply(first) ? "variant" : "size"}{group.variants.length !== 1 ? "s" : ""} · {totalQty} total
+              {group.variants.length} {first && isSupply(first) ? "option" : "size"}{group.variants.length !== 1 ? "s" : ""} · {totalQty} total
               {totalAvail !== totalQty && <span className="ml-1 text-xs">({totalAvail} avail)</span>}
             </span>
             <button
@@ -1668,7 +1668,7 @@ export default function InventoryClient({
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-background border-t border-border/40">
-                    <th className="py-2 pl-3 pr-3 text-left text-xs font-medium text-muted-foreground w-44">{first && isSupply(first) ? "Variant" : "Size"}</th>
+                    <th className="py-2 pl-3 pr-3 text-left text-xs font-medium text-muted-foreground w-44">{first && isSupply(first) ? "Option" : "Size"}</th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground w-32">Stock</th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Shop Listing</th>
                     <th className="px-3 py-2 w-12" />
@@ -1918,7 +1918,7 @@ export default function InventoryClient({
               <tr className="bg-muted/30">
                 <th className="py-2.5 pl-3 pr-1 text-left text-xs font-medium text-muted-foreground">{hasSupplies && stockTab === "supplies" ? "Item" : "Plant"}</th>
                 <th className="px-2 py-2.5 text-left text-xs font-medium text-muted-foreground">Variety</th>
-                <th className="px-2 py-2.5 text-left text-xs font-medium text-muted-foreground">{hasSupplies && stockTab === "supplies" ? "Variant" : "Size"}</th>
+                <th className="px-2 py-2.5 text-left text-xs font-medium text-muted-foreground">{hasSupplies && stockTab === "supplies" ? "Option" : "Size"}</th>
                 <th className="px-2 py-2.5 text-left text-xs font-medium text-muted-foreground">Stock</th>
                 <th className="px-2 py-2.5 text-left text-xs font-medium text-muted-foreground">Status</th>
                 <th className="px-2 py-2.5 w-16" />

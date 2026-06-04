@@ -2,8 +2,6 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
@@ -23,6 +21,7 @@ export default function AddToCartButton({
   bundleDiscountPct,
   buyerNotePrompt,
   buyerNoteRequired,
+  buyerNote = "",
 }: {
   listingId: string;
   plantName: string;
@@ -36,10 +35,10 @@ export default function AddToCartButton({
   bundleDiscountPct?: number | null;
   buyerNotePrompt?: string | null;
   buyerNoteRequired?: boolean;
+  buyerNote?: string;
 }) {
   const { addItem, clearCart, openCart, items, sellerDisplayName: cartSellerName } = useCart();
   const [showConflict, setShowConflict] = useState(false);
-  const [buyerNote, setBuyerNote] = useState("");
   const inCart = items.find((i) => i.listingId === listingId)?.quantity ?? 0;
   const atMax = inCart >= maxQty;
 
@@ -75,25 +74,6 @@ export default function AddToCartButton({
 
   return (
     <>
-      {buyerNotePrompt && (
-        <div className="space-y-1">
-          <Label htmlFor="cart-buyer-note">
-            {buyerNoteRequired ? (
-              <>{buyerNotePrompt} <span className="text-destructive">*</span></>
-            ) : (
-              <>{buyerNotePrompt} <span className="text-muted-foreground text-xs">(optional)</span></>
-            )}
-          </Label>
-          <Textarea
-            id="cart-buyer-note"
-            value={buyerNote}
-            onChange={(e) => setBuyerNote(e.target.value)}
-            placeholder={buyerNotePrompt}
-            rows={2}
-            maxLength={500}
-          />
-        </div>
-      )}
       <Button
         variant="outline"
         onClick={handleAdd}

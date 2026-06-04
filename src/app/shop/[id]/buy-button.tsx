@@ -3,26 +3,23 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Minus, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 export default function BuyButton({
   listingId,
   maxQty,
-  buyerNotePrompt,
+  buyerNote = "",
   buyerNoteRequired,
 }: {
   listingId: string;
   maxQty: number;
-  buyerNotePrompt?: string | null;
+  buyerNote?: string;
   buyerNoteRequired?: boolean;
 }) {
   const router = useRouter();
   const [qty, setQty] = useState(1);
   const [isPending, startTransition] = useTransition();
-  const [buyerNote, setBuyerNote] = useState("");
 
   function decrement() { setQty((q) => Math.max(1, q - 1)); }
   function increment() { setQty((q) => Math.min(maxQty, q + 1)); }
@@ -62,25 +59,6 @@ export default function BuyButton({
               <Plus size={14} />
             </button>
           </div>
-        </div>
-      )}
-      {buyerNotePrompt && (
-        <div className="space-y-1">
-          <Label htmlFor="buy-buyer-note">
-            {buyerNoteRequired ? (
-              <>{buyerNotePrompt} <span className="text-destructive">*</span></>
-            ) : (
-              <>{buyerNotePrompt} <span className="text-muted-foreground text-xs">(optional)</span></>
-            )}
-          </Label>
-          <Textarea
-            id="buy-buyer-note"
-            value={buyerNote}
-            onChange={(e) => setBuyerNote(e.target.value)}
-            placeholder={buyerNotePrompt}
-            rows={2}
-            maxLength={500}
-          />
         </div>
       )}
       <Button
