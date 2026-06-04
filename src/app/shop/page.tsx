@@ -211,18 +211,6 @@ export default async function ShopPage({
                 : "Check back soon — new plants are added regularly."}
             </p>
           )}
-          <p className="text-sm font-medium text-muted-foreground mb-3">Browse by category</p>
-          <div className="flex flex-wrap justify-center gap-2">
-            {(activeTab === "supplies" ? SUPPLY_CATEGORIES : PLANT_CATEGORIES).map((c) => (
-              <Link
-                key={c}
-                href={`/shop?${activeTab === "supplies" ? "tab=supplies&" : ""}category=${encodeURIComponent(c)}`}
-                className="inline-flex items-center px-3 py-1.5 rounded-full border text-sm hover:bg-muted hover:border-leaf hover:text-leaf transition-colors"
-              >
-                {c}
-              </Link>
-            ))}
-          </div>
         </div>
       ) : (
         <>
