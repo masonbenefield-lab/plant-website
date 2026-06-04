@@ -154,6 +154,18 @@ function ShippingSection({
     }
     setSaving(true);
     try {
+      const validRes = await fetch("/api/address/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const { valid, messages } = await validRes.json();
+      if (!valid) {
+        toast.error(messages?.length ? messages.join(" ") : "Address could not be verified. Please check and try again.");
+        setSaving(false);
+        return;
+      }
+
       const res = await fetch("/api/stripe/buyer-profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
