@@ -157,7 +157,7 @@ function GroundbreakerOnlyView({ groundbreakerCount, spotsLeft }: { groundbreake
 
           <a
             href="/signup"
-            className="inline-flex items-center justify-center rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-lg px-8 py-4 transition-colors shadow-lg shadow-amber-500/30 mb-4"
+            className="inline-flex items-center justify-center rounded-xl bg-terra hover:bg-[#B05A39] text-white font-bold text-lg px-8 py-4 transition-colors shadow-lg shadow-terra/30 mb-4"
           >
             Claim your spot →
           </a>
@@ -657,7 +657,7 @@ function FullPricingView({ groundbreakerCount }: { groundbreakerCount: number })
               </div>
               <a
                 href="/signup"
-                className="shrink-0 inline-flex items-center justify-center rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold text-sm px-5 py-2.5 transition-colors whitespace-nowrap"
+                className="shrink-0 inline-flex items-center justify-center rounded-xl bg-terra hover:bg-[#B05A39] text-white font-semibold text-sm px-5 py-2.5 transition-colors whitespace-nowrap"
               >
                 Claim your spot
               </a>
