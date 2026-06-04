@@ -34,7 +34,7 @@ export default async function DashboardPage() {
     { count: followingCount },
     { count: groundbreakerCount },
   ] = await Promise.all([
-    supabase.from("profiles").select("username, bio, avatar_url, stripe_onboarded, plan, garden_public, groundbreaker, groundbreaker_number, ship_from_address, return_policy_type, shipping_days, seller_terms_accepted_at").eq("id", user.id).single(),
+    supabase.from("profiles").select("username, display_name, bio, avatar_url, stripe_onboarded, plan, garden_public, groundbreaker, groundbreaker_number, ship_from_address, return_policy_type, shipping_days, seller_terms_accepted_at").eq("id", user.id).single(),
     supabase.from("listings").select("*", { count: "exact", head: true }).eq("seller_id", user.id).eq("status", "active"),
     supabase.from("auctions").select("*", { count: "exact", head: true }).eq("seller_id", user.id).eq("status", "active"),
     supabase.from("follows").select("*", { count: "exact", head: true }).eq("seller_id", user.id),
@@ -125,7 +125,7 @@ export default async function DashboardPage() {
         <div>
           <h1 className="text-2xl font-bold">My Account</h1>
           {profile?.username && (
-            <p className="text-muted-foreground text-sm mt-0.5">Welcome back, {profile.username}</p>
+            <p className="text-muted-foreground text-sm mt-0.5">Welcome back, {(profile as { display_name?: string | null }).display_name || profile.username}</p>
           )}
         </div>
 
@@ -189,7 +189,7 @@ export default async function DashboardPage() {
             )}
           </div>
           {profile?.username && (
-            <p className="text-muted-foreground text-sm mt-0.5">Welcome back, {profile.username}</p>
+            <p className="text-muted-foreground text-sm mt-0.5">Welcome back, {(profile as { display_name?: string | null }).display_name || profile.username}</p>
           )}
         </div>
         <Link href="/dashboard/create" className={cn(buttonVariants(), "bg-leaf hover:bg-forest gap-1")}>
