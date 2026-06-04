@@ -41,7 +41,7 @@ export default function DisputeThread({
   initialStatus: string;
   initialLastRepliedByRole: string | null;
   initialLastRepliedAt: string | null;
-  disputeCreatedAt: string;
+  disputeCreatedAt: string | null;
   currentUserId: string;
   isBuyer: boolean;
   buyerDisplayName: string;
@@ -69,8 +69,8 @@ export default function DisputeThread({
   const isSellersTurn = lastRepliedByRole === "buyer" || lastRepliedByRole === null;
   const isOthersTurn = isBuyer ? isSellersTurn : !isSellersTurn;
   const lastActivity = lastRepliedAt ?? disputeCreatedAt;
-  const timeoutDeadline = new Date(new Date(lastActivity).getTime() + 5 * 24 * 60 * 60 * 1000);
-  const daysLeft = Math.max(0, Math.ceil((timeoutDeadline.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+  const timeoutDeadline = lastActivity ? new Date(new Date(lastActivity).getTime() + 5 * 24 * 60 * 60 * 1000) : null;
+  const daysLeft = timeoutDeadline ? Math.max(0, Math.ceil((timeoutDeadline.getTime() - Date.now()) / (1000 * 60 * 60 * 24))) : 0;
 
   async function sendReply() {
     if (!reply.trim()) return;
