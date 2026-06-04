@@ -17,9 +17,9 @@ const PAGE_SIZE = 24;
 export default async function ShopPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; sort?: string; min?: string; max?: string; category?: string; on_sale?: string; location?: string; pot_size?: string; page?: string; tab?: string }>;
+  searchParams: Promise<{ q?: string; sort?: string; min?: string; max?: string; category?: string; on_sale?: string; location?: string; pot_size?: string; page?: string; tab?: string; stock?: string }>;
 }) {
-  const { q, sort, min, max, category, on_sale, location, pot_size, page: pageParam, tab: tabParam } = await searchParams;
+  const { q, sort, min, max, category, on_sale, location, pot_size, page: pageParam, tab: tabParam, stock } = await searchParams;
   const activeTab = tabParam === "supplies" ? "supplies" : "plants";
   const supplyOnly = SUPPLY_CATEGORIES.filter(c => c !== "Other") as string[];
   const page = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
@@ -47,10 +47,12 @@ export default async function ShopPage({
     locationSellerIds = locationSellers?.map((s) => s.id) ?? [];
   }
 
+  const showAll = stock === "all";
+
   let query = supabase
     .from("listings")
     .select("*", { count: "exact" })
-    .eq("status", "active")
+    .in("status", showAll ? ["active", "sold_out"] : ["active"])
     .or("category.neq.Hidden,category.is.null")
     .in("seller_id", onboardedSellerIds.length ? onboardedSellerIds : ["00000000-0000-0000-0000-000000000000"]);
 
@@ -96,6 +98,7 @@ export default async function ShopPage({
     if (sort && sort !== "newest") p.set("sort", sort);
     if (min) p.set("min", min);
     if (max) p.set("max", max);
+    if (showAll) p.set("stock", "all");
     if (t !== "plants") p.set("tab", t);
     const s = p.toString();
     return s ? `/shop?${s}` : "/shop";
@@ -111,10 +114,27 @@ export default async function ShopPage({
     if (on_sale === "1") params.set("on_sale", "1");
     if (location) params.set("location", location);
     if (pot_size) params.set("pot_size", pot_size);
+    if (showAll) params.set("stock", "all");
     if (activeTab !== "plants") params.set("tab", activeTab);
     if (p > 1) params.set("page", String(p));
     const s = params.toString();
     return s ? `/shop?${s}` : "/shop";
+  }
+
+  function buildStockHref(s: "all" | undefined) {
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    if (sort && sort !== "newest") params.set("sort", sort);
+    if (min) params.set("min", min);
+    if (max) params.set("max", max);
+    if (category) params.set("category", category);
+    if (on_sale === "1") params.set("on_sale", "1");
+    if (location) params.set("location", location);
+    if (pot_size) params.set("pot_size", pot_size);
+    if (activeTab !== "plants") params.set("tab", activeTab);
+    if (s) params.set("stock", s);
+    const str = params.toString();
+    return str ? `/shop?${str}` : "/shop";
   }
 
   const sellerIds = [...new Set(listings?.map((l) => l.seller_id) ?? [])];
@@ -165,7 +185,7 @@ export default async function ShopPage({
     (wRows ?? []).forEach((r) => { if (r.listing_id) wishlistedSet.add(r.listing_id); });
   }
 
-  const hasFilters = q || (sort && sort !== "newest") || min || max || category || on_sale === "1" || location;
+  const hasFilters = q || (sort && sort !== "newest") || min || max || category || on_sale === "1" || location || showAll;
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-10">
@@ -198,6 +218,25 @@ export default async function ShopPage({
       <Suspense>
         <RecentlyViewedStrip />
       </Suspense>
+
+      {/* In Stock / All toggle */}
+      <div className="flex items-center gap-2 mb-5">
+        <span className="text-xs text-muted-foreground font-medium">Show:</span>
+        <div className="flex rounded-lg border overflow-hidden text-xs font-medium">
+          <Link
+            href={buildStockHref(undefined)}
+            className={`px-3 py-1.5 transition-colors ${!showAll ? "bg-leaf text-white" : "text-muted-foreground hover:bg-muted"}`}
+          >
+            In Stock
+          </Link>
+          <Link
+            href={buildStockHref("all")}
+            className={`px-3 py-1.5 border-l transition-colors ${showAll ? "bg-leaf text-white" : "text-muted-foreground hover:bg-muted"}`}
+          >
+            All
+          </Link>
+        </div>
+      </div>
 
       {!sortedListings?.length ? (
         <div className="text-center py-16">
@@ -269,9 +308,15 @@ export default async function ShopPage({
                             </span>
                           )}
                         </div>
-                        <Badge variant="secondary" className="text-xs">
-                          {listing.quantity} left
-                        </Badge>
+                        {listing.status === "sold_out" ? (
+                          <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
+                            Out of stock
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="text-xs">
+                            {listing.quantity} left
+                          </Badge>
+                        )}
                       </div>
                       {listing.free_shipping ? (
                         <p className="text-xs text-leaf dark:text-sage font-medium mt-1.5">Free shipping</p>
