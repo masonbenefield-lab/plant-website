@@ -53,42 +53,50 @@ export async function PATCH(request: Request) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Create a baseline event so the task first appears ON startDate (not after it).
-  // We store a "last done" event `interval` days before startDate so that
-  // nextDue = startDate exactly. Skip today — the plant will show as due today
-  // and the user logs it themselves, avoiding a false auto-complete.
-  if (startDate) {
+  // Anchor the schedule to startDate (or today if not provided).
+  // Strategy: delete any future-dated events for these care types (they can only
+  // be stale baselines from a previous setup — real logged events can't be in the
+  // future). Then insert a new baseline at startDate - interval so the task first
+  // appears exactly on startDate.
+  {
     const d = new Date();
     const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const effectiveStart = startDate || todayStr;
+    const startLocal = new Date(effectiveStart + "T00:00:00");
 
-    if (startDate !== todayStr) {
-      const startLocal = new Date(startDate + "T00:00:00");
+    const intervalKeys = Object.keys(INTERVAL_TO_EVENT).filter((k) => {
+      const val = (body as Record<string, unknown>)[k];
+      return typeof val === "number" && val >= 1;
+    });
 
-      // Only create events for intervals that were explicitly set to a value >= 1
-      const intervalKeys = Object.keys(INTERVAL_TO_EVENT).filter((k) => {
-        const val = (body as Record<string, unknown>)[k];
-        return typeof val === "number" && val >= 1;
-      });
+    if (intervalKeys.length > 0) {
+      const eventTypes = intervalKeys.map((k) => INTERVAL_TO_EVENT[k]);
 
-      if (intervalKeys.length > 0) {
-        const events = plantIds.flatMap((plantId) =>
-          intervalKeys.map((k) => {
-            const intervalVal = (body as Record<string, unknown>)[k] as number;
-            // Compute the "last done" date as startDate - interval
-            const lastDone = new Date(startLocal.getTime() - intervalVal * 86400000);
-            const y = lastDone.getFullYear();
-            const m = String(lastDone.getMonth() + 1).padStart(2, "0");
-            const day = String(lastDone.getDate()).padStart(2, "0");
-            return {
-              plant_id:   plantId,
-              user_id:    user.id,
-              event_type: INTERVAL_TO_EVENT[k],
-              event_date: `${y}-${m}-${day}`,
-            };
-          })
-        );
-        await supabase.from("garden_events").insert(events);
-      }
+      // Delete future-dated events (stale baselines from previous setups with later startDates)
+      await supabase
+        .from("garden_events")
+        .delete()
+        .in("plant_id", plantIds)
+        .in("event_type", eventTypes)
+        .gt("event_date", todayStr);
+
+      // Insert new baseline: "last done" = startDate - interval → nextDue = startDate
+      const events = plantIds.flatMap((plantId) =>
+        intervalKeys.map((k) => {
+          const intervalVal = (body as Record<string, unknown>)[k] as number;
+          const lastDone = new Date(startLocal.getTime() - intervalVal * 86400000);
+          const y = lastDone.getFullYear();
+          const m = String(lastDone.getMonth() + 1).padStart(2, "0");
+          const day = String(lastDone.getDate()).padStart(2, "0");
+          return {
+            plant_id:   plantId,
+            user_id:    user.id,
+            event_type: INTERVAL_TO_EVENT[k],
+            event_date: `${y}-${m}-${day}`,
+          };
+        })
+      );
+      await supabase.from("garden_events").insert(events);
     }
   }
 

@@ -1036,6 +1036,15 @@ function IntervalsModal({
             </div>
           </div>
           <DialogFooter showCloseButton>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setValues(Object.fromEntries(INTERVAL_FIELDS.map(({ key }) => [key, "0"])));
+                setStartDate(todayStr());
+              }}
+            >
+              Clear all
+            </Button>
             <Button onClick={saveIntervals} disabled={saving} className="bg-leaf hover:bg-forest text-white">
               {saving ? "Saving…" : "Save intervals"}
             </Button>
