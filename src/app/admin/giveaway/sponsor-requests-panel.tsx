@@ -12,8 +12,8 @@ interface Request {
   user_id: string;
   item_name: string;
   message: string | null;
-  status: "open" | "closed";
-  created_at: string;
+  status: string | null;
+  created_at: string | null;
 }
 
 interface Profile {
@@ -82,7 +82,7 @@ export function SponsorRequestsPanel({
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold truncate">{req.item_name}</p>
                         <p className="text-xs text-muted-foreground">
-                          {name} · {new Date(req.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                          {name}{req.created_at && <> · {new Date(req.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</>}
                         </p>
                       </div>
                       <span className={cn(

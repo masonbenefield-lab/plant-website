@@ -21,8 +21,8 @@ type Request = {
   user_id: string;
   item_name: string;
   message: string | null;
-  status: "open" | "closed";
-  created_at: string;
+  status: string | null;
+  created_at: string | null;
 };
 
 type Profile = {
