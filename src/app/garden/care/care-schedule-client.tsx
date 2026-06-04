@@ -6,7 +6,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
-  Droplets, Leaf, Flower2, Scissors, Pencil, Check, ChevronDown,
+  Droplets, Leaf, Flower2, Scissors, Pencil, Check, ChevronDown, ChevronLeft, ChevronRight,
   StickyNote, Plus, Search, X, Syringe, Wheat,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -291,6 +291,9 @@ function DoneReminderRow({ reminder }: { reminder: ReminderEntry }) {
 
 // ─── WeekStrip (self-contained: strip + day panel + logging state) ────────────
 
+type LoggedEntry    = { entry: CareEntry;    actualDay: number };
+type LoggedReminder = { reminder: ReminderEntry; actualDay: number };
+
 function WeekStrip({
   entries, reminders, onLogged, onReminderCompleted,
 }: {
@@ -299,30 +302,51 @@ function WeekStrip({
   onLogged: (plantId: string, careType: string) => void;
   onReminderCompleted: (id: string) => void;
 }) {
-  const [selectedDay, setSelectedDay] = useState<number | null>(0);
-  const [loggedKeys, setLoggedKeys] = useState<Set<string>>(new Set());
+  // weekOffset: 0 = this week, -7 = last week, -14 = two weeks ago …
+  const [weekOffset, setWeekOffset]   = useState(0);
+  const [selectedDay, setSelectedDay] = useState<number | null>(0); // index 0–6 within strip
+  const [loggedKeys, setLoggedKeys]   = useState<Set<string>>(new Set());
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
+  // Explicit done lists persist across router.refresh() (unlike derived values)
+  const [doneEntryList, setDoneEntryList]       = useState<LoggedEntry[]>([]);
+  const [doneReminderList, setDoneReminderList] = useState<LoggedReminder[]>([]);
   const [panelSelected, setPanelSelected] = useState<Set<string>>(new Set());
-  const [bulkLogging, setBulkLogging] = useState(false);
+  const [bulkLogging, setBulkLogging]     = useState(false);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // Strip day counts — overdue + due-today count toward day 0
+  const isCurrentWeek = weekOffset === 0;
+
+  // Overdue task count (for the "missed tasks" chip when on current week)
+  const overdueCount = isCurrentWeek
+    ? entries.filter((e) => e.daysUntilDue < 0 && !loggedKeys.has(`${e.plantId}-${e.careType}`)).length
+    : 0;
+
+  // Strip days: actual offset from today = weekOffset + i
   const days = Array.from({ length: 7 }, (_, i) => {
-    const date = addDays(today, i);
+    const actualOffset = weekOffset + i;
+    const date = addDays(today, actualOffset);
+    const isPast  = actualOffset < 0;
+    const isToday = actualOffset === 0;
+
     const careCount = entries.reduce((sum, e) => {
       if (loggedKeys.has(`${e.plantId}-${e.careType}`)) return sum;
-      if (e.daysUntilDue <= 0) return i === 0 ? sum + 1 : sum;
-      return sum + (getStripDays(e.daysUntilDue, e.interval).has(i) ? 1 : 0);
+      if (isPast) {
+        // Past days: only show tasks whose exact due date is this day
+        return e.daysUntilDue === actualOffset ? sum + 1 : sum;
+      }
+      // Today / future: use interval-based calculation (overdue tasks float to next occurrence)
+      return sum + (getStripDays(e.daysUntilDue, e.interval).has(actualOffset) ? 1 : 0);
     }, 0);
+
     const reminderCount = reminders.filter((r) => {
       if (completedIds.has(r.id)) return false;
-      if (r.daysUntilDue <= 0) return i === 0;
-      return r.daysUntilDue === i;
+      return r.daysUntilDue === actualOffset;
     }).length;
+
     return {
-      offset: i,
+      i, actualOffset, isPast, isToday,
       dayLabel: date.toLocaleDateString("en-US", { weekday: "short" }),
       dateNum: date.getDate(),
       monthLabel: date.toLocaleDateString("en-US", { month: "short" }),
@@ -332,28 +356,32 @@ function WeekStrip({
 
   const weekTotal = days.reduce((s, d) => s + d.count, 0);
 
-  // Day panel content for selected day
-  const dayEntries = selectedDay !== null
+  // Actual calendar offset for the selected strip day
+  const actualSelectedOffset = selectedDay !== null ? weekOffset + selectedDay : null;
+
+  // Day panel: active tasks
+  const dayEntries = actualSelectedOffset !== null
     ? entries.filter((e) => {
-        if (e.daysUntilDue <= 0) return selectedDay === 0;
-        return getStripDays(e.daysUntilDue, e.interval).has(selectedDay);
+        if (loggedKeys.has(`${e.plantId}-${e.careType}`)) return false;
+        if (actualSelectedOffset < 0) return e.daysUntilDue === actualSelectedOffset;
+        return getStripDays(e.daysUntilDue, e.interval).has(actualSelectedOffset);
       })
     : [];
-  const dayReminders = selectedDay !== null
-    ? reminders.filter((r) => {
-        if (r.daysUntilDue <= 0) return selectedDay === 0;
-        return r.daysUntilDue === selectedDay;
-      })
+  const dayReminders = actualSelectedOffset !== null
+    ? reminders.filter((r) => !completedIds.has(r.id) && r.daysUntilDue === actualSelectedOffset)
     : [];
 
-  const activeEntries  = dayEntries.filter((e) => !loggedKeys.has(`${e.plantId}-${e.careType}`));
-  const doneEntries    = dayEntries.filter((e) => loggedKeys.has(`${e.plantId}-${e.careType}`));
-  const activeReminders = dayReminders.filter((r) => !completedIds.has(r.id));
-  const doneReminders  = dayReminders.filter((r) => completedIds.has(r.id));
+  // Done items: driven by explicit lists so they survive router.refresh()
+  const currentDoneEntries = actualSelectedOffset !== null
+    ? doneEntryList.filter((d) => d.actualDay === actualSelectedOffset).map((d) => d.entry)
+    : [];
+  const currentDoneReminders = actualSelectedOffset !== null
+    ? doneReminderList.filter((d) => d.actualDay === actualSelectedOffset).map((d) => d.reminder)
+    : [];
 
-  const hasActive = activeEntries.length > 0 || activeReminders.length > 0;
-  const hasDone   = doneEntries.length > 0 || doneReminders.length > 0;
-  const totalActive = activeEntries.length + activeReminders.length;
+  const hasActive = dayEntries.length > 0 || dayReminders.length > 0;
+  const hasDone   = currentDoneEntries.length > 0 || currentDoneReminders.length > 0;
+  const totalActive = dayEntries.length + dayReminders.length;
 
   function togglePanel(key: string) {
     setPanelSelected((prev) => {
@@ -365,12 +393,20 @@ function WeekStrip({
 
   function handleLog(plantId: string, careType: string) {
     const key = `${plantId}-${careType}`;
+    if (actualSelectedOffset !== null) {
+      const entry = entries.find((e) => e.plantId === plantId && e.careType === careType);
+      if (entry) setDoneEntryList((p) => [...p, { entry, actualDay: actualSelectedOffset }]);
+    }
     setLoggedKeys((p) => new Set([...p, key]));
     setPanelSelected((p) => { const n = new Set(p); n.delete(key); return n; });
     onLogged(plantId, careType);
   }
 
   function handleReminderDone(id: string) {
+    if (actualSelectedOffset !== null) {
+      const reminder = reminders.find((r) => r.id === id);
+      if (reminder) setDoneReminderList((p) => [...p, { reminder, actualDay: actualSelectedOffset }]);
+    }
     setCompletedIds((p) => new Set([...p, id]));
     setPanelSelected((p) => { const n = new Set(p); n.delete(`reminder-${id}`); return n; });
     onReminderCompleted(id);
@@ -380,20 +416,34 @@ function WeekStrip({
     setBulkLogging(true);
     const careKeys = [...panelSelected].filter((k) => !k.startsWith("reminder-"));
     const rIds = [...panelSelected].filter((k) => k.startsWith("reminder-")).map((k) => k.slice(9));
-    const toLog = activeEntries.filter((e) => careKeys.includes(`${e.plantId}-${e.careType}`)).map((e) => ({ plantId: e.plantId, careType: e.careType }));
+    const toLog = dayEntries.filter((e) => careKeys.includes(`${e.plantId}-${e.careType}`)).map((e) => ({ plantId: e.plantId, careType: e.careType }));
     let logged = 0;
     if (toLog.length > 0) {
       const res = await fetch("/api/garden/bulk-log-care", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items: toLog }) });
       if (res.ok) {
         const { logged: n } = await res.json() as { logged: number };
         logged += n;
+        if (actualSelectedOffset !== null) {
+          toLog.forEach(({ plantId, careType }) => {
+            const entry = entries.find((e) => e.plantId === plantId && e.careType === careType);
+            if (entry) setDoneEntryList((p) => [...p, { entry, actualDay: actualSelectedOffset }]);
+          });
+        }
         setLoggedKeys((p) => new Set([...p, ...toLog.map((i) => `${i.plantId}-${i.careType}`)]));
         toLog.forEach(({ plantId, careType }) => onLogged(plantId, careType));
       }
     }
     for (const id of rIds) {
       const res = await fetch(`/api/garden/reminders/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ completed: true }) });
-      if (res.ok) { logged++; setCompletedIds((p) => new Set([...p, id])); onReminderCompleted(id); }
+      if (res.ok) {
+        logged++;
+        if (actualSelectedOffset !== null) {
+          const reminder = reminders.find((r) => r.id === id);
+          if (reminder) setDoneReminderList((p) => [...p, { reminder, actualDay: actualSelectedOffset }]);
+        }
+        setCompletedIds((p) => new Set([...p, id]));
+        onReminderCompleted(id);
+      }
     }
     setBulkLogging(false);
     if (logged > 0) { toast.success(`Logged ${logged} task${logged !== 1 ? "s" : ""}`); setPanelSelected(new Set()); }
@@ -401,70 +451,142 @@ function WeekStrip({
 
   async function logAll() {
     setBulkLogging(true);
-    const toLog = activeEntries.map((e) => ({ plantId: e.plantId, careType: e.careType }));
+    const toLog = dayEntries.map((e) => ({ plantId: e.plantId, careType: e.careType }));
     let logged = 0;
     if (toLog.length > 0) {
       const res = await fetch("/api/garden/bulk-log-care", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items: toLog }) });
       if (res.ok) {
         const { logged: n } = await res.json() as { logged: number };
         logged += n;
+        if (actualSelectedOffset !== null) {
+          toLog.forEach(({ plantId, careType }) => {
+            const entry = entries.find((e) => e.plantId === plantId && e.careType === careType);
+            if (entry) setDoneEntryList((p) => [...p, { entry, actualDay: actualSelectedOffset }]);
+          });
+        }
         setLoggedKeys((p) => new Set([...p, ...toLog.map((i) => `${i.plantId}-${i.careType}`)]));
         toLog.forEach(({ plantId, careType }) => onLogged(plantId, careType));
       }
     }
-    for (const r of activeReminders) {
+    for (const r of dayReminders) {
       const res = await fetch(`/api/garden/reminders/${r.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ completed: true }) });
-      if (res.ok) { logged++; setCompletedIds((p) => new Set([...p, r.id])); onReminderCompleted(r.id); }
+      if (res.ok) {
+        logged++;
+        if (actualSelectedOffset !== null) setDoneReminderList((p) => [...p, { reminder: r, actualDay: actualSelectedOffset }]);
+        setCompletedIds((p) => new Set([...p, r.id]));
+        onReminderCompleted(r.id);
+      }
     }
     setBulkLogging(false);
     if (logged > 0) toast.success(`Logged ${logged} task${logged !== 1 ? "s" : ""}`);
     setPanelSelected(new Set());
   }
 
-  function dayHeading(offset: number) {
-    if (offset === 0) return "Today";
-    if (offset === 1) return "Tomorrow";
-    return addDays(today, offset).toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
+  function navigate(dir: -1 | 1) {
+    const next = Math.max(-21, Math.min(0, weekOffset + dir * 7));
+    setWeekOffset(next);
+    setSelectedDay(dir === -1 ? 6 : 0); // land on last day when going back, first when going forward
+    setPanelSelected(new Set());
+  }
+
+  function goToToday() {
+    setWeekOffset(0);
+    setSelectedDay(0);
+    setPanelSelected(new Set());
+  }
+
+  function dayHeading(actualOffset: number) {
+    if (actualOffset === 0) return "Today";
+    if (actualOffset === 1) return "Tomorrow";
+    if (actualOffset === -1) return "Yesterday";
+    return addDays(today, actualOffset).toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
   }
 
   return (
     <div className="space-y-3">
+      {/* Overdue chip — only when on current week and tasks are overdue */}
+      {overdueCount > 0 && (
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-1.5 text-xs font-medium text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-1.5 hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors"
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+          {overdueCount} task{overdueCount !== 1 ? "s" : ""} missed from earlier — view past days
+          <ChevronLeft size={12} />
+        </button>
+      )}
+
       {/* 7-day strip */}
       <div className="rounded-xl border bg-card p-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-semibold">Week ahead</p>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => navigate(-1)}
+              disabled={weekOffset <= -21}
+              className="p-1 rounded-md hover:bg-muted/60 disabled:opacity-30 transition-colors"
+              title="Previous week"
+            >
+              <ChevronLeft size={15} />
+            </button>
+            <button
+              onClick={() => navigate(1)}
+              disabled={isCurrentWeek}
+              className="p-1 rounded-md hover:bg-muted/60 disabled:opacity-30 transition-colors"
+              title="Next week"
+            >
+              <ChevronRight size={15} />
+            </button>
+            {isCurrentWeek ? (
+              <p className="text-sm font-semibold ml-1">Week ahead</p>
+            ) : (
+              <>
+                <p className="text-sm font-semibold ml-1 text-muted-foreground">
+                  {fmtShort(addDays(today, weekOffset))} – {fmtShort(addDays(today, weekOffset + 6))}
+                </p>
+                <button onClick={goToToday} className="ml-2 text-xs font-medium text-leaf hover:text-forest transition-colors">
+                  Back to today
+                </button>
+              </>
+            )}
+          </div>
           {weekTotal === 0
-            ? <span className="text-xs text-leaf font-medium">All clear ✓</span>
-            : <span className="text-xs text-muted-foreground">{weekTotal} remaining</span>
+            ? <span className="text-xs text-leaf font-medium">{isCurrentWeek ? "All clear ✓" : "Nothing missed ✓"}</span>
+            : <span className="text-xs text-muted-foreground">{weekTotal} {isCurrentWeek ? "remaining" : "missed"}</span>
           }
         </div>
+
         <div className="grid grid-cols-7 gap-1">
-          {days.map(({ offset, dayLabel, dateNum, monthLabel, count }) => {
-            const isToday    = offset === 0;
-            const isSelected = selectedDay === offset;
+          {days.map(({ i, actualOffset, isPast, isToday, dayLabel, dateNum, monthLabel, count }) => {
+            const isSelected = selectedDay === i;
             const clickable  = count > 0 || isToday;
             return (
               <button
-                key={offset}
-                onClick={() => setSelectedDay(isSelected ? null : offset)}
+                key={i}
+                onClick={() => clickable ? setSelectedDay(isSelected ? null : i) : undefined}
                 disabled={!clickable}
                 className={cn(
                   "flex flex-col items-center gap-1 rounded-lg py-2 px-0.5 transition-colors",
                   isToday && !isSelected && "bg-muted/60",
                   isSelected && "bg-leaf/10 ring-1 ring-leaf/40",
                   clickable && !isSelected && "hover:bg-muted/40 cursor-pointer",
-                  !clickable && "cursor-default opacity-60"
+                  !clickable && "cursor-default opacity-50"
                 )}
               >
-                <span className={cn("text-[10px] font-medium", isToday || isSelected ? "text-foreground" : "text-muted-foreground")}>{dayLabel}</span>
-                <span className="text-[11px] text-muted-foreground">{monthLabel} {dateNum}</span>
+                <span className={cn("text-[10px] font-medium", isToday || isSelected ? "text-foreground" : isPast ? "text-muted-foreground/70" : "text-muted-foreground")}>
+                  {isToday ? "Today" : dayLabel}
+                </span>
+                <span className={cn("text-[11px]", isPast ? "text-muted-foreground/60" : "text-muted-foreground")}>{monthLabel} {dateNum}</span>
                 {count > 0 ? (
                   <span className={cn("text-[11px] font-bold w-6 h-6 rounded-full flex items-center justify-center",
-                    isSelected ? "bg-leaf text-white" : isToday ? "bg-amber-500 text-white" : "bg-leaf text-white")}>
+                    isSelected ? "bg-leaf text-white"
+                    : isPast    ? "bg-amber-500 text-white"
+                    : isToday   ? "bg-amber-500 text-white"
+                    : "bg-leaf text-white"
+                  )}>
                     {count}
                   </span>
                 ) : (
-                  <span className="text-[11px] text-muted-foreground/30 leading-6">—</span>
+                  <span className="text-[11px] text-muted-foreground/25 leading-6">—</span>
                 )}
                 {clickable && (
                   <ChevronDown size={10} className={cn("text-muted-foreground/50 transition-transform", isSelected && "rotate-180")} />
@@ -476,13 +598,17 @@ function WeekStrip({
       </div>
 
       {/* Day panel */}
-      {selectedDay !== null && (
+      {selectedDay !== null && actualSelectedOffset !== null && (
         <div className="rounded-xl border bg-card p-4 space-y-3">
           <div className="flex items-center justify-between gap-2">
             <div>
-              <span className="text-sm font-semibold">{dayHeading(selectedDay)}</span>
+              <span className={cn("text-sm font-semibold", actualSelectedOffset < 0 && "text-amber-700 dark:text-amber-400")}>
+                {dayHeading(actualSelectedOffset)}
+              </span>
               {totalActive > 0 && (
-                <span className="text-xs text-muted-foreground ml-1.5">· {totalActive} task{totalActive !== 1 ? "s" : ""}</span>
+                <span className="text-xs text-muted-foreground ml-1.5">
+                  · {totalActive} {actualSelectedOffset < 0 ? "missed" : `task${totalActive !== 1 ? "s" : ""}`}
+                </span>
               )}
             </div>
             {hasActive && (
@@ -500,16 +626,16 @@ function WeekStrip({
 
           {hasActive ? (
             <div className="space-y-1.5">
-              {activeEntries.map((e, i) => {
+              {dayEntries.map((e, idx) => {
                 const key = `${e.plantId}-${e.careType}`;
                 return (
-                  <DayTaskRow key={`${key}-${i}`} entry={e}
+                  <DayTaskRow key={`${key}-${idx}`} entry={e}
                     selected={panelSelected.has(key)}
                     onToggle={() => togglePanel(key)}
                     onLog={() => handleLog(e.plantId, e.careType)} />
                 );
               })}
-              {activeReminders.map((r) => (
+              {dayReminders.map((r) => (
                 <DayReminderRow key={r.id} reminder={r}
                   selected={panelSelected.has(`reminder-${r.id}`)}
                   onToggle={() => togglePanel(`reminder-${r.id}`)}
@@ -518,15 +644,17 @@ function WeekStrip({
             </div>
           ) : (
             !hasDone && (
-              <p className="text-xs text-leaf text-center py-2">Nothing scheduled for this day ✓</p>
+              <p className="text-xs text-leaf text-center py-2">
+                {actualSelectedOffset < 0 ? "Nothing missed on this day ✓" : "Nothing scheduled for this day ✓"}
+              </p>
             )
           )}
 
           {hasDone && (
             <div className={cn("space-y-1.5", hasActive && "border-t pt-3 mt-1")}>
               <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Completed</p>
-              {doneEntries.map((e, i) => <DoneEntryRow key={`${e.plantId}-${e.careType}-${i}`} entry={e} />)}
-              {doneReminders.map((r) => <DoneReminderRow key={r.id} reminder={r} />)}
+              {currentDoneEntries.map((e, idx) => <DoneEntryRow key={`${e.plantId}-${e.careType}-${idx}`} entry={e} />)}
+              {currentDoneReminders.map((r) => <DoneReminderRow key={r.id} reminder={r} />)}
             </div>
           )}
         </div>
