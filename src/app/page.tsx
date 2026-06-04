@@ -8,6 +8,7 @@ import type { Database } from "@/lib/supabase/types";
 import { centsToDisplay } from "@/lib/stripe";
 import { GROUNDBREAKER_CAP } from "@/lib/plan-limits";
 import { HeroCategoryCarousel } from "@/components/hero-category-carousel";
+import GardenFeatureCards from "@/components/garden-feature-cards";
 
 const features = [
   { icon: "🌿", title: "Build Your Storefront",       desc: "Create a personal shop page with your bio, profile photo, and all your listings in one place.",    href: "/signup" },
@@ -213,27 +214,7 @@ export default async function LandingPage() {
               Log every plant you own, track care events, and watch your collection grow over time. No purchase needed — just sign up and start adding plants.
             </p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
-            {[
-              { icon: "📸", title: "Photo journal",     desc: "Add photos over time and watch your plants grow. Multiple images per plant." },
-              { icon: "🗓️", title: "Care schedule",     desc: "Set intervals for watering, fertilizing, repotting, and pruning." },
-              { icon: "📋", title: "Event log",         desc: "Record every care event with notes. Build a full history for each plant." },
-              { icon: "🌍", title: "Share your garden", desc: "Make your garden public and share the link. Others can browse your collection." },
-              { icon: "💚", title: "Wishlist",          desc: "Build a list of plants you're hunting for and share it with friends." },
-              { icon: "✅", title: "Verified origins",  desc: "Tag where a plant came from — if it's a Plantet seller, they can verify it publicly." },
-            ].map((f) => (
-              <div key={f.title} className="bg-card rounded-2xl border p-5 shadow-sm">
-                <span className="text-2xl mb-3 block">{f.icon}</span>
-                <p className="font-semibold mb-1">{f.title}</p>
-                <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
-              </div>
-            ))}
-          </div>
-          <div className="text-center">
-            <Link href="/signup" className={cn(buttonVariants({ size: "lg" }), "bg-leaf hover:bg-forest text-white font-semibold px-10")}>
-              Start your garden log — it&apos;s free
-            </Link>
-          </div>
+          <GardenFeatureCards />
         </div>
       </section>
 
