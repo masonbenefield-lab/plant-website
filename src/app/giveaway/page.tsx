@@ -246,7 +246,7 @@ export default async function GiveawayPage() {
 
       {/* Referral card */}
       {user && referralCode ? (
-        <ReferralCard referralCode={referralCode} bonusEntries={bonusEntriesThisMonth} />
+        <ReferralCard referralCode={referralCode} bonusEntries={bonusEntriesThisMonth} alreadyEntered={alreadyEntered} />
       ) : !user ? (
         <div className="rounded-2xl border border-dashed p-6 text-center space-y-2">
           <p className="font-semibold flex items-center justify-center gap-2">

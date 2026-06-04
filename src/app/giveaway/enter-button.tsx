@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, CheckCircle2, Copy, Check, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 const ELIGIBLE = ["US", "CA"];
 
@@ -28,6 +29,7 @@ export function EnterButton({ monthLabel, initialEntered, referralCode, userCoun
   const [country, setCountry] = useState(userCountry ?? null);
   const [showPicker, setShowPicker] = useState(false);
   const [savingCountry, setSavingCountry] = useState(false);
+  const [agreedToRules, setAgreedToRules] = useState(false);
 
   const isEligible = country ? ELIGIBLE.includes(country) : null; // null = unknown
 
@@ -148,14 +150,31 @@ export function EnterButton({ monthLabel, initialEntered, referralCode, userCoun
 
   // Default: enter button
   return (
-    <Button
-      size="lg"
-      className="bg-leaf hover:bg-forest text-white px-10 text-base"
-      onClick={handleEnterClick}
-      disabled={isPending}
-    >
-      {isPending ? <Loader2 size={16} className="animate-spin mr-2" /> : null}
-      Enter to Win
-    </Button>
+    <div className="space-y-3">
+      <label className="flex items-start gap-2.5 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={agreedToRules}
+          onChange={(e) => setAgreedToRules(e.target.checked)}
+          className="mt-0.5 h-4 w-4 rounded border-input accent-leaf cursor-pointer shrink-0"
+        />
+        <span className="text-xs text-muted-foreground leading-relaxed">
+          I agree to the{" "}
+          <Link href="/giveaway/rules" target="_blank" className="underline hover:text-foreground font-medium">
+            Official Giveaway Rules
+          </Link>
+          . No purchase necessary. Open to US and Canada residents 18+.
+        </span>
+      </label>
+      <Button
+        size="lg"
+        className="bg-leaf hover:bg-forest text-white px-10 text-base disabled:opacity-50"
+        onClick={handleEnterClick}
+        disabled={isPending || !agreedToRules}
+      >
+        {isPending ? <Loader2 size={16} className="animate-spin mr-2" /> : null}
+        Enter to Win
+      </Button>
+    </div>
   );
 }

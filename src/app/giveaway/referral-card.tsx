@@ -7,9 +7,11 @@ import { Card, CardContent } from "@/components/ui/card";
 export function ReferralCard({
   referralCode,
   bonusEntries,
+  alreadyEntered,
 }: {
   referralCode: string;
   bonusEntries: number;
+  alreadyEntered: boolean;
 }) {
   const [copied, setCopied] = useState(false);
 
@@ -38,18 +40,24 @@ export function ReferralCard({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="flex-1 min-w-0 px-3 py-2 text-xs rounded-md border bg-muted text-muted-foreground truncate font-mono">
-            {referralUrl}
+        {alreadyEntered ? (
+          <div className="flex items-center gap-2">
+            <div className="flex-1 min-w-0 px-3 py-2 text-xs rounded-md border bg-muted text-muted-foreground truncate font-mono">
+              {referralUrl}
+            </div>
+            <button
+              onClick={handleCopy}
+              className="shrink-0 flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-md border border-input bg-background hover:bg-muted transition-colors"
+            >
+              {copied ? <Check size={13} className="text-leaf" /> : <Copy size={13} />}
+              {copied ? "Copied!" : "Copy"}
+            </button>
           </div>
-          <button
-            onClick={handleCopy}
-            className="shrink-0 flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-md border border-input bg-background hover:bg-muted transition-colors"
-          >
-            {copied ? <Check size={13} className="text-leaf" /> : <Copy size={13} />}
-            {copied ? "Copied!" : "Copy"}
-          </button>
-        </div>
+        ) : (
+          <div className="px-3 py-2.5 rounded-md border border-dashed text-xs text-muted-foreground text-center">
+            🔒 Enter this month&apos;s giveaway to unlock your referral link
+          </div>
+        )}
 
         {bonusEntries > 0 && (
           <div className="flex items-center gap-2 rounded-lg bg-[#EBF0E6] dark:bg-forest/20 px-3 py-2">
