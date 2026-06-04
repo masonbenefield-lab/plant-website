@@ -17,6 +17,7 @@ import { LocalDate } from "@/components/local-date";
 import type { Database } from "@/lib/supabase/types";
 import { AuctionRealtimeRefresh } from "./auction-realtime-refresh";
 import { ActiveBidsList } from "./active-bids-list";
+import { AuctionHelpDialog } from "./auction-help-dialog";
 
 const PAGE_SIZE = 25;
 
@@ -168,7 +169,10 @@ export default async function DashboardAuctionsPage({
       <AuctionRealtimeRefresh sellerId={user.id} />
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Auctions</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-bold">Auctions</h1>
+          <AuctionHelpDialog />
+        </div>
         {tab === "selling" && (
           stripeOnboarded ? (
             <NewAuctionDialog
