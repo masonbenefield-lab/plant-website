@@ -45,7 +45,7 @@ export async function POST(req: Request) {
   // Count activations per user by type (plant_added=+1, first_sale=+2)
   const plantAddedCounts: Record<string, number> = {};
   const firstSaleCounts: Record<string, number> = {};
-  for (const a of (activations ?? []) as { referrer_id: string; type: string }[]) {
+  for (const a of (activations ?? []) as unknown as { referrer_id: string; type: string }[]) {
     if (a.type === "first_sale") {
       firstSaleCounts[a.referrer_id] = (firstSaleCounts[a.referrer_id] ?? 0) + 1;
     } else {
