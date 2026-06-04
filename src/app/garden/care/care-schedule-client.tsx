@@ -904,10 +904,10 @@ function IntervalsModal({
             <p className="text-xs text-muted-foreground -mt-1">Enter 0 to remove an interval.</p>
             <div className="border-t pt-3 space-y-1.5">
               <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground w-36 shrink-0">📅 Schedule from</span>
+                <span className="text-sm text-muted-foreground w-36 shrink-0">📅 First due</span>
                 <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="h-8 text-sm flex-1 min-w-0" />
               </div>
-              <p className="text-xs text-muted-foreground pl-[152px]">Intervals count from this date. Clear to leave open-ended.</p>
+              <p className="text-xs text-muted-foreground pl-[152px]">Task first appears on this date. Leave blank to show immediately.</p>
             </div>
           </div>
           <DialogFooter showCloseButton>

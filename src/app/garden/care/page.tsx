@@ -71,7 +71,7 @@ export default async function CareSchedulePage() {
       const lastDateStr = lastEventMap[plant.id]?.[eventKey] ?? null;
       let daysUntilDue: number;
       if (lastDateStr) {
-        const last = new Date(lastDateStr);
+        const last = new Date(lastDateStr + "T00:00:00");
         last.setHours(0, 0, 0, 0);
         const nextDue = new Date(last.getTime() + interval * 86400000);
         daysUntilDue = Math.round((nextDue.getTime() - today.getTime()) / 86400000);

@@ -53,21 +53,39 @@ export async function PATCH(request: Request) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Log a care event on startDate for each interval that was set, for each plant.
-  // Only create events for past dates — today's date would auto-populate the
-  // Completed section and make it look like care was already done today.
+  // Create a baseline event so the task first appears ON startDate (not after it).
+  // We store a "last done" event `interval` days before startDate so that
+  // nextDue = startDate exactly. Skip today — the plant will show as due today
+  // and the user logs it themselves, avoiding a false auto-complete.
   if (startDate) {
-    const todayStr = new Date().toISOString().split("T")[0];
-    if (startDate < todayStr) {
-      const intervalKeys = Object.keys(INTERVAL_TO_EVENT).filter((k) => k in body);
+    const d = new Date();
+    const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+    if (startDate !== todayStr) {
+      const startLocal = new Date(startDate + "T00:00:00");
+
+      // Only create events for intervals that were explicitly set to a value >= 1
+      const intervalKeys = Object.keys(INTERVAL_TO_EVENT).filter((k) => {
+        const val = (body as Record<string, unknown>)[k];
+        return typeof val === "number" && val >= 1;
+      });
+
       if (intervalKeys.length > 0) {
         const events = plantIds.flatMap((plantId) =>
-          intervalKeys.map((k) => ({
-            plant_id:   plantId,
-            user_id:    user.id,
-            event_type: INTERVAL_TO_EVENT[k],
-            event_date: startDate,
-          }))
+          intervalKeys.map((k) => {
+            const intervalVal = (body as Record<string, unknown>)[k] as number;
+            // Compute the "last done" date as startDate - interval
+            const lastDone = new Date(startLocal.getTime() - intervalVal * 86400000);
+            const y = lastDone.getFullYear();
+            const m = String(lastDone.getMonth() + 1).padStart(2, "0");
+            const day = String(lastDone.getDate()).padStart(2, "0");
+            return {
+              plant_id:   plantId,
+              user_id:    user.id,
+              event_type: INTERVAL_TO_EVENT[k],
+              event_date: `${y}-${m}-${day}`,
+            };
+          })
         );
         await supabase.from("garden_events").insert(events);
       }
