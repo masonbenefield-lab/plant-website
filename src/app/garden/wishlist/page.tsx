@@ -46,7 +46,7 @@ export default async function WishlistPage() {
 
       <GardenTabs />
 
-      <WishlistClient initialItems={items ?? []} />
+      <WishlistClient initialItems={(items ?? []) as Parameters<typeof WishlistClient>[0]["initialItems"]} />
     </div>
   );
 }
