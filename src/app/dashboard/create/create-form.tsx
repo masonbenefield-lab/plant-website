@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils";
 
 type ItemType = "plant" | "supply";
 type ShippingMode = "" | "free" | "flat";
-type SizeEntry = { id: number; potSize: string; quantity: string; listInShop: boolean; shopPrice: string; shopQuantity: string; shippingMode: ShippingMode; shippingCost: string };
+type SizeEntry = { id: number; potSize: string; quantity: string; listInShop: boolean; shopPrice: string; shopQuantity: string; shippingMode: ShippingMode; shippingCost: string; sizeImages: string[] };
 
 let nextId = 1;
 
@@ -42,7 +42,10 @@ export default function CreateInventoryPage() {
   const [category, setCategory] = useState("Other");
   const [existingGroup, setExistingGroup] = useState<{ plant_name: string; count: number } | null>(null);
 
-  const [sizes, setSizes] = useState<SizeEntry[]>([{ id: 0, potSize: "", quantity: "1", listInShop: false, shopPrice: "", shopQuantity: "", shippingMode: "" as ShippingMode, shippingCost: "" }]);
+  const [sizes, setSizes] = useState<SizeEntry[]>([{ id: 0, potSize: "", quantity: "1", listInShop: false, shopPrice: "", shopQuantity: "", shippingMode: "" as ShippingMode, shippingCost: "", sizeImages: [] }]);
+  const [uploadingForSize, setUploadingForSize] = useState<number | null>(null);
+  const sizeFileRef = useRef<HTMLInputElement>(null);
+  const uploadTargetSizeId = useRef<number | null>(null);
   function switchType(type: ItemType) {
     setItemType(type);
     setCategory("Other");
@@ -50,7 +53,7 @@ export default function CreateInventoryPage() {
   }
 
   function addSize() {
-    setSizes(prev => [...prev, { id: nextId++, potSize: "", quantity: "1", weightOz: "", listInShop: false, shopPrice: "", shopQuantity: "", shippingMode: "" as ShippingMode, shippingCost: "" }]);
+    setSizes(prev => [...prev, { id: nextId++, potSize: "", quantity: "1", listInShop: false, shopPrice: "", shopQuantity: "", shippingMode: "" as ShippingMode, shippingCost: "", sizeImages: [] }]);
   }
 
   function removeSize(id: number) {
@@ -128,6 +131,33 @@ export default function CreateInventoryPage() {
     setUploading(false);
   }
 
+  async function uploadSizeImages(sizeId: number, files: FileList) {
+    const photoLimit = planLimits.photos;
+    const size = sizes.find(s => s.id === sizeId);
+    if (!size) return;
+    if (photoLimit !== null && size.sizeImages.length >= photoLimit) {
+      toast.error(`Your plan allows ${photoLimit} photos per listing.`);
+      return;
+    }
+    setUploadingForSize(sizeId);
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setUploadingForSize(null); return; }
+    const remaining = photoLimit !== null ? photoLimit - size.sizeImages.length : Infinity;
+    const toUpload = Array.from(files).slice(0, remaining);
+    const urls: string[] = [];
+    for (const rawFile of toUpload) {
+      const file = await compressImage(rawFile);
+      const path = `${user.id}/${Date.now()}-${file.name}`;
+      const { error } = await supabase.storage.from("listings").upload(path, file, { upsert: true });
+      if (error) { toast.error(`Upload failed: ${error.message}`); setUploadingForSize(null); return; }
+      const { data } = supabase.storage.from("listings").getPublicUrl(path);
+      urls.push(data.publicUrl);
+    }
+    setSizes(prev => prev.map(s => s.id === sizeId ? { ...s, sizeImages: [...s.sizeImages, ...urls] } : s));
+    setUploadingForSize(null);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const fields: [string, string][] = [
@@ -166,7 +196,7 @@ export default function CreateInventoryPage() {
       variety: itemType === "plant" ? (variety.trim() || null) : (s.potSize.trim() || null),
       quantity: Math.max(1, Number(s.quantity) || 1),
       description: description.trim() || null,
-      images: imageUrls,
+      images: s.sizeImages.length > 0 ? s.sizeImages : imageUrls,
       category: category || "Other",
       pot_size: itemType === "plant" ? (s.potSize || null) : null,
       free_shipping: s.listInShop && s.shippingMode === "free",
@@ -198,7 +228,7 @@ export default function CreateInventoryPage() {
             variety: itemType === "plant" ? (variety.trim() || null) : (s.potSize.trim() || null),
             quantity: listedQty,
             description: description.trim() || null,
-            images: imageUrls,
+            images: s.sizeImages.length > 0 ? s.sizeImages : imageUrls,
             category: category || "Other",
             pot_size: itemType === "plant" ? (s.potSize || null) : null,
             price_cents: dollarsToCents(s.shopPrice),
@@ -232,7 +262,7 @@ export default function CreateInventoryPage() {
     }
 
     setSaving(false);
-    const unitWord = itemType === "plant" ? "size" : "variant";
+    const unitWord = itemType === "plant" ? "size" : "option";
     if (sizes.length > 1) {
       toast.success(listedCount > 0 ? `${sizes.length} ${unitWord}s saved — ${listedCount} listed in shop` : `${sizes.length} ${unitWord}s added to inventory`);
     } else {
@@ -247,7 +277,7 @@ export default function CreateInventoryPage() {
   const canSubmit = !!plantName.trim() && sizes.every(s => Number(s.quantity) >= 1) && !hasIncompleteListings && !hasOverQty;
   const isSupply = itemType === "supply";
   const categories = isSupply ? SUPPLY_CATEGORIES : PLANT_CATEGORIES;
-  const unitWord = isSupply ? "variant" : "size";
+  const unitWord = isSupply ? "option" : "size";
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-10">
@@ -403,6 +433,19 @@ export default function CreateInventoryPage() {
                 )}
               </div>
               <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { if (e.target.files) uploadImages(e.target.files); }} />
+              <input
+                ref={sizeFileRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files && uploadTargetSizeId.current !== null) {
+                    uploadSizeImages(uploadTargetSizeId.current, e.target.files);
+                    e.target.value = "";
+                  }
+                }}
+              />
               {imageUrls.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-1">
                   {imageUrls.map((url, i) => (
@@ -421,7 +464,7 @@ export default function CreateInventoryPage() {
         <Card className="mb-6">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base">{isSupply ? "Variants & Quantities" : "Sizes & Quantities"}</CardTitle>
+              <CardTitle className="text-base">{isSupply ? "Options & Quantities" : "Sizes & Quantities"}</CardTitle>
               <p className="text-xs text-muted-foreground">Each {unitWord} is saved as a separate inventory row</p>
             </div>
           </CardHeader>
@@ -433,7 +476,7 @@ export default function CreateInventoryPage() {
                     <div className="space-y-1">
                       {isSupply ? (
                         <>
-                          <Label className="text-xs">Variant <span className="font-normal text-muted-foreground">(optional)</span></Label>
+                          <Label className="text-xs">Option <span className="font-normal text-muted-foreground">(optional)</span></Label>
                           <Input
                             placeholder='e.g. "1 lb bag", "Small"'
                             value={size.potSize}
@@ -471,6 +514,44 @@ export default function CreateInventoryPage() {
                     </button>
                   )}
                 </div>
+
+                {/* Per-size photos (plants only, when multiple sizes) */}
+                {!isSupply && sizes.length > 1 && (
+                  <div className="border-t pt-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-medium text-muted-foreground">
+                        Photos for this size
+                        {size.sizeImages.length === 0 && (
+                          <span className="ml-1 font-normal">· uses shared photos above</span>
+                        )}
+                      </p>
+                      {size.sizeImages.length > 0 && (
+                        <span className="text-[10px] text-leaf font-medium">Overrides shared photos</span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {size.sizeImages.map((url, i) => (
+                        <div key={i} className="relative group">
+                          <Image src={url} alt="" width={56} height={56} className="w-14 h-14 object-cover rounded border" />
+                          <button
+                            type="button"
+                            onClick={() => setSizes(prev => prev.map(s => s.id === size.id ? { ...s, sizeImages: s.sizeImages.filter((_, idx) => idx !== i) } : s))}
+                            className="absolute -top-1.5 -right-1.5 hidden group-hover:flex items-center justify-center w-4 h-4 rounded-full bg-red-500 text-white text-xs leading-none"
+                          >×</button>
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        disabled={uploadingForSize === size.id}
+                        onClick={() => { uploadTargetSizeId.current = size.id; sizeFileRef.current?.click(); }}
+                        className="w-14 h-14 rounded border-2 border-dashed border-muted-foreground/25 hover:border-sage hover:bg-muted/40 transition-colors flex items-center justify-center text-muted-foreground hover:text-leaf disabled:opacity-50"
+                        title="Add photos for this size"
+                      >
+                        {uploadingForSize === size.id ? <span className="text-[10px]">…</span> : <Plus size={16} />}
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Per-size: list in shop toggle */}
                 <div className="border-t pt-3 space-y-3">
