@@ -46,7 +46,7 @@ export default async function CheckoutPage({
     } else {
       const { data } = await supabase
         .from("listings")
-        .select("plant_name, variety, price_cents, sale_price_cents, sale_ends_at, buyer_note_prompt, buyer_note_required")
+        .select("plant_name, variety, price_cents, sale_price_cents, sale_ends_at")
         .eq("id", listingId)
         .eq("status", "active")
         .single();
@@ -54,8 +54,9 @@ export default async function CheckoutPage({
       itemName = data.variety ? `${data.plant_name} — ${data.variety}` : data.plant_name;
       const onSale = !!(data.sale_price_cents && data.sale_ends_at && new Date(data.sale_ends_at) > new Date());
       priceCents = (onSale ? data.sale_price_cents! : data.price_cents) * quantity;
-      buyerNotePrompt = (data as any).buyer_note_prompt ?? null;
-      buyerNoteRequired = (data as any).buyer_note_required ?? false;
+      const { data: noteData } = await supabase.from("listings").select("*").eq("id", listingId).single();
+      buyerNotePrompt = (noteData as any)?.buyer_note_prompt ?? null;
+      buyerNoteRequired = (noteData as any)?.buyer_note_required ?? false;
     }
   } else if (auctionId) {
     if (offerId) {
