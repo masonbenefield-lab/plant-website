@@ -139,6 +139,7 @@ function ShippingSection({
 }) {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [addressError, setAddressError] = useState<string | null>(null);
   const [form, setForm] = useState<ShippingAddress>(
     address ?? { name: "", line1: "", line2: "", city: "", state: "", zip: "", country: "US" }
   );
@@ -147,12 +148,26 @@ function ShippingSection({
     if (address) setForm(address);
   }, [address]);
 
+  async function saveAddress() {
+    const res = await fetch("/api/stripe/buyer-profile", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ shippingAddress: form }),
+    });
+    if (!res.ok) throw new Error("Failed to save address");
+    onSaved(form);
+    toast.success("Delivery address saved");
+    setEditing(false);
+    setAddressError(null);
+  }
+
   async function handleSave() {
     if (!form.name || !form.line1 || !form.city || !form.state || !form.zip || !form.country) {
       toast.error("Please fill in all required address fields");
       return;
     }
     setSaving(true);
+    setAddressError(null);
     try {
       const validRes = await fetch("/api/address/validate", {
         method: "POST",
@@ -161,20 +176,22 @@ function ShippingSection({
       });
       const { valid, messages } = await validRes.json();
       if (!valid) {
-        toast.error(messages?.length ? messages.join(" ") : "Address could not be verified. Please check and try again.");
+        setAddressError(messages?.length ? messages.join(" ") : "Address not found");
         setSaving(false);
         return;
       }
+      await saveAddress();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to save address");
+    } finally {
+      setSaving(false);
+    }
+  }
 
-      const res = await fetch("/api/stripe/buyer-profile", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ shippingAddress: form }),
-      });
-      if (!res.ok) throw new Error("Failed to save address");
-      onSaved(form);
-      toast.success("Delivery address saved");
-      setEditing(false);
+  async function handleSaveAnyway() {
+    setSaving(true);
+    try {
+      await saveAddress();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to save address");
     } finally {
@@ -202,7 +219,7 @@ function ShippingSection({
         <h3 className="font-semibold text-sm">Delivery Address</h3>
       </div>
       <p className="text-xs text-muted-foreground">
-        Where your winnings ship to. Required for weight-based shipping auctions and used for automatic checkout.
+        Where your winnings ship to. Used for automatic checkout at auctions and listings.
       </p>
 
       {address && !editing ? (
@@ -226,6 +243,21 @@ function ShippingSection({
             {field("ZIP Code", "zip", true, true)}
             {field("Country", "country", true, true)}
           </div>
+          {addressError && (
+            <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2.5 text-sm space-y-1">
+              <p className="font-medium text-destructive">Address not found</p>
+              <p className="text-muted-foreground text-xs">
+                USPS couldn&apos;t verify this address. Double-check your street number, street name, city, and ZIP code.
+              </p>
+              <button
+                onClick={handleSaveAnyway}
+                disabled={saving}
+                className="text-xs underline text-muted-foreground hover:text-foreground mt-1"
+              >
+                Save anyway (if you&apos;re sure it&apos;s correct)
+              </button>
+            </div>
+          )}
           <div className="flex gap-2">
             <Button size="sm" onClick={handleSave} disabled={saving} className="bg-leaf hover:bg-forest">
               {saving ? "Saving…" : "Save address"}
