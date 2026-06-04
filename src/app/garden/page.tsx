@@ -11,7 +11,7 @@ import GardenTabs from "@/components/garden/garden-tabs";
 import GardenSettings from "@/components/garden/garden-settings";
 import GardenPlantCard from "@/components/garden/garden-plant-card";
 import { GardenScrollRestore } from "@/components/garden/garden-scroll-restore";
-import type { GardenPlantStatus } from "@/lib/supabase/types";
+import type { GardenPlantStatus } from "@/lib/garden-types";
 
 const STATUS_LABEL: Record<GardenPlantStatus, string> = {
   thriving: "Thriving",

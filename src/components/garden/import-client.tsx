@@ -10,7 +10,7 @@ import { PlantReviewCard } from "@/components/garden/plant-review-card";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import type { GardenPlantStatus } from "@/lib/supabase/types";
+import type { GardenPlantStatus } from "@/lib/garden-types";
 
 const MAX_BATCH = 100;
 

@@ -7,7 +7,7 @@ import { ArrowLeftRight, MessageSquare, Store } from "lucide-react";
 import type { Metadata } from "next";
 import type { Database } from "@/lib/supabase/types";
 import { GardenPublicGrid } from "@/components/garden/garden-public-grid";
-import type { GardenPlantStatus } from "@/lib/supabase/types";
+import type { GardenPlantStatus } from "@/lib/garden-types";
 
 export async function generateMetadata({
   params,

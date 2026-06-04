@@ -11,7 +11,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ChevronDown, X, Upload, AlertTriangle, Trash2 } from "lucide-react";
 import type { PlantDraft } from "@/components/garden/import-client";
-import type { GardenPlantStatus } from "@/lib/supabase/types";
+import type { GardenPlantStatus } from "@/lib/garden-types";
 
 const STATUS_OPTIONS: { value: GardenPlantStatus; label: string; color: string }[] = [
   { value: "thriving",   label: "Thriving",   color: "bg-[#DFE7D4] text-leaf" },

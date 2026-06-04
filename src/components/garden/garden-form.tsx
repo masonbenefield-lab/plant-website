@@ -19,7 +19,7 @@ import {
 import { toast } from "sonner";
 import { X, Upload, Loader2, CheckCircle2 } from "lucide-react";
 import { DeletePlantButton } from "@/components/garden/delete-plant-button";
-import type { GardenPlantStatus } from "@/lib/supabase/types";
+import type { GardenPlantStatus } from "@/lib/garden-types";
 
 const STATUS_OPTIONS: { value: GardenPlantStatus; label: string }[] = [
   { value: "thriving", label: "Thriving" },

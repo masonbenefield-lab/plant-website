@@ -3,7 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { GardenForm } from "@/components/garden/garden-form";
 import { ChevronLeft } from "lucide-react";
-import type { GardenPlantStatus } from "@/lib/supabase/types";
+import type { GardenPlantStatus } from "@/lib/garden-types";
 
 export default async function EditGardenPlantPage({
   params,

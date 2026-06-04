@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { EventLog } from "@/components/garden/event-log";
 import { ChevronLeft, Pencil, ExternalLink } from "lucide-react";
-import type { GardenPlantStatus, GardenEventType } from "@/lib/supabase/types";
+import type { GardenPlantStatus, GardenEventType } from "@/lib/garden-types";
 import { DeletePlantButton } from "@/components/garden/delete-plant-button";
 import { PlantVisibilityToggle } from "@/components/garden/plant-visibility-toggle";
 import { SharePlantButton } from "@/components/garden/share-plant-button";

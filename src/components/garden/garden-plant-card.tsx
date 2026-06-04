@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { PlantVisibilityToggle } from "@/components/garden/plant-visibility-toggle";
 import PinPlantButton from "@/components/garden/pin-plant-button";
-import type { GardenPlantStatus } from "@/lib/supabase/types";
+import type { GardenPlantStatus } from "@/lib/garden-types";
 
 const STATUS_LABEL: Record<GardenPlantStatus, string> = {
   thriving: "Thriving",

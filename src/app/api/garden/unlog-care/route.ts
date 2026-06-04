@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import type { Database } from "@/lib/supabase/types";
-type GardenEventType = Database["public"]["Tables"]["garden_events"]["Row"]["event_type"];
+import type { GardenEventType } from "@/lib/garden-types";
 
 const CARE_EVENT_MAP: Record<string, GardenEventType> = {
   Water: "watered", Fertilize: "fertilized", Repot: "repotted", Prune: "pruned",

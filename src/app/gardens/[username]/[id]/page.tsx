@@ -8,7 +8,8 @@ import { cn } from "@/lib/utils";
 import { ChevronLeft } from "lucide-react";
 import { PhotoGallery } from "@/components/garden/photo-gallery";
 import type { Metadata } from "next";
-import type { GardenPlantStatus, Database } from "@/lib/supabase/types";
+import type { Database } from "@/lib/supabase/types";
+import type { GardenPlantStatus } from "@/lib/garden-types";
 
 const STATUS_LABEL: Record<GardenPlantStatus, string> = {
   thriving: "Thriving",

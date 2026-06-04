@@ -26,7 +26,7 @@ import {
 import { toast } from "sonner";
 import { Loader2, Plus, Droplets, Leaf, FlowerIcon, Scissors, Syringe, Apple, StickyNote, Upload, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { GardenEventType } from "@/lib/supabase/types";
+import type { GardenEventType } from "@/lib/garden-types";
 
 const MAX_EVENT_PHOTOS = 3;
 
