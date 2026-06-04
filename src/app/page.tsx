@@ -9,6 +9,7 @@ import { centsToDisplay } from "@/lib/stripe";
 import { GROUNDBREAKER_CAP } from "@/lib/plan-limits";
 import { HeroCategoryCarousel } from "@/components/hero-category-carousel";
 import GardenFeatureCards from "@/components/garden-feature-cards";
+import SellerFeatureCards from "@/components/seller-feature-cards";
 
 const features = [
   { icon: "🌿", title: "Build Your Storefront",       desc: "Create a personal shop page with your bio, profile photo, and all your listings in one place.",    href: "/signup" },
@@ -332,17 +333,7 @@ export default async function LandingPage() {
         <div className="max-w-5xl mx-auto">
           <h2 className="text-2xl sm:text-3xl font-bold text-center mb-3">Everything you need</h2>
           <p className="text-muted-foreground text-center mb-10 max-w-xl mx-auto">One platform handles your storefront, payments, orders, and reputation — so you can focus on growing.</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {features.map((f) => (
-              <Link key={f.title} href={f.href} className="group rounded-2xl border bg-card p-6 hover:border-[#A8BF9A] hover:shadow-md transition-all">
-                <div className="w-11 h-11 rounded-xl bg-[#EBF0E6] dark:bg-forest/30 flex items-center justify-center text-2xl mb-4 group-hover:bg-[#DFE7D4] dark:group-hover:bg-forest/50 transition-colors">
-                  {f.icon}
-                </div>
-                <p className="font-semibold text-foreground mb-1.5">{f.title}</p>
-                <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
-              </Link>
-            ))}
-          </div>
+          <SellerFeatureCards />
         </div>
       </section>
 
