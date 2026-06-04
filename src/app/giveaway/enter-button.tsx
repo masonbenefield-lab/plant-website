@@ -2,36 +2,55 @@
 
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Loader2, CheckCircle2, Copy, Check, MapPin } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 import Link from "next/link";
 
-const ELIGIBLE = ["US", "CA"];
-
-const COUNTRY_OPTIONS = [
-  { code: "US", label: "🇺🇸 United States" },
-  { code: "CA", label: "🇨🇦 Canada" },
-  { code: "OTHER", label: "🌍 Other country" },
-];
+interface ShippingAddress {
+  name: string;
+  line1: string;
+  line2?: string;
+  city: string;
+  state: string;
+  zip: string;
+  country: string;
+}
 
 interface Props {
   monthLabel: string;
   initialEntered: boolean;
   referralCode?: string | null;
-  userCountry?: string | null;
+  savedAddress?: ShippingAddress | null;
 }
 
-export function EnterButton({ monthLabel, initialEntered, referralCode, userCountry }: Props) {
+const US_STATES = [
+  "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA",
+  "KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ",
+  "NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT",
+  "VA","WA","WV","WI","WY","DC",
+];
+
+function isUSAddress(addr: ShippingAddress): boolean {
+  if (addr.country && addr.country !== "US") return false;
+  const state = addr.state.trim().toUpperCase();
+  return US_STATES.includes(state) || US_STATES.includes(
+    // handle full state names being entered
+    state.slice(0, 2)
+  );
+}
+
+export function EnterButton({ monthLabel, initialEntered, referralCode, savedAddress }: Props) {
   const [entered, setEntered] = useState(initialEntered);
   const [isPending, startTransition] = useTransition();
   const [copied, setCopied] = useState(false);
-  const [country, setCountry] = useState(userCountry ?? null);
-  const [showPicker, setShowPicker] = useState(false);
-  const [savingCountry, setSavingCountry] = useState(false);
   const [agreedToRules, setAgreedToRules] = useState(false);
-
-  const isEligible = country ? ELIGIBLE.includes(country) : null; // null = unknown
+  const [showAddressStep, setShowAddressStep] = useState(false);
+  const [address, setAddress] = useState<ShippingAddress>(
+    savedAddress ?? { name: "", line1: "", line2: "", city: "", state: "", zip: "", country: "US" }
+  );
+  const [savingAddress, setSavingAddress] = useState(false);
 
   function handleCopy() {
     if (!referralCode) return;
@@ -40,22 +59,6 @@ export function EnterButton({ monthLabel, initialEntered, referralCode, userCoun
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
-  }
-
-  async function saveCountry(code: string) {
-    setSavingCountry(true);
-    await fetch("/api/profile/set-country", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ country: code }),
-    });
-    setCountry(code);
-    setSavingCountry(false);
-    setShowPicker(false);
-
-    if (ELIGIBLE.includes(code)) {
-      doEnter();
-    }
   }
 
   function doEnter() {
@@ -71,13 +74,37 @@ export function EnterButton({ monthLabel, initialEntered, referralCode, userCoun
     });
   }
 
-  function handleEnterClick() {
-    if (!country) {
-      setShowPicker(true);
+  async function handleConfirmAddress() {
+    if (!address.name || !address.line1 || !address.city || !address.state || !address.zip) {
+      toast.error("Please fill in all required address fields");
       return;
     }
-    if (!ELIGIBLE.includes(country)) return; // ineligible — button shouldn't be visible
+    if (!isUSAddress(address)) {
+      toast.error("This giveaway is open to US residents only.");
+      return;
+    }
+    setSavingAddress(true);
+    await fetch("/api/stripe/buyer-profile", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ shippingAddress: { ...address, country: "US" } }),
+    }).catch(() => {});
+    setSavingAddress(false);
+    setShowAddressStep(false);
     doEnter();
+  }
+
+  function field(label: string, key: keyof ShippingAddress, required = false, half = false) {
+    return (
+      <div className={half ? "col-span-1" : "col-span-2"}>
+        <Label className="text-xs mb-1 block">{label}{required && <span className="text-destructive ml-0.5">*</span>}</Label>
+        <Input
+          value={address[key] ?? ""}
+          onChange={(e) => setAddress((a) => ({ ...a, [key]: e.target.value }))}
+          className="h-8 text-sm"
+        />
+      </div>
+    );
   }
 
   // Already entered
@@ -91,7 +118,7 @@ export function EnterButton({ monthLabel, initialEntered, referralCode, userCoun
         {referralCode && (
           <div className="rounded-lg border border-[#C5D4BC] dark:border-forest bg-[#EBF0E6] dark:bg-forest/20 px-4 py-3 space-y-2">
             <p className="text-xs font-medium text-forest dark:text-[#A8BF9A]">
-              Boost your chances — share your referral link. Every friend who signs up and adds at least one plant to their Plantet garden earns you +1 extra entry.
+              Boost your chances — share your referral link. Every friend who signs up and adds at least one plant earns you +1 extra entry.
             </p>
             <button
               onClick={handleCopy}
@@ -106,49 +133,45 @@ export function EnterButton({ monthLabel, initialEntered, referralCode, userCoun
     );
   }
 
-  // Ineligible country set
-  if (country && !ELIGIBLE.includes(country)) {
+  // Address confirmation step
+  if (showAddressStep) {
     return (
-      <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-300 space-y-1 max-w-sm">
-        <p className="font-semibold">Not available in your region</p>
-        <p className="text-xs">This giveaway is currently open to US and Canada residents only. We hope to expand in the future!</p>
-      </div>
-    );
-  }
-
-  // Country picker prompt
-  if (showPicker) {
-    return (
-      <div className="space-y-3 max-w-xs">
+      <div className="space-y-3 max-w-sm">
         <div className="flex items-center gap-2 text-sm font-medium">
           <MapPin size={15} className="text-leaf" />
-          Where are you located?
+          Confirm your shipping address
         </div>
-        <p className="text-xs text-muted-foreground">This giveaway is open to US and Canada residents. We just need to confirm eligibility.</p>
-        <div className="flex flex-col gap-2">
-          {COUNTRY_OPTIONS.map((opt) => (
-            <button
-              key={opt.code}
-              onClick={() => saveCountry(opt.code)}
-              disabled={savingCountry}
-              className={cn(
-                "flex items-center gap-2 px-4 py-2.5 rounded-lg border text-sm font-medium text-left transition-colors",
-                "hover:border-leaf hover:bg-[#EBF0E6] dark:hover:bg-forest/20"
-              )}
-            >
-              {savingCountry ? <Loader2 size={14} className="animate-spin" /> : null}
-              {opt.label}
-            </button>
-          ))}
+        <p className="text-xs text-muted-foreground">
+          We&apos;ll use this to ship your prize if you win. Must be a US address.
+          {savedAddress && " Your saved address is pre-filled — update it if needed."}
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          {field("Full Name", "name", true)}
+          {field("Address Line 1", "line1", true)}
+          {field("Address Line 2", "line2")}
+          {field("City", "city", true, true)}
+          {field("State", "state", true, true)}
+          {field("ZIP Code", "zip", true, true)}
         </div>
-        <button onClick={() => setShowPicker(false)} className="text-xs text-muted-foreground hover:text-foreground">
-          Cancel
-        </button>
+        <div className="flex gap-2 pt-1">
+          <Button
+            size="sm"
+            className="bg-leaf hover:bg-forest text-white"
+            onClick={handleConfirmAddress}
+            disabled={savingAddress || isPending}
+          >
+            {(savingAddress || isPending) ? <Loader2 size={14} className="animate-spin mr-1.5" /> : null}
+            Confirm &amp; Enter
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => setShowAddressStep(false)}>
+            Cancel
+          </Button>
+        </div>
       </div>
     );
   }
 
-  // Default: enter button
+  // Default: rules checkbox + enter button
   return (
     <div className="space-y-3">
       <label className="flex items-start gap-2.5 cursor-pointer">
@@ -169,10 +192,9 @@ export function EnterButton({ monthLabel, initialEntered, referralCode, userCoun
       <Button
         size="lg"
         className="bg-leaf hover:bg-forest text-white px-10 text-base disabled:opacity-50"
-        onClick={handleEnterClick}
-        disabled={isPending || !agreedToRules}
+        onClick={() => setShowAddressStep(true)}
+        disabled={!agreedToRules}
       >
-        {isPending ? <Loader2 size={16} className="animate-spin mr-2" /> : null}
         Enter to Win
       </Button>
     </div>
