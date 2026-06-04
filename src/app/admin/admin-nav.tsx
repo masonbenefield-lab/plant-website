@@ -10,14 +10,13 @@ const links = [
   { href: "/admin/listings",               label: "Listings" },
   { href: "/admin/auctions",               label: "Auctions" },
   { href: "/admin/orders",                 label: "Orders" },
-  { href: "/admin/shipping-adjustments",   label: "Shipping" },
   { href: "/admin/reports",                label: "Reports" },
   { href: "/admin/review-reports",         label: "Review Reports" },
   { href: "/admin/violations",             label: "Violations" },
   { href: "/admin/giveaway",               label: "Giveaway" },
 ];
 
-export default function AdminNav({ pendingReports = 0, pendingReviewReports = 0, repeatViolators = 0, repeatAdjustors = 0 }: { pendingReports?: number; pendingReviewReports?: number; repeatViolators?: number; repeatAdjustors?: number }) {
+export default function AdminNav({ pendingReports = 0, pendingReviewReports = 0, repeatViolators = 0 }: { pendingReports?: number; pendingReviewReports?: number; repeatViolators?: number }) {
   const pathname = usePathname();
 
   return (
@@ -31,7 +30,6 @@ export default function AdminNav({ pendingReports = 0, pendingReviewReports = 0,
           const isReports = link.href === "/admin/reports";
           const isReviewReports = link.href === "/admin/review-reports";
           const isViolations = link.href === "/admin/violations";
-          const isShipping = link.href === "/admin/shipping-adjustments";
           return (
             <Link
               key={link.href}
@@ -57,11 +55,6 @@ export default function AdminNav({ pendingReports = 0, pendingReviewReports = 0,
               {isViolations && repeatViolators > 0 && (
                 <span className="ml-2 rounded-full bg-orange-500 text-white text-xs px-1.5 py-0.5 font-semibold leading-none">
                   {repeatViolators}
-                </span>
-              )}
-              {isShipping && repeatAdjustors > 0 && (
-                <span className="ml-2 rounded-full bg-red-500 text-white text-xs px-1.5 py-0.5 font-semibold leading-none">
-                  {repeatAdjustors}
                 </span>
               )}
             </Link>
