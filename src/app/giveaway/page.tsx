@@ -144,13 +144,13 @@ export default async function GiveawayPage() {
           )}
 
           {/* Plant card */}
-          <div className="rounded-2xl border overflow-hidden shadow-sm">
+          <div className="rounded-2xl border overflow-hidden shadow-sm grid grid-cols-1 md:grid-cols-2">
             {giveaway.image_url && (
-              <div className="relative w-full aspect-[3/4] bg-muted">
-                <Image src={giveaway.image_url} alt={giveaway.plant_name} fill sizes="(max-width: 768px) 100vw, 800px" className="object-cover" />
+              <div className="relative w-full aspect-square bg-muted">
+                <Image src={giveaway.image_url} alt={giveaway.plant_name} fill sizes="(max-width: 768px) 100vw, 400px" className="object-cover" />
               </div>
             )}
-            <div className="p-6 sm:p-8 space-y-4">
+            <div className="p-6 sm:p-8 space-y-4 flex flex-col justify-center">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-widest text-leaf mb-1">This month&apos;s prize</p>
                 <h2 className="text-2xl font-bold">{giveaway.plant_name}</h2>
