@@ -30,6 +30,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   const violationCounts = new Map<string, number>();
   for (const v of violationUsers ?? []) {
+    if (!v.user_id) continue;
     violationCounts.set(v.user_id, (violationCounts.get(v.user_id) ?? 0) + 1);
   }
   const repeatViolators = Array.from(violationCounts.values()).filter(c => c >= 3).length;
