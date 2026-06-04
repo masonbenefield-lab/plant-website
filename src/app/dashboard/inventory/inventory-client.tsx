@@ -414,11 +414,19 @@ export default function InventoryClient({
       }
       setDragPhotoIdx(null);
       setSaveTemplateName("");
-      const notePrompt = (m.row as any).buyer_note_prompt ?? "";
-      const noteRequired = (m.row as any).buyer_note_required ?? false;
-      setEditBuyerNoteEnabled(!!notePrompt);
-      setEditBuyerNotePrompt(notePrompt);
-      setEditBuyerNoteRequired(noteRequired);
+      setEditBuyerNoteEnabled(false);
+      setEditBuyerNotePrompt("");
+      setEditBuyerNoteRequired(false);
+      if (m.row.listing_id) {
+        createClient().from("listings").select("*").eq("id", m.row.listing_id).single().then(({ data }) => {
+          if (!data) return;
+          const notePrompt = (data as any).buyer_note_prompt ?? "";
+          const noteRequired = (data as any).buyer_note_required ?? false;
+          setEditBuyerNoteEnabled(!!notePrompt);
+          setEditBuyerNotePrompt(notePrompt);
+          setEditBuyerNoteRequired(noteRequired);
+        });
+      }
       // Load seller's templates
       createClient().from("listing_templates").select("id, name, plant_name, variety, category, pot_size, description, price_cents").then(({ data }) => {
         if (data) setTemplates(data);
