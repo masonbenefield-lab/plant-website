@@ -16,11 +16,11 @@ export async function PATCH(request: Request) {
 
   const body = await request.json() as {
     plantIds: string[];
-    waterInterval?: number;
-    fertilizeInterval?: number;
-    repotInterval?: number;
-    pruneInterval?: number;
-    startDate?: string; // YYYY-MM-DD — when to count intervals from
+    waterInterval?: number | null;
+    fertilizeInterval?: number | null;
+    repotInterval?: number | null;
+    pruneInterval?: number | null;
+    startDate?: string;
   };
 
   const { plantIds, startDate } = body;

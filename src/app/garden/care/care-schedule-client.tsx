@@ -819,9 +819,15 @@ function IntervalsModal({
     const body: Record<string, unknown> = { plantIds: plants.map((p) => p.id) };
     for (const { key } of INTERVAL_FIELDS) {
       const raw = values[key].trim();
-      if (raw !== "") { const n = parseInt(raw, 10); if (!isNaN(n) && n >= 1) body[key] = n; }
+      if (raw !== "") {
+        const n = parseInt(raw, 10);
+        if (!isNaN(n)) {
+          if (n === 0) body[key] = null;     // 0 = remove this interval
+          else if (n >= 1) body[key] = n;
+        }
+      }
     }
-    if (Object.keys(body).length === 1) { toast.info("No intervals entered"); return; }
+    if (Object.keys(body).length === 1) { toast.info("No changes to save"); return; }
     if (startDate) body.startDate = startDate;
     setSaving(true);
     const res = await fetch("/api/garden/update-intervals", {
@@ -890,11 +896,12 @@ function IntervalsModal({
             {fields.map(({ key, emoji, label, meta }) => (
               <div key={key} className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground w-36 shrink-0">{emoji} {label}</span>
-                <Input type="number" min={1} value={values[key]} onChange={(e) => setValues((p) => ({ ...p, [key]: e.target.value }))}
+                <Input type="number" min={0} value={values[key]} onChange={(e) => setValues((p) => ({ ...p, [key]: e.target.value }))}
                   placeholder={meta.placeholder || "—"} className="h-8 text-sm flex-1 min-w-0" />
                 <span className="text-xs text-muted-foreground shrink-0">days</span>
               </div>
             ))}
+            <p className="text-xs text-muted-foreground -mt-1">Enter 0 to remove an interval.</p>
             <div className="border-t pt-3 space-y-1.5">
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground w-36 shrink-0">📅 Schedule from</span>
