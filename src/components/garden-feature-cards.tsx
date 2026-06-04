@@ -170,42 +170,56 @@ const features = [
   },
 ];
 
+const COLS = 3;
+const rows = [features.slice(0, COLS), features.slice(COLS)];
+
 export default function GardenFeatureCards() {
   const [selected, setSelected] = useState<number | null>(null);
 
   return (
-    <div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-        {features.map((f, i) => (
-          <button
-            key={f.title}
-            onClick={() => setSelected(selected === i ? null : i)}
-            className={cn(
-              "text-left bg-card rounded-2xl border p-5 shadow-sm transition-all duration-200 hover:shadow-md hover:border-leaf/40",
-              selected === i && "border-leaf ring-1 ring-leaf shadow-md"
-            )}
-          >
-            <span className="text-2xl mb-3 block">{f.icon}</span>
-            <p className="font-semibold mb-1">{f.title}</p>
-            <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
-            <p className={cn(
-              "text-xs mt-2 font-medium transition-colors",
-              selected === i ? "text-leaf" : "text-muted-foreground"
-            )}>
-              {selected === i ? "Hide example ↑" : "See example →"}
-            </p>
-          </button>
-        ))}
-      </div>
+    <div className="space-y-4">
+      {rows.map((row, rowIdx) => {
+        const expandedInRow =
+          selected !== null && Math.floor(selected / COLS) === rowIdx ? selected : null;
+        return (
+          <div key={rowIdx} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {row.map((f, colIdx) => {
+                const i = rowIdx * COLS + colIdx;
+                return (
+                  <button
+                    key={f.title}
+                    onClick={() => setSelected(selected === i ? null : i)}
+                    className={cn(
+                      "text-left bg-card rounded-2xl border p-5 shadow-sm transition-all duration-200 hover:shadow-md hover:border-leaf/40",
+                      selected === i && "border-leaf ring-1 ring-leaf shadow-md"
+                    )}
+                  >
+                    <span className="text-2xl mb-3 block">{f.icon}</span>
+                    <p className="font-semibold mb-1">{f.title}</p>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
+                    <p className={cn(
+                      "text-xs mt-2 font-medium transition-colors",
+                      selected === i ? "text-leaf" : "text-muted-foreground"
+                    )}>
+                      {selected === i ? "Hide example ↑" : "See example →"}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
 
-      {selected !== null && (
-        <div className="rounded-2xl border bg-card p-5 shadow-sm mb-6 animate-in fade-in slide-in-from-top-2 duration-200">
-          <p className="text-xs font-semibold text-leaf uppercase tracking-wide mb-4">
-            {features[selected].icon} {features[selected].title} — example
-          </p>
-          {features[selected].example}
-        </div>
-      )}
+            {expandedInRow !== null && (
+              <div className="rounded-2xl border bg-card p-5 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200">
+                <p className="text-xs font-semibold text-leaf uppercase tracking-wide mb-4">
+                  {features[expandedInRow].icon} {features[expandedInRow].title} — example
+                </p>
+                {features[expandedInRow].example}
+              </div>
+            )}
+          </div>
+        );
+      })}
 
       <div className="text-center mt-6">
         <Link href="/signup" className={cn(buttonVariants({ size: "lg" }), "bg-leaf hover:bg-forest text-white font-semibold px-10")}>
