@@ -54,7 +54,7 @@ export default async function CommunityPage({
   const searchQuery = q?.trim() ?? "";
 
   // Gardens view data
-  type GardenProfile = { id: string; username: string; display_name: string | null; avatar_url: string | null; garden_bio: string | null; open_to_trades: boolean };
+  type GardenProfile = { id: string; username: string; display_name: string | null; avatar_url: string | null; garden_bio: string | null; open_to_trades: boolean | null };
   type GardenSummary = { count: number; photos: string[] };
   let gardens: GardenProfile[] = [];
   let gardenMap: Record<string, GardenSummary> = {};

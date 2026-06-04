@@ -14,7 +14,7 @@ interface Profile {
   display_name: string | null;
   avatar_url: string | null;
   garden_bio: string | null;
-  open_to_trades: boolean;
+  open_to_trades: boolean | null;
 }
 
 interface GardenSummary {
