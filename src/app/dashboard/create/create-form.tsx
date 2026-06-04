@@ -222,8 +222,9 @@ export default function CreateInventoryPage() {
         const invQty = Math.max(1, Number(s.quantity) || 1);
         const listedQty = Math.min(Math.max(1, Number(s.shopQuantity) || invQty), invQty);
 
-        const { data: listing, error: listErr } = await supabase
-          .from("listings")
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: listing, error: listErr } = await (supabase
+          .from("listings") as any)
           .insert({
             seller_id: user.id,
             plant_name: plantName.trim(),
