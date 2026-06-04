@@ -7,7 +7,6 @@ import { createClient as createAdminClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import { centsToDisplay } from "@/lib/stripe";
 import { GROUNDBREAKER_CAP } from "@/lib/plan-limits";
-import LiveAuctionCard from "@/components/live-auction-card";
 import { HeroCategoryCarousel } from "@/components/hero-category-carousel";
 
 const features = [
@@ -52,15 +51,7 @@ export default async function LandingPage() {
 
   const currentMonth = new Date().toISOString().slice(0, 7);
 
-  const [{ data: liveAuctions }, { data: nurseryProfiles }, { count: groundbreakerCount }, { data: recentCommunityPosts }] = await Promise.all([
-    supabase
-      .from("auctions")
-      .select("id, plant_name, variety, current_bid_cents, images, ends_at")
-      .eq("status", "active")
-      .gt("ends_at", new Date().toISOString())
-      .or("category.neq.Hidden,category.is.null")
-      .order("ends_at", { ascending: true })
-      .limit(4),
+  const [{ data: nurseryProfiles }, { count: groundbreakerCount }, { data: recentCommunityPosts }] = await Promise.all([
     supabase
       .from("profiles")
       .select("id")
@@ -282,35 +273,6 @@ export default async function LandingPage() {
         </section>
       )}
 
-      {/* ── Live auctions ─────────────────────────────────────────── */}
-      {liveAuctions && liveAuctions.length > 0 && (
-        <section className="py-14 sm:py-16 px-4 bg-background">
-          <div className="max-w-5xl mx-auto">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-2xl sm:text-3xl font-bold">Live Auctions</h2>
-                <p className="text-muted-foreground mt-1 text-sm">Bid now — these end soon.</p>
-              </div>
-              <Link href="/auctions" className="text-sm font-medium text-leaf hover:underline">
-                View all →
-              </Link>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              {liveAuctions.map((a) => (
-                <LiveAuctionCard
-                  key={a.id}
-                  id={a.id}
-                  plant_name={a.plant_name}
-                  variety={a.variety}
-                  current_bid_cents={a.current_bid_cents}
-                  images={a.images as string[]}
-                  ends_at={a.ends_at}
-                />
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
 
       {/* ── Featured sellers (Nursery plan) ──────────────────────── */}
       {featuredListings.length > 0 && (
