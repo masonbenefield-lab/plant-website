@@ -163,7 +163,7 @@ export default async function AdminViolationsPage() {
               {(violations ?? []).slice(0, 50).map((v, i) => (
                 <tr key={v.id} className={i % 2 === 0 ? "bg-card" : "bg-muted/20"}>
                   <td className="px-4 py-2.5 font-medium text-xs">
-                    {profileMap[v.user_id]?.username ?? "Deleted"}
+                    {v.user_id ? (profileMap[v.user_id]?.username ?? "Deleted") : "Deleted"}
                   </td>
                   <td className="px-4 py-2.5">
                     <span className="font-mono text-xs bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 px-1.5 py-0.5 rounded">
