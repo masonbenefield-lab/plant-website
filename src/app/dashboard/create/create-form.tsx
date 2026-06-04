@@ -44,8 +44,6 @@ export default function CreateInventoryPage() {
 
   const [sizes, setSizes] = useState<SizeEntry[]>([{ id: 0, potSize: "", quantity: "1", listInShop: false, shopPrice: "", shopQuantity: "", shippingMode: "" as ShippingMode, shippingCost: "", sizeImages: [] }]);
   const [uploadingForSize, setUploadingForSize] = useState<number | null>(null);
-  const sizeFileRef = useRef<HTMLInputElement>(null);
-  const uploadTargetSizeId = useRef<number | null>(null);
   function switchType(type: ItemType) {
     setItemType(type);
     setCategory("Other");
@@ -433,19 +431,6 @@ export default function CreateInventoryPage() {
                 )}
               </div>
               <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { if (e.target.files) uploadImages(e.target.files); }} />
-              <input
-                ref={sizeFileRef}
-                type="file"
-                accept="image/*"
-                multiple
-                className="hidden"
-                onChange={(e) => {
-                  if (e.target.files && uploadTargetSizeId.current !== null) {
-                    uploadSizeImages(uploadTargetSizeId.current, e.target.files);
-                    e.target.value = "";
-                  }
-                }}
-              />
               {imageUrls.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-1">
                   {imageUrls.map((url, i) => (
@@ -515,12 +500,12 @@ export default function CreateInventoryPage() {
                   )}
                 </div>
 
-                {/* Per-size photos (plants only, when multiple sizes) */}
-                {!isSupply && sizes.length > 1 && (
+                {/* Per-size/option photos (when multiple rows) */}
+                {sizes.length > 1 && (
                   <div className="border-t pt-3 space-y-2">
                     <div className="flex items-center justify-between">
                       <p className="text-xs font-medium text-muted-foreground">
-                        Photos for this size
+                        Photos for this {unitWord}
                         {size.sizeImages.length === 0 && (
                           <span className="ml-1 font-normal">· uses shared photos above</span>
                         )}
@@ -529,7 +514,7 @@ export default function CreateInventoryPage() {
                         <span className="text-[10px] text-leaf font-medium">Overrides shared photos</span>
                       )}
                     </div>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-2 items-center">
                       {size.sizeImages.map((url, i) => (
                         <div key={i} className="relative group">
                           <Image src={url} alt="" width={56} height={56} className="w-14 h-14 object-cover rounded border" />
@@ -540,15 +525,29 @@ export default function CreateInventoryPage() {
                           >×</button>
                         </div>
                       ))}
-                      <button
-                        type="button"
-                        disabled={uploadingForSize === size.id}
-                        onClick={() => { uploadTargetSizeId.current = size.id; sizeFileRef.current?.click(); }}
-                        className="w-14 h-14 rounded border-2 border-dashed border-muted-foreground/25 hover:border-sage hover:bg-muted/40 transition-colors flex items-center justify-center text-muted-foreground hover:text-leaf disabled:opacity-50"
-                        title="Add photos for this size"
+                      <label
+                        htmlFor={`size-photos-${size.id}`}
+                        className={cn(
+                          "w-14 h-14 rounded border-2 border-dashed border-muted-foreground/25 hover:border-sage hover:bg-muted/40 transition-colors flex items-center justify-center text-muted-foreground hover:text-leaf cursor-pointer",
+                          uploadingForSize === size.id && "opacity-50 pointer-events-none"
+                        )}
+                        title={`Add photos for this ${unitWord}`}
                       >
                         {uploadingForSize === size.id ? <span className="text-[10px]">…</span> : <Plus size={16} />}
-                      </button>
+                      </label>
+                      <input
+                        id={`size-photos-${size.id}`}
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={(e) => {
+                          if (e.target.files) {
+                            uploadSizeImages(size.id, e.target.files);
+                            e.target.value = "";
+                          }
+                        }}
+                      />
                     </div>
                   </div>
                 )}
