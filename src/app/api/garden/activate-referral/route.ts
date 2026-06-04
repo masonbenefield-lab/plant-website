@@ -23,7 +23,8 @@ export async function POST() {
   if (!profile?.referred_by) return NextResponse.json({ ok: true, skipped: "no referrer" });
 
   // Idempotent — UNIQUE(referred_id, type) means a second call is a no-op
-  const { error } = await admin
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (admin as any)
     .from("referral_activations")
     .insert({ referrer_id: profile.referred_by, referred_id: user.id, type: "plant_added" })
     .select()

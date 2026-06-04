@@ -150,9 +150,10 @@ export async function POST(request: Request) {
           .eq("id", order.seller_id)
           .single();
         if (sellerProfile?.referred_by) {
-          await supabase
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (supabase as any)
             .from("referral_activations")
-            .insert({ referrer_id: sellerProfile.referred_by, referred_id: order.seller_id, type: "first_sale" } as never)
+            .insert({ referrer_id: sellerProfile.referred_by, referred_id: order.seller_id, type: "first_sale" })
             .catch(() => {}); // 23505 unique violation = already fired, idempotent
         }
       }
