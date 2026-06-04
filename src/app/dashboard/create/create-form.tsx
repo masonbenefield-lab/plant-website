@@ -129,31 +129,35 @@ export default function CreateInventoryPage() {
     setUploading(false);
   }
 
-  async function uploadSizeImages(sizeId: number, files: FileList) {
+  async function uploadSizeImages(sizeId: number, fileArray: File[], currentCount: number) {
     const photoLimit = planLimits.photos;
-    const size = sizes.find(s => s.id === sizeId);
-    if (!size) return;
-    if (photoLimit !== null && size.sizeImages.length >= photoLimit) {
+    if (photoLimit !== null && currentCount >= photoLimit) {
       toast.error(`Your plan allows ${photoLimit} photos per listing.`);
       return;
     }
     setUploadingForSize(sizeId);
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setUploadingForSize(null); return; }
-    const remaining = photoLimit !== null ? photoLimit - size.sizeImages.length : Infinity;
-    const toUpload = Array.from(files).slice(0, remaining);
-    const urls: string[] = [];
-    for (const rawFile of toUpload) {
-      const file = await compressImage(rawFile);
-      const path = `${user.id}/${Date.now()}-${file.name}`;
-      const { error } = await supabase.storage.from("listings").upload(path, file, { upsert: true });
-      if (error) { toast.error(`Upload failed: ${error.message}`); setUploadingForSize(null); return; }
-      const { data } = supabase.storage.from("listings").getPublicUrl(path);
-      urls.push(data.publicUrl);
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const remaining = photoLimit !== null ? photoLimit - currentCount : Infinity;
+      const toUpload = fileArray.slice(0, remaining);
+      const urls: string[] = [];
+      for (const rawFile of toUpload) {
+        const file = await compressImage(rawFile);
+        const path = `${user.id}/${Date.now()}-${file.name}`;
+        const { error } = await supabase.storage.from("listings").upload(path, file, { upsert: true });
+        if (error) { toast.error(`Upload failed: ${error.message}`); return; }
+        const { data } = supabase.storage.from("listings").getPublicUrl(path);
+        urls.push(data.publicUrl);
+      }
+      setSizes(prev => prev.map(s => s.id === sizeId ? { ...s, sizeImages: [...s.sizeImages, ...urls] } : s));
+    } catch (err) {
+      toast.error("Upload failed. Please try again.");
+      console.error(err);
+    } finally {
+      setUploadingForSize(null);
     }
-    setSizes(prev => prev.map(s => s.id === sizeId ? { ...s, sizeImages: [...s.sizeImages, ...urls] } : s));
-    setUploadingForSize(null);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -542,10 +546,9 @@ export default function CreateInventoryPage() {
                         multiple
                         className="hidden"
                         onChange={(e) => {
-                          if (e.target.files) {
-                            uploadSizeImages(size.id, e.target.files);
-                            e.target.value = "";
-                          }
+                          const fileArray = Array.from(e.target.files ?? []);
+                          e.target.value = "";
+                          if (fileArray.length) uploadSizeImages(size.id, fileArray, size.sizeImages.length);
                         }}
                       />
                     </div>
