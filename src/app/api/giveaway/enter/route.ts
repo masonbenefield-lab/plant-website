@@ -1,25 +1,34 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-const ELIGIBLE_COUNTRIES = ["US", "CA"];
+const US_STATES = [
+  "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA",
+  "KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ",
+  "NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT",
+  "VA","WA","WV","WI","WY","DC",
+];
 
 export async function POST() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  // Check country eligibility
+  // Check eligibility via saved shipping address
   const { data: profile } = await supabase
     .from("profiles")
-    .select("country")
+    .select("saved_shipping_address")
     .eq("id", user.id)
     .single();
 
-  if (!profile?.country) {
-    return NextResponse.json({ error: "Please select your country before entering." }, { status: 400 });
+  const addr = profile?.saved_shipping_address as { state?: string; country?: string } | null;
+  if (!addr?.state) {
+    return NextResponse.json({ error: "Please confirm your shipping address before entering." }, { status: 400 });
   }
-  if (!ELIGIBLE_COUNTRIES.includes(profile.country)) {
-    return NextResponse.json({ error: "This giveaway is open to US and Canada residents only." }, { status: 403 });
+  if (addr.country && addr.country !== "US") {
+    return NextResponse.json({ error: "This giveaway is open to US residents only." }, { status: 403 });
+  }
+  if (!US_STATES.includes(addr.state.trim().toUpperCase())) {
+    return NextResponse.json({ error: "This giveaway is open to US residents only." }, { status: 403 });
   }
 
   const month = new Date().toISOString().slice(0, 7);
