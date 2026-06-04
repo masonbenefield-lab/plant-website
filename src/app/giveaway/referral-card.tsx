@@ -35,7 +35,7 @@ export function ReferralCard({
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-sm">Refer friends for bonus entries</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Share your link. When someone signs up and adds their first plant to their Plantet garden, you get +1 entry into that month&apos;s giveaway. No limit — the more friends you refer, the more entries you earn.
+              Share your link and earn bonus entries: <strong className="text-foreground">+1</strong> when a friend signs up and adds their first plant, <strong className="text-foreground">+2</strong> when a friend makes their first sale. No limit — the more you refer, the more entries you earn.
             </p>
           </div>
         </div>

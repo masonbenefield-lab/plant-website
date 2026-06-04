@@ -60,20 +60,22 @@ export default async function GiveawayPage() {
   if (user) {
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
-    const [{ data: entry }, { data: sponsorReq }, { data: profile }, { count: bonusCount }] = await Promise.all([
+    const [{ data: entry }, { data: sponsorReq }, { data: profile }, { data: bonusActivations }] = await Promise.all([
       giveaway
         ? supabase.from("giveaway_entries").select("id").eq("user_id", user.id).eq("month", month).single()
         : Promise.resolve({ data: null }),
       supabase.from("giveaway_sponsor_requests").select("id").eq("user_id", user.id).eq("status", "open").maybeSingle(),
       admin.from("profiles").select("referral_code, saved_shipping_address").eq("id", user.id).single(),
-      admin.from("referral_activations").select("id", { count: "exact", head: true })
+      admin.from("referral_activations").select("type")
         .eq("referrer_id", user.id)
         .gte("activated_at", monthStart),
     ]);
 
     alreadyEntered = !!entry;
     hasOpenSponsorRequest = !!sponsorReq;
-    bonusEntriesThisMonth = bonusCount ?? 0;
+    bonusEntriesThisMonth = (bonusActivations ?? []).reduce(
+      (sum, a) => sum + ((a as { type: string }).type === "first_sale" ? 2 : 1), 0
+    );
     savedAddress = (profile?.saved_shipping_address as typeof savedAddress) ?? null;
 
     // Backfill referral code for existing users who signed up before this feature

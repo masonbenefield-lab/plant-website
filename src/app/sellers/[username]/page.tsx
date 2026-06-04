@@ -13,6 +13,7 @@ import { MessageButton } from "@/components/message-button";
 import { StorefrontMoreMenu } from "@/components/storefront-more-menu";
 import { StorefrontBannerEditor, StorefrontAvatarEditor } from "@/components/storefront-photo-editor";
 import RateSellerForm from "@/app/orders/rate-seller-form";
+import { ReportReviewButton } from "@/components/report-review-button";
 import { StorefrontListings, StorefrontAuctions, StorefrontGarden, StorefrontWishlist } from "./storefront-listings";
 import SocialLinks from "@/components/social-links";
 import type { Database } from "@/lib/supabase/types";
@@ -109,6 +110,19 @@ export default async function SellerStorefront({
     ? await supabase.from("profiles").select("id, username, avatar_url").in("id", reviewerIds)
     : { data: [] };
   const reviewerMap = Object.fromEntries((reviewers ?? []).map((r) => [r.id, r]));
+
+  // Fetch which reviews the seller has already reported (only needed on their own profile)
+  const reportedRatingIds = new Set<string>();
+  if (user?.id === profile.id && (ratings?.length ?? 0) > 0) {
+    const { data: existingReports } = await adminClient
+      .from("review_reports" as never)
+      .select("rating_id")
+      .eq("reporter_id", user.id)
+      .in("rating_id", ratings!.map((r) => r.id));
+    for (const r of (existingReports ?? []) as { rating_id: string | null }[]) {
+      if (r.rating_id) reportedRatingIds.add(r.rating_id);
+    }
+  }
 
   const isFollowing = user
     ? !!(await supabase.from("follows").select("id").eq("follower_id", user.id).eq("seller_id", profile.id).maybeSingle()).data
@@ -402,6 +416,12 @@ export default async function SellerStorefront({
                               />
                             ))}
                           </div>
+                          {user?.id === profile.id && (
+                            <ReportReviewButton
+                              ratingId={rating.id}
+                              initialReported={reportedRatingIds.has(rating.id)}
+                            />
+                          )}
                         </div>
                         {rating.comment && (
                           <p className="text-sm text-muted-foreground">{rating.comment}</p>

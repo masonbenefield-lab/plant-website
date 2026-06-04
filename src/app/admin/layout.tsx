@@ -22,8 +22,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  const [{ count: pendingReports }, { data: violationUsers }, { data: adjustmentRows }] = await Promise.all([
+  const [{ count: pendingReports }, { count: pendingReviewReports }, { data: violationUsers }, { data: adjustmentRows }] = await Promise.all([
     supabase.from("reports").select("*", { count: "exact", head: true }).eq("status", "pending"),
+    admin.from("review_reports" as never).select("*", { count: "exact", head: true }).eq("status", "pending") as unknown as Promise<{ count: number }>,
     supabase.from("word_violations").select("user_id"),
     admin.from("shipping_adjustments").select("seller_id"),
   ]);
@@ -43,7 +44,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div className="flex min-h-[calc(100vh-64px)]">
-      <AdminNav pendingReports={pendingReports ?? 0} repeatViolators={repeatViolators} repeatAdjustors={repeatAdjustors} />
+      <AdminNav pendingReports={pendingReports ?? 0} pendingReviewReports={pendingReviewReports ?? 0} repeatViolators={repeatViolators} repeatAdjustors={repeatAdjustors} />
       <main className="flex-1 overflow-auto min-w-0">{children}</main>
     </div>
   );

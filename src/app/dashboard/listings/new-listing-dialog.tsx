@@ -76,6 +76,7 @@ export default function NewListingDialog({ sellerId, planLimit, currentCount, ph
     if (!(data.get("description") as string)?.trim()) { toast.error("Description is required."); return; }
     if (!dollarsToCents(data.get("price") as string)) { toast.error("Price is required."); return; }
     if (!shippingMode) { toast.error("Select a shipping method."); return; }
+    if (imageUrls.length === 0) { toast.error("At least one photo is required."); return; }
     setSaving(true);
 
     const supabase = createClient();
@@ -173,7 +174,7 @@ export default function NewListingDialog({ sellerId, planLimit, currentCount, ph
           </div>
           <div className="space-y-1">
             <Label>
-              Photos{photoLimit !== null && (
+              Photos <span className="text-destructive">*</span>{photoLimit !== null && (
                 <span className="ml-1 font-normal text-muted-foreground text-xs">({imageUrls.length}/{photoLimit})</span>
               )}
             </Label>

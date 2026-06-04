@@ -78,44 +78,50 @@ const features = [
     href: "/auctions",
     desc: "Set a starting bid and end time. Watch live bids roll in — highest bidder wins when the clock hits zero.",
     example: (
-      <div className="space-y-3">
-        <div className="rounded-xl border bg-card overflow-hidden">
-          <div className="relative aspect-video bg-muted flex items-center justify-center text-5xl">
+      <div className="rounded-xl border bg-card overflow-hidden">
+        <div className="flex gap-4 p-4">
+          {/* Image */}
+          <div className="relative w-28 h-28 rounded-lg bg-muted flex items-center justify-center text-4xl shrink-0 overflow-hidden">
             🌿
-            <span className="absolute top-2 left-2 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">● LIVE</span>
-            <span className="absolute top-2 right-2 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded-full">4h 22m left</span>
+            <span className="absolute top-1.5 left-1.5 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full leading-none">● LIVE</span>
           </div>
-          <div className="p-4 space-y-3">
+          {/* Details */}
+          <div className="flex-1 min-w-0 space-y-2">
             <div>
-              <p className="font-semibold">Rare Monstera Albo — Rooted Cut</p>
-              <p className="text-xs text-muted-foreground">Starting bid: $45.00</p>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <p className="font-semibold text-sm leading-tight">Monstera Albo — Rooted Cut</p>
+              </div>
+              <span className="inline-block mt-1 text-[10px] bg-muted text-muted-foreground px-2 py-0.5 rounded-full">Tropical</span>
             </div>
-            <div className="flex items-center justify-between rounded-lg bg-muted px-3 py-2">
+            <div className="rounded-lg bg-muted px-3 py-2 flex items-center justify-between">
               <div>
                 <p className="text-[10px] text-muted-foreground">Current bid</p>
-                <p className="text-xl font-bold text-leaf">$112.00</p>
+                <p className="text-base font-bold text-leaf">$112.00</p>
+                <p className="text-[10px] text-muted-foreground">Starting: $45.00</p>
               </div>
               <div className="text-right">
-                <p className="text-[10px] text-muted-foreground">8 bids</p>
-                <p className="text-xs font-medium">plant_lover92</p>
+                <p className="text-[10px] font-semibold text-amber-500">4h 22m left</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">8 bids</p>
               </div>
             </div>
-            <div className="space-y-1">
-              {[
-                { user: "plant_lover92", amount: "$112.00", time: "2m ago" },
-                { user: "fig_fanatic",   amount: "$98.00",  time: "14m ago" },
-                { user: "greenthumbs",  amount: "$75.00",  time: "31m ago" },
-              ].map((b) => (
-                <div key={b.time} className="flex items-center justify-between text-[10px] text-muted-foreground">
-                  <span>{b.user}</span>
-                  <span className="font-medium">{b.amount} · {b.time}</span>
-                </div>
-              ))}
-            </div>
-            <div className="w-full rounded-lg bg-leaf text-white text-sm font-semibold py-2 text-center">
-              Place Bid
-            </div>
           </div>
+        </div>
+        {/* Recent bids */}
+        <div className="border-t px-4 py-3 space-y-1.5">
+          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Recent bids</p>
+          {[
+            { user: "plant_lover92", amount: "$112.00", time: "2m ago", winner: true },
+            { user: "fig_fanatic",   amount: "$98.00",  time: "14m ago", winner: false },
+            { user: "greenthumbs",  amount: "$75.00",  time: "31m ago", winner: false },
+          ].map((b) => (
+            <div key={b.time} className="flex items-center justify-between text-[10px]">
+              <span className="flex items-center gap-1">
+                {b.winner && <span>🏆</span>}
+                <span className={b.winner ? "font-medium" : "text-muted-foreground"}>{b.user}</span>
+              </span>
+              <span className="text-muted-foreground">{b.amount} · {b.time}</span>
+            </div>
+          ))}
         </div>
       </div>
     ),

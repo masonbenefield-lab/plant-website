@@ -22,10 +22,10 @@ export async function POST() {
 
   if (!profile?.referred_by) return NextResponse.json({ ok: true, skipped: "no referrer" });
 
-  // Idempotent — UNIQUE(referred_id) means a second call is a no-op
+  // Idempotent — UNIQUE(referred_id, type) means a second call is a no-op
   const { error } = await admin
     .from("referral_activations")
-    .insert({ referrer_id: profile.referred_by, referred_id: user.id })
+    .insert({ referrer_id: profile.referred_by, referred_id: user.id, type: "plant_added" })
     .select()
     .single();
 

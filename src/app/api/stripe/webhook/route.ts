@@ -142,6 +142,21 @@ export async function POST(request: Request) {
         }).catch(() => {});
       }
 
+      // First-sale referral bonus: if this seller was referred and hasn't sold before, activate +2 entry
+      {
+        const { data: sellerProfile } = await supabase
+          .from("profiles")
+          .select("referred_by")
+          .eq("id", order.seller_id)
+          .single();
+        if (sellerProfile?.referred_by) {
+          await supabase
+            .from("referral_activations")
+            .insert({ referrer_id: sellerProfile.referred_by, referred_id: order.seller_id, type: "first_sale" } as never)
+            .catch(() => {}); // 23505 unique violation = already fired, idempotent
+        }
+      }
+
       // Cart checkout: decrement listing stock and inventory now that payment is confirmed
       if (pi.metadata?.cart_checkout === "true" && order.cart_items) {
         const cartItems = order.cart_items as { listing_id: string; quantity: number }[];

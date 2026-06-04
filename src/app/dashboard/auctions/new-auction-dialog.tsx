@@ -165,6 +165,11 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
         return;
       }
     }
+    if (imageUrls.length === 0) {
+      toast.error("At least one photo is required.");
+      setSaving(false);
+      return;
+    }
     const supabase = createClient();
     const { error } = await supabase.from("auctions").insert({
       seller_id: sellerId,
@@ -358,7 +363,7 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
           </div>
           <div className="space-y-1">
             <Label>
-              Photos{photoLimit !== null && (
+              Photos <span className="text-destructive">*</span>{photoLimit !== null && (
                 <span className="ml-1 font-normal text-muted-foreground text-xs">({imageUrls.length}/{photoLimit})</span>
               )}
             </Label>

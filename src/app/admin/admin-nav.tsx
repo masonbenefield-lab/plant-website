@@ -12,11 +12,12 @@ const links = [
   { href: "/admin/orders",                 label: "Orders" },
   { href: "/admin/shipping-adjustments",   label: "Shipping" },
   { href: "/admin/reports",                label: "Reports" },
+  { href: "/admin/review-reports",         label: "Review Reports" },
   { href: "/admin/violations",             label: "Violations" },
   { href: "/admin/giveaway",               label: "Giveaway" },
 ];
 
-export default function AdminNav({ pendingReports = 0, repeatViolators = 0, repeatAdjustors = 0 }: { pendingReports?: number; repeatViolators?: number; repeatAdjustors?: number }) {
+export default function AdminNav({ pendingReports = 0, pendingReviewReports = 0, repeatViolators = 0, repeatAdjustors = 0 }: { pendingReports?: number; pendingReviewReports?: number; repeatViolators?: number; repeatAdjustors?: number }) {
   const pathname = usePathname();
 
   return (
@@ -28,6 +29,7 @@ export default function AdminNav({ pendingReports = 0, repeatViolators = 0, repe
         {links.map((link) => {
           const active = link.href === "/admin" ? pathname === "/admin" : pathname.startsWith(link.href);
           const isReports = link.href === "/admin/reports";
+          const isReviewReports = link.href === "/admin/review-reports";
           const isViolations = link.href === "/admin/violations";
           const isShipping = link.href === "/admin/shipping-adjustments";
           return (
@@ -42,6 +44,11 @@ export default function AdminNav({ pendingReports = 0, repeatViolators = 0, repe
               )}
             >
               {link.label}
+              {isReviewReports && pendingReviewReports > 0 && (
+                <span className="ml-2 rounded-full bg-red-500 text-white text-xs px-1.5 py-0.5 font-semibold leading-none">
+                  {pendingReviewReports}
+                </span>
+              )}
               {isReports && pendingReports > 0 && (
                 <span className="ml-2 rounded-full bg-red-500 text-white text-xs px-1.5 py-0.5 font-semibold leading-none">
                   {pendingReports}
