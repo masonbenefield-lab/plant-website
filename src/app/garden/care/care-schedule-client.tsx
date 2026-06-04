@@ -42,6 +42,13 @@ export type ReminderEntry = {
 
 type SimplePlant = { id: string; name: string; image: string | null };
 
+export type CompletedCareEntry = {
+  plantId: string;
+  plantName: string;
+  image: string | null;
+  careType: string;
+};
+
 export type PlantWithIntervals = {
   id: string;
   name: string;
@@ -208,6 +215,7 @@ function DayReminderRow({ reminder, selected, onToggle, onComplete }: {
   const displayType = reminderDisplayType(reminder.eventType);
   const { label, color } = urgencyLabel(reminder.daysUntilDue);
   const [loading, setLoading] = useState(false);
+  const [noteExpanded, setNoteExpanded] = useState(false);
 
   async function handleComplete() {
     setLoading(true);
@@ -221,46 +229,61 @@ function DayReminderRow({ reminder, selected, onToggle, onComplete }: {
   }
 
   return (
-    <div className={cn("flex items-center gap-2.5 rounded-lg border bg-background px-3 py-2 transition-colors", selected && "border-leaf/40 bg-leaf/5")}>
-      <SelectCheckbox checked={selected} onToggle={onToggle} />
-      {reminder.plantId ? (
-        <Link href={`/garden/${reminder.plantId}`} className="shrink-0">
-          {reminder.image
-            ? <Image src={reminder.image} alt={reminder.plantName ?? ""} width={36} height={36} className="rounded-md object-cover border w-9 h-9" />
-            : <div className="w-9 h-9 rounded-md bg-muted border flex items-center justify-center text-sm">🌿</div>
-          }
-        </Link>
-      ) : (
-        <div className="w-9 h-9 rounded-md bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 flex items-center justify-center text-sm shrink-0">📝</div>
-      )}
-      <div className="flex-1 min-w-0">
-        <span className="text-xs font-medium truncate block">{reminder.plantName ?? "Garden note"}</span>
-        <div className="flex items-center gap-1.5 mt-0.5">
-          <span className={cn("flex items-center gap-1 text-[11px] font-medium px-1.5 py-0.5 rounded-full border", meta.bg, meta.color, meta.border)}>
-            {meta.icon} {displayType}
-          </span>
-          <span className={cn("text-[11px] font-medium", color)}>{label}</span>
-          {reminder.notes && <span className="text-[11px] text-muted-foreground truncate max-w-[120px]">{reminder.notes}</span>}
+    <div className={cn("flex flex-col gap-1.5 rounded-lg border bg-background px-3 py-2 transition-colors", selected && "border-leaf/40 bg-leaf/5")}>
+      <div className="flex items-center gap-2.5">
+        <SelectCheckbox checked={selected} onToggle={onToggle} />
+        {reminder.plantId ? (
+          <Link href={`/garden/${reminder.plantId}`} className="shrink-0">
+            {reminder.image
+              ? <Image src={reminder.image} alt={reminder.plantName ?? ""} width={36} height={36} className="rounded-md object-cover border w-9 h-9" />
+              : <div className="w-9 h-9 rounded-md bg-muted border flex items-center justify-center text-sm">🌿</div>
+            }
+          </Link>
+        ) : (
+          <div className="w-9 h-9 rounded-md bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 flex items-center justify-center text-sm shrink-0">📝</div>
+        )}
+        <div className="flex-1 min-w-0">
+          <span className="text-xs font-medium truncate block">{reminder.plantName ?? "Garden note"}</span>
+          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+            <span className={cn("flex items-center gap-1 text-[11px] font-medium px-1.5 py-0.5 rounded-full border", meta.bg, meta.color, meta.border)}>
+              {meta.icon} {displayType}
+            </span>
+            <span className={cn("text-[11px] font-medium", color)}>{label}</span>
+            {reminder.notes && !noteExpanded && (
+              <button onClick={() => setNoteExpanded(true)} className="text-[11px] text-muted-foreground hover:text-foreground truncate max-w-[140px] text-left transition-colors">
+                {reminder.notes}
+              </button>
+            )}
+          </div>
         </div>
+        <button onClick={handleComplete} disabled={loading} className="text-xs font-medium text-leaf hover:text-forest disabled:opacity-50 transition-colors whitespace-nowrap shrink-0">
+          {loading ? "…" : "Done ✓"}
+        </button>
       </div>
-      <button onClick={handleComplete} disabled={loading} className="text-xs font-medium text-leaf hover:text-forest disabled:opacity-50 transition-colors whitespace-nowrap shrink-0">
-        {loading ? "…" : "Done ✓"}
-      </button>
+      {reminder.notes && noteExpanded && (
+        <button onClick={() => setNoteExpanded(false)} className="text-xs text-muted-foreground bg-muted/40 rounded-md px-2.5 py-1.5 text-left ml-[46px] hover:bg-muted/60 transition-colors">
+          {reminder.notes}
+        </button>
+      )}
     </div>
   );
 }
 
-function DoneEntryRow({ entry }: { entry: CareEntry }) {
+function DoneEntryRow({ entry }: { entry: CompletedCareEntry }) {
   const meta = CARE_META[entry.careType];
   return (
-    <div className="flex items-center gap-2.5 rounded-lg border bg-background/50 px-3 py-2 opacity-55">
+    <div className="flex items-center gap-2.5 rounded-lg border bg-background/50 px-3 py-2 opacity-60 hover:opacity-80 transition-opacity">
       <Check size={14} className="text-leaf shrink-0" />
-      {entry.image
-        ? <Image src={entry.image} alt={entry.plantName} width={28} height={28} className="rounded-md object-cover border w-7 h-7 shrink-0" />
-        : <div className="w-7 h-7 rounded-md bg-muted border flex items-center justify-center text-xs shrink-0">🌿</div>
-      }
+      <Link href={`/garden/${entry.plantId}`} className="shrink-0">
+        {entry.image
+          ? <Image src={entry.image} alt={entry.plantName} width={28} height={28} className="rounded-md object-cover border w-7 h-7" />
+          : <div className="w-7 h-7 rounded-md bg-muted border flex items-center justify-center text-xs">🌿</div>
+        }
+      </Link>
       <div className="flex-1 min-w-0">
-        <span className="text-xs text-muted-foreground line-through truncate block">{entry.plantName}</span>
+        <Link href={`/garden/${entry.plantId}`} className="text-xs text-muted-foreground line-through truncate block hover:text-foreground transition-colors">
+          {entry.plantName}
+        </Link>
         <span className={cn("inline-flex items-center gap-1 text-[11px] font-medium px-1.5 py-0.5 rounded-full border mt-0.5 line-through", meta.bg, meta.color, meta.border)}>
           {meta.icon} {entry.careType}
         </span>
@@ -272,43 +295,76 @@ function DoneEntryRow({ entry }: { entry: CareEntry }) {
 function DoneReminderRow({ reminder }: { reminder: ReminderEntry }) {
   const meta = reminderMeta(reminder.eventType);
   const displayType = reminderDisplayType(reminder.eventType);
+  const [noteExpanded, setNoteExpanded] = useState(false);
   return (
-    <div className="flex items-center gap-2.5 rounded-lg border bg-background/50 px-3 py-2 opacity-55">
-      <Check size={14} className="text-leaf shrink-0" />
-      {reminder.image
-        ? <Image src={reminder.image} alt={reminder.plantName ?? ""} width={28} height={28} className="rounded-md object-cover border w-7 h-7 shrink-0" />
-        : <div className="w-7 h-7 rounded-md bg-muted border flex items-center justify-center text-xs shrink-0">📝</div>
-      }
-      <div className="flex-1 min-w-0">
-        <span className="text-xs text-muted-foreground line-through truncate block">{reminder.plantName ?? "Garden note"}</span>
-        <span className={cn("inline-flex items-center gap-1 text-[11px] font-medium px-1.5 py-0.5 rounded-full border mt-0.5 line-through", meta.bg, meta.color, meta.border)}>
-          {meta.icon} {displayType}
-        </span>
+    <div className="flex flex-col gap-1 rounded-lg border bg-background/50 px-3 py-2 opacity-60 hover:opacity-80 transition-opacity">
+      <div className="flex items-center gap-2.5">
+        <Check size={14} className="text-leaf shrink-0" />
+        {reminder.plantId ? (
+          <Link href={`/garden/${reminder.plantId}`} className="shrink-0">
+            {reminder.image
+              ? <Image src={reminder.image} alt={reminder.plantName ?? ""} width={28} height={28} className="rounded-md object-cover border w-7 h-7" />
+              : <div className="w-7 h-7 rounded-md bg-muted border flex items-center justify-center text-xs">🌿</div>
+            }
+          </Link>
+        ) : (
+          <div className="w-7 h-7 rounded-md bg-muted border flex items-center justify-center text-xs shrink-0">📝</div>
+        )}
+        <div className="flex-1 min-w-0">
+          {reminder.plantId ? (
+            <Link href={`/garden/${reminder.plantId}`} className="text-xs text-muted-foreground line-through truncate block hover:text-foreground transition-colors">
+              {reminder.plantName ?? "Garden note"}
+            </Link>
+          ) : (
+            <span className="text-xs text-muted-foreground line-through truncate block">{reminder.plantName ?? "Garden note"}</span>
+          )}
+          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+            <span className={cn("inline-flex items-center gap-1 text-[11px] font-medium px-1.5 py-0.5 rounded-full border line-through", meta.bg, meta.color, meta.border)}>
+              {meta.icon} {displayType}
+            </span>
+            {reminder.notes && !noteExpanded && (
+              <button onClick={() => setNoteExpanded(true)} className="text-[11px] text-muted-foreground hover:text-foreground truncate max-w-[140px] text-left transition-colors">
+                {reminder.notes}
+              </button>
+            )}
+          </div>
+        </div>
       </div>
+      {reminder.notes && noteExpanded && (
+        <button onClick={() => setNoteExpanded(false)} className="text-xs text-muted-foreground bg-muted/40 rounded-md px-2.5 py-1.5 text-left ml-[38px] hover:bg-muted/60 transition-colors">
+          {reminder.notes}
+        </button>
+      )}
     </div>
   );
 }
 
 // ─── WeekStrip (self-contained: strip + day panel + logging state) ────────────
 
-type LoggedEntry    = { entry: CareEntry;    actualDay: number };
+type LoggedEntry    = CompletedCareEntry & { actualDay: number };
 type LoggedReminder = { reminder: ReminderEntry; actualDay: number };
 
 function WeekStrip({
-  entries, reminders, onLogged, onReminderCompleted,
+  entries, reminders, completedToday, onLogged, onReminderCompleted,
 }: {
   entries: CareEntry[];
   reminders: ReminderEntry[];
+  completedToday: CompletedCareEntry[];
   onLogged: (plantId: string, careType: string) => void;
   onReminderCompleted: (id: string) => void;
 }) {
   // weekOffset: 0 = this week, -7 = last week, -14 = two weeks ago …
   const [weekOffset, setWeekOffset]   = useState(0);
   const [selectedDay, setSelectedDay] = useState<number | null>(0); // index 0–6 within strip
-  const [loggedKeys, setLoggedKeys]   = useState<Set<string>>(new Set());
+  // Pre-seed with today's already-logged events so completed list survives navigation
+  const [loggedKeys, setLoggedKeys]   = useState<Set<string>>(
+    () => new Set(completedToday.map((c) => `${c.plantId}-${c.careType}`))
+  );
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
-  // Explicit done lists persist across router.refresh() (unlike derived values)
-  const [doneEntryList, setDoneEntryList]       = useState<LoggedEntry[]>([]);
+  // Explicit done lists — survive router.refresh() because they're React state, not derived
+  const [doneEntryList, setDoneEntryList] = useState<LoggedEntry[]>(
+    () => completedToday.map((c) => ({ ...c, actualDay: 0 }))
+  );
   const [doneReminderList, setDoneReminderList] = useState<LoggedReminder[]>([]);
   const [panelSelected, setPanelSelected] = useState<Set<string>>(new Set());
   const [bulkLogging, setBulkLogging]     = useState(false);
@@ -373,7 +429,7 @@ function WeekStrip({
 
   // Done items: driven by explicit lists so they survive router.refresh()
   const currentDoneEntries = actualSelectedOffset !== null
-    ? doneEntryList.filter((d) => d.actualDay === actualSelectedOffset).map((d) => d.entry)
+    ? doneEntryList.filter((d) => d.actualDay === actualSelectedOffset)
     : [];
   const currentDoneReminders = actualSelectedOffset !== null
     ? doneReminderList.filter((d) => d.actualDay === actualSelectedOffset).map((d) => d.reminder)
@@ -395,7 +451,7 @@ function WeekStrip({
     const key = `${plantId}-${careType}`;
     if (actualSelectedOffset !== null) {
       const entry = entries.find((e) => e.plantId === plantId && e.careType === careType);
-      if (entry) setDoneEntryList((p) => [...p, { entry, actualDay: actualSelectedOffset }]);
+      if (entry) setDoneEntryList((p) => [...p, { plantId: entry.plantId, plantName: entry.plantName, image: entry.image, careType: entry.careType, actualDay: actualSelectedOffset }]);
     }
     setLoggedKeys((p) => new Set([...p, key]));
     setPanelSelected((p) => { const n = new Set(p); n.delete(key); return n; });
@@ -426,7 +482,7 @@ function WeekStrip({
         if (actualSelectedOffset !== null) {
           toLog.forEach(({ plantId, careType }) => {
             const entry = entries.find((e) => e.plantId === plantId && e.careType === careType);
-            if (entry) setDoneEntryList((p) => [...p, { entry, actualDay: actualSelectedOffset }]);
+            if (entry) setDoneEntryList((p) => [...p, { plantId: entry.plantId, plantName: entry.plantName, image: entry.image, careType: entry.careType, actualDay: actualSelectedOffset }]);
           });
         }
         setLoggedKeys((p) => new Set([...p, ...toLog.map((i) => `${i.plantId}-${i.careType}`)]));
@@ -461,7 +517,7 @@ function WeekStrip({
         if (actualSelectedOffset !== null) {
           toLog.forEach(({ plantId, careType }) => {
             const entry = entries.find((e) => e.plantId === plantId && e.careType === careType);
-            if (entry) setDoneEntryList((p) => [...p, { entry, actualDay: actualSelectedOffset }]);
+            if (entry) setDoneEntryList((p) => [...p, { plantId: entry.plantId, plantName: entry.plantName, image: entry.image, careType: entry.careType, actualDay: actualSelectedOffset }]);
           });
         }
         setLoggedKeys((p) => new Set([...p, ...toLog.map((i) => `${i.plantId}-${i.careType}`)]));
@@ -653,7 +709,7 @@ function WeekStrip({
           {hasDone && (
             <div className={cn("space-y-1.5", hasActive && "border-t pt-3 mt-1")}>
               <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Completed</p>
-              {currentDoneEntries.map((e, idx) => <DoneEntryRow key={`${e.plantId}-${e.careType}-${idx}`} entry={e} />)}
+              {currentDoneEntries.map((d, idx) => <DoneEntryRow key={`${d.plantId}-${d.careType}-${idx}`} entry={d} />)}
               {currentDoneReminders.map((r) => <DoneReminderRow key={r.id} reminder={r} />)}
             </div>
           )}
@@ -942,12 +998,14 @@ function ManagePlantRow({ plant, selectionMode, selected, onToggle, onEdit }: {
 export function CareScheduleClient({
   entries,
   reminderEntries: initialReminders,
+  completedToday,
   plantsWithoutSchedule: _plantsWithoutSchedule,
   totalWithSchedule,
   plantIntervals,
 }: {
   entries: CareEntry[];
   reminderEntries: ReminderEntry[];
+  completedToday: CompletedCareEntry[];
   plantsWithoutSchedule: SimplePlant[];
   totalWithSchedule: number;
   plantIntervals: PlantWithIntervals[];
@@ -1048,6 +1106,7 @@ export function CareScheduleClient({
               <WeekStrip
                 entries={entries}
                 reminders={reminders}
+                completedToday={completedToday}
                 onLogged={handleLogged}
                 onReminderCompleted={handleReminderCompleted}
               />

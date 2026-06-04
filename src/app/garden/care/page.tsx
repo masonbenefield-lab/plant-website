@@ -3,7 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import GardenTabs from "@/components/garden/garden-tabs";
 import { CareScheduleClient } from "./care-schedule-client";
-import type { PlantWithIntervals, ReminderEntry } from "./care-schedule-client";
+import type { PlantWithIntervals, ReminderEntry, CompletedCareEntry } from "./care-schedule-client";
 
 export default async function CareSchedulePage() {
   const supabase = await createClient();
@@ -80,6 +80,30 @@ export default async function CareSchedulePage() {
     }
   }
 
+  const plantMap = Object.fromEntries(allPlants.map((p) => [p.id, p]));
+
+  // Fetch today's logged care events (to pre-populate the Completed section on load)
+  const todayDateStr = today.toISOString().split("T")[0];
+  const { data: todayEventData } = plantIds.length
+    ? await supabase
+        .from("garden_events")
+        .select("plant_id, event_type")
+        .in("plant_id", plantIds)
+        .in("event_type", ["watered", "fertilized", "repotted", "pruned"])
+        .eq("event_date", todayDateStr)
+    : { data: [] };
+
+  const CARE_TYPE_DISPLAY: Record<string, string> = {
+    watered: "Water", fertilized: "Fertilize", repotted: "Repot", pruned: "Prune",
+  };
+  const completedToday: CompletedCareEntry[] = (todayEventData ?? []).flatMap((ev) => {
+    const plant = plantMap[ev.plant_id];
+    if (!plant) return [];
+    const name = plant.variety ? `${plant.name} — ${plant.variety}` : plant.name;
+    const image = (plant.images as string[] | null)?.[0] ?? null;
+    return [{ plantId: ev.plant_id, plantName: name, image, careType: CARE_TYPE_DISPLAY[ev.event_type] ?? ev.event_type }];
+  });
+
   // Fetch non-completed reminders (up to 60 days ahead, include overdue up to 30 days back)
   const pastCutoff = new Date(today.getTime() - 30 * 86400000).toISOString().split("T")[0];
   const { data: rawReminders } = await supabase
@@ -90,7 +114,6 @@ export default async function CareSchedulePage() {
     .gte("scheduled_date", pastCutoff)
     .order("scheduled_date", { ascending: true });
 
-  const plantMap = Object.fromEntries(allPlants.map((p) => [p.id, p]));
   const reminderEntries: ReminderEntry[] = (rawReminders ?? []).map((r) => {
     const plant = r.plant_id ? plantMap[r.plant_id] : null;
     const plantName = plant ? (plant.variety ? `${plant.name} — ${plant.variety}` : plant.name) : null;
@@ -149,6 +172,7 @@ export default async function CareSchedulePage() {
         <CareScheduleClient
           entries={entries}
           reminderEntries={reminderEntries}
+          completedToday={completedToday}
           plantsWithoutSchedule={plantsWithoutSchedule.map((p) => ({
             id: p.id,
             name: p.variety ? `${p.name} — ${p.variety}` : p.name,
