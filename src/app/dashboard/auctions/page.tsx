@@ -279,7 +279,7 @@ export default async function DashboardAuctionsPage({
                       {auction.status === "scheduled" && (
                         <DeleteScheduledAuctionButton auctionId={auction.id} />
                       )}
-                      {(auction.status === "ended" || auction.status === "cancelled" || auction.status === "expired") && (
+                      {(auction.status === "ended" || auction.status === "cancelled") && (
                         <div className="flex items-center gap-2">
                           {/* Reserve offer button — ended auctions where reserve was not met and no offer sent yet */}
                           {auction.status === "ended" &&
