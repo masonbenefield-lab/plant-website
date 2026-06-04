@@ -12,7 +12,7 @@ export default async function CareSchedulePage() {
 
   const { data: plants } = await supabase
     .from("garden_plants")
-    .select("id, name, variety, images, water_interval_days, fertilize_interval_days, repot_interval_days, prune_interval_days")
+    .select("id, name, variety, images, location, water_interval_days, fertilize_interval_days, repot_interval_days, prune_interval_days")
     .eq("user_id", user.id)
     .order("name", { ascending: true });
 
@@ -44,6 +44,7 @@ export default async function CareSchedulePage() {
     plantId: string;
     plantName: string;
     image: string | null;
+    location: string | null;
     careType: string;
     eventKey: string;
     interval: number;
@@ -63,6 +64,7 @@ export default async function CareSchedulePage() {
   for (const plant of allPlants) {
     const name = plant.variety ? `${plant.name} — ${plant.variety}` : plant.name;
     const image = (plant.images as string[] | null)?.[0] ?? null;
+    const location = (plant as Record<string, unknown>).location as string | null ?? null;
     for (const { type, eventKey, intervalKey } of CHECKS) {
       const interval = (plant as Record<string, unknown>)[intervalKey] as number | null;
       if (!interval) continue;
@@ -76,7 +78,7 @@ export default async function CareSchedulePage() {
       } else {
         daysUntilDue = 0;
       }
-      entries.push({ plantId: plant.id, plantName: name, image, careType: type, eventKey, interval, lastDate: lastDateStr, daysUntilDue });
+      entries.push({ plantId: plant.id, plantName: name, image, location, careType: type, eventKey, interval, lastDate: lastDateStr, daysUntilDue });
     }
   }
 
@@ -101,7 +103,8 @@ export default async function CareSchedulePage() {
     if (!plant) return [];
     const name = plant.variety ? `${plant.name} — ${plant.variety}` : plant.name;
     const image = (plant.images as string[] | null)?.[0] ?? null;
-    return [{ plantId: ev.plant_id, plantName: name, image, careType: CARE_TYPE_DISPLAY[ev.event_type] ?? ev.event_type }];
+    const loc = (plant as Record<string, unknown>).location as string | null ?? null;
+    return [{ plantId: ev.plant_id, plantName: name, image, location: loc, careType: CARE_TYPE_DISPLAY[ev.event_type] ?? ev.event_type }];
   });
 
   // Fetch non-completed reminders (up to 60 days ahead, include overdue up to 30 days back)
@@ -144,6 +147,7 @@ export default async function CareSchedulePage() {
     id: p.id,
     name: p.variety ? `${p.name} — ${p.variety}` : p.name,
     image: (p.images as string[] | null)?.[0] ?? null,
+    location: (p as Record<string, unknown>).location as string | null ?? null,
     waterInterval: p.water_interval_days ?? null,
     fertilizeInterval: p.fertilize_interval_days ?? null,
     repotInterval: p.repot_interval_days ?? null,

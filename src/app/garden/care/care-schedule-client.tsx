@@ -22,6 +22,7 @@ type CareEntry = {
   plantId: string;
   plantName: string;
   image: string | null;
+  location: string | null;
   careType: string;
   eventKey: string;
   interval: number;
@@ -46,6 +47,7 @@ export type CompletedCareEntry = {
   plantId: string;
   plantName: string;
   image: string | null;
+  location: string | null;
   careType: string;
 };
 
@@ -53,6 +55,7 @@ export type PlantWithIntervals = {
   id: string;
   name: string;
   image: string | null;
+  location: string | null;
   waterInterval: number | null;
   fertilizeInterval: number | null;
   repotInterval: number | null;
@@ -193,7 +196,10 @@ function DayTaskRow({ entry, selected, onToggle, onLog }: {
         }
       </Link>
       <div className="flex-1 min-w-0">
-        <Link href={`/garden/${entry.plantId}`} className="text-xs font-medium hover:text-leaf transition-colors truncate block">{entry.plantName}</Link>
+        <div className="flex items-center gap-1.5 min-w-0">
+          <Link href={`/garden/${entry.plantId}`} className="text-xs font-medium hover:text-leaf transition-colors truncate">{entry.plantName}</Link>
+          {entry.location && <span className="text-[10px] text-muted-foreground truncate shrink-0">· {entry.location}</span>}
+        </div>
         <div className="flex items-center gap-1.5 mt-0.5">
           <span className={cn("flex items-center gap-1 text-[11px] font-medium px-1.5 py-0.5 rounded-full border", meta.bg, meta.color, meta.border)}>
             {meta.icon} {entry.careType}
@@ -304,9 +310,12 @@ function DoneEntryRow({ entry, onUndo }: { entry: CompletedCareEntry; onUndo: ()
         }
       </Link>
       <div className="flex-1 min-w-0">
-        <Link href={`/garden/${entry.plantId}`} className="text-xs text-muted-foreground line-through truncate block hover:text-foreground transition-colors">
-          {entry.plantName}
-        </Link>
+        <div className="flex items-center gap-1.5 min-w-0">
+          <Link href={`/garden/${entry.plantId}`} className="text-xs text-muted-foreground line-through truncate hover:text-foreground transition-colors">
+            {entry.plantName}
+          </Link>
+          {entry.location && <span className="text-[10px] text-muted-foreground/70 truncate shrink-0">· {entry.location}</span>}
+        </div>
         <span className={cn("inline-flex items-center gap-1 text-[11px] font-medium px-1.5 py-0.5 rounded-full border mt-0.5 line-through", meta.bg, meta.color, meta.border)}>
           {meta.icon} {entry.careType}
         </span>
@@ -473,7 +482,7 @@ function WeekStrip({
     const key = `${plantId}-${careType}`;
     if (actualSelectedOffset !== null) {
       const entry = entries.find((e) => e.plantId === plantId && e.careType === careType);
-      if (entry) setDoneEntryList((p) => [...p, { plantId: entry.plantId, plantName: entry.plantName, image: entry.image, careType: entry.careType, actualDay: actualSelectedOffset }]);
+      if (entry) setDoneEntryList((p) => [...p, { plantId: entry.plantId, plantName: entry.plantName, image: entry.image, location: entry.location, careType: entry.careType, actualDay: actualSelectedOffset }]);
     }
     setLoggedKeys((p) => new Set([...p, key]));
     setPanelSelected((p) => { const n = new Set(p); n.delete(key); return n; });
@@ -538,7 +547,7 @@ function WeekStrip({
         if (actualSelectedOffset !== null) {
           toLog.forEach(({ plantId, careType }) => {
             const entry = entries.find((e) => e.plantId === plantId && e.careType === careType);
-            if (entry) setDoneEntryList((p) => [...p, { plantId: entry.plantId, plantName: entry.plantName, image: entry.image, careType: entry.careType, actualDay: actualSelectedOffset }]);
+            if (entry) setDoneEntryList((p) => [...p, { plantId: entry.plantId, plantName: entry.plantName, image: entry.image, location: entry.location, careType: entry.careType, actualDay: actualSelectedOffset }]);
           });
         }
         setLoggedKeys((p) => new Set([...p, ...toLog.map((i) => `${i.plantId}-${i.careType}`)]));
@@ -573,7 +582,7 @@ function WeekStrip({
         if (actualSelectedOffset !== null) {
           toLog.forEach(({ plantId, careType }) => {
             const entry = entries.find((e) => e.plantId === plantId && e.careType === careType);
-            if (entry) setDoneEntryList((p) => [...p, { plantId: entry.plantId, plantName: entry.plantName, image: entry.image, careType: entry.careType, actualDay: actualSelectedOffset }]);
+            if (entry) setDoneEntryList((p) => [...p, { plantId: entry.plantId, plantName: entry.plantName, image: entry.image, location: entry.location, careType: entry.careType, actualDay: actualSelectedOffset }]);
           });
         }
         setLoggedKeys((p) => new Set([...p, ...toLog.map((i) => `${i.plantId}-${i.careType}`)]));
@@ -1035,7 +1044,10 @@ function ManagePlantRow({ plant, selectionMode, selected, onToggle, onEdit }: {
         }
       </Link>
       <div className="flex-1 min-w-0">
-        <Link href={`/garden/${plant.id}`} className="text-sm font-medium hover:text-leaf transition-colors truncate block">{plant.name}</Link>
+        <div className="flex items-center gap-1.5 min-w-0">
+          <Link href={`/garden/${plant.id}`} className="text-sm font-medium hover:text-leaf transition-colors truncate">{plant.name}</Link>
+          {plant.location && <span className="text-xs text-muted-foreground truncate shrink-0">· {plant.location}</span>}
+        </div>
         {setIntervals.length > 0 ? (
           <div className="flex flex-wrap gap-2 mt-0.5">
             {setIntervals.map(({ key, emoji }) => (
