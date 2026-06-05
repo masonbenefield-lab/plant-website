@@ -18,6 +18,7 @@ import { ReportReviewButton } from "@/components/report-review-button";
 import { StorefrontListings, StorefrontAuctions, StorefrontGarden, StorefrontWishlist } from "./storefront-listings";
 import SocialLinks from "@/components/social-links";
 import type { Database } from "@/lib/supabase/types";
+import { MarkStorefrontPreviewed } from "./mark-storefront-previewed";
 
 export async function generateMetadata({
   params,
@@ -112,11 +113,6 @@ export default async function SellerStorefront({
     : { data: [] };
   const reviewerMap = Object.fromEntries((reviewers ?? []).map((r) => [r.id, r]));
 
-  // Mark storefront as previewed the first time the owner visits
-  if (user?.id === profile.id && !(profile as { storefront_previewed?: boolean }).storefront_previewed) {
-    adminClient.from("profiles").update({ storefront_previewed: true } as never).eq("id", profile.id).then(() => {});
-  }
-
   // Fetch which reviews the seller has already reported (only needed on their own profile)
   const reportedRatingIds = new Set<string>();
   if (user?.id === profile.id && (ratings?.length ?? 0) > 0) {
@@ -189,6 +185,11 @@ export default async function SellerStorefront({
         <div className="mb-6 rounded-lg border border-[#C5D4BC] bg-[#EBF0E6] dark:bg-forest/30 dark:border-forest px-4 py-3 text-sm text-forest dark:text-[#C5D4BC] font-medium">
           {(profile as { announcement?: string | null }).announcement}
         </div>
+      )}
+
+      {/* Fire-and-forget: mark storefront as previewed when owner visits */}
+      {user?.id === profile.id && !(profile as { storefront_previewed?: boolean }).storefront_previewed && (
+        <MarkStorefrontPreviewed />
       )}
 
       {/* Banner */}
