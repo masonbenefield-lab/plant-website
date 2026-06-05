@@ -27,13 +27,13 @@ const siteUrl = "https://www.plantet.shop";
 export const metadata: Metadata = {
   title: "Plantet — Buy, Sell & Auction Plants",
   description:
-    "A marketplace for nurseries and hobbyists to buy, sell, and auction plants.",
+    "Track your plants, connect with fellow growers, and buy or sell — all in one place built for the plant-obsessed.",
   icons: {
     icon: "/plantet-mark-color.svg",
   },
   openGraph: {
     title: "Plantet — Buy, Sell & Auction Plants",
-    description: "A marketplace for nurseries and hobbyists to buy, sell, and auction plants.",
+    description: "Track your plants, connect with fellow growers, and buy or sell — all in one place built for the plant-obsessed.",
     siteName: "Plantet",
     url: siteUrl,
     type: "website",
@@ -49,7 +49,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Plantet — Buy, Sell & Auction Plants",
-    description: "A marketplace for nurseries and hobbyists to buy, sell, and auction plants.",
+    description: "Track your plants, connect with fellow growers, and buy or sell — all in one place built for the plant-obsessed.",
     images: [`${siteUrl}/plantet-facebook-green.png`],
   },
 };
