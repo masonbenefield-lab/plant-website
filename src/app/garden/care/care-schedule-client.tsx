@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   Droplets, Leaf, Flower2, Scissors, Pencil, Check, ChevronDown, ChevronLeft, ChevronRight,
-  StickyNote, Plus, Search, X, Syringe, Wheat,
+  StickyNote, Plus, Search, X, Syringe, Wheat, Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -168,9 +168,9 @@ function SelectCheckbox({ checked, onToggle }: { checked: boolean; onToggle: () 
 
 // ─── Day panel rows ───────────────────────────────────────────────────────────
 
-function DayTaskRow({ entry, logDate, selected, isToday, onToggle, onLog, onEditSchedule }: {
+function DayTaskRow({ entry, logDate, selected, isToday, onToggle, onLog, onEditSchedule, onViewHistory }: {
   entry: CareEntry; logDate: string; selected: boolean; isToday?: boolean; onToggle: () => void;
-  onLog: (eventId: string, withNote: boolean) => void; onEditSchedule?: () => void;
+  onLog: (eventId: string, withNote: boolean) => void; onEditSchedule?: () => void; onViewHistory?: () => void;
 }) {
   const meta = CARE_META[entry.careType];
   // Overdue items at or past the cap boundary cycle back via getStripDays — show "Due today"
@@ -215,6 +215,11 @@ function DayTaskRow({ entry, logDate, selected, isToday, onToggle, onLog, onEdit
         </div>
       </div>
       <div className="flex items-center gap-2 shrink-0">
+        {onViewHistory && (
+          <button onClick={onViewHistory} className="text-muted-foreground hover:text-foreground transition-colors" title="View history">
+            <Clock size={13} />
+          </button>
+        )}
         {onEditSchedule && (
           <button onClick={onEditSchedule} className="text-muted-foreground hover:text-foreground transition-colors" title="Edit schedule">
             <Pencil size={13} />
@@ -395,13 +400,20 @@ function BulkConfirmDialog({ careItems, reminderItems, open, onClose, onConfirm,
   reminderItems: ReminderEntry[];
   open: boolean;
   onClose: () => void;
-  onConfirm: (note: string) => void;
+  onConfirm: (sharedNote: string, individualNotes: Record<string, string>) => void;
   confirming: boolean;
 }) {
-  const [note, setNote] = useState("");
+  const [sharedNote, setSharedNote] = useState("");
+  const [individualNotes, setIndividualNotes] = useState<Record<string, string>>({});
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const total = careItems.length + reminderItems.length;
 
-  function handleClose() { setNote(""); onClose(); }
+  function handleClose() {
+    setSharedNote(""); setIndividualNotes({}); setExpandedItems(new Set()); onClose();
+  }
+  function toggleExpand(key: string) {
+    setExpandedItems((p) => { const n = new Set(p); if (n.has(key)) n.delete(key); else n.add(key); return n; });
+  }
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>
@@ -410,15 +422,46 @@ function BulkConfirmDialog({ careItems, reminderItems, open, onClose, onConfirm,
           <DialogTitle>Log {total} task{total !== 1 ? "s" : ""}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3 py-1">
-          <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
-            {careItems.map((e, i) => {
+          {careItems.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-sm text-muted-foreground">Note <span className="text-xs">(optional · applies to all)</span></p>
+              <textarea
+                value={sharedNote}
+                onChange={(e) => setSharedNote(e.target.value)}
+                placeholder="Add a shared note…"
+                rows={2}
+                className="w-full text-xs rounded-md border border-input bg-background px-2.5 py-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+            </div>
+          )}
+          <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+            {careItems.map((e) => {
               const meta = CARE_META[e.careType];
+              const key = `${e.plantId}-${e.careType}`;
               return (
-                <div key={i} className="flex items-center gap-2">
-                  <span className={cn("flex items-center gap-1 text-[11px] font-medium px-1.5 py-0.5 rounded-full border shrink-0", meta.bg, meta.color, meta.border)}>
-                    {meta.icon} {e.careType}
-                  </span>
-                  <span className="text-xs text-muted-foreground truncate">{e.plantName}</span>
+                <div key={key}>
+                  <div className="flex items-center gap-2">
+                    <span className={cn("flex items-center gap-1 text-[11px] font-medium px-1.5 py-0.5 rounded-full border shrink-0", meta.bg, meta.color, meta.border)}>
+                      {meta.icon} {e.careType}
+                    </span>
+                    <span className="text-xs text-muted-foreground truncate flex-1">{e.plantName}</span>
+                    <button
+                      onClick={() => toggleExpand(key)}
+                      className={cn("shrink-0 transition-colors", expandedItems.has(key) ? "text-leaf" : "text-muted-foreground/40 hover:text-muted-foreground")}
+                      title="Add individual note"
+                    >
+                      <StickyNote size={11} />
+                    </button>
+                  </div>
+                  {expandedItems.has(key) && (
+                    <textarea
+                      value={individualNotes[key] ?? ""}
+                      onChange={(ev) => setIndividualNotes((p) => ({ ...p, [key]: ev.target.value }))}
+                      placeholder="Individual note (overrides shared)…"
+                      rows={1}
+                      className="w-full mt-1 text-xs rounded-md border border-input bg-background px-2.5 py-1 resize-none focus:outline-none focus:ring-1 focus:ring-ring"
+                    />
+                  )}
                 </div>
               );
             })}
@@ -435,21 +478,9 @@ function BulkConfirmDialog({ careItems, reminderItems, open, onClose, onConfirm,
               );
             })}
           </div>
-          {careItems.length > 0 && (
-            <div className="space-y-1.5">
-              <p className="text-sm text-muted-foreground">Note <span className="text-xs">(optional · applies to all)</span></p>
-              <textarea
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                placeholder="Add a shared note…"
-                rows={2}
-                className="w-full text-xs rounded-md border border-input bg-background px-2.5 py-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-ring"
-              />
-            </div>
-          )}
         </div>
         <DialogFooter showCloseButton>
-          <Button onClick={() => onConfirm(note)} disabled={confirming} className="bg-leaf hover:bg-forest text-white">
+          <Button onClick={() => onConfirm(sharedNote, individualNotes)} disabled={confirming} className="bg-leaf hover:bg-forest text-white">
             {confirming ? "Logging…" : `Log ${total} task${total !== 1 ? "s" : ""}`}
           </Button>
         </DialogFooter>
@@ -458,13 +489,14 @@ function BulkConfirmDialog({ careItems, reminderItems, open, onClose, onConfirm,
   );
 }
 
-function DoneEntryRow({ entry, onUndo, onAddNote }: {
+function DoneEntryRow({ entry, onUndo, onAddNote, selected, onToggle }: {
   entry: LoggedEntry; onUndo: () => void; onAddNote?: () => void;
+  selected?: boolean; onToggle?: () => void;
 }) {
   const meta = CARE_META[entry.careType];
   return (
-    <div className="flex items-center gap-2.5 rounded-lg border bg-background/50 px-3 py-2 opacity-60 hover:opacity-80 transition-opacity">
-      <Check size={14} className="text-leaf shrink-0" />
+    <div className={cn("flex items-center gap-2.5 rounded-lg border bg-background/50 px-3 py-2 opacity-60 hover:opacity-80 transition-opacity", selected && "opacity-100 border-leaf/40 bg-leaf/5")}>
+      <SelectCheckbox checked={selected ?? false} onToggle={() => onToggle?.()} />
       <Link href={`/garden/${entry.plantId}`} className="shrink-0">
         {entry.image
           ? <Image src={entry.image} alt={entry.plantName} width={28} height={28} className="rounded-md object-cover border w-7 h-7" />
@@ -542,7 +574,7 @@ type LoggedEntry    = CompletedCareEntry & { actualDay: number; eventId?: string
 type LoggedReminder = { reminder: ReminderEntry; actualDay: number };
 
 function WeekStrip({
-  entries, reminders, completedToday, onLogged, onReminderCompleted, onReminderUncompleted, onEditSchedule,
+  entries, reminders, completedToday, onLogged, onReminderCompleted, onReminderUncompleted, onEditSchedule, onViewHistory,
 }: {
   entries: CareEntry[];
   reminders: ReminderEntry[];
@@ -551,6 +583,7 @@ function WeekStrip({
   onReminderCompleted: (id: string) => void;
   onReminderUncompleted: (reminder: ReminderEntry) => void;
   onEditSchedule?: (plantId: string) => void;
+  onViewHistory?: (plantId: string) => void;
 }) {
   // weekOffset: 0 = this week, -7 = last week, -14 = two weeks ago …
   const [weekOffset, setWeekOffset]   = useState(0);
@@ -570,6 +603,7 @@ function WeekStrip({
   const [notesDialogEvents, setNotesDialogEvents] = useState<{ eventId: string; plantName: string; careType: string }[] | null>(null);
   const [bulkConfirmState, setBulkConfirmState] = useState<{ careItems: CareEntry[]; reminderItems: ReminderEntry[]; date: string } | null>(null);
   const [bulkConfirming, setBulkConfirming] = useState(false);
+  const [doneSelected, setDoneSelected] = useState<Set<string>>(new Set());
   const [overdueDismissed, setOverdueDismissed] = useState(false);
 
   const today = new Date();
@@ -750,7 +784,7 @@ function WeekStrip({
     setOverdueDismissed(true);
   }
 
-  async function performBulkLog(careItems: CareEntry[], reminderItems: ReminderEntry[], sharedNote: string, date: string) {
+  async function performBulkLog(careItems: CareEntry[], reminderItems: ReminderEntry[], sharedNote: string, individualNotes: Record<string, string>, date: string) {
     setBulkLogging(true);
     const snapshotOffset = actualSelectedOffset;
     const snapshotLogDate = date;
@@ -775,11 +809,16 @@ function WeekStrip({
         }
         if (snapshotOffset === 0) setLoggedKeys((p) => new Set([...p, ...toLog.map((i) => `${i.plantId}-${i.careType}`)]));
         careItems.forEach(({ plantId, careType }) => onLogged(plantId, careType));
-        if (sharedNote.trim() && bulkEvents?.length) {
-          await fetch("/api/garden/log-notes", {
-            method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ events: bulkEvents.map((ev) => ({ eventId: ev.eventId, notes: sharedNote.trim() })) }),
-          });
+        if (bulkEvents?.length) {
+          const eventsWithNotes = bulkEvents
+            .map((ev) => ({ eventId: ev.eventId, notes: (individualNotes[`${ev.plantId}-${ev.careType}`]?.trim() || sharedNote.trim()) }))
+            .filter((ev) => ev.notes);
+          if (eventsWithNotes.length) {
+            await fetch("/api/garden/log-notes", {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ events: eventsWithNotes }),
+            });
+          }
         }
       }
     }
@@ -952,10 +991,10 @@ function WeekStrip({
           open={bulkConfirmState !== null}
           onClose={() => setBulkConfirmState(null)}
           confirming={bulkConfirming}
-          onConfirm={async (note) => {
+          onConfirm={async (sharedNote, individualNotes) => {
             if (!bulkConfirmState) return;
             setBulkConfirming(true);
-            await performBulkLog(bulkConfirmState.careItems, bulkConfirmState.reminderItems, note, bulkConfirmState.date);
+            await performBulkLog(bulkConfirmState.careItems, bulkConfirmState.reminderItems, sharedNote, individualNotes, bulkConfirmState.date);
             setBulkConfirming(false);
             setBulkConfirmState(null);
           }}
@@ -1013,7 +1052,8 @@ function WeekStrip({
                     isToday={actualSelectedOffset === 0}
                     onToggle={() => togglePanel(key)}
                     onLog={(eventId, withNote) => handleLog(e.plantId, e.careType, eventId, withNote)}
-                    onEditSchedule={onEditSchedule ? () => onEditSchedule(e.plantId) : undefined} />
+                    onEditSchedule={onEditSchedule ? () => onEditSchedule(e.plantId) : undefined}
+                    onViewHistory={onViewHistory ? () => onViewHistory(e.plantId) : undefined} />
                 );
               })}
               {dayReminders.map((r) => (
@@ -1033,13 +1073,35 @@ function WeekStrip({
 
           {hasDone && (
             <div className={cn("space-y-1.5", hasActive && "border-t pt-3 mt-1")}>
-              <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Completed</p>
-              {currentDoneEntries.map((d, idx) => (
-                <DoneEntryRow key={`${d.plantId}-${d.careType}-${idx}`} entry={d}
-                  onUndo={() => handleUnlog(d.plantId, d.careType, d.logDate)}
-                  onAddNote={d.eventId ? () => setNotesDialogEvents([{ eventId: d.eventId!, plantName: d.plantName, careType: d.careType }]) : undefined}
-                />
-              ))}
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Completed</p>
+                {doneSelected.size > 0 && (
+                  <button
+                    onClick={async () => {
+                      const keys = [...doneSelected];
+                      setDoneSelected(new Set());
+                      for (const key of keys) {
+                        const entry = doneEntryList.find((d) => `${d.plantId}-${d.careType}` === key && d.actualDay === actualSelectedOffset);
+                        if (entry) await handleUnlog(entry.plantId, entry.careType, entry.logDate);
+                      }
+                    }}
+                    className="text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Undo selected ({doneSelected.size})
+                  </button>
+                )}
+              </div>
+              {currentDoneEntries.map((d, idx) => {
+                const key = `${d.plantId}-${d.careType}`;
+                return (
+                  <DoneEntryRow key={`${key}-${idx}`} entry={d}
+                    onUndo={() => { setDoneSelected((p) => { const n = new Set(p); n.delete(key); return n; }); handleUnlog(d.plantId, d.careType, d.logDate); }}
+                    onAddNote={d.eventId ? () => setNotesDialogEvents([{ eventId: d.eventId!, plantName: d.plantName, careType: d.careType }]) : undefined}
+                    selected={doneSelected.has(key)}
+                    onToggle={() => setDoneSelected((p) => { const n = new Set(p); if (n.has(key)) n.delete(key); else n.add(key); return n; })}
+                  />
+                );
+              })}
               {currentDoneReminders.map((r) => (
                 <DoneReminderRow key={r.id} reminder={r} onUndo={() => handleUndoReminder(r.id)} />
               ))}
@@ -1054,21 +1116,39 @@ function WeekStrip({
 // ─── Intervals + one-time modal ───────────────────────────────────────────────
 
 function IntervalsModal({
-  plants, onSaved, onReminderAdded,
+  plants, onSaved, onReminderAdded, initialTab = "intervals",
 }: {
   plants: PlantWithIntervals[];
   onSaved: () => void;
   onReminderAdded: (reminder: ReminderEntry) => void;
+  initialTab?: "intervals" | "onetime" | "history";
 }) {
   type HistoryEvent = { id: string; event_type: string; event_date: string; notes: string | null };
-  const [modalTab, setModalTab] = useState<"intervals" | "onetime" | "history">("intervals");
+  const [modalTab, setModalTab] = useState<"intervals" | "onetime" | "history">(initialTab);
   const [historyEvents, setHistoryEvents] = useState<HistoryEvent[] | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
+
+  const isBulk = plants.length > 1;
+  const singlePlant = !isBulk ? plants[0] : null;
+
+  function loadHistory() {
+    if (!singlePlant || historyLoading || historyEvents !== null) return;
+    setHistoryLoading(true);
+    fetch(`/api/garden/plants/${singlePlant.id}/events`)
+      .then((r) => r.json() as Promise<{ events: HistoryEvent[] }>)
+      .then(({ events }) => setHistoryEvents(events))
+      .catch(() => setHistoryEvents([]))
+      .finally(() => setHistoryLoading(false));
+  }
+
+  useEffect(() => {
+    if (initialTab === "history") loadHistory();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const fields = INTERVAL_FIELDS.map(({ key, emoji, label }) => ({
     key, emoji, label, meta: getFieldMeta(plants.map((p) => p[key])),
   }));
-  const isBulk = plants.length > 1;
-  const singlePlant = !isBulk ? plants[0] : null;
 
   const [values, setValues] = useState<Record<string, string>>(
     Object.fromEntries(fields.map(({ key, meta }) => [key, meta.defaultValue]))
@@ -1160,13 +1240,7 @@ function IntervalsModal({
           <button key={t.id}
             onClick={() => {
               setModalTab(t.id);
-              if (t.id === "history" && !historyEvents && singlePlant) {
-                setHistoryLoading(true);
-                fetch(`/api/garden/plants/${singlePlant.id}/events`)
-                  .then((r) => r.json() as Promise<{ events: HistoryEvent[] }>)
-                  .then(({ events }) => setHistoryEvents(events))
-                  .finally(() => setHistoryLoading(false));
-              }
+              if (t.id === "history") loadHistory();
             }}
             className={cn("px-3 py-1 rounded text-xs font-medium transition-colors",
               modalTab === t.id ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}>
@@ -1364,10 +1438,10 @@ const INTERVAL_TO_CARE_TYPE: Record<string, string> = {
   repotInterval: "Repot", pruneInterval: "Prune",
 };
 
-function ManagePlantRow({ plant, selectionMode, selected, onToggle, onEdit, onQuickWater, dueDays, lastDates }: {
+function ManagePlantRow({ plant, selectionMode, selected, onToggle, onEdit, onQuickWater, onViewHistory, dueDays }: {
   plant: PlantWithIntervals; selectionMode: boolean; selected: boolean;
   onToggle: () => void; onEdit: () => void; onQuickWater: (days: number) => void;
-  dueDays?: Record<string, number>; lastDates?: Record<string, string | null>;
+  onViewHistory?: () => void; dueDays?: Record<string, number>;
 }) {
   const setIntervals = INTERVAL_DISPLAY.filter(({ key }) => plant[key] !== null);
   return (
@@ -1404,17 +1478,17 @@ function ManagePlantRow({ plant, selectionMode, selected, onToggle, onEdit, onQu
                 })}
               </div>
             )}
-            {lastDates && setIntervals.some(({ key }) => lastDates[INTERVAL_TO_CARE_TYPE[key]]) && (
+            {dueDays && setIntervals.some(({ key }) => dueDays[INTERVAL_TO_CARE_TYPE[key]] !== undefined) && (
               <div className="flex flex-wrap gap-2 mt-0.5">
                 {setIntervals.map(({ key, emoji }) => {
                   const careType = INTERVAL_TO_CARE_TYPE[key];
-                  const lastDate = lastDates[careType];
-                  if (!lastDate) return null;
-                  const last = new Date(lastDate + "T00:00:00");
-                  last.setHours(0, 0, 0, 0);
-                  const now = new Date(); now.setHours(0, 0, 0, 0);
-                  const daysSince = Math.round((now.getTime() - last.getTime()) / 86400000);
-                  const ago = daysSince === 0 ? "today" : daysSince === 1 ? "1d ago" : `${daysSince}d ago`;
+                  const days = dueDays[careType];
+                  if (days === undefined) return null;
+                  const interval = plant[key] as number;
+                  const effectiveDays = days < 0 && Math.abs(days) >= interval ? 0 : days;
+                  const daysSince = interval - effectiveDays;
+                  if (daysSince <= 0) return null;
+                  const ago = daysSince === 1 ? "1d ago" : `${daysSince}d ago`;
                   return <span key={key} className="text-[11px] text-muted-foreground/60">{emoji} last {ago}</span>;
                 })}
               </div>
@@ -1443,9 +1517,16 @@ function ManagePlantRow({ plant, selectionMode, selected, onToggle, onEdit, onQu
           </div>
         )}
       </div>
-      <button onClick={onEdit} className="text-muted-foreground hover:text-foreground transition-colors shrink-0 p-0.5" title="Edit schedule">
-        <Pencil size={13} />
-      </button>
+      <div className="flex items-center gap-0.5 shrink-0">
+        {onViewHistory && setIntervals.length > 0 && (
+          <button onClick={onViewHistory} className="text-muted-foreground hover:text-foreground transition-colors p-0.5" title="View history">
+            <Clock size={13} />
+          </button>
+        )}
+        <button onClick={onEdit} className="text-muted-foreground hover:text-foreground transition-colors p-0.5" title="Edit schedule">
+          <Pencil size={13} />
+        </button>
+      </div>
     </div>
   );
 }
@@ -1472,17 +1553,16 @@ export function CareScheduleClient({
   const [activeTab, setActiveTab] = useState<"week" | "manage">("week");
   const [selectionMode, setSelectionMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [editPlantIds, setEditPlantIds] = useState<string[] | null>(null);
+  const [editTarget, setEditTarget] = useState<{ ids: string[]; tab: "intervals" | "onetime" | "history" } | null>(null);
   const [showAddReminder, setShowAddReminder] = useState(false);
+  const editPlantIds = editTarget?.ids ?? null;
 
   // Manage tab filter/search
   const [manageFilter, setManageFilter] = useState<"all" | "scheduled" | "notset">("all");
   const [manageSearch, setManageSearch] = useState("");
 
   const intervalMap = Object.fromEntries(plantIntervals.map((p) => [p.id, p]));
-  const editPlants = editPlantIds
-    ? (editPlantIds.map((id) => intervalMap[id]).filter(Boolean) as PlantWithIntervals[])
-    : [];
+  const editPlants = editPlantIds ? (editPlantIds.map((id) => intervalMap[id]).filter(Boolean) as PlantWithIntervals[]) : [];
 
   const scheduledCount   = plantIntervals.filter((p) => p.waterInterval || p.fertilizeInterval || p.repotInterval || p.pruneInterval).length;
   const unscheduledCount = plantIntervals.length - scheduledCount;
@@ -1517,7 +1597,7 @@ export function CareScheduleClient({
 
   function handleReminderAdded(reminder: ReminderEntry) {
     setReminders((prev) => [...prev, reminder].sort((a, b) => a.daysUntilDue - b.daysUntilDue));
-    setEditPlantIds(null);
+    setEditTarget(null);
   }
 
   function toggleSelect(key: string) {
@@ -1536,7 +1616,7 @@ export function CareScheduleClient({
 
   function exitSelectionMode() { setSelectionMode(false); setSelected(new Set()); }
 
-  function handleSaved() { setEditPlantIds(null); exitSelectionMode(); router.refresh(); }
+  function handleSaved() { setEditTarget(null); exitSelectionMode(); router.refresh(); }
 
   async function handleQuickWater(plantId: string, days: number) {
     const res = await fetch("/api/garden/update-intervals", {
@@ -1551,12 +1631,9 @@ export function CareScheduleClient({
 
   // Build map: plantId → careType → daysUntilDue (for Manage Schedules next-due display)
   const dueMap: Record<string, Record<string, number>> = {};
-  const lastDateMap: Record<string, Record<string, string | null>> = {};
   for (const entry of entries) {
     if (!dueMap[entry.plantId]) dueMap[entry.plantId] = {};
     dueMap[entry.plantId][entry.careType] = entry.daysUntilDue;
-    if (!lastDateMap[entry.plantId]) lastDateMap[entry.plantId] = {};
-    lastDateMap[entry.plantId][entry.careType] = entry.lastDate;
   }
 
   return (
@@ -1590,7 +1667,8 @@ export function CareScheduleClient({
                 onLogged={handleLogged}
                 onReminderCompleted={handleReminderCompleted}
                 onReminderUncompleted={handleReminderUncompleted}
-                onEditSchedule={(plantId) => setEditPlantIds([plantId])}
+                onEditSchedule={(plantId) => setEditTarget({ ids: [plantId], tab: "intervals" })}
+                onViewHistory={(plantId) => setEditTarget({ ids: [plantId], tab: "history" })}
               />
             ) : hasAnyPlants ? (
               <div className="rounded-xl border bg-muted/30 px-5 py-6 space-y-3">
@@ -1678,9 +1756,11 @@ export function CareScheduleClient({
                     {filteredPlants.map((plant) => (
                       <ManagePlantRow key={plant.id} plant={plant}
                         selectionMode={selectionMode} selected={selected.has(plant.id)}
-                        onToggle={() => toggleSelect(plant.id)} onEdit={() => setEditPlantIds([plant.id])}
+                        onToggle={() => toggleSelect(plant.id)}
+                        onEdit={() => setEditTarget({ ids: [plant.id], tab: "intervals" })}
+                        onViewHistory={() => setEditTarget({ ids: [plant.id], tab: "history" })}
                         onQuickWater={(days) => handleQuickWater(plant.id, days)}
-                        dueDays={dueMap[plant.id]} lastDates={lastDateMap[plant.id]} />
+                        dueDays={dueMap[plant.id]} />
                     ))}
                   </div>
                 )}
@@ -1696,7 +1776,7 @@ export function CareScheduleClient({
           <p className="text-sm font-medium text-muted-foreground">{selected.size} plant{selected.size !== 1 ? "s" : ""} selected</p>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={exitSelectionMode}>Cancel</Button>
-            <Button size="sm" className="bg-leaf hover:bg-forest text-white" onClick={() => setEditPlantIds([...selected])}>
+            <Button size="sm" className="bg-leaf hover:bg-forest text-white" onClick={() => setEditTarget({ ids: [...selected], tab: "intervals" })}>
               Update intervals
             </Button>
           </div>
@@ -1704,8 +1784,8 @@ export function CareScheduleClient({
       )}
 
       {/* Intervals modal */}
-      <Dialog open={editPlantIds !== null} onOpenChange={(open: boolean) => { if (!open) setEditPlantIds(null); }}>
-        {editPlants.length > 0 && <IntervalsModal plants={editPlants} onSaved={handleSaved} onReminderAdded={handleReminderAdded} />}
+      <Dialog open={editPlantIds !== null} onOpenChange={(open: boolean) => { if (!open) setEditTarget(null); }}>
+        {editPlants.length > 0 && <IntervalsModal plants={editPlants} onSaved={handleSaved} onReminderAdded={handleReminderAdded} initialTab={editTarget?.tab ?? "intervals"} />}
       </Dialog>
 
       {/* Add reminder modal */}
