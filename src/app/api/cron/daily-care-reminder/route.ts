@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { sendDailyCareReminder, type DailyCareItem } from "@/lib/email";
+import { sendDailyCareReminder, type DailyCareItem, type OneTimeCareItem } from "@/lib/email";
 
 export const maxDuration = 300;
 
@@ -93,7 +93,37 @@ export async function GET(request: Request) {
     }
   }
 
-  const eligibleIds = Object.keys(userItems);
+  // 4b — one-time reminders due today or overdue (up to 7 days back)
+  const pastCutoff7 = new Date(today.getTime() - 7 * 86400000);
+  const pastCutoff7Str = `${pastCutoff7.getFullYear()}-${String(pastCutoff7.getMonth() + 1).padStart(2, "0")}-${String(pastCutoff7.getDate()).padStart(2, "0")}`;
+  const { data: oneTimeRaw } = await admin
+    .from("care_reminders")
+    .select("id, user_id, plant_id, event_type, notes")
+    .in("user_id", profileIds)
+    .gte("scheduled_date", pastCutoff7Str)
+    .lte("scheduled_date", todayStr)
+    .eq("completed", false);
+
+  const userOneTimeItems: Record<string, OneTimeCareItem[]> = {};
+  if (oneTimeRaw?.length) {
+    const reminderPlantIds = [...new Set(oneTimeRaw.filter((r) => r.plant_id).map((r) => r.plant_id as string))];
+    const { data: reminderPlants } = reminderPlantIds.length
+      ? await admin.from("garden_plants").select("id, name, variety").in("id", reminderPlantIds)
+      : { data: [] };
+    const reminderPlantMap = Object.fromEntries(
+      (reminderPlants ?? []).map((p) => [p.id, p.variety ? `${p.name} — ${p.variety}` : p.name])
+    );
+    for (const r of oneTimeRaw) {
+      if (!userOneTimeItems[r.user_id]) userOneTimeItems[r.user_id] = [];
+      userOneTimeItems[r.user_id].push({
+        plantName: r.plant_id ? (reminderPlantMap[r.plant_id] ?? null) : null,
+        eventType: r.event_type,
+        notes: r.notes ?? null,
+      });
+    }
+  }
+
+  const eligibleIds = [...new Set([...Object.keys(userItems), ...Object.keys(userOneTimeItems)])];
   if (!eligibleIds.length) return NextResponse.json({ sent: 0, reason: "Nothing due today" });
 
   // 5 — get emails from auth
@@ -117,7 +147,8 @@ export async function GET(request: Request) {
         recipientEmail: email,
         username,
         userId,
-        items: userItems[userId],
+        items: userItems[userId] ?? [],
+        oneTimeItems: userOneTimeItems[userId],
       });
       sent++;
     } catch {

@@ -2457,25 +2457,45 @@ export type DailyCareItem = {
   daysOverdue: number;
 };
 
+export type OneTimeCareItem = {
+  plantName: string | null;
+  eventType: string;
+  notes: string | null;
+};
+
 function careTypeEmoji(careType: string): string {
   const map: Record<string, string> = {
     Water: "💧", Fertilize: "🌿", Repot: "🪴", Prune: "✂️",
+    watered: "💧", fertilized: "🌿", repotted: "🪴", pruned: "✂️",
+    note: "📝", treated: "💉", harvested: "🌾",
   };
   return map[careType] ?? "🌱";
+}
+
+function careTypeDisplay(eventType: string): string {
+  const map: Record<string, string> = {
+    watered: "Water", fertilized: "Fertilize", repotted: "Repot", pruned: "Prune",
+    note: "Note", treated: "Treated", harvested: "Harvested",
+  };
+  return map[eventType] ?? eventType;
 }
 
 export function buildDailyCareReminderHtml({
   username,
   userId,
   items,
+  oneTimeItems,
 }: {
   username: string;
   userId: string;
   items: DailyCareItem[];
+  oneTimeItems?: OneTimeCareItem[];
 }): string {
   const siteUrl = siteBase();
   const dueToday = items.filter((i) => i.daysOverdue === 0);
   const overdue  = items.filter((i) => i.daysOverdue > 0);
+  const hasIntervalItems = items.length > 0;
+  const hasOneTime = (oneTimeItems?.length ?? 0) > 0;
 
   function itemRow(item: DailyCareItem, highlight: boolean) {
     const bg = highlight ? "#FBF9F3" : "#F5F0E8";
@@ -2496,9 +2516,37 @@ export function buildDailyCareReminderHtml({
     ...overdue.map((i) => itemRow(i, true)),
   ].join("");
 
-  const heading = items.length === 1
-    ? `1 plant needs care today`
-    : `${items.length} plants need care today`;
+  const intervalTable = hasIntervalItems ? `
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-radius:10px;overflow:hidden;border:1px solid #DED6C4;margin-bottom:28px;">
+      <tr style="background:#EFE7D6;">
+        <th style="padding:9px 16px;text-align:left;font-size:11px;font-weight:700;color:#6B7E72;text-transform:uppercase;letter-spacing:0.06em;">Plant</th>
+        <th style="padding:9px 16px;text-align:left;font-size:11px;font-weight:700;color:#6B7E72;text-transform:uppercase;letter-spacing:0.06em;">Care</th>
+        <th style="padding:9px 16px;text-align:left;font-size:11px;font-weight:700;color:#6B7E72;text-transform:uppercase;letter-spacing:0.06em;">Status</th>
+      </tr>
+      ${allRows}
+    </table>` : "";
+
+  const oneTimeTable = hasOneTime ? `
+    <p style="margin:0 0 10px;font-size:13px;font-weight:600;color:#16201B;">📌 One-time reminders today</p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-radius:10px;overflow:hidden;border:1px solid #DED6C4;margin-bottom:28px;">
+      <tr style="background:#EFE7D6;">
+        <th style="padding:9px 16px;text-align:left;font-size:11px;font-weight:700;color:#6B7E72;text-transform:uppercase;letter-spacing:0.06em;">Task</th>
+        <th style="padding:9px 16px;text-align:left;font-size:11px;font-weight:700;color:#6B7E72;text-transform:uppercase;letter-spacing:0.06em;">Notes</th>
+      </tr>
+      ${(oneTimeItems ?? []).map((r, idx) => {
+        const bg = idx % 2 === 0 ? "#F5F0E8" : "#FBF9F3";
+        const label = r.plantName ? `${careTypeEmoji(r.eventType)} ${careTypeDisplay(r.eventType)} — <strong>${r.plantName}</strong>` : `${careTypeEmoji(r.eventType)} ${careTypeDisplay(r.eventType)}`;
+        return `<tr style="background:${bg};">
+          <td style="padding:11px 16px;font-size:13px;color:#16201B;border-bottom:1px solid #DED6C4;">${label}</td>
+          <td style="padding:11px 16px;font-size:12px;color:#4B5563;border-bottom:1px solid #DED6C4;">${r.notes ?? "—"}</td>
+        </tr>`;
+      }).join("")}
+    </table>` : "";
+
+  const total = items.length + (oneTimeItems?.length ?? 0);
+  const heading = !hasIntervalItems && hasOneTime
+    ? (oneTimeItems!.length === 1 ? "1 garden reminder today" : `${oneTimeItems!.length} garden reminders today`)
+    : (items.length === 1 ? "1 plant needs care today" : `${items.length} plants need care today`);
 
   return emailBase({
     title: heading,
@@ -2508,14 +2556,8 @@ export function buildDailyCareReminderHtml({
       <p style="margin:0 0 20px;font-size:14px;color:#6B7E72;line-height:1.65;">
         Good morning! Here's what needs attention in your garden today.
       </p>
-      <table width="100%" cellpadding="0" cellspacing="0" style="border-radius:10px;overflow:hidden;border:1px solid #DED6C4;margin-bottom:28px;">
-        <tr style="background:#EFE7D6;">
-          <th style="padding:9px 16px;text-align:left;font-size:11px;font-weight:700;color:#6B7E72;text-transform:uppercase;letter-spacing:0.06em;">Plant</th>
-          <th style="padding:9px 16px;text-align:left;font-size:11px;font-weight:700;color:#6B7E72;text-transform:uppercase;letter-spacing:0.06em;">Care</th>
-          <th style="padding:9px 16px;text-align:left;font-size:11px;font-weight:700;color:#6B7E72;text-transform:uppercase;letter-spacing:0.06em;">Status</th>
-        </tr>
-        ${allRows}
-      </table>
+      ${intervalTable}
+      ${oneTimeTable}
       ${ctaBtn("Open care schedule", `${siteUrl}/garden/care`)}
     `,
     footerNote: "You're receiving this because you have garden care reminders enabled on Plantet.",
@@ -2528,18 +2570,23 @@ export async function sendDailyCareReminder({
   username,
   userId,
   items,
+  oneTimeItems,
 }: {
   recipientEmail: string;
   username: string;
   userId: string;
   items: DailyCareItem[];
+  oneTimeItems?: OneTimeCareItem[];
 }) {
   const resend = getResend();
-  const count = items.length;
+  const total = items.length + (oneTimeItems?.length ?? 0);
+  const subject = items.length > 0
+    ? (items.length === 1 ? "🌱 1 plant needs care today" : `🌱 ${items.length} plants need care today`)
+    : (total === 1 ? "🌱 1 garden reminder today" : `🌱 ${total} garden reminders today`);
   await resend.emails.send({
     from: FROM,
     to: recipientEmail,
-    subject: count === 1 ? "🌱 1 plant needs care today" : `🌱 ${count} plants need care today`,
-    html: buildDailyCareReminderHtml({ username, userId, items }),
+    subject,
+    html: buildDailyCareReminderHtml({ username, userId, items, oneTimeItems }),
   });
 }

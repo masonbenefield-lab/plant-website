@@ -298,8 +298,11 @@ function DayReminderRow({ reminder, selected, onToggle, onComplete }: {
         ) : (
           <div className="w-9 h-9 rounded-md bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 flex items-center justify-center text-sm shrink-0">📝</div>
         )}
-        <button className="flex-1 min-w-0 text-left" onClick={() => setNoteOpen(true)}>
-          <span className="text-xs font-medium truncate block">{reminder.plantName ?? "Garden note"}</span>
+        <button className="flex-1 min-w-0 text-left group" onClick={() => setNoteOpen(true)}>
+          <div className="flex items-center gap-1 min-w-0">
+            <span className="text-xs font-medium truncate group-hover:text-leaf transition-colors">{reminder.plantName ?? "Garden note"}</span>
+            <ChevronRight size={10} className="text-muted-foreground/40 group-hover:text-leaf transition-colors shrink-0" />
+          </div>
           <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
             <span className={cn("flex items-center gap-1 text-[11px] font-medium px-1.5 py-0.5 rounded-full border", meta.bg, meta.color, meta.border)}>
               {meta.icon} {displayType}
@@ -378,6 +381,76 @@ function LogNotesDialog({ events, open, onClose }: {
         <DialogFooter showCloseButton>
           <Button onClick={save} disabled={saving} className="bg-leaf hover:bg-forest text-white">
             {saving ? "Saving…" : "Save notes"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── Bulk confirm + notes dialog ─────────────────────────────────────────────
+
+function BulkConfirmDialog({ careItems, reminderItems, open, onClose, onConfirm, confirming }: {
+  careItems: CareEntry[];
+  reminderItems: ReminderEntry[];
+  open: boolean;
+  onClose: () => void;
+  onConfirm: (note: string) => void;
+  confirming: boolean;
+}) {
+  const [note, setNote] = useState("");
+  const total = careItems.length + reminderItems.length;
+
+  function handleClose() { setNote(""); onClose(); }
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Log {total} task{total !== 1 ? "s" : ""}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3 py-1">
+          <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
+            {careItems.map((e, i) => {
+              const meta = CARE_META[e.careType];
+              return (
+                <div key={i} className="flex items-center gap-2">
+                  <span className={cn("flex items-center gap-1 text-[11px] font-medium px-1.5 py-0.5 rounded-full border shrink-0", meta.bg, meta.color, meta.border)}>
+                    {meta.icon} {e.careType}
+                  </span>
+                  <span className="text-xs text-muted-foreground truncate">{e.plantName}</span>
+                </div>
+              );
+            })}
+            {reminderItems.map((r) => {
+              const meta = reminderMeta(r.eventType);
+              const displayType = reminderDisplayType(r.eventType);
+              return (
+                <div key={r.id} className="flex items-center gap-2">
+                  <span className={cn("flex items-center gap-1 text-[11px] font-medium px-1.5 py-0.5 rounded-full border shrink-0", meta.bg, meta.color, meta.border)}>
+                    {meta.icon} {displayType}
+                  </span>
+                  <span className="text-xs text-muted-foreground truncate">{r.plantName ?? "Garden note"}</span>
+                </div>
+              );
+            })}
+          </div>
+          {careItems.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-sm text-muted-foreground">Note <span className="text-xs">(optional · applies to all)</span></p>
+              <textarea
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="Add a shared note…"
+                rows={2}
+                className="w-full text-xs rounded-md border border-input bg-background px-2.5 py-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+            </div>
+          )}
+        </div>
+        <DialogFooter showCloseButton>
+          <Button onClick={() => onConfirm(note)} disabled={confirming} className="bg-leaf hover:bg-forest text-white">
+            {confirming ? "Logging…" : `Log ${total} task${total !== 1 ? "s" : ""}`}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -495,8 +568,8 @@ function WeekStrip({
   const [panelSelected, setPanelSelected] = useState<Set<string>>(new Set());
   const [bulkLogging, setBulkLogging]     = useState(false);
   const [notesDialogEvents, setNotesDialogEvents] = useState<{ eventId: string; plantName: string; careType: string }[] | null>(null);
-  // Bulk-logged events pending optional notes (shown as a button, not auto-opened)
-  const [pendingNoteEvents, setPendingNoteEvents] = useState<{ eventId: string; plantName: string; careType: string }[] | null>(null);
+  const [bulkConfirmState, setBulkConfirmState] = useState<{ careItems: CareEntry[]; reminderItems: ReminderEntry[]; date: string } | null>(null);
+  const [bulkConfirming, setBulkConfirming] = useState(false);
   const [overdueDismissed, setOverdueDismissed] = useState(false);
 
   const today = new Date();
@@ -667,113 +740,68 @@ function WeekStrip({
     }
   }
 
-  async function logAllOverdue() {
+  function logAllOverdue() {
     const overdueEntries = entries.filter((e) => e.daysUntilDue < 0 && Math.abs(e.daysUntilDue) < e.interval && !loggedKeys.has(`${e.plantId}-${e.careType}`));
     if (!overdueEntries.length) return;
-    const toLog = overdueEntries.map((e) => ({ plantId: e.plantId, careType: e.careType }));
-    const res = await fetch("/api/garden/bulk-log-care", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: toLog, date: todayStr() }),
-    });
-    if (res.ok) {
-      setLoggedKeys((p) => new Set([...p, ...toLog.map((i) => `${i.plantId}-${i.careType}`)]));
-      toast.success(`Logged ${overdueEntries.length} missed task${overdueEntries.length !== 1 ? "s" : ""}`);
-      onLogged("", "");
-    } else {
-      toast.error("Failed to log missed tasks");
-    }
+    setBulkConfirmState({ careItems: overdueEntries, reminderItems: [], date: todayStr() });
   }
 
   function dismissAllOverdue() {
     setOverdueDismissed(true);
   }
 
-  async function logSelected(autoOpenNotes = false) {
+  async function performBulkLog(careItems: CareEntry[], reminderItems: ReminderEntry[], sharedNote: string, date: string) {
     setBulkLogging(true);
-    const careKeys = [...panelSelected].filter((k) => !k.startsWith("reminder-"));
-    const rIds = [...panelSelected].filter((k) => k.startsWith("reminder-")).map((k) => k.slice(9));
-    const toLog = dayEntries.filter((e) => careKeys.includes(`${e.plantId}-${e.careType}`)).map((e) => ({ plantId: e.plantId, careType: e.careType }));
+    const snapshotOffset = actualSelectedOffset;
+    const snapshotLogDate = date;
+    const toLog = careItems.map((e) => ({ plantId: e.plantId, careType: e.careType }));
     let logged = 0;
-    const allNoteEvents: { eventId: string; plantName: string; careType: string }[] = [];
-    if (toLog.length > 0) {
-      const res = await fetch("/api/garden/bulk-log-care", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items: toLog, date: logDate }) });
-      if (res.ok) {
-        const { logged: n, events: bulkEvents } = await res.json() as { logged: number; events: { eventId: string; plantId: string; plantName: string; careType: string }[] };
-        logged += n;
-        if (bulkEvents) allNoteEvents.push(...bulkEvents.map((ev) => ({ eventId: ev.eventId, plantName: ev.plantName, careType: ev.careType })));
-        if (actualSelectedOffset !== null) {
-          const bulkEventMap = Object.fromEntries((bulkEvents ?? []).map((ev) => [`${ev.plantId}-${ev.careType}`, ev.eventId]));
-          toLog.forEach(({ plantId, careType }) => {
-            const entry = entries.find((e) => e.plantId === plantId && e.careType === careType);
-            const eventId = bulkEventMap[`${plantId}-${careType}`];
-            if (entry) setDoneEntryList((p) => [...p, { plantId: entry.plantId, plantName: entry.plantName, image: entry.image, location: entry.location, careType: entry.careType, actualDay: actualSelectedOffset, eventId, logDate }]);
-          });
-        }
-        if (actualSelectedOffset === 0) setLoggedKeys((p) => new Set([...p, ...toLog.map((i) => `${i.plantId}-${i.careType}`)]));
-        toLog.forEach(({ plantId, careType }) => onLogged(plantId, careType));
-      }
-    }
-    for (const id of rIds) {
-      const res = await fetch(`/api/garden/reminders/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ completed: true }) });
-      if (res.ok) {
-        logged++;
-        if (actualSelectedOffset !== null) {
-          const reminder = reminders.find((r) => r.id === id);
-          if (reminder) setDoneReminderList((p) => [...p, { reminder, actualDay: actualSelectedOffset }]);
-        }
-        setCompletedIds((p) => new Set([...p, id]));
-        onReminderCompleted(id);
-      }
-    }
-    setBulkLogging(false);
-    if (logged > 0) {
-      toast.success(`Logged ${logged} task${logged !== 1 ? "s" : ""}`);
-      setPanelSelected(new Set());
-      if (allNoteEvents.length > 0) {
-        if (autoOpenNotes) setNotesDialogEvents(allNoteEvents);
-        else setPendingNoteEvents(allNoteEvents);
-      }
-    }
-  }
 
-  async function logAll() {
-    setBulkLogging(true);
-    const toLog = dayEntries.map((e) => ({ plantId: e.plantId, careType: e.careType }));
-    let logged = 0;
-    const allNoteEvents: { eventId: string; plantName: string; careType: string }[] = [];
     if (toLog.length > 0) {
-      const res = await fetch("/api/garden/bulk-log-care", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items: toLog, date: logDate }) });
+      const res = await fetch("/api/garden/bulk-log-care", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: toLog, date: snapshotLogDate }),
+      });
       if (res.ok) {
         const { logged: n, events: bulkEvents } = await res.json() as { logged: number; events: { eventId: string; plantId: string; plantName: string; careType: string }[] };
         logged += n;
-        if (bulkEvents) allNoteEvents.push(...bulkEvents.map((ev) => ({ eventId: ev.eventId, plantName: ev.plantName, careType: ev.careType })));
-        if (actualSelectedOffset !== null) {
+        if (snapshotOffset !== null) {
           const bulkEventMap = Object.fromEntries((bulkEvents ?? []).map((ev) => [`${ev.plantId}-${ev.careType}`, ev.eventId]));
-          toLog.forEach(({ plantId, careType }) => {
+          careItems.forEach(({ plantId, careType }) => {
             const entry = entries.find((e) => e.plantId === plantId && e.careType === careType);
             const eventId = bulkEventMap[`${plantId}-${careType}`];
-            if (entry) setDoneEntryList((p) => [...p, { plantId: entry.plantId, plantName: entry.plantName, image: entry.image, location: entry.location, careType: entry.careType, actualDay: actualSelectedOffset, eventId, logDate }]);
+            if (entry) setDoneEntryList((p) => [...p, { plantId: entry.plantId, plantName: entry.plantName, image: entry.image, location: entry.location, careType: entry.careType, actualDay: snapshotOffset, eventId, logDate: snapshotLogDate }]);
           });
         }
-        if (actualSelectedOffset === 0) setLoggedKeys((p) => new Set([...p, ...toLog.map((i) => `${i.plantId}-${i.careType}`)]));
-        toLog.forEach(({ plantId, careType }) => onLogged(plantId, careType));
+        if (snapshotOffset === 0) setLoggedKeys((p) => new Set([...p, ...toLog.map((i) => `${i.plantId}-${i.careType}`)]));
+        careItems.forEach(({ plantId, careType }) => onLogged(plantId, careType));
+        if (sharedNote.trim() && bulkEvents?.length) {
+          await fetch("/api/garden/log-notes", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ events: bulkEvents.map((ev) => ({ eventId: ev.eventId, notes: sharedNote.trim() })) }),
+          });
+        }
       }
     }
-    for (const r of dayReminders) {
-      const res = await fetch(`/api/garden/reminders/${r.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ completed: true }) });
+
+    for (const r of reminderItems) {
+      const res = await fetch(`/api/garden/reminders/${r.id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ completed: true }),
+      });
       if (res.ok) {
         logged++;
-        if (actualSelectedOffset !== null) setDoneReminderList((p) => [...p, { reminder: r, actualDay: actualSelectedOffset }]);
+        if (snapshotOffset !== null) setDoneReminderList((p) => [...p, { reminder: r, actualDay: snapshotOffset }]);
         setCompletedIds((p) => new Set([...p, r.id]));
         onReminderCompleted(r.id);
       }
     }
+
     setBulkLogging(false);
     if (logged > 0) {
       toast.success(`Logged ${logged} task${logged !== 1 ? "s" : ""}`);
-      if (allNoteEvents.length > 0) setPendingNoteEvents(allNoteEvents);
+      setPanelSelected(new Set());
     }
-    setPanelSelected(new Set());
   }
 
   function navigate(dir: -1 | 1) {
@@ -907,12 +935,30 @@ function WeekStrip({
         </div>
       </div>
 
-      {/* Notes dialog — shown after logging single or bulk tasks */}
+      {/* Notes dialog — shown after single task log with note */}
       {notesDialogEvents !== null && (
         <LogNotesDialog
           events={notesDialogEvents}
           open={notesDialogEvents !== null}
           onClose={() => setNotesDialogEvents(null)}
+        />
+      )}
+
+      {/* Bulk confirm dialog — shown before logging multiple tasks */}
+      {bulkConfirmState !== null && (
+        <BulkConfirmDialog
+          careItems={bulkConfirmState.careItems}
+          reminderItems={bulkConfirmState.reminderItems}
+          open={bulkConfirmState !== null}
+          onClose={() => setBulkConfirmState(null)}
+          confirming={bulkConfirming}
+          onConfirm={async (note) => {
+            if (!bulkConfirmState) return;
+            setBulkConfirming(true);
+            await performBulkLog(bulkConfirmState.careItems, bulkConfirmState.reminderItems, note, bulkConfirmState.date);
+            setBulkConfirming(false);
+            setBulkConfirmState(null);
+          }}
         />
       )}
 
@@ -931,31 +977,26 @@ function WeekStrip({
               )}
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              {pendingNoteEvents && (
-                <button
-                  onClick={() => { setNotesDialogEvents(pendingNoteEvents); setPendingNoteEvents(null); }}
-                  className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
-                >
-                  <StickyNote size={12} /> Add notes
-                </button>
-              )}
               {hasActive && (
                 panelSelected.size > 0 ? (
-                  <div className="flex items-center gap-1 shrink-0">
-                    <button
-                      onClick={() => logSelected(true)} disabled={bulkLogging}
-                      className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 disabled:opacity-50 transition-colors"
-                      title="Log selected with notes"
-                    >
-                      <StickyNote size={13} />
-                    </button>
-                    <Button size="sm" variant="outline" onClick={() => logSelected(false)} disabled={bulkLogging}>
-                      {bulkLogging ? "Logging…" : `Log selected (${panelSelected.size})`}
-                    </Button>
-                  </div>
+                  <Button size="sm" variant="outline" disabled={bulkLogging}
+                    onClick={() => {
+                      const careKeys = [...panelSelected].filter((k) => !k.startsWith("reminder-"));
+                      const rIds = [...panelSelected].filter((k) => k.startsWith("reminder-")).map((k) => k.slice(9));
+                      setBulkConfirmState({
+                        careItems: dayEntries.filter((e) => careKeys.includes(`${e.plantId}-${e.careType}`)),
+                        reminderItems: dayReminders.filter((r) => rIds.includes(r.id)),
+                        date: logDate,
+                      });
+                    }}
+                  >
+                    {`Log selected (${panelSelected.size})`}
+                  </Button>
                 ) : (
-                  <Button size="sm" variant="outline" onClick={logAll} disabled={bulkLogging} className="shrink-0">
-                    {bulkLogging ? "Logging…" : "Log all"}
+                  <Button size="sm" variant="outline" disabled={bulkLogging} className="shrink-0"
+                    onClick={() => setBulkConfirmState({ careItems: dayEntries, reminderItems: dayReminders, date: logDate })}
+                  >
+                    Log all
                   </Button>
                 )
               )}
@@ -1019,7 +1060,10 @@ function IntervalsModal({
   onSaved: () => void;
   onReminderAdded: (reminder: ReminderEntry) => void;
 }) {
-  const [modalTab, setModalTab] = useState<"intervals" | "onetime">("intervals");
+  type HistoryEvent = { id: string; event_type: string; event_date: string; notes: string | null };
+  const [modalTab, setModalTab] = useState<"intervals" | "onetime" | "history">("intervals");
+  const [historyEvents, setHistoryEvents] = useState<HistoryEvent[] | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const fields = INTERVAL_FIELDS.map(({ key, emoji, label }) => ({
     key, emoji, label, meta: getFieldMeta(plants.map((p) => p[key])),
   }));
@@ -1108,11 +1152,25 @@ function IntervalsModal({
       )}
 
       <div className="flex gap-1 p-0.5 bg-muted/50 rounded-md w-fit">
-        {(["intervals", "onetime"] as const).map((t) => (
-          <button key={t} onClick={() => setModalTab(t)}
+        {([
+          { id: "intervals", label: "Recurring" },
+          { id: "onetime",   label: "One-time"  },
+          ...(!isBulk ? [{ id: "history", label: "History" }] : []),
+        ] as { id: "intervals" | "onetime" | "history"; label: string }[]).map((t) => (
+          <button key={t.id}
+            onClick={() => {
+              setModalTab(t.id);
+              if (t.id === "history" && !historyEvents && singlePlant) {
+                setHistoryLoading(true);
+                fetch(`/api/garden/plants/${singlePlant.id}/events`)
+                  .then((r) => r.json() as Promise<{ events: HistoryEvent[] }>)
+                  .then(({ events }) => setHistoryEvents(events))
+                  .finally(() => setHistoryLoading(false));
+              }
+            }}
             className={cn("px-3 py-1 rounded text-xs font-medium transition-colors",
-              modalTab === t ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}>
-            {t === "intervals" ? "Recurring" : "One-time"}
+              modalTab === t.id ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}>
+            {t.label}
           </button>
         ))}
       </div>
@@ -1182,6 +1240,34 @@ function IntervalsModal({
             </Button>
           </DialogFooter>
         </>
+      )}
+
+      {modalTab === "history" && !isBulk && (
+        <div className="py-1">
+          {historyLoading ? (
+            <p className="text-xs text-muted-foreground text-center py-6">Loading…</p>
+          ) : historyEvents && historyEvents.length > 0 ? (
+            <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+              {historyEvents.map((ev) => {
+                const displayType = EVENT_TYPE_TO_DISPLAY[ev.event_type] ?? ev.event_type;
+                const meta = CARE_META[displayType] ?? CARE_META["Note"];
+                const dateObj = new Date(ev.event_date + "T00:00:00");
+                const dateLabel = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+                return (
+                  <div key={ev.id} className="flex items-start gap-2">
+                    <span className="text-xs text-muted-foreground w-14 shrink-0 pt-0.5">{dateLabel}</span>
+                    <span className={cn("flex items-center gap-1 text-[11px] font-medium px-1.5 py-0.5 rounded-full border shrink-0", meta.bg, meta.color, meta.border)}>
+                      {meta.icon} {displayType}
+                    </span>
+                    {ev.notes && <span className="text-xs text-muted-foreground truncate">{ev.notes}</span>}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground text-center py-6">No care history yet.</p>
+          )}
+        </div>
       )}
     </DialogContent>
   );
@@ -1278,10 +1364,10 @@ const INTERVAL_TO_CARE_TYPE: Record<string, string> = {
   repotInterval: "Repot", pruneInterval: "Prune",
 };
 
-function ManagePlantRow({ plant, selectionMode, selected, onToggle, onEdit, onQuickWater, dueDays }: {
+function ManagePlantRow({ plant, selectionMode, selected, onToggle, onEdit, onQuickWater, dueDays, lastDates }: {
   plant: PlantWithIntervals; selectionMode: boolean; selected: boolean;
   onToggle: () => void; onEdit: () => void; onQuickWater: (days: number) => void;
-  dueDays?: Record<string, number>;
+  dueDays?: Record<string, number>; lastDates?: Record<string, string | null>;
 }) {
   const setIntervals = INTERVAL_DISPLAY.filter(({ key }) => plant[key] !== null);
   return (
@@ -1315,6 +1401,21 @@ function ManagePlantRow({ plant, selectionMode, selected, onToggle, onEdit, onQu
                   const effectiveDays = days < 0 && Math.abs(days) >= interval ? 0 : days;
                   const { label, color } = urgencyLabel(effectiveDays);
                   return <span key={key} className={cn("text-[11px]", color)}>{emoji} {label}</span>;
+                })}
+              </div>
+            )}
+            {lastDates && setIntervals.some(({ key }) => lastDates[INTERVAL_TO_CARE_TYPE[key]]) && (
+              <div className="flex flex-wrap gap-2 mt-0.5">
+                {setIntervals.map(({ key, emoji }) => {
+                  const careType = INTERVAL_TO_CARE_TYPE[key];
+                  const lastDate = lastDates[careType];
+                  if (!lastDate) return null;
+                  const last = new Date(lastDate + "T00:00:00");
+                  last.setHours(0, 0, 0, 0);
+                  const now = new Date(); now.setHours(0, 0, 0, 0);
+                  const daysSince = Math.round((now.getTime() - last.getTime()) / 86400000);
+                  const ago = daysSince === 0 ? "today" : daysSince === 1 ? "1d ago" : `${daysSince}d ago`;
+                  return <span key={key} className="text-[11px] text-muted-foreground/60">{emoji} last {ago}</span>;
                 })}
               </div>
             )}
@@ -1450,9 +1551,12 @@ export function CareScheduleClient({
 
   // Build map: plantId → careType → daysUntilDue (for Manage Schedules next-due display)
   const dueMap: Record<string, Record<string, number>> = {};
+  const lastDateMap: Record<string, Record<string, string | null>> = {};
   for (const entry of entries) {
     if (!dueMap[entry.plantId]) dueMap[entry.plantId] = {};
     dueMap[entry.plantId][entry.careType] = entry.daysUntilDue;
+    if (!lastDateMap[entry.plantId]) lastDateMap[entry.plantId] = {};
+    lastDateMap[entry.plantId][entry.careType] = entry.lastDate;
   }
 
   return (
@@ -1576,7 +1680,7 @@ export function CareScheduleClient({
                         selectionMode={selectionMode} selected={selected.has(plant.id)}
                         onToggle={() => toggleSelect(plant.id)} onEdit={() => setEditPlantIds([plant.id])}
                         onQuickWater={(days) => handleQuickWater(plant.id, days)}
-                        dueDays={dueMap[plant.id]} />
+                        dueDays={dueMap[plant.id]} lastDates={lastDateMap[plant.id]} />
                     ))}
                   </div>
                 )}
