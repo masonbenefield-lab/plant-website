@@ -5,20 +5,15 @@ import Image from "next/image";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function ImageGallery({ images, alt }: { images: string[]; alt: string }) {
-  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [selected, setSelected] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
-  const close = useCallback(() => setLightboxIndex(null), []);
-  const prev = useCallback(
-    () => setLightboxIndex((i) => (i !== null ? (i - 1 + images.length) % images.length : null)),
-    [images.length]
-  );
-  const next = useCallback(
-    () => setLightboxIndex((i) => (i !== null ? (i + 1) % images.length : null)),
-    [images.length]
-  );
+  const close = useCallback(() => setLightboxOpen(false), []);
+  const prev = useCallback(() => setSelected((i) => (i - 1 + images.length) % images.length), [images.length]);
+  const next = useCallback(() => setSelected((i) => (i + 1) % images.length), [images.length]);
 
   useEffect(() => {
-    if (lightboxIndex === null) return;
+    if (!lightboxOpen) return;
     document.body.style.overflow = "hidden";
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") close();
@@ -30,7 +25,7 @@ export default function ImageGallery({ images, alt }: { images: string[]; alt: s
       window.removeEventListener("keydown", onKey);
       document.body.style.overflow = "";
     };
-  }, [lightboxIndex, close, prev, next]);
+  }, [lightboxOpen, close, prev, next]);
 
   if (!images.length) {
     return (
@@ -43,24 +38,27 @@ export default function ImageGallery({ images, alt }: { images: string[]; alt: s
   return (
     <>
       <div className="space-y-3">
+        {/* Main photo */}
         <button
-          className="relative h-96 w-full rounded-xl overflow-hidden bg-muted cursor-zoom-in"
-          onClick={() => setLightboxIndex(0)}
+          className="relative aspect-[4/3] w-full rounded-xl overflow-hidden bg-muted cursor-zoom-in"
+          onClick={() => setLightboxOpen(true)}
           aria-label={`View ${alt} — click to open full-size`}
         >
-          <Image src={images[0]} alt={alt} fill className="object-cover" />
+          <Image src={images[selected]} alt={alt} fill className="object-cover object-center" priority />
         </button>
+
+        {/* Thumbnails */}
         {images.length > 1 && (
           <div className="flex gap-2 overflow-x-auto pb-1" role="list" aria-label="Image thumbnails">
             {images.map((url, i) => (
               <button
                 key={i}
                 role="listitem"
-                onClick={() => setLightboxIndex(i)}
+                onClick={() => setSelected(i)}
                 aria-label={`View image ${i + 1} of ${images.length}`}
-                aria-pressed={i === 0}
+                aria-pressed={i === selected}
                 className={`relative h-20 w-20 flex-shrink-0 rounded-lg overflow-hidden border-2 transition-colors ${
-                  i === 0 ? "border-leaf" : "border-transparent hover:border-sage"
+                  i === selected ? "border-leaf" : "border-transparent hover:border-sage"
                 }`}
               >
                 <Image src={url} alt={`${alt} — image ${i + 1}`} fill className="object-cover" />
@@ -70,11 +68,12 @@ export default function ImageGallery({ images, alt }: { images: string[]; alt: s
         )}
       </div>
 
-      {lightboxIndex !== null && (
+      {/* Lightbox */}
+      {lightboxOpen && (
         <div
           role="dialog"
           aria-modal="true"
-          aria-label={`${alt} — image ${lightboxIndex + 1} of ${images.length}`}
+          aria-label={`${alt} — image ${selected + 1} of ${images.length}`}
           className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
           onClick={close}
         >
@@ -110,8 +109,8 @@ export default function ImageGallery({ images, alt }: { images: string[]; alt: s
             onClick={(e) => e.stopPropagation()}
           >
             <Image
-              src={images[lightboxIndex]}
-              alt={`${alt} — image ${lightboxIndex + 1} of ${images.length}`}
+              src={images[selected]}
+              alt={`${alt} — image ${selected + 1} of ${images.length}`}
               fill
               className="object-contain"
             />
@@ -123,11 +122,11 @@ export default function ImageGallery({ images, alt }: { images: string[]; alt: s
                 <button
                   key={i}
                   role="tab"
-                  aria-selected={i === lightboxIndex}
+                  aria-selected={i === selected}
                   aria-label={`Go to image ${i + 1}`}
-                  onClick={(e) => { e.stopPropagation(); setLightboxIndex(i); }}
+                  onClick={(e) => { e.stopPropagation(); setSelected(i); }}
                   className={`w-2 h-2 rounded-full transition-colors ${
-                    i === lightboxIndex ? "bg-white" : "bg-white/40 hover:bg-white/70"
+                    i === selected ? "bg-white" : "bg-white/40 hover:bg-white/70"
                   }`}
                 />
               ))}
