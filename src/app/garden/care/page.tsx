@@ -1,11 +1,13 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { unstable_noStore as noStore } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import GardenTabs from "@/components/garden/garden-tabs";
 import { CareScheduleClient } from "./care-schedule-client";
 import type { PlantWithIntervals, ReminderEntry, CompletedCareEntry } from "./care-schedule-client";
 
 export default async function CareSchedulePage() {
+  noStore();
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");

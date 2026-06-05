@@ -743,7 +743,7 @@ function WeekStrip({
   // Day panel: active tasks
   const dayEntries = actualSelectedOffset !== null
     ? entries.filter((e) => {
-        if (snoozedEntryKeys?.has(`${e.plantId}-${e.eventKey}`)) return false; // optimistically hidden after snooze
+        if (actualSelectedOffset === 0 && snoozedEntryKeys?.has(`${e.plantId}-${e.eventKey}`)) return false; // optimistically hidden after snooze (today only)
         // Same rule as strip counts: only hide while daysUntilDue ≤ 0
         if (loggedKeys.has(`${e.plantId}-${e.careType}`) && e.daysUntilDue <= 0) return false;
         if (actualSelectedOffset < 0) return e.daysUntilDue === actualSelectedOffset;
@@ -1787,24 +1787,46 @@ function ManagePlantRow({ plant, selectionMode, selected, onToggle, onEdit, onQu
           </>
         ) : (
           <div className="space-y-1 mt-0.5">
-            <div className="flex items-center gap-1 flex-wrap">
-              <span className="text-[11px] text-muted-foreground mr-0.5">💧 water:</span>
-              {[3, 7, 14, 30].map((d) => (
+            {/* Custom-only urgency labels — plants with no built-in intervals */}
+            {plant.customSchedules && plant.customSchedules.length > 0 && dueDays && (
+              <div className="flex flex-wrap gap-2">
+                {plant.customSchedules.map((cs) => {
+                  const days = dueDays[cs.label];
+                  if (days === undefined) return null;
+                  const effectiveDays = days < 0 && Math.abs(days) >= cs.interval_days ? 0 : days;
+                  const { label, color } = urgencyLabel(effectiveDays);
+                  const isSnoozed = snoozedTypes?.has(cs.label);
+                  return (
+                    <span key={cs.id} className={cn("text-[11px]", isSnoozed ? "text-muted-foreground/60" : color)}>
+                      ✨ {cs.label} · {isSnoozed ? "💤 Snoozed" : label}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+            {/* Quick water presets for plants with no water interval */}
+            {!plant.waterInterval && (
+              <>
+                <div className="flex items-center gap-1 flex-wrap">
+                  <span className="text-[11px] text-muted-foreground mr-0.5">💧 water:</span>
+                  {[3, 7, 14, 30].map((d) => (
+                    <button
+                      key={d}
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); onQuickWater(d); }}
+                      className="text-[11px] font-medium px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
+                    >
+                      {d}d
+                    </button>
+                  ))}
+                </div>
                 <button
-                  key={d}
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); onQuickWater(d); }}
-                  className="text-[11px] font-medium px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(); }}
+                  className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  {d}d
+                  + fertilize, prune, repot…
                 </button>
-              ))}
-            </div>
-            <button
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(); }}
-              className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
-            >
-              + fertilize, prune, repot…
-            </button>
+              </>
+            )}
           </div>
         )}
       </div>
