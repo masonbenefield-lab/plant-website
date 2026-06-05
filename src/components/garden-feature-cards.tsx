@@ -37,21 +37,27 @@ const features = [
     desc: "See every task due this week at a glance. Log care in one tap, snooze anything that can wait, and pause everything while you're away. Weekly email reminders and a shareable sitter guide included.",
     example: (
       <div className="space-y-3">
-        {/* Week calendar */}
+        {/* Missed tasks banner */}
+        <div className="flex items-center gap-2 rounded-lg bg-amber-500/10 border border-amber-500/30 px-3 py-2">
+          <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+          <p className="text-[11px] text-amber-600 dark:text-amber-400 font-medium flex-1">3 tasks missed — view past days</p>
+          <p className="text-[10px] text-muted-foreground cursor-pointer">Dismiss</p>
+        </div>
+        {/* Week strip */}
         <div className="rounded-lg border bg-card p-3">
           <div className="flex items-center justify-between mb-2">
             <p className="text-xs font-semibold">Week ahead</p>
-            <p className="text-[10px] text-muted-foreground">10 remaining</p>
+            <p className="text-[10px] text-muted-foreground">12 remaining</p>
           </div>
           <div className="grid grid-cols-7 gap-1 text-center">
             {[
-              { day: "Today", date: "Jun 4", count: 3 },
-              { day: "Fri",   date: "Jun 5", count: 0 },
-              { day: "Sat",   date: "Jun 6", count: 0 },
-              { day: "Sun",   date: "Jun 7", count: 3 },
-              { day: "Mon",   date: "Jun 8", count: 0 },
-              { day: "Tue",   date: "Jun 9", count: 1 },
-              { day: "Wed",   date: "Jun 10", count: 3 },
+              { day: "Today", date: "Jun 5", count: 5 },
+              { day: "Sat",   date: "Jun 6", count: 4 },
+              { day: "Sun",   date: "Jun 7", count: 0 },
+              { day: "Mon",   date: "Jun 8", count: 8 },
+              { day: "Tue",   date: "Jun 9", count: 4 },
+              { day: "Wed",   date: "Jun 10", count: 0 },
+              { day: "Thu",   date: "Jun 11", count: 8 },
             ].map((d) => (
               <div key={d.date} className={`rounded-md py-1 ${d.day === "Today" ? "bg-muted" : ""}`}>
                 <p className="text-[9px] text-muted-foreground">{d.day}</p>
@@ -64,16 +70,21 @@ const features = [
             ))}
           </div>
         </div>
-        {/* Today's tasks */}
+        {/* Today panel with tabs */}
         <div className="rounded-lg border bg-card p-3 space-y-2">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-semibold">Today · 3 tasks</p>
+            <p className="text-xs font-semibold">Today · 5 tasks</p>
             <p className="text-[10px] text-leaf font-medium cursor-pointer">Log all</p>
           </div>
+          {/* Overdue / Due today tabs */}
+          <div className="flex gap-1.5">
+            <span className="text-[10px] px-2 py-0.5 rounded-full border border-muted-foreground/30 text-muted-foreground font-medium">Overdue 3</span>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-foreground text-background font-medium">Due today 2</span>
+          </div>
           {[
-            { name: "Azores Dark Fig",   emoji: "🌳", task: "Water",     badge: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400" },
-            { name: "Banana — Blue Java", emoji: "🍌", task: "Fertilize", badge: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400" },
-            { name: "Black Madeira Fig", emoji: "🌿", task: "Prune",      badge: "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400" },
+            { name: "Azores Dark Fig",    emoji: "🌳", task: "💧 Water",     badge: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400" },
+            { name: "Banana — Blue Java", emoji: "🍌", task: "🌿 Fertilize", badge: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400" },
+            { name: "Black Madeira Fig",  emoji: "🌿", task: "✂️ Prune",     badge: "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400" },
           ].map((t) => (
             <div key={t.name} className="flex items-center gap-2">
               <div className="w-4 h-4 rounded border border-muted-foreground/40 shrink-0" />
@@ -81,6 +92,7 @@ const features = [
               <div className="flex-1 min-w-0">
                 <p className="text-[11px] font-medium truncate">{t.name}</p>
                 <span className={`inline-block text-[9px] px-1.5 py-0.5 rounded-full font-medium ${t.badge}`}>{t.task}</span>
+                <span className="ml-1 text-[9px] text-amber-600 dark:text-amber-400 font-medium">Due today</span>
               </div>
               <p className="text-[10px] text-leaf font-medium shrink-0">Log ✓</p>
             </div>
