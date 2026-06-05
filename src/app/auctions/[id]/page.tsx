@@ -92,8 +92,38 @@ export default async function AuctionPage({
   const isReported = !!reportRow.data;
   const existingOrderStatus = existingOrderRow.data?.status ?? null;
 
+  const siteUrl = "https://www.plantet.shop";
+  const ratingCount = sellerRatings?.length ?? 0;
+  const avgRating = ratingCount > 0
+    ? (sellerRatings.reduce((s, r) => s + r.score, 0) / ratingCount).toFixed(1)
+    : null;
+
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: auction.variety ? `${auction.plant_name} ${auction.variety}` : auction.plant_name,
+    description: auction.description ?? undefined,
+    image: (auction.images as string[]).slice(0, 3),
+    offers: {
+      "@type": "Offer",
+      priceCurrency: "USD",
+      price: (auction.current_bid_cents / 100).toFixed(2),
+      availability: auction.status === "active" ? "https://schema.org/InStock" : "https://schema.org/SoldOut",
+      url: `${siteUrl}/auctions/${auction.id}`,
+      seller: { "@type": "Organization", name: seller?.display_name ?? seller?.username ?? "Plantet Seller" },
+    },
+    ...(avgRating && ratingCount >= 3 ? {
+      aggregateRating: {
+        "@type": "AggregateRating",
+        ratingValue: avgRating,
+        reviewCount: ratingCount,
+      },
+    } : {}),
+  };
+
   return (
     <div className="max-w-5xl mx-auto px-4 py-10">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <Link href="/auctions" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
         Back to Auctions

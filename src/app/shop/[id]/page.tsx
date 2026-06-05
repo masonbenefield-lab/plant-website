@@ -154,8 +154,38 @@ export default async function ListingPage({
     avatar_url: commenterMap[c.user_id]?.avatar_url ?? null,
   }));
 
+  const siteUrl = "https://www.plantet.shop";
+  const ratingCount = sellerRatings?.length ?? 0;
+  const avgRating = ratingCount > 0
+    ? (sellerRatings!.reduce((s, r) => s + r.score, 0) / ratingCount).toFixed(1)
+    : null;
+
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: listing.variety ? `${listing.plant_name} ${listing.variety}` : listing.plant_name,
+    description: listing.description ?? undefined,
+    image: (listing.images as string[]).slice(0, 3),
+    offers: {
+      "@type": "Offer",
+      priceCurrency: "USD",
+      price: ((listing.price_cents as number) / 100).toFixed(2),
+      availability: isSoldOut ? "https://schema.org/OutOfStock" : "https://schema.org/InStock",
+      url: `${siteUrl}/shop/${listing.id}`,
+      seller: { "@type": "Organization", name: seller?.display_name ?? seller?.username ?? "Plantet Seller" },
+    },
+    ...(avgRating && ratingCount >= 3 ? {
+      aggregateRating: {
+        "@type": "AggregateRating",
+        ratingValue: avgRating,
+        reviewCount: ratingCount,
+      },
+    } : {}),
+  };
+
   return (
     <div className="max-w-5xl mx-auto px-4 py-10">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <TrackView listingId={listing.id} />
       <Link href={listing.item_type === "supply" ? "/shop?tab=supplies" : "/shop"} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>

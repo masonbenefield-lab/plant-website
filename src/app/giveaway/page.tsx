@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
@@ -9,6 +10,22 @@ import { EnterButton } from "./enter-button";
 import { SponsorRequestForm } from "./sponsor-request-form";
 import { ReferralCard } from "./referral-card";
 import { Gift, Users, Trophy } from "lucide-react";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const supabase = await createClient();
+  const month = new Date().toISOString().slice(0, 7);
+  const monthLabel = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  const { data } = await supabase.from("giveaway_months").select("plant_name").eq("month", month).single();
+  const title = data?.plant_name
+    ? `Win a ${data.plant_name} — ${monthLabel} Giveaway | Plantet`
+    : `${monthLabel} Giveaway — Win a Free Plant | Plantet`;
+  const description = `Enter for a chance to win a free plant shipped to your door. One lucky winner every month on Plantet.`;
+  return {
+    title,
+    description,
+    openGraph: { title, description },
+  };
+}
 
 export default async function GiveawayPage() {
   const supabase = await createClient();
