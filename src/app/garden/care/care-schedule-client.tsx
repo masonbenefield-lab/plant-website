@@ -629,7 +629,7 @@ type LoggedEntry    = CompletedCareEntry & { actualDay: number; eventId?: string
 type LoggedReminder = { reminder: ReminderEntry; actualDay: number };
 
 function WeekStrip({
-  entries, reminders, completedToday, onLogged, onReminderCompleted, onReminderUncompleted, onEditSchedule, onViewHistory, vacationActive,
+  entries, reminders, completedToday, onLogged, onReminderCompleted, onReminderUncompleted, onEditSchedule, onViewHistory, vacationActive, onSnooze,
 }: {
   entries: CareEntry[];
   reminders: ReminderEntry[];
@@ -640,6 +640,7 @@ function WeekStrip({
   onEditSchedule?: (plantId: string) => void;
   onViewHistory?: (plantId: string) => void;
   vacationActive?: boolean;
+  onSnooze?: (entries: CareEntry[]) => void;
 }) {
   // weekOffset: 0 = this week, -7 = last week, -14 = two weeks ago …
   const [weekOffset, setWeekOffset]   = useState(0);
@@ -1103,7 +1104,7 @@ function WeekStrip({
                       onClick={() => {
                         const careKeys = [...panelSelected].filter((k) => !k.startsWith("reminder-"));
                         const selectedCareEntries = activeEntries.filter((e) => careKeys.includes(`${e.plantId}-${e.careType}`));
-                        if (selectedCareEntries.length > 0) setSnoozeDialogEntries(selectedCareEntries);
+                        if (selectedCareEntries.length > 0) onSnooze?.(selectedCareEntries);
                       }}
                     >
                       <Moon size={12} className="mr-1" /> Snooze
@@ -2080,6 +2081,7 @@ export function CareScheduleClient({
                 onEditSchedule={(plantId) => setEditTarget({ ids: [plantId], tab: "intervals" })}
                 onViewHistory={(plantId) => setEditTarget({ ids: [plantId], tab: "history" })}
                 vacationActive={isVacationActive}
+                onSnooze={(entriesToSnooze) => setSnoozeDialogEntries(entriesToSnooze)}
               />
             ) : hasAnyPlants ? (
               <div className="rounded-xl border bg-muted/30 px-5 py-6 space-y-3">
