@@ -12,7 +12,8 @@ export async function POST() {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  await admin.from("profiles").update({ storefront_previewed: true } as never).eq("id", user.id);
+  const { error } = await admin.rpc("mark_storefront_previewed", { user_id: user.id } as never);
+  if (error) console.error("[mark-storefront-previewed] rpc error:", error.message);
 
   return NextResponse.json({ ok: true });
 }
