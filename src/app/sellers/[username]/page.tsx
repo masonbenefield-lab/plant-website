@@ -29,14 +29,17 @@ export async function generateMetadata({
   const supabase = await createClient();
   const { data } = await supabase
     .from("profiles")
-    .select("username, bio, avatar_url")
+    .select("username, display_name, bio, avatar_url, location")
     .eq("username", username)
     .single();
 
   if (!data) return { title: "Seller Not Found — Plantet" };
 
-  const title = `${data.username} — Plantet Storefront`;
-  const description = data.bio || `Browse plants from ${data.username} on Plantet`;
+  const name = (data.display_name as string | null) ?? data.username;
+  const location = data.location as string | null;
+  const title = `${name} — Plant Shop on Plantet`;
+  const description = (data.bio as string | null) ||
+    `Shop plants from ${name}${location ? ` based in ${location}` : ""} on Plantet.`;
   const image = data.avatar_url as string | null;
 
   return {

@@ -170,6 +170,7 @@ export default async function ShopPage({
 
   // Top seller: 10+ reviews with avg ≥ 4.5
   const topSellerSet = new Set<string>();
+  const ratingMap: Record<string, { avg: number; count: number }> = {};
   if (sellerRatings?.length) {
     const ratingsByseller: Record<string, number[]> = {};
     for (const r of sellerRatings) {
@@ -177,9 +178,9 @@ export default async function ShopPage({
       ratingsByseller[r.seller_id].push(r.score);
     }
     for (const [sid, scores] of Object.entries(ratingsByseller)) {
-      if (scores.length >= 10 && scores.reduce((a, b) => a + b, 0) / scores.length >= 4.5) {
-        topSellerSet.add(sid);
-      }
+      const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+      ratingMap[sid] = { avg, count: scores.length };
+      if (scores.length >= 10 && avg >= 4.5) topSellerSet.add(sid);
     }
   }
 
@@ -343,6 +344,12 @@ export default async function ShopPage({
                       >
                         by {seller.display_name ?? seller.username}
                       </Link>
+                      {ratingMap[listing.seller_id]?.count >= 3 && (
+                        <span className="text-xs text-amber-500 font-medium">
+                          ★ {ratingMap[listing.seller_id].avg.toFixed(1)}
+                          <span className="text-muted-foreground font-normal ml-0.5">({ratingMap[listing.seller_id].count})</span>
+                        </span>
+                      )}
                       {topSellerSet.has(listing.seller_id) && (
                         <span
                           title="This seller has 10+ reviews with a 4.5★ or higher average"
