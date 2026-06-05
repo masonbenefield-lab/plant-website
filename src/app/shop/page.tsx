@@ -47,7 +47,7 @@ export default async function ShopPage({
     locationSellerIds = locationSellers?.map((s) => s.id) ?? [];
   }
 
-  const showAll = stock === "all";
+  const showAll = stock !== "instock";
 
   let query = supabase
     .from("listings")
@@ -98,7 +98,7 @@ export default async function ShopPage({
     if (sort && sort !== "newest") p.set("sort", sort);
     if (min) p.set("min", min);
     if (max) p.set("max", max);
-    if (showAll) p.set("stock", "all");
+    if (!showAll) p.set("stock", "instock");
     if (t !== "plants") p.set("tab", t);
     const s = p.toString();
     return s ? `/shop?${s}` : "/shop";
@@ -114,7 +114,7 @@ export default async function ShopPage({
     if (on_sale === "1") params.set("on_sale", "1");
     if (location) params.set("location", location);
     if (pot_size) params.set("pot_size", pot_size);
-    if (showAll) params.set("stock", "all");
+    if (!showAll) params.set("stock", "instock");
     if (activeTab !== "plants") params.set("tab", activeTab);
     if (p > 1) params.set("page", String(p));
     const s = params.toString();
@@ -224,13 +224,13 @@ export default async function ShopPage({
         <span className="text-xs text-muted-foreground font-medium">Show:</span>
         <div className="flex rounded-lg border overflow-hidden text-xs font-medium">
           <Link
-            href={buildStockHref(undefined)}
+            href={buildStockHref("instock")}
             className={`px-3 py-1.5 transition-colors ${!showAll ? "bg-leaf text-white" : "text-muted-foreground hover:bg-muted"}`}
           >
             In Stock
           </Link>
           <Link
-            href={buildStockHref("all")}
+            href={buildStockHref(undefined)}
             className={`px-3 py-1.5 border-l transition-colors ${showAll ? "bg-leaf text-white" : "text-muted-foreground hover:bg-muted"}`}
           >
             All
