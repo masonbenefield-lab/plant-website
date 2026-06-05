@@ -168,9 +168,10 @@ function SelectCheckbox({ checked, onToggle }: { checked: boolean; onToggle: () 
 
 // ─── Day panel rows ───────────────────────────────────────────────────────────
 
-function DayTaskRow({ entry, logDate, selected, isToday, onToggle, onLog, onEditSchedule, onViewHistory }: {
+function DayTaskRow({ entry, logDate, selected, isToday, onToggle, onLog, onEditSchedule, onViewHistory, compact }: {
   entry: CareEntry; logDate: string; selected: boolean; isToday?: boolean; onToggle: () => void;
   onLog: (eventId: string, withNote: boolean) => void; onEditSchedule?: () => void; onViewHistory?: () => void;
+  compact?: boolean;
 }) {
   const meta = CARE_META[entry.careType];
   // Overdue items at or past the cap boundary cycle back via getStripDays — show "Due today"
@@ -194,20 +195,29 @@ function DayTaskRow({ entry, logDate, selected, isToday, onToggle, onLog, onEdit
   }
 
   return (
-    <div className={cn("flex items-center gap-2.5 rounded-lg border bg-background px-3 py-2 transition-colors", selected && "border-leaf/40 bg-leaf/5")}>
+    <div className={cn(
+      "flex items-center gap-2.5 px-3 py-2 transition-colors",
+      !compact && "rounded-lg border bg-background",
+      !compact && selected && "border-leaf/40 bg-leaf/5",
+      compact && selected && "bg-leaf/5",
+    )}>
       <SelectCheckbox checked={selected} onToggle={onToggle} />
-      <Link href={`/garden/${entry.plantId}`} className="shrink-0">
-        {entry.image
-          ? <Image src={entry.image} alt={entry.plantName} width={36} height={36} className="rounded-md object-cover border w-9 h-9" />
-          : <div className="w-9 h-9 rounded-md bg-muted border flex items-center justify-center text-sm">🌿</div>
-        }
-      </Link>
+      {!compact && (
+        <Link href={`/garden/${entry.plantId}`} className="shrink-0">
+          {entry.image
+            ? <Image src={entry.image} alt={entry.plantName} width={36} height={36} className="rounded-md object-cover border w-9 h-9" />
+            : <div className="w-9 h-9 rounded-md bg-muted border flex items-center justify-center text-sm">🌿</div>
+          }
+        </Link>
+      )}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <Link href={`/garden/${entry.plantId}`} className="text-xs font-medium hover:text-leaf transition-colors truncate">{entry.plantName}</Link>
-          {entry.location && <span className="text-[10px] text-muted-foreground truncate shrink-0">· {entry.location}</span>}
-        </div>
-        <div className="flex items-center gap-1.5 mt-0.5">
+        {!compact && (
+          <div className="flex items-center gap-1.5 min-w-0">
+            <Link href={`/garden/${entry.plantId}`} className="text-xs font-medium hover:text-leaf transition-colors truncate">{entry.plantName}</Link>
+            {entry.location && <span className="text-[10px] text-muted-foreground truncate shrink-0">· {entry.location}</span>}
+          </div>
+        )}
+        <div className={cn("flex items-center gap-1.5", !compact && "mt-0.5")}>
           <span className={cn("flex items-center gap-1 text-[11px] font-medium px-1.5 py-0.5 rounded-full border", meta.bg, meta.color, meta.border)}>
             {meta.icon} {entry.careType}
           </span>
@@ -236,6 +246,28 @@ function DayTaskRow({ entry, logDate, selected, isToday, onToggle, onLog, onEdit
           {loading ? "…" : "Log ✓"}
         </button>
       </div>
+    </div>
+  );
+}
+
+// ─── Plant group header (used when a plant has 2+ tasks in the day panel) ─────
+
+function PlantGroupHeader({ entry, onLogAll }: { entry: CareEntry; onLogAll: () => void }) {
+  return (
+    <div className="flex items-center gap-2.5 px-3 py-2 bg-muted/40">
+      <Link href={`/garden/${entry.plantId}`} className="shrink-0">
+        {entry.image
+          ? <Image src={entry.image} alt={entry.plantName} width={28} height={28} className="rounded-md object-cover border w-7 h-7" />
+          : <div className="w-7 h-7 rounded-md bg-muted border flex items-center justify-center text-xs">🌿</div>
+        }
+      </Link>
+      <div className="flex-1 min-w-0">
+        <Link href={`/garden/${entry.plantId}`} className="text-xs font-semibold truncate hover:text-leaf transition-colors block">{entry.plantName}</Link>
+        {entry.location && <span className="text-[10px] text-muted-foreground">{entry.location}</span>}
+      </div>
+      <button onClick={onLogAll} className="text-[11px] font-medium text-leaf hover:text-forest transition-colors whitespace-nowrap shrink-0">
+        Log all →
+      </button>
     </div>
   );
 }
@@ -1052,18 +1084,52 @@ function WeekStrip({
 
           {hasActive ? (
             <div className="space-y-1.5">
-              {dayEntries.map((e, idx) => {
-                const key = `${e.plantId}-${e.careType}`;
-                return (
-                  <DayTaskRow key={`${key}-${idx}`} entry={e} logDate={logDate}
-                    selected={panelSelected.has(key)}
-                    isToday={actualSelectedOffset === 0}
-                    onToggle={() => togglePanel(key)}
-                    onLog={(eventId, withNote) => handleLog(e.plantId, e.careType, eventId, withNote)}
-                    onEditSchedule={onEditSchedule ? () => onEditSchedule(e.plantId) : undefined}
-                    onViewHistory={onViewHistory ? () => onViewHistory(e.plantId) : undefined} />
-                );
-              })}
+              {(() => {
+                // Group entries by plantId (preserve first-appearance order)
+                const grouped = dayEntries.reduce<{ plantId: string; entries: CareEntry[] }[]>((acc, e) => {
+                  const g = acc.find((x) => x.plantId === e.plantId);
+                  if (g) g.entries.push(e); else acc.push({ plantId: e.plantId, entries: [e] });
+                  return acc;
+                }, []);
+                return grouped.map(({ plantId, entries: group }) => {
+                  if (group.length === 1) {
+                    const e = group[0];
+                    const key = `${e.plantId}-${e.careType}`;
+                    return (
+                      <DayTaskRow key={key} entry={e} logDate={logDate}
+                        selected={panelSelected.has(key)}
+                        isToday={actualSelectedOffset === 0}
+                        onToggle={() => togglePanel(key)}
+                        onLog={(eventId, withNote) => handleLog(e.plantId, e.careType, eventId, withNote)}
+                        onEditSchedule={onEditSchedule ? () => onEditSchedule(e.plantId) : undefined}
+                        onViewHistory={onViewHistory ? () => onViewHistory(e.plantId) : undefined} />
+                    );
+                  }
+                  return (
+                    <div key={plantId} className="rounded-lg border bg-background overflow-hidden">
+                      <PlantGroupHeader
+                        entry={group[0]}
+                        onLogAll={() => setBulkConfirmState({ careItems: group, reminderItems: [], date: logDate })}
+                      />
+                      <div className="divide-y">
+                        {group.map((e) => {
+                          const key = `${e.plantId}-${e.careType}`;
+                          return (
+                            <DayTaskRow key={key} entry={e} logDate={logDate}
+                              selected={panelSelected.has(key)}
+                              isToday={actualSelectedOffset === 0}
+                              compact
+                              onToggle={() => togglePanel(key)}
+                              onLog={(eventId, withNote) => handleLog(e.plantId, e.careType, eventId, withNote)}
+                              onEditSchedule={onEditSchedule ? () => onEditSchedule(e.plantId) : undefined}
+                              onViewHistory={onViewHistory ? () => onViewHistory(e.plantId) : undefined} />
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
               {dayReminders.map((r) => (
                 <DayReminderRow key={r.id} reminder={r}
                   selected={panelSelected.has(`reminder-${r.id}`)}
