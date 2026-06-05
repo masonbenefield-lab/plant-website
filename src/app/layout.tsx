@@ -7,6 +7,7 @@ import Footer from "@/components/layout/footer";
 import { ThemeProvider } from "@/components/theme-provider";
 import { CartProvider } from "@/lib/cart";
 import { CartDrawer } from "@/components/cart-drawer";
+import { Analytics } from "@vercel/analytics/next";
 import { createClient } from "@/lib/supabase/server";
 import { unstable_noStore as noStore } from "next/cache";
 
@@ -90,6 +91,7 @@ export default async function RootLayout({
             <Footer />
             <CartDrawer />
             <Toaster richColors />
+            <Analytics />
           </CartProvider>
         </ThemeProvider>
       </body>
