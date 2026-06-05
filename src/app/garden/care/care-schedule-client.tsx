@@ -168,9 +168,9 @@ function SelectCheckbox({ checked, onToggle }: { checked: boolean; onToggle: () 
 
 // ─── Day panel rows ───────────────────────────────────────────────────────────
 
-function DayTaskRow({ entry, logDate, selected, isToday, onToggle, onLog }: {
+function DayTaskRow({ entry, logDate, selected, isToday, onToggle, onLog, onEditSchedule }: {
   entry: CareEntry; logDate: string; selected: boolean; isToday?: boolean; onToggle: () => void;
-  onLog: (eventId: string, withNote: boolean) => void;
+  onLog: (eventId: string, withNote: boolean) => void; onEditSchedule?: () => void;
 }) {
   const meta = CARE_META[entry.careType];
   // Overdue items at or past the cap boundary cycle back via getStripDays — show "Due today"
@@ -215,6 +215,11 @@ function DayTaskRow({ entry, logDate, selected, isToday, onToggle, onLog }: {
         </div>
       </div>
       <div className="flex items-center gap-2 shrink-0">
+        {onEditSchedule && (
+          <button onClick={onEditSchedule} className="text-muted-foreground hover:text-foreground transition-colors" title="Edit schedule">
+            <Pencil size={13} />
+          </button>
+        )}
         <button
           onClick={() => handleLog(true)} disabled={loading}
           className="text-muted-foreground hover:text-foreground disabled:opacity-50 transition-colors"
@@ -464,7 +469,7 @@ type LoggedEntry    = CompletedCareEntry & { actualDay: number; eventId?: string
 type LoggedReminder = { reminder: ReminderEntry; actualDay: number };
 
 function WeekStrip({
-  entries, reminders, completedToday, onLogged, onReminderCompleted, onReminderUncompleted,
+  entries, reminders, completedToday, onLogged, onReminderCompleted, onReminderUncompleted, onEditSchedule,
 }: {
   entries: CareEntry[];
   reminders: ReminderEntry[];
@@ -472,6 +477,7 @@ function WeekStrip({
   onLogged: (plantId: string, careType: string) => void;
   onReminderCompleted: (id: string) => void;
   onReminderUncompleted: (reminder: ReminderEntry) => void;
+  onEditSchedule?: (plantId: string) => void;
 }) {
   // weekOffset: 0 = this week, -7 = last week, -14 = two weeks ago …
   const [weekOffset, setWeekOffset]   = useState(0);
@@ -497,6 +503,7 @@ function WeekStrip({
   today.setHours(0, 0, 0, 0);
 
   const isCurrentWeek = weekOffset === 0;
+  const isFutureWeek = weekOffset > 0;
 
   // Overdue task count (for the "missed tasks" chip when on current week)
   const overdueCount = isCurrentWeek && !overdueDismissed
@@ -770,7 +777,7 @@ function WeekStrip({
   }
 
   function navigate(dir: -1 | 1) {
-    const next = Math.max(-21, Math.min(0, weekOffset + dir * 7));
+    const next = Math.max(-21, Math.min(21, weekOffset + dir * 7));
     setWeekOffset(next);
     setSelectedDay(dir === -1 ? 6 : 0); // land on last day when going back, first when going forward
     setPanelSelected(new Set());
@@ -826,7 +833,7 @@ function WeekStrip({
             </button>
             <button
               onClick={() => navigate(1)}
-              disabled={isCurrentWeek}
+              disabled={weekOffset >= 21}
               className="p-1 rounded-md hover:bg-muted/60 disabled:opacity-30 transition-colors"
               title="Next week"
             >
@@ -851,10 +858,10 @@ function WeekStrip({
                   ? nextTaskOffset !== null
                     ? `Next: ${fmtShort(addDays(today, nextTaskOffset))}`
                     : "All clear ✓"
-                  : "Nothing missed ✓"
+                  : isFutureWeek ? "Nothing scheduled ✓" : "Nothing missed ✓"
                 }
               </span>
-            : <span className="text-xs text-muted-foreground">{weekTotal} {isCurrentWeek ? "remaining" : "missed"}</span>
+            : <span className="text-xs text-muted-foreground">{weekTotal} {isCurrentWeek ? "remaining" : isFutureWeek ? "upcoming" : "missed"}</span>
           }
         </div>
 
@@ -964,7 +971,8 @@ function WeekStrip({
                     selected={panelSelected.has(key)}
                     isToday={actualSelectedOffset === 0}
                     onToggle={() => togglePanel(key)}
-                    onLog={(eventId, withNote) => handleLog(e.plantId, e.careType, eventId, withNote)} />
+                    onLog={(eventId, withNote) => handleLog(e.plantId, e.careType, eventId, withNote)}
+                    onEditSchedule={onEditSchedule ? () => onEditSchedule(e.plantId) : undefined} />
                 );
               })}
               {dayReminders.map((r) => (
@@ -1138,7 +1146,7 @@ function IntervalsModal({
                 setStartDate(todayStr());
               }}
             >
-              Clear all
+              Remove all intervals
             </Button>
             <Button onClick={saveIntervals} disabled={saving} className="bg-leaf hover:bg-forest text-white">
               {saving ? "Saving…" : "Save intervals"}
@@ -1478,6 +1486,7 @@ export function CareScheduleClient({
                 onLogged={handleLogged}
                 onReminderCompleted={handleReminderCompleted}
                 onReminderUncompleted={handleReminderUncompleted}
+                onEditSchedule={(plantId) => setEditPlantIds([plantId])}
               />
             ) : hasAnyPlants ? (
               <div className="rounded-xl border bg-muted/30 px-5 py-6 space-y-3">
