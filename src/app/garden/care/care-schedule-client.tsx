@@ -1018,19 +1018,27 @@ function WeekStrip({
             <div className="flex items-center gap-2 shrink-0">
               {hasActive && (
                 panelSelected.size > 0 ? (
-                  <Button size="sm" variant="outline" disabled={bulkLogging}
-                    onClick={() => {
-                      const careKeys = [...panelSelected].filter((k) => !k.startsWith("reminder-"));
-                      const rIds = [...panelSelected].filter((k) => k.startsWith("reminder-")).map((k) => k.slice(9));
-                      setBulkConfirmState({
-                        careItems: dayEntries.filter((e) => careKeys.includes(`${e.plantId}-${e.careType}`)),
-                        reminderItems: dayReminders.filter((r) => rIds.includes(r.id)),
-                        date: logDate,
-                      });
-                    }}
-                  >
-                    {`Log selected (${panelSelected.size})`}
-                  </Button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => setPanelSelected(new Set())}
+                      className="text-xs text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
+                    >
+                      Deselect all
+                    </button>
+                    <Button size="sm" variant="outline" disabled={bulkLogging}
+                      onClick={() => {
+                        const careKeys = [...panelSelected].filter((k) => !k.startsWith("reminder-"));
+                        const rIds = [...panelSelected].filter((k) => k.startsWith("reminder-")).map((k) => k.slice(9));
+                        setBulkConfirmState({
+                          careItems: dayEntries.filter((e) => careKeys.includes(`${e.plantId}-${e.careType}`)),
+                          reminderItems: dayReminders.filter((r) => rIds.includes(r.id)),
+                          date: logDate,
+                        });
+                      }}
+                    >
+                      {`Log selected (${panelSelected.size})`}
+                    </Button>
+                  </div>
                 ) : (
                   <Button size="sm" variant="outline" disabled={bulkLogging} className="shrink-0"
                     onClick={() => setBulkConfirmState({ careItems: dayEntries, reminderItems: dayReminders, date: logDate })}
@@ -1076,19 +1084,27 @@ function WeekStrip({
               <div className="flex items-center justify-between">
                 <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Completed</p>
                 {doneSelected.size > 0 && (
-                  <button
-                    onClick={async () => {
-                      const keys = [...doneSelected];
-                      setDoneSelected(new Set());
-                      for (const key of keys) {
-                        const entry = doneEntryList.find((d) => `${d.plantId}-${d.careType}` === key && d.actualDay === actualSelectedOffset);
-                        if (entry) await handleUnlog(entry.plantId, entry.careType, entry.logDate);
-                      }
-                    }}
-                    className="text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    Undo selected ({doneSelected.size})
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setDoneSelected(new Set())}
+                      className="text-[11px] text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
+                    >
+                      Deselect all
+                    </button>
+                    <button
+                      onClick={async () => {
+                        const keys = [...doneSelected];
+                        setDoneSelected(new Set());
+                        for (const key of keys) {
+                          const entry = doneEntryList.find((d) => `${d.plantId}-${d.careType}` === key && d.actualDay === actualSelectedOffset);
+                          if (entry) await handleUnlog(entry.plantId, entry.careType, entry.logDate);
+                        }
+                      }}
+                      className="text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
+                    >
+                      Undo selected ({doneSelected.size})
+                    </button>
+                  </div>
                 )}
               </div>
               {currentDoneEntries.map((d, idx) => {
