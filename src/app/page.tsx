@@ -50,6 +50,8 @@ const steps = [
 
 export default async function LandingPage() {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const gardenHref = user ? "/garden" : "/signup";
 
   const currentMonth = new Date().toISOString().slice(0, 7);
 
@@ -159,8 +161,8 @@ export default async function LandingPage() {
 
               {/* Dual CTA */}
               <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start mb-6">
-                <Link href="/signup" className={cn(buttonVariants({ size: "lg" }), "bg-terra text-white hover:bg-[#B05A39] font-semibold px-8 text-base flex flex-col items-center gap-0 h-auto py-3 border-0")}>
-                  <span className="text-[11px] font-normal text-white/70 leading-none mb-1">Free to join</span>
+                <Link href={gardenHref} className={cn(buttonVariants({ size: "lg" }), "bg-terra text-white hover:bg-[#B05A39] font-semibold px-8 text-base flex flex-col items-center gap-0 h-auto py-3 border-0")}>
+                  <span className="text-[11px] font-normal text-white/70 leading-none mb-1">{user ? "Go to my garden" : "Free to join"}</span>
                   Start your garden log
                 </Link>
                 <Link href="/shop" className={cn(buttonVariants({ size: "lg" }), "bg-transparent text-cream border border-cream/50 hover:bg-cream/10 font-semibold px-8 text-base h-auto py-3")}>
@@ -215,7 +217,7 @@ export default async function LandingPage() {
               Log every plant you own, track care events, and watch your collection grow over time. No purchase needed — just sign up and start adding plants.
             </p>
           </div>
-          <GardenFeatureCards />
+          <GardenFeatureCards gardenHref={gardenHref} />
         </div>
       </section>
 
@@ -383,8 +385,8 @@ export default async function LandingPage() {
               <p className="text-sm text-muted-foreground leading-relaxed">
                 Log every plant you own, record care events, set watering reminders, and share your garden publicly with other enthusiasts.
               </p>
-              <Link href="/signup" className="text-sm font-medium text-leaf hover:underline mt-auto">
-                Start your garden log →
+              <Link href={gardenHref} className="text-sm font-medium text-leaf hover:underline mt-auto">
+                {user ? "Go to my garden →" : "Start your garden log →"}
               </Link>
             </div>
           </div>

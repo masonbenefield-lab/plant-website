@@ -204,7 +204,7 @@ const features = [
 const COLS = 3;
 const rows = [features.slice(0, COLS), features.slice(COLS)];
 
-export default function GardenFeatureCards() {
+export default function GardenFeatureCards({ gardenHref = "/signup" }: { gardenHref?: string }) {
   const [selected, setSelected] = useState<number | null>(null);
 
   return (
@@ -264,8 +264,8 @@ export default function GardenFeatureCards() {
       })}
 
       <div className="text-center mt-6">
-        <Link href="/signup" className={cn(buttonVariants({ size: "lg" }), "bg-leaf hover:bg-forest text-white font-semibold px-10")}>
-          Start your garden log — it&apos;s free
+        <Link href={gardenHref} className={cn(buttonVariants({ size: "lg" }), "bg-leaf hover:bg-forest text-white font-semibold px-10")}>
+          {gardenHref === "/garden" ? "Go to my garden" : "Start your garden log — it's free"}
         </Link>
       </div>
     </div>
