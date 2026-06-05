@@ -18,7 +18,6 @@ import {
   buildWelcomeHtml,
   buildDigestHtml,
   buildReengagementHtml,
-  buildGardenCareReminderHtml,
   buildConfirmationEmailHtml,
   buildPasswordResetHtml,
   buildChangeEmailHtml,
@@ -381,21 +380,6 @@ export default async function EmailPreviewPage() {
         ],
         totalCount: 8,
         weekRange: "Jun 9 – Jun 15",
-      }),
-    },
-    {
-      id: "garden-care",
-      label: "Garden Care Reminder",
-      category: "Account",
-      html: buildGardenCareReminderHtml({
-        username: "plantlover",
-        userId: "preview-user-id",
-        month: "May 2026",
-        items: [
-          { plantName: "Monstera deliciosa", careType: "Water", nextDueDate: "May 31" },
-          { plantName: "Hoya kerrii", careType: "Fertilize", nextDueDate: "Jun 1" },
-          { plantName: "Philodendron gloriosum", careType: "Repot", nextDueDate: "Jun 5" },
-        ],
       }),
     },
   ];
