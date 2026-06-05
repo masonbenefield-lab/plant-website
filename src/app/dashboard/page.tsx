@@ -34,7 +34,7 @@ export default async function DashboardPage() {
     { count: followingCount },
     { count: groundbreakerCount },
   ] = await Promise.all([
-    supabase.from("profiles").select("username, display_name, bio, avatar_url, stripe_onboarded, plan, garden_public, groundbreaker, groundbreaker_number, ship_from_address, return_policy_type, shipping_days, seller_terms_accepted_at").eq("id", user.id).single(),
+    supabase.from("profiles").select("username, display_name, bio, avatar_url, stripe_onboarded, plan, garden_public, groundbreaker, groundbreaker_number, ship_from_address, return_policy_type, shipping_days, seller_terms_accepted_at, storefront_previewed").eq("id", user.id).single(),
     supabase.from("listings").select("*", { count: "exact", head: true }).eq("seller_id", user.id).eq("status", "active"),
     supabase.from("auctions").select("*", { count: "exact", head: true }).eq("seller_id", user.id).eq("status", "active"),
     supabase.from("follows").select("*", { count: "exact", head: true }).eq("seller_id", user.id),
