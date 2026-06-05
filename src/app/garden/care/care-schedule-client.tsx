@@ -168,12 +168,14 @@ function SelectCheckbox({ checked, onToggle }: { checked: boolean; onToggle: () 
 
 // ─── Day panel rows ───────────────────────────────────────────────────────────
 
-function DayTaskRow({ entry, logDate, selected, onToggle, onLog }: {
-  entry: CareEntry; logDate: string; selected: boolean; onToggle: () => void;
+function DayTaskRow({ entry, logDate, selected, isToday, onToggle, onLog }: {
+  entry: CareEntry; logDate: string; selected: boolean; isToday?: boolean; onToggle: () => void;
   onLog: (eventId: string, withNote: boolean) => void;
 }) {
   const meta = CARE_META[entry.careType];
-  const { label, color } = urgencyLabel(entry.daysUntilDue);
+  const { label, color } = isToday && entry.daysUntilDue < 0
+    ? urgencyLabel(0)
+    : urgencyLabel(entry.daysUntilDue);
   const [loading, setLoading] = useState(false);
 
   async function handleLog(withNote: boolean) {
@@ -488,6 +490,7 @@ function WeekStrip({
   const [notesDialogEvents, setNotesDialogEvents] = useState<{ eventId: string; plantName: string; careType: string }[] | null>(null);
   // Bulk-logged events pending optional notes (shown as a button, not auto-opened)
   const [pendingNoteEvents, setPendingNoteEvents] = useState<{ eventId: string; plantName: string; careType: string }[] | null>(null);
+  const [overdueDismissed, setOverdueDismissed] = useState(false);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -495,7 +498,7 @@ function WeekStrip({
   const isCurrentWeek = weekOffset === 0;
 
   // Overdue task count (for the "missed tasks" chip when on current week)
-  const overdueCount = isCurrentWeek
+  const overdueCount = isCurrentWeek && !overdueDismissed
     ? entries.filter((e) => e.daysUntilDue < 0 && Math.abs(e.daysUntilDue) < e.interval && !loggedKeys.has(`${e.plantId}-${e.careType}`)).length
     : 0;
 
@@ -673,30 +676,8 @@ function WeekStrip({
     }
   }
 
-  async function dismissAllOverdue() {
-    const overdueEntries = entries.filter((e) => e.daysUntilDue < 0 && Math.abs(e.daysUntilDue) < e.interval && !loggedKeys.has(`${e.plantId}-${e.careType}`));
-    if (!overdueEntries.length) return;
-    // Group by plantId, collect intervals per care type
-    const plantGroups: Record<string, Record<string, number>> = {};
-    const fieldMap: Record<string, string> = { Water: "waterInterval", Fertilize: "fertilizeInterval", Repot: "repotInterval", Prune: "pruneInterval" };
-    for (const e of overdueEntries) {
-      if (!plantGroups[e.plantId]) plantGroups[e.plantId] = {};
-      const field = fieldMap[e.careType];
-      if (field) plantGroups[e.plantId][field] = e.interval;
-    }
-    // startDate = tomorrow → nextDue = tomorrow, clears overdue without logging care
-    const d = new Date(); d.setDate(d.getDate() + 1);
-    const tomorrowStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    await Promise.all(
-      Object.entries(plantGroups).map(([plantId, intervals]) =>
-        fetch("/api/garden/update-intervals", {
-          method: "PATCH", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ plantIds: [plantId], ...intervals, startDate: tomorrowStr }),
-        })
-      )
-    );
-    toast.success("Overdue tasks dismissed — schedules reset from tomorrow");
-    onLogged("", "");
+  function dismissAllOverdue() {
+    setOverdueDismissed(true);
   }
 
   async function logSelected(autoOpenNotes = false) {
@@ -980,6 +961,7 @@ function WeekStrip({
                 return (
                   <DayTaskRow key={`${key}-${idx}`} entry={e} logDate={logDate}
                     selected={panelSelected.has(key)}
+                    isToday={actualSelectedOffset === 0}
                     onToggle={() => togglePanel(key)}
                     onLog={(eventId, withNote) => handleLog(e.plantId, e.careType, eventId, withNote)} />
                 );
