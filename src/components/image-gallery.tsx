@@ -44,7 +44,7 @@ export default function ImageGallery({ images, alt }: { images: string[]; alt: s
           onClick={() => setLightboxOpen(true)}
           aria-label={`View ${alt} — click to open full-size`}
         >
-          <Image src={images[selected]} alt={alt} fill className="object-cover object-center" priority />
+          <Image src={images[selected]} alt={alt} fill className="object-contain" priority />
         </button>
 
         {/* Thumbnails */}

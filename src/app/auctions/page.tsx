@@ -8,6 +8,7 @@ import { centsToDisplay } from "@/lib/stripe";
 import AuctionFilterBar from "@/components/auction-filter-bar";
 import WishlistButton from "@/components/wishlist-button";
 import { Pagination } from "@/components/pagination";
+import AuctionCardGallery from "@/components/auction-card-gallery";
 
 const PAGE_SIZE = 24;
 
@@ -196,32 +197,28 @@ export default async function AuctionsPage({
 
               return (
                 <Card key={auction.id} className="overflow-hidden hover:shadow-md transition-shadow">
+                  <div className="relative">
+                    <AuctionCardGallery images={auction.images as string[]} alt={auction.plant_name} />
+                    {!isSoldView && (
+                      <WishlistButton
+                        userId={user?.id ?? null}
+                        auctionId={auction.id}
+                        initialWishlisted={wishlistedSet.has(auction.id)}
+                        compact
+                        className="absolute top-2 left-2 z-10"
+                      />
+                    )}
+                    {isSoldView ? (
+                      <Badge className="absolute top-2 right-2 z-10 bg-gray-700">
+                        Sold · {timeAgo(auction.ends_at)}
+                      </Badge>
+                    ) : (
+                      <Badge className="absolute top-2 right-2 z-10 bg-red-600">
+                        {hoursLeft > 0 ? `${hoursLeft}h ${minutesLeft}m` : `${minutesLeft}m`} left
+                      </Badge>
+                    )}
+                  </div>
                   <Link href={`/auctions/${auction.id}`} className="block">
-                    <div className="relative aspect-[4/3] bg-muted">
-                      {auction.images[0] ? (
-                        <Image src={auction.images[0]} alt={auction.plant_name} fill className="object-cover object-center" sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw" />
-                      ) : (
-                        <div className="flex items-center justify-center h-full text-4xl">🌿</div>
-                      )}
-                      {!isSoldView && (
-                        <WishlistButton
-                          userId={user?.id ?? null}
-                          auctionId={auction.id}
-                          initialWishlisted={wishlistedSet.has(auction.id)}
-                          compact
-                          className="absolute top-2 left-2 z-10"
-                        />
-                      )}
-                      {isSoldView ? (
-                        <Badge className="absolute top-2 right-2 bg-gray-700">
-                          Sold · {timeAgo(auction.ends_at)}
-                        </Badge>
-                      ) : (
-                        <Badge className="absolute top-2 right-2 bg-red-600">
-                          {hoursLeft > 0 ? `${hoursLeft}h ${minutesLeft}m` : `${minutesLeft}m`} left
-                        </Badge>
-                      )}
-                    </div>
                     <CardContent className="p-4">
                       {auction.category && (
                         <span className="inline-block text-xs font-medium text-blue-700 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/40 px-2 py-0.5 rounded-full mb-1.5">
