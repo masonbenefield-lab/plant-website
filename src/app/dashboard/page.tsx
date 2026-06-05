@@ -165,7 +165,6 @@ export default async function DashboardPage() {
               label="Preview your storefront"
               href={profile?.username ? `/sellers/${profile.username}` : "/account"}
               hint="See how buyers discover and shop your store"
-              external={!!profile?.username}
               doneHref={profile?.username ? `/sellers/${profile.username}` : undefined}
             />
           </CardContent>
@@ -218,7 +217,6 @@ export default async function DashboardPage() {
               label="Preview your storefront"
               href={profile?.username ? `/sellers/${profile.username}` : "/account"}
               hint="See how buyers discover and shop your store — share the link when you're ready"
-              external={!!profile?.username}
               doneHref={profile?.username ? `/sellers/${profile.username}` : undefined}
             />
             <CheckItem
