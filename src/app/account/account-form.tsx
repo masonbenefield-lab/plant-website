@@ -721,9 +721,9 @@ export default function AccountForm({
           </div>
           <div className="flex items-start justify-between gap-4 rounded-lg border px-4 py-4 mt-3">
             <div>
-              <p className="text-sm font-medium">Daily garden care reminders</p>
+              <p className="text-sm font-medium">Weekly garden care reminders</p>
               <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                Receive a morning email listing plants that need watering, fertilizing, or other care that day. Only sent when you have tasks due.
+                Receive a Sunday evening email with everything your plants need for the coming week. Only sent when you have tasks due.
               </p>
             </div>
             <button

@@ -2590,3 +2590,87 @@ export async function sendDailyCareReminder({
     html: buildDailyCareReminderHtml({ username, userId, items, oneTimeItems }),
   });
 }
+
+// ─── Weekly care summary ──────────────────────────────────────────────────────
+
+export type WeeklyCareDay = {
+  label: string;
+  tasks: { plantName: string; careType: string }[];
+};
+
+export function buildWeeklyCareSummaryHtml({
+  username,
+  days,
+  totalCount,
+  weekRange,
+}: {
+  username: string;
+  days: WeeklyCareDay[];
+  totalCount: number;
+  weekRange: string;
+}): string {
+  const siteUrl = siteBase();
+  const shownCount = days.reduce((sum, d) => sum + d.tasks.length, 0);
+  const hiddenCount = totalCount - shownCount;
+
+  const daySections = days.map((day) => {
+    const rows = day.tasks.map((t, i) => {
+      const bg = i % 2 === 0 ? "#F5F0E8" : "#FBF9F3";
+      return `<tr style="background:${bg};">
+        <td style="padding:10px 16px;font-size:13px;color:#16201B;border-bottom:1px solid #DED6C4;">
+          ${careTypeEmoji(t.careType)} <strong>${t.plantName}</strong> <span style="color:#6B7E72;">— ${t.careType}</span>
+        </td>
+      </tr>`;
+    }).join("");
+
+    return `
+      <p style="margin:20px 0 6px;font-size:11px;font-weight:700;color:#6B7E72;text-transform:uppercase;letter-spacing:0.06em;">${day.label}</p>
+      <table width="100%" cellpadding="0" cellspacing="0" style="border-radius:8px;overflow:hidden;border:1px solid #DED6C4;">
+        ${rows}
+      </table>`;
+  }).join("");
+
+  const overflowNote = hiddenCount > 0
+    ? `<p style="margin:16px 0 0;font-size:13px;color:#6B7E72;text-align:center;">
+        ...and <strong>${hiddenCount} more task${hiddenCount !== 1 ? "s" : ""}</strong> this week.
+      </p>`
+    : "";
+
+  return emailBase({
+    title: "Your plant care week ahead",
+    heading: "🌿 Your plant care week ahead",
+    subheading: weekRange,
+    body: `
+      <p style="margin:0 0 4px;font-size:14px;color:#6B7E72;line-height:1.65;">
+        Hey ${username}! Here's what your plants need this week. Plan ahead and keep your garden thriving.
+      </p>
+      ${daySections}
+      ${overflowNote}
+      ${ctaBtn("Open care schedule", `${siteUrl}/garden/care`)}
+    `,
+    footerNote: "You're receiving this because you have garden care reminders enabled on Plantet.",
+    unsubLink: `${siteUrl}/account#email-preferences`,
+  });
+}
+
+export async function sendWeeklyCareSummary({
+  recipientEmail,
+  username,
+  days,
+  totalCount,
+  weekRange,
+}: {
+  recipientEmail: string;
+  username: string;
+  days: WeeklyCareDay[];
+  totalCount: number;
+  weekRange: string;
+}) {
+  const resend = getResend();
+  await resend.emails.send({
+    from: FROM,
+    to: recipientEmail,
+    subject: `🌿 Your plant care week ahead — ${weekRange}`,
+    html: buildWeeklyCareSummaryHtml({ username, days, totalCount, weekRange }),
+  });
+}
