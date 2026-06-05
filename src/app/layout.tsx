@@ -25,14 +25,14 @@ const bricolage = Bricolage_Grotesque({
 const siteUrl = "https://www.plantet.shop";
 
 export const metadata: Metadata = {
-  title: "Plantet — Buy, Sell & Auction Plants",
+  title: "Plantet — Your Plants. Your People. Your Garden.",
   description:
     "Track your plants, connect with fellow growers, and buy or sell — all in one place built for the plant-obsessed.",
   icons: {
     icon: "/plantet-mark-color.svg",
   },
   openGraph: {
-    title: "Plantet — Buy, Sell & Auction Plants",
+    title: "Plantet — Your Plants. Your People. Your Garden.",
     description: "Track your plants, connect with fellow growers, and buy or sell — all in one place built for the plant-obsessed.",
     siteName: "Plantet",
     url: siteUrl,
@@ -42,13 +42,13 @@ export const metadata: Metadata = {
         url: `${siteUrl}/plantet-facebook-green.png`,
         width: 1200,
         height: 630,
-        alt: "Plantet — Buy, Sell & Auction Plants",
+        alt: "Plantet — Your Plants. Your People. Your Garden.",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Plantet — Buy, Sell & Auction Plants",
+    title: "Plantet — Your Plants. Your People. Your Garden.",
     description: "Track your plants, connect with fellow growers, and buy or sell — all in one place built for the plant-obsessed.",
     images: [`${siteUrl}/plantet-facebook-green.png`],
   },
