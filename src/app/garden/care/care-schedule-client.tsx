@@ -1302,7 +1302,9 @@ function ManagePlantRow({ plant, selectionMode, selected, onToggle, onEdit, onQu
                   const careType = INTERVAL_TO_CARE_TYPE[key];
                   const days = dueDays[careType];
                   if (days === undefined) return null;
-                  const { label, color } = urgencyLabel(days);
+                  const interval = plant[key] as number;
+                  const effectiveDays = days < 0 && Math.abs(days) >= interval ? 0 : days;
+                  const { label, color } = urgencyLabel(effectiveDays);
                   return <span key={key} className={cn("text-[11px]", color)}>{emoji} {label}</span>;
                 })}
               </div>
