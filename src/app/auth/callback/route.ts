@@ -17,7 +17,7 @@ async function handleSession(
 
   const { data: profile } = await admin
     .from("profiles")
-    .select("groundbreaker, username")
+    .select("groundbreaker, username, display_name")
     .eq("id", user.id)
     .single();
 
@@ -28,7 +28,7 @@ async function handleSession(
 
   const isNewUser = Date.now() - new Date(user.created_at).getTime() < 10 * 60 * 1000;
   if (isNewUser && user.email && profile?.username) {
-    sendWelcomeEmail({ recipientEmail: user.email, username: profile.username }).catch(() => {});
+    sendWelcomeEmail({ recipientEmail: user.email, username: profile.username, displayName: (profile as { display_name?: string | null }).display_name }).catch(() => {});
     // Override destination — send new users to the welcome page instead of dashboard
     if (next === "/dashboard") next = "/welcome?confirmed=true";
   }

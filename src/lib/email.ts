@@ -1176,7 +1176,7 @@ export async function sendLowStockAlert({
 
 // ─── Welcome email ───────────────────────────────────────────────────────────
 
-export function buildWelcomeHtml({ username }: { username: string }): string {
+export function buildWelcomeHtml({ username, displayName }: { username: string; displayName?: string | null }): string {
   const siteUrl = siteBase();
   return `<!DOCTYPE html>
 <html lang="en">
@@ -1216,7 +1216,7 @@ export function buildWelcomeHtml({ username }: { username: string }): string {
 
           <tr>
             <td style="padding:32px 32px 8px;">
-              <p style="margin:0 0 8px;font-size:18px;font-weight:600;color:#16201B;">Hey ${username} &#128075;</p>
+              <p style="margin:0 0 8px;font-size:18px;font-weight:600;color:#16201B;">Hey ${displayName ?? username} &#128075;</p>
               <p style="margin:0;font-size:14px;color:#6B7E72;line-height:1.7;">You're now part of a community built for plant lovers — whether you're hunting for a rare find, growing your own collection, or looking to sell some cuttings. Here's everything you can do on Plantet.</p>
             </td>
           </tr>
@@ -1238,7 +1238,7 @@ export function buildWelcomeHtml({ username }: { username: string }): string {
                   <td width="50%" style="padding:0 0 12px 6px;vertical-align:top;">
                     <table width="100%" cellpadding="0" cellspacing="0" style="background:#EFE7D6;border:1px solid #DED6C4;border-radius:10px;">
                       <tr><td style="padding:14px 16px;">
-                        <p style="margin:0 0 4px;font-size:18px;">&#129332;</p>
+                        <p style="margin:0 0 4px;font-size:18px;">&#127807;</p>
                         <p style="margin:0 0 4px;font-size:13px;font-weight:700;color:#1F4736;">Garden Log</p>
                         <p style="margin:0;font-size:12px;color:#6B7E72;line-height:1.5;">Track every plant you own — photos, care schedule, event history, and a shareable public garden.</p>
                       </td></tr>
@@ -1369,16 +1369,18 @@ export function buildWelcomeHtml({ username }: { username: string }): string {
 export async function sendWelcomeEmail({
   recipientEmail,
   username,
+  displayName,
 }: {
   recipientEmail: string;
   username: string;
+  displayName?: string | null;
 }) {
   const resend = getResend();
   await resend.emails.send({
     from: FROM,
     to: recipientEmail,
     subject: "Welcome to Plantet",
-    html: buildWelcomeHtml({ username }),
+    html: buildWelcomeHtml({ username, displayName }),
   });
 }
 
@@ -1503,6 +1505,7 @@ function auctionSection(auctions: DigestAuction[], siteUrl: string): string {
 
 export function buildDigestHtml({
   username,
+  displayName,
   userId,
   month,
   followedListings,
@@ -1510,6 +1513,7 @@ export function buildDigestHtml({
   hotAuctions,
 }: {
   username: string;
+  displayName?: string | null;
   userId: string;
   month: string;
   followedListings: DigestListing[];
@@ -1556,7 +1560,7 @@ export function buildDigestHtml({
 
           <tr>
             <td style="padding:32px 32px 24px;">
-              <p style="margin:0 0 8px;font-size:18px;font-weight:600;color:#16201B;">Hey ${username} &#128075;</p>
+              <p style="margin:0 0 8px;font-size:18px;font-weight:600;color:#16201B;">Hey ${displayName ?? username} &#128075;</p>
               <p style="margin:0;font-size:14px;color:#6B7E72;line-height:1.65;">Here's what's been growing this week on Plantet — fresh listings, new arrivals from shops you follow, and auctions you don't want to miss.</p>
             </td>
           </tr>
@@ -1616,6 +1620,7 @@ export function buildDigestHtml({
 export async function sendWeeklyDigest({
   recipientEmail,
   username,
+  displayName,
   userId,
   month,
   followedListings,
@@ -1624,6 +1629,7 @@ export async function sendWeeklyDigest({
 }: {
   recipientEmail: string;
   username: string;
+  displayName?: string | null;
   userId: string;
   month: string;
   followedListings: DigestListing[];
@@ -1631,7 +1637,7 @@ export async function sendWeeklyDigest({
   hotAuctions: DigestAuction[];
 }) {
   const resend = getResend();
-  const html = buildDigestHtml({ username, userId, month, followedListings, freshListings, hotAuctions });
+  const html = buildDigestHtml({ username, displayName, userId, month, followedListings, freshListings, hotAuctions });
   await resend.emails.send({
     from: FROM,
     to: recipientEmail,
@@ -1644,10 +1650,12 @@ export async function sendWeeklyDigest({
 
 export function buildReengagementHtml({
   username,
+  displayName,
   userId,
   freshListings,
 }: {
   username: string;
+  displayName?: string | null;
   userId: string;
   freshListings: DigestListing[];
 }): string {
@@ -1692,7 +1700,7 @@ export function buildReengagementHtml({
 
           <tr>
             <td style="padding:32px 32px 24px;">
-              <p style="margin:0 0 8px;font-size:18px;font-weight:600;color:#16201B;">Hey ${username} &#128075;</p>
+              <p style="margin:0 0 8px;font-size:18px;font-weight:600;color:#16201B;">Hey ${displayName ?? username} &#128075;</p>
               <p style="margin:0;font-size:14px;color:#6B7E72;line-height:1.65;">We noticed you haven't stopped by in a while. The shop has been growing — here are some fresh finds we think you'll love.</p>
             </td>
           </tr>
@@ -1735,11 +1743,13 @@ export function buildReengagementHtml({
 export async function sendReengagementEmail({
   recipientEmail,
   username,
+  displayName,
   userId,
   freshListings,
 }: {
   recipientEmail: string;
   username: string;
+  displayName?: string | null;
   userId: string;
   freshListings: DigestListing[];
 }) {
@@ -1748,7 +1758,7 @@ export async function sendReengagementEmail({
     from: FROM,
     to: recipientEmail,
     subject: "We've missed you on Plantet",
-    html: buildReengagementHtml({ username, userId, freshListings }),
+    html: buildReengagementHtml({ username, displayName, userId, freshListings }),
   });
 }
 
@@ -2482,11 +2492,13 @@ function careTypeDisplay(eventType: string): string {
 
 export function buildDailyCareReminderHtml({
   username,
+  displayName,
   userId,
   items,
   oneTimeItems,
 }: {
   username: string;
+  displayName?: string | null;
   userId: string;
   items: DailyCareItem[];
   oneTimeItems?: OneTimeCareItem[];
@@ -2551,7 +2563,7 @@ export function buildDailyCareReminderHtml({
   return emailBase({
     title: heading,
     heading: `🌱 ${heading}`,
-    subheading: `${username}'s garden`,
+    subheading: `${displayName ?? username}'s garden`,
     body: `
       <p style="margin:0 0 20px;font-size:14px;color:#6B7E72;line-height:1.65;">
         Good morning! Here's what needs attention in your garden today.
@@ -2568,12 +2580,14 @@ export function buildDailyCareReminderHtml({
 export async function sendDailyCareReminder({
   recipientEmail,
   username,
+  displayName,
   userId,
   items,
   oneTimeItems,
 }: {
   recipientEmail: string;
   username: string;
+  displayName?: string | null;
   userId: string;
   items: DailyCareItem[];
   oneTimeItems?: OneTimeCareItem[];
@@ -2587,7 +2601,7 @@ export async function sendDailyCareReminder({
     from: FROM,
     to: recipientEmail,
     subject,
-    html: buildDailyCareReminderHtml({ username, userId, items, oneTimeItems }),
+    html: buildDailyCareReminderHtml({ username, displayName, userId, items, oneTimeItems }),
   });
 }
 
@@ -2600,11 +2614,13 @@ export type WeeklyCareDay = {
 
 export function buildWeeklyCareSummaryHtml({
   username,
+  displayName,
   days,
   totalCount,
   weekRange,
 }: {
   username: string;
+  displayName?: string | null;
   days: WeeklyCareDay[];
   totalCount: number;
   weekRange: string;
@@ -2642,7 +2658,7 @@ export function buildWeeklyCareSummaryHtml({
     subheading: weekRange,
     body: `
       <p style="margin:0 0 4px;font-size:14px;color:#6B7E72;line-height:1.65;">
-        Hey ${username}! Here's what your plants need this week. Plan ahead and keep your garden thriving.
+        Hey ${displayName ?? username}! Here's what your plants need this week. Plan ahead and keep your garden thriving.
       </p>
       ${daySections}
       ${overflowNote}
@@ -2656,12 +2672,14 @@ export function buildWeeklyCareSummaryHtml({
 export async function sendWeeklyCareSummary({
   recipientEmail,
   username,
+  displayName,
   days,
   totalCount,
   weekRange,
 }: {
   recipientEmail: string;
   username: string;
+  displayName?: string | null;
   days: WeeklyCareDay[];
   totalCount: number;
   weekRange: string;
@@ -2671,6 +2689,6 @@ export async function sendWeeklyCareSummary({
     from: FROM,
     to: recipientEmail,
     subject: `🌿 Your plant care week ahead — ${weekRange}`,
-    html: buildWeeklyCareSummaryHtml({ username, days, totalCount, weekRange }),
+    html: buildWeeklyCareSummaryHtml({ username, displayName, days, totalCount, weekRange }),
   });
 }

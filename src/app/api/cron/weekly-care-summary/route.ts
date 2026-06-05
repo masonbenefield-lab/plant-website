@@ -39,7 +39,7 @@ export async function GET(request: Request) {
   // Opted-in profiles (reuse daily_care_emails preference)
   const { data: profiles } = await admin
     .from("profiles")
-    .select("id, username, vacation_start, vacation_end, schedule_pause_offset")
+    .select("id, username, display_name, vacation_start, vacation_end, schedule_pause_offset")
     .eq("daily_care_emails", true);
 
   if (!profiles?.length) return NextResponse.json({ sent: 0, reason: "No eligible profiles" });
@@ -175,7 +175,7 @@ export async function GET(request: Request) {
   for (const u of authData?.users ?? []) {
     if (u.email) emailMap[u.id] = u.email;
   }
-  const profileMap = Object.fromEntries(activeProfiles.map((p) => [p.id, p.username]));
+  const profileMap = Object.fromEntries(activeProfiles.map((p) => [p.id, { username: p.username, displayName: (p as { display_name?: string | null }).display_name }]));
 
   const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -183,7 +183,7 @@ export async function GET(request: Request) {
   let sent = 0;
   for (const userId of eligibleIds) {
     const email = emailMap[userId];
-    const username = profileMap[userId];
+    const { username, displayName } = profileMap[userId] ?? {};
     if (!email || !username) continue;
 
     const tasks = [...(userTasks[userId] ?? [])].sort((a, b) => a.dayOffset - b.dayOffset);
@@ -203,7 +203,7 @@ export async function GET(request: Request) {
     });
 
     try {
-      await sendWeeklyCareSummary({ recipientEmail: email, username, days, totalCount, weekRange });
+      await sendWeeklyCareSummary({ recipientEmail: email, username, displayName, days, totalCount, weekRange });
       sent++;
     } catch {
       // continue on individual failure

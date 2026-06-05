@@ -26,7 +26,7 @@ export async function GET(request: Request) {
   // 1 — opted-in users who haven't received a digest recently
   const { data: profiles, error: profileErr } = await admin
     .from("profiles")
-    .select("id, username, email_marketing_opt_in, last_digest_sent")
+    .select("id, username, display_name, email_marketing_opt_in, last_digest_sent")
     .eq("email_marketing_opt_in", true)
     .or(`last_digest_sent.is.null,last_digest_sent.lt.${sixDaysAgo}`);
 
@@ -251,6 +251,7 @@ export async function GET(request: Request) {
       await sendWeeklyDigest({
         recipientEmail: email,
         username: profile.username,
+        displayName: (profile as { display_name?: string | null }).display_name,
         userId: profile.id,
         month,
         followedListings: followedForUser,

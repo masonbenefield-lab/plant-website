@@ -71,7 +71,7 @@ export async function POST(req: Request) {
   }
 
   if (user.email) {
-    sendWelcomeEmail({ recipientEmail: user.email, username }).catch(() => {});
+    sendWelcomeEmail({ recipientEmail: user.email, username, displayName: displayName ?? null }).catch(() => {});
   }
 
   return NextResponse.json({ ok: true });

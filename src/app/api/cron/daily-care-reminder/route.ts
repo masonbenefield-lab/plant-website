@@ -31,7 +31,7 @@ export async function GET(request: Request) {
   // 1 — opted-in profiles (include vacation fields to skip vacationing users + apply pause offset)
   const { data: profiles } = await admin
     .from("profiles")
-    .select("id, username, vacation_start, vacation_end, schedule_pause_offset")
+    .select("id, username, display_name, vacation_start, vacation_end, schedule_pause_offset")
     .eq("daily_care_emails", true);
 
   if (!profiles?.length) return NextResponse.json({ sent: 0, reason: "No eligible profiles" });
@@ -196,19 +196,20 @@ export async function GET(request: Request) {
     if (u.email) emailMap[u.id] = u.email;
   }
 
-  const profileMap = Object.fromEntries(activeProfiles.map((p) => [p.id, p.username]));
+  const profileMap = Object.fromEntries(activeProfiles.map((p) => [p.id, { username: p.username, displayName: (p as { display_name?: string | null }).display_name }]));
 
   // 6 — send emails
   let sent = 0;
   for (const userId of eligibleIds) {
     const email = emailMap[userId];
-    const username = profileMap[userId];
+    const { username, displayName } = profileMap[userId] ?? {};
     if (!email || !username) continue;
 
     try {
       await sendDailyCareReminder({
         recipientEmail: email,
         username,
+        displayName,
         userId,
         items: userItems[userId] ?? [],
         oneTimeItems: userOneTimeItems[userId],
