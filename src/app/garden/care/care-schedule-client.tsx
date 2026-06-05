@@ -1960,7 +1960,11 @@ export function CareScheduleClient({
       method: "DELETE", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ plantId, eventType }),
     });
-    if (res.ok) { toast.success("Snooze cleared"); router.refresh(); }
+    if (res.ok) {
+      setSnoozedEntryKeys((prev) => { const next = new Set(prev); next.delete(`${plantId}-${eventType}`); return next; });
+      toast.success("Snooze cleared");
+      router.refresh();
+    }
     else toast.error("Failed to clear snooze");
   }
 
