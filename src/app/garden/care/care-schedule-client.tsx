@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   Droplets, Leaf, Flower2, Scissors, Pencil, Check, ChevronDown, ChevronLeft, ChevronRight,
-  StickyNote, Plus, Search, X, Syringe, Wheat, Clock,
+  StickyNote, Plus, Search, X, Syringe, Wheat, Clock, Sparkles, Moon, Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -28,6 +28,9 @@ type CareEntry = {
   interval: number;
   lastDate: string | null;
   daysUntilDue: number;
+  snoozeUntil: string | null;
+  isCustom?: boolean;
+  scheduleId?: string;
 };
 
 export type ReminderEntry = {
@@ -51,6 +54,13 @@ export type CompletedCareEntry = {
   careType: string;
 };
 
+export type CustomSchedule = {
+  id: string;
+  label: string;
+  interval_days: number;
+  start_date: string;
+};
+
 export type PlantWithIntervals = {
   id: string;
   name: string;
@@ -60,6 +70,7 @@ export type PlantWithIntervals = {
   fertilizeInterval: number | null;
   repotInterval: number | null;
   pruneInterval: number | null;
+  customSchedules: CustomSchedule[];
 };
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -73,6 +84,15 @@ const CARE_META: Record<string, { icon: React.ReactNode; color: string; bg: stri
   Treated:   { icon: <Syringe size={13} />,   color: "text-pink-700 dark:text-pink-400",     bg: "bg-pink-100 dark:bg-pink-900/30",     border: "border-pink-200 dark:border-pink-800"    },
   Harvested: { icon: <Wheat size={13} />,     color: "text-yellow-700 dark:text-yellow-500", bg: "bg-yellow-100 dark:bg-yellow-900/30", border: "border-yellow-200 dark:border-yellow-800" },
 };
+
+function getCareMeta(careType: string) {
+  return CARE_META[careType] ?? {
+    icon: <Sparkles size={13} />,
+    color: "text-violet-700 dark:text-violet-400",
+    bg: "bg-violet-100 dark:bg-violet-900/30",
+    border: "border-violet-200 dark:border-violet-800",
+  };
+}
 
 const EVENT_TYPE_TO_DISPLAY: Record<string, string> = {
   watered: "Water", fertilized: "Fertilize", repotted: "Repot",
@@ -173,7 +193,7 @@ function DayTaskRow({ entry, logDate, selected, isToday, onToggle, onLog, onEdit
   onLog: (eventId: string, withNote: boolean) => void; onEditSchedule?: () => void; onViewHistory?: () => void;
   compact?: boolean;
 }) {
-  const meta = CARE_META[entry.careType];
+  const meta = getCareMeta(entry.careType);
   // Overdue items at or past the cap boundary cycle back via getStripDays — show "Due today"
   const effectiveDays = isToday && entry.daysUntilDue < 0 && Math.abs(entry.daysUntilDue) >= entry.interval
     ? 0 : entry.daysUntilDue;
@@ -184,7 +204,7 @@ function DayTaskRow({ entry, logDate, selected, isToday, onToggle, onLog, onEdit
     setLoading(true);
     const res = await fetch("/api/garden/log-care", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ plantId: entry.plantId, careType: entry.careType, date: logDate }),
+      body: JSON.stringify({ plantId: entry.plantId, careType: entry.careType, eventKey: entry.eventKey, date: logDate }),
     });
     setLoading(false);
     if (res.ok) {
@@ -1082,6 +1102,15 @@ function WeekStrip({
                     <Button size="sm" variant="outline" disabled={bulkLogging}
                       onClick={() => {
                         const careKeys = [...panelSelected].filter((k) => !k.startsWith("reminder-"));
+                        const selectedCareEntries = activeEntries.filter((e) => careKeys.includes(`${e.plantId}-${e.careType}`));
+                        if (selectedCareEntries.length > 0) setSnoozeDialogEntries(selectedCareEntries);
+                      }}
+                    >
+                      <Moon size={12} className="mr-1" /> Snooze
+                    </Button>
+                    <Button size="sm" variant="outline" disabled={bulkLogging}
+                      onClick={() => {
+                        const careKeys = [...panelSelected].filter((k) => !k.startsWith("reminder-"));
                         const rIds = [...panelSelected].filter((k) => k.startsWith("reminder-")).map((k) => k.slice(9));
                         setBulkConfirmState({
                           careItems: activeEntries.filter((e) => careKeys.includes(`${e.plantId}-${e.careType}`)),
@@ -1194,10 +1223,36 @@ function WeekStrip({
               ))}
             </div>
           ) : (
-            !hasDone && (
-              <p className="text-xs text-leaf text-center py-2">
-                {actualSelectedOffset < 0 ? "Nothing missed on this day ✓" : "Nothing scheduled for this day ✓"}
-              </p>
+            isSelectedToday && hasDone ? (
+              // All done moment — all of today's tasks logged
+              (() => {
+                let minOffset = Infinity;
+                for (const e of entries) {
+                  let d = e.daysUntilDue;
+                  if (d < 0) d += Math.ceil(Math.abs(d) / e.interval) * e.interval;
+                  if (d > 0 && d < minOffset) minOffset = d;
+                }
+                for (const r of reminders) {
+                  if (r.daysUntilDue > 0 && r.daysUntilDue < minOffset) minOffset = r.daysUntilDue;
+                }
+                const nextUpDate = minOffset < Infinity ? addDays(today, minOffset) : null;
+                return (
+                  <div className="text-center py-4 space-y-1">
+                    <p className="text-sm font-semibold text-leaf">🌿 All done for today!</p>
+                    {nextUpDate && (
+                      <p className="text-xs text-muted-foreground">
+                        Next up: {nextUpDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+                      </p>
+                    )}
+                  </div>
+                );
+              })()
+            ) : (
+              !hasDone && (
+                <p className="text-xs text-leaf text-center py-2">
+                  {actualSelectedOffset < 0 ? "Nothing missed on this day ✓" : "Nothing scheduled for this day ✓"}
+                </p>
+              )
             )
           )}
 
@@ -1261,6 +1316,8 @@ function IntervalsModal({
   onReminderAdded: (reminder: ReminderEntry) => void;
   initialTab?: "intervals" | "onetime" | "history";
 }) {
+  type LocalCustom = CustomSchedule & { _new?: boolean };
+
   type HistoryEvent = { id: string; event_type: string; event_date: string; notes: string | null };
   const [modalTab, setModalTab] = useState<"intervals" | "onetime" | "history">(initialTab);
   const [historyEvents, setHistoryEvents] = useState<HistoryEvent[] | null>(null);
@@ -1268,6 +1325,45 @@ function IntervalsModal({
 
   const isBulk = plants.length > 1;
   const singlePlant = !isBulk ? plants[0] : null;
+
+  // Custom schedules (single-plant only)
+  const [customList, setCustomList] = useState<LocalCustom[]>(singlePlant?.customSchedules ?? []);
+  const [addingCustom, setAddingCustom] = useState(false);
+  const [newCustomLabel, setNewCustomLabel] = useState("");
+  const [newCustomInterval, setNewCustomInterval] = useState("");
+  const [newCustomStart, setNewCustomStart] = useState(todayStr());
+  const [savingCustom, setSavingCustom] = useState(false);
+
+  async function addCustomSchedule() {
+    const interval = parseInt(newCustomInterval, 10);
+    if (!newCustomLabel.trim() || !interval || interval < 1 || !newCustomStart || !singlePlant) return;
+    setSavingCustom(true);
+    const res = await fetch("/api/garden/custom-schedules", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plantId: singlePlant.id, label: newCustomLabel.trim(), intervalDays: interval, startDate: newCustomStart }),
+    });
+    setSavingCustom(false);
+    if (res.ok) {
+      const { schedule } = await res.json() as { schedule: CustomSchedule };
+      setCustomList((p) => [...p, schedule]);
+      setNewCustomLabel(""); setNewCustomInterval(""); setNewCustomStart(todayStr());
+      setAddingCustom(false);
+      toast.success("Custom interval added");
+      onSaved();
+    } else toast.error("Failed to add custom interval");
+  }
+
+  async function deleteCustomSchedule(scheduleId: string) {
+    const res = await fetch("/api/garden/custom-schedules", {
+      method: "DELETE", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ scheduleId }),
+    });
+    if (res.ok) {
+      setCustomList((p) => p.filter((s) => s.id !== scheduleId));
+      toast.success("Custom interval removed");
+      onSaved();
+    } else toast.error("Failed to remove");
+  }
 
   function loadHistory() {
     if (!singlePlant || historyLoading || historyEvents !== null) return;
@@ -1408,6 +1504,42 @@ function IntervalsModal({
               <p className="text-xs text-muted-foreground pl-[152px]">Set to re-anchor the schedule. Leave blank to keep the current rhythm.</p>
             </div>
           </div>
+          {/* Custom recurring intervals — single plant only */}
+          {!isBulk && (
+            <div className="border-t pt-3 space-y-2">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Custom intervals</p>
+              {customList.map((cs) => (
+                <div key={cs.id} className="flex items-center gap-2 text-sm">
+                  <span className="text-violet-600 dark:text-violet-400 shrink-0"><Sparkles size={13} /></span>
+                  <span className="flex-1 truncate">{cs.label}</span>
+                  <span className="text-xs text-muted-foreground shrink-0">every {cs.interval_days}d</span>
+                  <button onClick={() => deleteCustomSchedule(cs.id)} className="text-muted-foreground hover:text-destructive transition-colors shrink-0 p-0.5">
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              ))}
+              {addingCustom ? (
+                <div className="space-y-2 rounded-lg border bg-muted/30 p-3">
+                  <Input placeholder="Label (e.g. Neem oil spray)" value={newCustomLabel} onChange={(e) => setNewCustomLabel(e.target.value)} className="h-8 text-sm" />
+                  <div className="flex gap-2">
+                    <Input type="number" min={1} placeholder="Days" value={newCustomInterval} onChange={(e) => setNewCustomInterval(e.target.value)} className="h-8 text-sm w-24" />
+                    <Input type="date" value={newCustomStart} onChange={(e) => setNewCustomStart(e.target.value)} className="h-8 text-sm flex-1" />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" onClick={() => setAddingCustom(false)} className="flex-1">Cancel</Button>
+                    <Button size="sm" onClick={addCustomSchedule} disabled={savingCustom || !newCustomLabel.trim() || !newCustomInterval} className="flex-1 bg-leaf hover:bg-forest text-white">
+                      {savingCustom ? "Adding…" : "Add"}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <button onClick={() => setAddingCustom(true)} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                  <Plus size={12} /> Add custom interval
+                </button>
+              )}
+            </div>
+          )}
+
           <DialogFooter showCloseButton>
             <Button
               variant="outline"
@@ -1576,10 +1708,10 @@ const INTERVAL_TO_CARE_TYPE: Record<string, string> = {
   repotInterval: "Repot", pruneInterval: "Prune",
 };
 
-function ManagePlantRow({ plant, selectionMode, selected, onToggle, onEdit, onQuickWater, onViewHistory, dueDays }: {
+function ManagePlantRow({ plant, selectionMode, selected, onToggle, onEdit, onQuickWater, onViewHistory, dueDays, snoozedTypes }: {
   plant: PlantWithIntervals; selectionMode: boolean; selected: boolean;
   onToggle: () => void; onEdit: () => void; onQuickWater: (days: number) => void;
-  onViewHistory?: () => void; dueDays?: Record<string, number>;
+  onViewHistory?: () => void; dueDays?: Record<string, number>; snoozedTypes?: Set<string>;
 }) {
   const setIntervals = INTERVAL_DISPLAY.filter(({ key }) => plant[key] !== null);
   return (
@@ -1612,7 +1744,25 @@ function ManagePlantRow({ plant, selectionMode, selected, onToggle, onEdit, onQu
                   const interval = plant[key] as number;
                   const effectiveDays = days < 0 && Math.abs(days) >= interval ? 0 : days;
                   const { label, color } = urgencyLabel(effectiveDays);
-                  return <span key={key} className={cn("text-[11px]", color)}>{emoji} {label}</span>;
+                  const isSnoozed = snoozedTypes?.has(careType);
+                  return (
+                    <span key={key} className={cn("text-[11px]", isSnoozed ? "text-muted-foreground/60" : color)}>
+                      {emoji} {isSnoozed ? "💤 Snoozed" : label}
+                    </span>
+                  );
+                })}
+                {/* Custom schedule urgency labels */}
+                {plant.customSchedules?.map((cs) => {
+                  const days = dueDays[cs.label];
+                  if (days === undefined) return null;
+                  const effectiveDays = days < 0 && Math.abs(days) >= cs.interval_days ? 0 : days;
+                  const { label, color } = urgencyLabel(effectiveDays);
+                  const isSnoozed = snoozedTypes?.has(cs.label);
+                  return (
+                    <span key={cs.id} className={cn("text-[11px]", isSnoozed ? "text-muted-foreground/60" : color)}>
+                      ✨ {isSnoozed ? "💤 Snoozed" : label}
+                    </span>
+                  );
                 })}
               </div>
             )}
@@ -1700,6 +1850,24 @@ export function CareScheduleClient({
   const [editTarget, setEditTarget] = useState<{ ids: string[]; tab: "intervals" | "onetime" | "history" } | null>(null);
   const [showAddReminder, setShowAddReminder] = useState(false);
   const editPlantIds = editTarget?.ids ?? null;
+
+  // Snooze state
+  const [snoozeDialogEntries, setSnoozeDialogEntries] = useState<CareEntry[] | null>(null);
+  const [snoozeSaving, setSnoozeSaving] = useState(false);
+
+  async function handleSnooze(entries: CareEntry[], snoozedUntil: string) {
+    setSnoozeSaving(true);
+    await Promise.all(entries.map((e) =>
+      fetch("/api/garden/snooze", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plantId: e.plantId, eventType: e.eventKey, snoozedUntil }),
+      })
+    ));
+    setSnoozeSaving(false);
+    setSnoozeDialogEntries(null);
+    toast.success(entries.length === 1 ? "Task snoozed" : `${entries.length} tasks snoozed`);
+    router.refresh();
+  }
 
   // Vacation state
   const [vacationEnd, setVacationEnd] = useState(initialVacationEnd);
@@ -1829,9 +1997,15 @@ export function CareScheduleClient({
 
   // Build map: plantId → careType → daysUntilDue (for Manage Schedules next-due display)
   const dueMap: Record<string, Record<string, number>> = {};
+  // Snoozed care types per plant (for 💤 indicator in Manage Schedules)
+  const snoozedMap: Record<string, Set<string>> = {};
   for (const entry of entries) {
     if (!dueMap[entry.plantId]) dueMap[entry.plantId] = {};
     dueMap[entry.plantId][entry.careType] = entry.daysUntilDue;
+    if (entry.snoozeUntil) {
+      if (!snoozedMap[entry.plantId]) snoozedMap[entry.plantId] = new Set();
+      snoozedMap[entry.plantId].add(entry.careType);
+    }
   }
 
   return (
@@ -1997,7 +2171,8 @@ export function CareScheduleClient({
                         onEdit={() => setEditTarget({ ids: [plant.id], tab: "intervals" })}
                         onViewHistory={() => setEditTarget({ ids: [plant.id], tab: "history" })}
                         onQuickWater={(days) => handleQuickWater(plant.id, days)}
-                        dueDays={dueMap[plant.id]} />
+                        dueDays={dueMap[plant.id]}
+                        snoozedTypes={snoozedMap[plant.id]} />
                     ))}
                   </div>
                 )}
@@ -2034,6 +2209,41 @@ export function CareScheduleClient({
             onClose={() => setShowAddReminder(false)}
           />
         )}
+      </Dialog>
+
+      {/* Snooze dialog */}
+      <Dialog open={snoozeDialogEntries !== null} onOpenChange={(open) => { if (!open) setSnoozeDialogEntries(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle><Moon size={16} className="inline mr-1.5" />Snooze {snoozeDialogEntries?.length === 1 ? "task" : `${snoozeDialogEntries?.length ?? 0} tasks`}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-1">
+            <p className="text-sm text-muted-foreground">Push the due date forward without logging or changing the interval.</p>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { label: "Tomorrow", days: 1 },
+                { label: "+3 days",  days: 3 },
+                { label: "+1 week",  days: 7 },
+                { label: "+2 weeks", days: 14 },
+              ].map(({ label, days }) => {
+                const date = new Date(Date.now() + days * 86400000);
+                const dateStr = date.toISOString().split("T")[0];
+                return (
+                  <Button key={days} variant="outline" disabled={snoozeSaving}
+                    onClick={() => snoozeDialogEntries && handleSnooze(snoozeDialogEntries, dateStr)}
+                    className="flex flex-col h-auto py-2.5 gap-0.5"
+                  >
+                    <span className="text-sm font-medium">{label}</span>
+                    <span className="text-[11px] text-muted-foreground">{date.toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSnoozeDialogEntries(null)}>Cancel</Button>
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
 
       {/* Vacation mode dialog */}

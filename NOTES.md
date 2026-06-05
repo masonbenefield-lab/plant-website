@@ -1245,3 +1245,29 @@ ALTER TABLE profiles
 
 ### Environment variables
 None new.
+
+---
+
+## 2026-06-05 — Snooze, All Done Moment, Custom Care Types
+
+### Features built
+- **Snooze tasks (#5+#9)**: Select one or more tasks in the day panel → "Snooze" button opens a dialog with Tomorrow / +3 days / +1 week / +2 weeks options. Pushes the due date forward without logging or changing the interval. Active snoozes stored in `care_snoozes` table; snooze clears automatically on log. 💤 indicator shows in Manage Schedules for snoozed tasks. Snoozed tasks skipped in daily emails.
+- **All done moment (#7)**: When every task in today's panel is logged, shows "🌿 All done for today!" with the next upcoming task date instead of a blank panel.
+- **Custom care types (#8)**: Add unlimited user-defined recurring intervals per plant (e.g. "Neem oil spray every 14 days"). Accessible via the IntervalsModal Recurring tab → Custom intervals section. Custom tasks appear in the day panel, week strip, Manage Schedules, daily emails, and sitter guide. Event type stored as `custom:<schedule_id>` in garden_events.
+
+### Files changed
+- `supabase/migrations/016_snooze_custom_care.sql` — new tables
+- `src/app/api/garden/snooze/route.ts` — new snooze API
+- `src/app/api/garden/custom-schedules/route.ts` — new custom schedule API
+- `src/app/api/garden/log-care/route.ts` — accepts eventKey for custom types; clears snooze on log
+- `src/app/garden/care/page.tsx` — fetches snoozes + custom schedules, applies to daysUntilDue
+- `src/app/garden/care/care-schedule-client.tsx` — all done moment, snooze dialog, custom type rendering, IntervalsModal custom section, snooze indicator in Manage Schedules
+- `src/app/api/cron/daily-care-reminder/route.ts` — custom schedules + snooze-aware
+- `src/app/garden/care/sitter-guide/page.tsx` — custom schedules in 30-day schedule
+- `src/lib/supabase/types.ts` — care_snoozes + custom_care_schedules table types
+
+### SQL migrations needed
+Run `supabase/migrations/016_snooze_custom_care.sql` in the Supabase dashboard.
+
+### Environment variables
+None new.

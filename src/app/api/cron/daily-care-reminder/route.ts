@@ -53,24 +53,40 @@ export async function GET(request: Request) {
 
   const profileIds = activeProfiles.map((p) => p.id);
 
-  // 2 — fetch all garden plants with intervals for these users
-  const { data: plants } = await admin
-    .from("garden_plants")
-    .select("id, user_id, name, variety, water_interval_days, fertilize_interval_days, repot_interval_days, prune_interval_days")
-    .in("user_id", profileIds)
-    .or("water_interval_days.not.is.null,fertilize_interval_days.not.is.null,repot_interval_days.not.is.null,prune_interval_days.not.is.null");
+  // 2 — fetch all garden plants and custom schedules for these users
+  const [{ data: allPlants }, { data: customSchedules }] = await Promise.all([
+    admin.from("garden_plants")
+      .select("id, user_id, name, variety, water_interval_days, fertilize_interval_days, repot_interval_days, prune_interval_days")
+      .in("user_id", profileIds),
+    admin.from("custom_care_schedules")
+      .select("id, user_id, plant_id, label, interval_days")
+      .in("user_id", profileIds),
+  ]);
 
-  if (!plants?.length) return NextResponse.json({ sent: 0, reason: "No scheduled plants" });
+  const plants = (allPlants ?? []).filter((p) =>
+    p.water_interval_days || p.fertilize_interval_days || p.repot_interval_days || p.prune_interval_days ||
+    (customSchedules ?? []).some((cs) => cs.plant_id === p.id)
+  );
+
+  if (!plants.length) return NextResponse.json({ sent: 0, reason: "No scheduled plants" });
 
   const plantIds = plants.map((p) => p.id);
 
-  // 3 — fetch latest event per plant per event type
-  const { data: events } = await admin
-    .from("garden_events")
-    .select("plant_id, event_type, event_date")
-    .in("plant_id", plantIds)
-    .in("event_type", ["watered", "fertilized", "repotted", "pruned"])
-    .order("event_date", { ascending: false });
+  // 3 — fetch latest events (built-in + custom) and active snoozes
+  const [{ data: events }, { data: snoozes }] = await Promise.all([
+    admin.from("garden_events")
+      .select("plant_id, event_type, event_date")
+      .in("plant_id", plantIds)
+      .order("event_date", { ascending: false }),
+    admin.from("care_snoozes")
+      .select("plant_id, event_type, snoozed_until")
+      .in("plant_id", plantIds)
+      .gte("snoozed_until", todayStr),
+  ]);
+
+  // Snooze map: "plantId-eventType" → snoozedUntil
+  const snoozeMap: Record<string, string> = {};
+  for (const s of snoozes ?? []) snoozeMap[`${s.plant_id}-${s.event_type}`] = s.snoozed_until;
 
   // Build lastEvent map: plantId → eventKey → date string
   const lastEvent: Record<string, Partial<Record<EventKey, string>>> = {};
@@ -93,6 +109,8 @@ export async function GET(request: Request) {
       let daysUntilDue: number;
 
       const pauseOffset = pauseOffsetMap[plant.user_id] ?? 0;
+      const snoozeUntil = snoozeMap[`${plant.id}-${eventKey}`] ?? null;
+      if (snoozeUntil) continue; // snoozed — skip email for this task
       if (lastDateStr) {
         const last = new Date(lastDateStr + "T00:00:00");
         last.setHours(0, 0, 0, 0);
@@ -106,6 +124,35 @@ export async function GET(request: Request) {
         if (!userItems[plant.user_id]) userItems[plant.user_id] = [];
         userItems[plant.user_id].push({ plantName, careType, daysOverdue: Math.abs(daysUntilDue) });
       }
+    }
+  }
+
+  // 4b — custom care schedules
+  const lastEventByType: Record<string, string> = {};
+  for (const ev of events ?? []) {
+    const k = `${ev.plant_id}-${ev.event_type}`;
+    if (!lastEventByType[k]) lastEventByType[k] = ev.event_date;
+  }
+  for (const cs of customSchedules ?? []) {
+    const plant = plants.find((p) => p.id === cs.plant_id);
+    if (!plant) continue;
+    const pauseOffset = pauseOffsetMap[plant.user_id] ?? 0;
+    const eventType = `custom:${cs.id}`;
+    if (snoozeMap[`${cs.plant_id}-${eventType}`]) continue;
+    const lastDateStr = lastEventByType[`${cs.plant_id}-${eventType}`] ?? null;
+    let daysUntilDue: number;
+    if (lastDateStr) {
+      const last = new Date(lastDateStr + "T00:00:00");
+      last.setHours(0, 0, 0, 0);
+      const nextDue = new Date(last.getTime() + cs.interval_days * 86400000);
+      daysUntilDue = Math.round((nextDue.getTime() - today.getTime()) / 86400000) + pauseOffset;
+    } else {
+      daysUntilDue = pauseOffset;
+    }
+    if (daysUntilDue <= 0) {
+      const plantName = plant.variety ? `${plant.name} — ${plant.variety}` : plant.name;
+      if (!userItems[plant.user_id]) userItems[plant.user_id] = [];
+      userItems[plant.user_id].push({ plantName, careType: cs.label, daysOverdue: Math.abs(daysUntilDue) });
     }
   }
 

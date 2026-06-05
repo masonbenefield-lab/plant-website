@@ -37,14 +37,19 @@ export default async function SitterGuidePage({
 
   if (!profile) redirect("/");
 
-  const { data: plants } = await admin
-    .from("garden_plants")
-    .select("id, name, variety, water_interval_days, fertilize_interval_days, repot_interval_days, prune_interval_days")
-    .eq("user_id", profile.id)
-    .or("water_interval_days.not.is.null,fertilize_interval_days.not.is.null,repot_interval_days.not.is.null,prune_interval_days.not.is.null")
-    .order("name");
+  const [{ data: plants }, { data: customSchedules }] = await Promise.all([
+    admin.from("garden_plants")
+      .select("id, name, variety, water_interval_days, fertilize_interval_days, repot_interval_days, prune_interval_days")
+      .eq("user_id", profile.id).order("name"),
+    admin.from("custom_care_schedules")
+      .select("id, plant_id, label, interval_days")
+      .eq("user_id", profile.id),
+  ]);
 
-  const plantList = plants ?? [];
+  const plantList = (plants ?? []).filter((p) =>
+    p.water_interval_days || p.fertilize_interval_days || p.repot_interval_days || p.prune_interval_days ||
+    (customSchedules ?? []).some((cs) => cs.plant_id === p.id)
+  );
   const plantIds = plantList.map((p) => p.id);
 
   const { data: lastEvents } = plantIds.length
@@ -52,7 +57,6 @@ export default async function SitterGuidePage({
         .from("garden_events")
         .select("plant_id, event_type, event_date")
         .in("plant_id", plantIds)
-        .in("event_type", ["watered", "fertilized", "repotted", "pruned"])
         .order("event_date", { ascending: false })
     : { data: [] };
 
@@ -94,6 +98,28 @@ export default async function SitterGuidePage({
         if (!schedule.has(d)) schedule.set(d, []);
         schedule.get(d)!.push({ plantName, careType: type, emoji });
         d += interval;
+      }
+    }
+
+    // Custom schedules for this plant
+    for (const cs of (customSchedules ?? []).filter((s) => s.plant_id === plant.id)) {
+      const eventType = `custom:${cs.id}`;
+      const lastDateStr = lastEventMap[plant.id]?.[eventType] ?? null;
+      let daysUntilDue: number;
+      if (lastDateStr) {
+        const last = new Date(lastDateStr + "T00:00:00");
+        last.setHours(0, 0, 0, 0);
+        const nextDue = new Date(last.getTime() + cs.interval_days * 86400000);
+        daysUntilDue = Math.round((nextDue.getTime() - today.getTime()) / 86400000);
+      } else {
+        daysUntilDue = 0;
+      }
+      let d = daysUntilDue;
+      if (d < 0) d += Math.ceil(Math.abs(d) / cs.interval_days) * cs.interval_days;
+      while (d < daysAhead) {
+        if (!schedule.has(d)) schedule.set(d, []);
+        schedule.get(d)!.push({ plantName, careType: cs.label, emoji: "✨" });
+        d += cs.interval_days;
       }
     }
   }

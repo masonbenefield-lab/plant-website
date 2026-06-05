@@ -25,26 +25,9 @@ export default async function CareSchedulePage() {
   const allPlants = plants ?? [];
   const plantIds = allPlants.map((p) => p.id);
 
-  const { data: lastEvents } = plantIds.length
-    ? await supabase
-        .from("garden_events")
-        .select("plant_id, event_type, event_date")
-        .in("plant_id", plantIds)
-        .in("event_type", ["watered", "fertilized", "repotted", "pruned"])
-        .order("event_date", { ascending: false })
-    : { data: [] };
-
-  // Build map: plantId -> { eventType -> lastDate }
-  const lastEventMap: Record<string, Record<string, string>> = {};
-  for (const ev of lastEvents ?? []) {
-    if (!lastEventMap[ev.plant_id]) lastEventMap[ev.plant_id] = {};
-    if (!lastEventMap[ev.plant_id][ev.event_type]) {
-      lastEventMap[ev.plant_id][ev.event_type] = ev.event_date;
-    }
-  }
-
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+  const todayDateStr = today.toISOString().split("T")[0];
 
   // Pause offset: cumulative days from past vacations + days elapsed in any active vacation
   const basePauseOffset = profile?.schedule_pause_offset ?? 0;
@@ -58,6 +41,43 @@ export default async function CareSchedulePage() {
     if (elapsed > 0) totalPauseOffset += elapsed;
   }
 
+  // Fetch in parallel: built-in events, custom schedules, snoozes
+  const [
+    { data: lastEventsRaw },
+    { data: customSchedules },
+    { data: activeSnoozes },
+  ] = await Promise.all([
+    plantIds.length
+      ? supabase.from("garden_events").select("plant_id, event_type, event_date")
+          .in("plant_id", plantIds).order("event_date", { ascending: false })
+      : Promise.resolve({ data: [] }),
+    plantIds.length
+      ? supabase.from("custom_care_schedules").select("id, plant_id, label, interval_days, start_date")
+          .in("plant_id", plantIds).order("created_at", { ascending: true })
+      : Promise.resolve({ data: [] }),
+    plantIds.length
+      ? supabase.from("care_snoozes").select("plant_id, event_type, snoozed_until")
+          .in("plant_id", plantIds).gte("snoozed_until", todayDateStr)
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  const allEvents = lastEventsRaw ?? [];
+
+  // Build last-event map: plantId → eventType → lastDate
+  const lastEventMap: Record<string, Record<string, string>> = {};
+  for (const ev of allEvents) {
+    if (!lastEventMap[ev.plant_id]) lastEventMap[ev.plant_id] = {};
+    if (!lastEventMap[ev.plant_id][ev.event_type]) {
+      lastEventMap[ev.plant_id][ev.event_type] = ev.event_date;
+    }
+  }
+
+  // Snooze map: "plantId-eventType" → snoozedUntil
+  const snoozeMap: Record<string, string> = {};
+  for (const s of activeSnoozes ?? []) {
+    snoozeMap[`${s.plant_id}-${s.event_type}`] = s.snoozed_until;
+  }
+
   type CareEntry = {
     plantId: string;
     plantName: string;
@@ -68,6 +88,9 @@ export default async function CareSchedulePage() {
     interval: number;
     lastDate: string | null;
     daysUntilDue: number;
+    snoozeUntil: string | null;
+    isCustom?: boolean;
+    scheduleId?: string;
   };
 
   const CHECKS = [
@@ -77,46 +100,68 @@ export default async function CareSchedulePage() {
     { type: "Prune",     eventKey: "pruned",      intervalKey: "prune_interval_days"     },
   ] as const;
 
+  function computeDaysUntilDue(lastDateStr: string | null, interval: number, snoozeUntil: string | null): number {
+    let base: number;
+    if (snoozeUntil) {
+      const snooze = new Date(snoozeUntil + "T00:00:00");
+      snooze.setHours(0, 0, 0, 0);
+      base = Math.round((snooze.getTime() - today.getTime()) / 86400000);
+    } else if (lastDateStr) {
+      const last = new Date(lastDateStr + "T00:00:00");
+      last.setHours(0, 0, 0, 0);
+      const nextDue = new Date(last.getTime() + interval * 86400000);
+      base = Math.round((nextDue.getTime() - today.getTime()) / 86400000);
+    } else {
+      base = 0;
+    }
+    return base + (snoozeUntil ? 0 : totalPauseOffset);
+  }
+
   const entries: CareEntry[] = [];
 
   for (const plant of allPlants) {
     const name = plant.variety ? `${plant.name} — ${plant.variety}` : plant.name;
     const image = (plant.images as string[] | null)?.[0] ?? null;
     const location = (plant as Record<string, unknown>).location as string | null ?? null;
+
     for (const { type, eventKey, intervalKey } of CHECKS) {
       const interval = (plant as Record<string, unknown>)[intervalKey] as number | null;
       if (!interval) continue;
       const lastDateStr = lastEventMap[plant.id]?.[eventKey] ?? null;
-      let daysUntilDue: number;
-      if (lastDateStr) {
-        const last = new Date(lastDateStr + "T00:00:00");
-        last.setHours(0, 0, 0, 0);
-        const nextDue = new Date(last.getTime() + interval * 86400000);
-        daysUntilDue = Math.round((nextDue.getTime() - today.getTime()) / 86400000) + totalPauseOffset;
-      } else {
-        daysUntilDue = totalPauseOffset;
-      }
-      entries.push({ plantId: plant.id, plantName: name, image, location, careType: type, eventKey, interval, lastDate: lastDateStr, daysUntilDue });
+      const snoozeKey = `${plant.id}-${eventKey}`;
+      const snoozeUntil = snoozeMap[snoozeKey] ?? null;
+      const daysUntilDue = computeDaysUntilDue(lastDateStr, interval, snoozeUntil);
+      entries.push({ plantId: plant.id, plantName: name, image, location, careType: type, eventKey, interval, lastDate: lastDateStr, daysUntilDue, snoozeUntil });
+    }
+
+    // Custom schedules for this plant
+    for (const cs of (customSchedules ?? []).filter((s) => s.plant_id === plant.id)) {
+      const eventKey = `custom:${cs.id}`;
+      const lastDateStr = lastEventMap[plant.id]?.[eventKey] ?? null;
+      const snoozeKey = `${plant.id}-${eventKey}`;
+      const snoozeUntil = snoozeMap[snoozeKey] ?? null;
+      const daysUntilDue = computeDaysUntilDue(lastDateStr, cs.interval_days, snoozeUntil);
+      entries.push({
+        plantId: plant.id, plantName: name, image, location,
+        careType: cs.label, eventKey,
+        interval: cs.interval_days, lastDate: lastDateStr,
+        daysUntilDue, snoozeUntil,
+        isCustom: true, scheduleId: cs.id,
+      });
     }
   }
 
   const plantMap = Object.fromEntries(allPlants.map((p) => [p.id, p]));
 
-  // Fetch today's logged care events (to pre-populate the Completed section on load)
-  const todayDateStr = today.toISOString().split("T")[0];
-  const { data: todayEventData } = plantIds.length
-    ? await supabase
-        .from("garden_events")
-        .select("plant_id, event_type")
-        .in("plant_id", plantIds)
-        .in("event_type", ["watered", "fertilized", "repotted", "pruned"])
-        .eq("event_date", todayDateStr)
-    : { data: [] };
-
+  // Today's completed built-in events
+  const todayBuiltInEvents = allEvents.filter(
+    (ev) => ev.event_date === todayDateStr &&
+      ["watered", "fertilized", "repotted", "pruned"].includes(ev.event_type)
+  );
   const CARE_TYPE_DISPLAY: Record<string, string> = {
     watered: "Water", fertilized: "Fertilize", repotted: "Repot", pruned: "Prune",
   };
-  const completedToday: CompletedCareEntry[] = (todayEventData ?? []).flatMap((ev) => {
+  const completedToday: CompletedCareEntry[] = todayBuiltInEvents.flatMap((ev) => {
     const plant = plantMap[ev.plant_id];
     if (!plant) return [];
     const name = plant.variety ? `${plant.name} — ${plant.variety}` : plant.name;
@@ -125,7 +170,7 @@ export default async function CareSchedulePage() {
     return [{ plantId: ev.plant_id, plantName: name, image, location: loc, careType: CARE_TYPE_DISPLAY[ev.event_type] ?? ev.event_type }];
   });
 
-  // Fetch non-completed reminders (up to 60 days ahead, include overdue up to 30 days back)
+  // Reminders
   const pastCutoff = new Date(today.getTime() - 30 * 86400000).toISOString().split("T")[0];
   const { data: rawReminders } = await supabase
     .from("care_reminders")
@@ -142,23 +187,23 @@ export default async function CareSchedulePage() {
     const scheduled = new Date(r.scheduled_date + "T00:00:00");
     scheduled.setHours(0, 0, 0, 0);
     const daysUntilDue = Math.round((scheduled.getTime() - today.getTime()) / 86400000);
-    return {
-      id: r.id,
-      plantId: r.plant_id ?? null,
-      plantName,
-      image,
-      eventType: r.event_type,
-      scheduledDate: r.scheduled_date,
-      notes: r.notes ?? null,
-      daysUntilDue,
-    };
+    return { id: r.id, plantId: r.plant_id ?? null, plantName, image, eventType: r.event_type, scheduledDate: r.scheduled_date, notes: r.notes ?? null, daysUntilDue };
   });
 
+  // Group custom schedules by plant for plantIntervals
+  const customByPlant: Record<string, { id: string; label: string; interval_days: number; start_date: string }[]> = {};
+  for (const cs of customSchedules ?? []) {
+    if (!customByPlant[cs.plant_id]) customByPlant[cs.plant_id] = [];
+    customByPlant[cs.plant_id].push({ id: cs.id, label: cs.label, interval_days: cs.interval_days, start_date: cs.start_date });
+  }
+
   const plantsWithSchedule = allPlants.filter((p) =>
-    p.water_interval_days || p.fertilize_interval_days || p.repot_interval_days || p.prune_interval_days
+    p.water_interval_days || p.fertilize_interval_days || p.repot_interval_days || p.prune_interval_days ||
+    (customByPlant[p.id]?.length ?? 0) > 0
   );
   const plantsWithoutSchedule = allPlants.filter((p) =>
-    !p.water_interval_days && !p.fertilize_interval_days && !p.repot_interval_days && !p.prune_interval_days
+    !p.water_interval_days && !p.fertilize_interval_days && !p.repot_interval_days && !p.prune_interval_days &&
+    !(customByPlant[p.id]?.length)
   );
 
   const plantIntervals: PlantWithIntervals[] = allPlants.map((p) => ({
@@ -170,6 +215,7 @@ export default async function CareSchedulePage() {
     fertilizeInterval: p.fertilize_interval_days ?? null,
     repotInterval: p.repot_interval_days ?? null,
     pruneInterval: p.prune_interval_days ?? null,
+    customSchedules: customByPlant[p.id] ?? [],
   }));
 
   return (
