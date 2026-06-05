@@ -213,6 +213,14 @@ export default function NewListingDialog({ sellerId, planLimit, currentCount, ph
                     >
                       ×
                     </button>
+                    <div className="absolute bottom-0.5 left-0 right-0 flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {i > 0 && (
+                        <button type="button" onClick={() => setImageUrls((prev) => { const a = [...prev]; [a[i-1], a[i]] = [a[i], a[i-1]]; return a; })} className="flex items-center justify-center w-5 h-5 rounded-full bg-black/60 text-white text-xs" aria-label="Move left">‹</button>
+                      )}
+                      {i < imageUrls.length - 1 && (
+                        <button type="button" onClick={() => setImageUrls((prev) => { const a = [...prev]; [a[i], a[i+1]] = [a[i+1], a[i]]; return a; })} className="flex items-center justify-center w-5 h-5 rounded-full bg-black/60 text-white text-xs" aria-label="Move right">›</button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>

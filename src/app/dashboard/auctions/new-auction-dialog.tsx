@@ -336,21 +336,26 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
           </div>
           <div className="space-y-1">
             <Label htmlFor="starts_at">Schedule Start <span className="font-normal text-muted-foreground">(optional)</span></Label>
-            <Input
-              id="starts_at"
-              name="starts_at"
-              type="datetime-local"
-              disabled={atAuctionLimit}
-              step={900}
-              value={startsAt}
-              onChange={handleStartsAtChange}
-              min={(() => {
-                const n = new Date();
-                const ms15 = 15 * 60 * 1000;
-                const next = new Date(Math.ceil(n.getTime() / ms15) * ms15);
-                return new Date(next.getTime() - next.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-              })()}
-            />
+            <div className="flex items-center gap-2">
+              <Input
+                id="starts_at"
+                name="starts_at"
+                type="datetime-local"
+                disabled={atAuctionLimit}
+                step={900}
+                value={startsAt}
+                onChange={handleStartsAtChange}
+                min={(() => {
+                  const n = new Date();
+                  const ms15 = 15 * 60 * 1000;
+                  const next = new Date(Math.ceil(n.getTime() / ms15) * ms15);
+                  return new Date(next.getTime() - next.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+                })()}
+              />
+              {startsAt && (
+                <button type="button" onClick={() => setStartsAt("")} className="shrink-0 text-xs text-muted-foreground hover:text-foreground underline">Clear</button>
+              )}
+            </div>
             <p className="text-xs text-muted-foreground">Leave blank to start immediately. Set a future date/time to queue the auction.</p>
           </div>
           <div className="space-y-1">
@@ -402,6 +407,14 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
                     >
                       ×
                     </button>
+                    <div className="absolute bottom-0.5 left-0 right-0 flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {i > 0 && (
+                        <button type="button" onClick={() => setImageUrls((prev) => { const a = [...prev]; [a[i-1], a[i]] = [a[i], a[i-1]]; return a; })} className="flex items-center justify-center w-5 h-5 rounded-full bg-black/60 text-white text-xs" aria-label="Move left">‹</button>
+                      )}
+                      {i < imageUrls.length - 1 && (
+                        <button type="button" onClick={() => setImageUrls((prev) => { const a = [...prev]; [a[i], a[i+1]] = [a[i+1], a[i]]; return a; })} className="flex items-center justify-center w-5 h-5 rounded-full bg-black/60 text-white text-xs" aria-label="Move right">›</button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
