@@ -2059,12 +2059,20 @@ export function CareScheduleClient({
           <DialogFooter>
             <Button variant="outline" onClick={() => setSitterDialogOpen(false)}>Close</Button>
             {sitterToken && (
-              <Button
-                className="bg-leaf hover:bg-forest text-white"
-                onClick={() => window.open(`/garden/care/sitter-guide?token=${sitterToken}`, "_blank")}
-              >
-                Open guide
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => window.open(`/garden/care/sitter-guide?token=${sitterToken}`, "_blank")}
+                >
+                  View guide
+                </Button>
+                <Button
+                  className="bg-leaf hover:bg-forest text-white"
+                  onClick={() => window.open(`/garden/care/sitter-guide?token=${sitterToken}&pdf=1`, "_blank")}
+                >
+                  Download PDF
+                </Button>
+              </>
             )}
           </DialogFooter>
         </DialogContent>

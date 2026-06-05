@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
+import Image from "next/image";
 import { PrintButton } from "./print-button";
+import { AutoPrint } from "./auto-print";
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -19,11 +21,13 @@ type SitterTask = { plantName: string; careType: string; emoji: string };
 export default async function SitterGuidePage({
   searchParams,
 }: {
-  searchParams: Promise<{ token?: string; days?: string }>;
+  searchParams: Promise<{ token?: string; days?: string; pdf?: string }>;
 }) {
   const params = await searchParams;
   const token = params.token;
   if (!token) redirect("/");
+
+  const autoPrint = params.pdf === "1";
 
   const { data: profile } = await admin
     .from("profiles")
@@ -84,7 +88,6 @@ export default async function SitterGuidePage({
         daysUntilDue = 0;
       }
 
-      // Walk all occurrences within the window
       let d = daysUntilDue;
       if (d < 0) d += Math.ceil(Math.abs(d) / interval) * interval;
       while (d < daysAhead) {
@@ -97,73 +100,91 @@ export default async function SitterGuidePage({
 
   const scheduleDays = [...schedule.keys()].sort((a, b) => a - b);
   const rangeEnd = new Date(today.getTime() + daysAhead * 86400000);
-
-  const fmt = (d: Date, opts: Intl.DateTimeFormatOptions) =>
-    d.toLocaleDateString("en-US", opts);
+  const fmt = (d: Date, opts: Intl.DateTimeFormatOptions) => d.toLocaleDateString("en-US", opts);
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
-      {/* Screen header */}
-      <div className="print:hidden mb-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold">🌿 Plant Care Schedule</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            {profile.username}&apos;s plants · {fmt(today, { month: "short", day: "numeric" })} – {fmt(rangeEnd, { month: "short", day: "numeric", year: "numeric" })}
-          </p>
-        </div>
-        <PrintButton />
-      </div>
+    <>
+      {/* Kill browser print chrome (URL, date, page numbers) and hide site nav/footer */}
+      <style>{`
+        @page { margin: 0; }
+        @media print {
+          header, footer { display: none !important; }
+          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          .print-wrap { padding: 0.65in; }
+        }
+      `}</style>
 
-      {/* Print-only header */}
-      <div className="hidden print:block mb-8">
-        <h1 className="text-2xl font-bold">Plant Care Schedule</h1>
-        <p className="text-sm text-gray-600 mt-1">
-          {profile.username}&apos;s plants · {fmt(today, { month: "long", day: "numeric", year: "numeric" })} – {fmt(rangeEnd, { month: "long", day: "numeric", year: "numeric" })}
+      {autoPrint && <AutoPrint />}
+
+      <div className="print-wrap max-w-2xl mx-auto px-4 py-8">
+
+        {/* Branded header — print only */}
+        <div className="hidden print:flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
+          <div className="flex items-center gap-2">
+            <Image src="/plantet-mark-color.svg" alt="Plantet" width={22} height={22} />
+            <span className="font-bold text-lg tracking-tight">Plantet</span>
+          </div>
+          <div className="text-right">
+            <p className="text-sm font-semibold">{profile.username}&apos;s Plant Care Schedule</p>
+            <p className="text-xs text-gray-500">
+              {fmt(today, { month: "short", day: "numeric" })} – {fmt(rangeEnd, { month: "short", day: "numeric", year: "numeric" })}
+            </p>
+          </div>
+        </div>
+
+        {/* Screen header */}
+        <div className="print:hidden mb-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+          <div>
+            <h1 className="text-xl font-bold">🌿 Plant Care Schedule</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              {profile.username}&apos;s plants · {fmt(today, { month: "short", day: "numeric" })} – {fmt(rangeEnd, { month: "short", day: "numeric", year: "numeric" })}
+            </p>
+          </div>
+          <PrintButton />
+        </div>
+
+        {scheduleDays.length === 0 ? (
+          <div className="rounded-xl border bg-muted/30 text-center py-16">
+            <p className="text-3xl mb-2">✅</p>
+            <p className="font-semibold">No care tasks in the next {daysAhead} days</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {scheduleDays.map((dayOffset) => {
+              const date = new Date(today.getTime() + dayOffset * 86400000);
+              const tasks = schedule.get(dayOffset)!;
+              const isToday = dayOffset === 0;
+
+              return (
+                <div key={dayOffset} className="border rounded-lg overflow-hidden print:break-inside-avoid">
+                  <div className="bg-muted/50 print:bg-gray-100 px-4 py-2 border-b">
+                    <h2 className="font-semibold text-sm">
+                      {isToday && <span className="text-amber-600 mr-1">Today — </span>}
+                      {fmt(date, { weekday: "long", month: "long", day: "numeric" })}
+                    </h2>
+                  </div>
+                  <div className="divide-y">
+                    {tasks.map((task, i) => (
+                      <div key={i} className="flex items-center gap-3 px-4 py-3">
+                        <span className="text-base shrink-0">{task.emoji}</span>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium truncate">{task.plantName}</p>
+                          <p className="text-xs text-muted-foreground print:text-gray-500">{task.careType}</p>
+                        </div>
+                        <div className="ml-auto w-5 h-5 rounded border-2 border-muted-foreground/40 print:border-gray-400 shrink-0" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <p className="mt-8 text-xs text-muted-foreground print:text-gray-400 text-center">
+          plantet.shop · View-only link
         </p>
       </div>
-
-      {scheduleDays.length === 0 ? (
-        <div className="rounded-xl border bg-muted/30 text-center py-16">
-          <p className="text-3xl mb-2">✅</p>
-          <p className="font-semibold">No care tasks in the next {daysAhead} days</p>
-        </div>
-      ) : (
-        <div className="space-y-3 print:space-y-4">
-          {scheduleDays.map((dayOffset) => {
-            const date = new Date(today.getTime() + dayOffset * 86400000);
-            const tasks = schedule.get(dayOffset)!;
-            const isToday = dayOffset === 0;
-
-            return (
-              <div key={dayOffset} className="border rounded-lg overflow-hidden print:break-inside-avoid">
-                <div className="bg-muted/50 print:bg-gray-100 px-4 py-2 border-b">
-                  <h2 className="font-semibold text-sm">
-                    {isToday && <span className="text-amber-600 mr-1">Today — </span>}
-                    {fmt(date, { weekday: "long", month: "long", day: "numeric" })}
-                  </h2>
-                </div>
-                <div className="divide-y">
-                  {tasks.map((task, i) => (
-                    <div key={i} className="flex items-center gap-3 px-4 py-3">
-                      <span className="text-base shrink-0">{task.emoji}</span>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium truncate">{task.plantName}</p>
-                        <p className="text-xs text-muted-foreground print:text-gray-500">{task.careType}</p>
-                      </div>
-                      {/* Printable checkbox */}
-                      <div className="ml-auto w-5 h-5 rounded border-2 border-muted-foreground/40 print:border-gray-500 shrink-0" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      <p className="mt-8 text-xs text-muted-foreground print:text-gray-400 text-center print:mt-10">
-        Generated from plantet.shop · View-only link
-      </p>
-    </div>
+    </>
   );
 }
