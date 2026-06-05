@@ -121,7 +121,7 @@ export default async function ShopPage({
     return s ? `/shop?${s}` : "/shop";
   }
 
-  function buildStockHref(s: "all" | undefined) {
+  function buildStockHref(s: "all" | "instock" | undefined) {
     const params = new URLSearchParams();
     if (q) params.set("q", q);
     if (sort && sort !== "newest") params.set("sort", sort);
