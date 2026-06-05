@@ -27,20 +27,6 @@ const audiences = [
   { emoji: "🌱", label: "Plant Enthusiasts",    desc: "Browse the shop, follow growers you love, ask the community for help, and track your own collection." },
 ];
 
-const testimonials = [
-  {
-    initials: "SM", name: "Sarah M.", role: "Small Nursery Owner",
-    quote: "I moved 40 plants in my first month. The auction feature is a game changer for rare cuttings — I got way more than I ever would have priced them at.",
-  },
-  {
-    initials: "JT", name: "James T.", role: "Rare Plant Collector",
-    quote: "Finally a place built for plant people. I've found varieties here I couldn't get anywhere else, and every seller has been fantastic to deal with.",
-  },
-  {
-    initials: "RK", name: "Rosa K.", role: "Hobbyist Seller",
-    quote: "Setting up my storefront took 10 minutes. I listed my extra propagations and sold out within a week. The shipping dashboard makes fulfillment so easy.",
-  },
-];
 
 const steps = [
   { step: "1", title: "Create your account",  desc: "Sign up free and build your seller profile in minutes." },
@@ -190,20 +176,6 @@ export default async function LandingPage() {
       </section>
 
 
-      {/* ── Trust bar ─────────────────────────────────────────────── */}
-      <section className="border-b bg-[#DDD3BE] dark:bg-muted py-5 px-4">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-muted-foreground">
-            <span className="flex items-center gap-2"><span className="text-leaf font-bold text-base">2,400+</span> plants listed</span>
-            <span className="hidden sm:block text-border">·</span>
-            <span className="flex items-center gap-2"><span className="text-leaf font-bold text-base">180+</span> active sellers</span>
-            <span className="hidden sm:block text-border">·</span>
-            <span className="flex items-center gap-2"><span className="text-leaf font-bold text-base">4.9★</span> avg seller rating</span>
-            <span className="hidden sm:block text-border">·</span>
-            <span className="flex items-center gap-2"><span className="text-leaf font-bold text-base">Free</span> to start selling</span>
-          </div>
-        </div>
-      </section>
 
       {/* ── Garden log feature spotlight ──────────────────────────── */}
       <section className="py-16 sm:py-20 px-4 bg-[#EBF0E6] dark:bg-forest/20">
@@ -503,30 +475,6 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ── Testimonials ──────────────────────────────────────────── */}
-      <section className="py-16 sm:py-20 px-4 bg-[#DDD3BE] dark:bg-muted">
-        <div className="max-w-5xl mx-auto">
-          <h2 className="text-2xl sm:text-3xl font-bold text-center mb-3">Sellers love it</h2>
-          <p className="text-muted-foreground text-center mb-10 max-w-xl mx-auto">Real stories from nurseries and hobbyists who&apos;ve found their plant community.</p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            {testimonials.map((t) => (
-              <div key={t.name} className="bg-card rounded-2xl border p-6 shadow-sm flex flex-col gap-4">
-                <div className="flex gap-0.5 text-amber-400 text-sm">{"★★★★★"}</div>
-                <p className="text-sm text-muted-foreground leading-relaxed flex-1">&ldquo;{t.quote}&rdquo;</p>
-                <div className="flex items-center gap-3 pt-2 border-t">
-                  <div className="w-9 h-9 rounded-full bg-[#DFE7D4] dark:bg-forest/40 text-leaf dark:text-sage font-bold text-xs flex items-center justify-center shrink-0">
-                    {t.initials}
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">{t.name}</p>
-                    <p className="text-xs text-muted-foreground">{t.role}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* ── CTA ───────────────────────────────────────────────────── */}
       <section className="py-20 px-4 text-white text-center" style={{ background: "linear-gradient(160deg, #235140, #19392B)" }}>
