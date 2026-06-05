@@ -66,6 +66,7 @@ export async function GET(request: Request) {
   // PKCE flow — email confirmation, OAuth
   if (code) {
     const { data: { session }, error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error) console.error("[auth/callback] exchangeCodeForSession error:", error.message, error);
     if (!error && session?.user) {
       return handleSession(session.user, origin, next);
     }
