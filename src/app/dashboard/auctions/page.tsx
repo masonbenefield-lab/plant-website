@@ -219,9 +219,9 @@ export default async function DashboardAuctionsPage({
             <div className="space-y-3">
               {sellingAuctions.map((auction) => (
                 <Card key={auction.id}>
-                  <CardContent className="p-4 flex items-center gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
+                  <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                         <span className="font-semibold">{auction.plant_name}</span>
                         {auction.variety && (
                           <span className="text-sm text-muted-foreground">— {auction.variety}</span>
@@ -233,7 +233,7 @@ export default async function DashboardAuctionsPage({
                           {auction.status}
                         </Badge>
                       </div>
-                      <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground flex-wrap">
+                      <div className="flex gap-x-4 gap-y-0.5 mt-1 text-sm text-muted-foreground flex-wrap">
                         <span>Starting: {centsToDisplay(auction.starting_bid_cents)}</span>
                         <span>Current: {centsToDisplay(auction.current_bid_cents)}</span>
                         {auction.buy_now_price_cents && (
@@ -268,7 +268,7 @@ export default async function DashboardAuctionsPage({
                         })()}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-2 flex-wrap shrink-0">
                       {auction.status === "active" && (
                         <>
                           <Link href={`/auctions/${auction.id}`} className="text-sm text-muted-foreground hover:underline">
