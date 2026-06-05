@@ -1,44 +1,48 @@
-import type { MetadataRoute } from "next";
 import { createClient } from "@/lib/supabase/server";
+import type { MetadataRoute } from "next";
 
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://plantet.co";
+const siteUrl = "https://www.plantet.shop";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const supabase = await createClient();
 
-  const [{ data: listings }, { data: auctions }, { data: profiles }] = await Promise.all([
-    supabase.from("listings").select("id, created_at").eq("status", "active"),
-    supabase.from("auctions").select("id, created_at").eq("status", "active"),
-    supabase.from("profiles").select("username, created_at").not("username", "is", null),
+  const [{ data: listings }, { data: auctions }, { data: sellers }] = await Promise.all([
+    supabase.from("listings").select("id, updated_at").eq("status", "active").limit(1000),
+    supabase.from("auctions").select("id, created_at").eq("status", "active").limit(500),
+    supabase.from("profiles").select("username, updated_at").eq("stripe_onboarded", true).is("deleted_at", null).limit(500),
   ]);
 
-  const staticRoutes: MetadataRoute.Sitemap = [
-    { url: BASE_URL, lastModified: new Date(), changeFrequency: "daily", priority: 1.0 },
-    { url: `${BASE_URL}/shop`, lastModified: new Date(), changeFrequency: "hourly", priority: 0.9 },
-    { url: `${BASE_URL}/auctions`, lastModified: new Date(), changeFrequency: "hourly", priority: 0.9 },
-    { url: `${BASE_URL}/pricing`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.5 },
+  const staticPages: MetadataRoute.Sitemap = [
+    { url: siteUrl, lastModified: new Date(), changeFrequency: "daily", priority: 1 },
+    { url: `${siteUrl}/shop`, lastModified: new Date(), changeFrequency: "hourly", priority: 0.9 },
+    { url: `${siteUrl}/auctions`, lastModified: new Date(), changeFrequency: "hourly", priority: 0.9 },
+    { url: `${siteUrl}/pricing`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.6 },
+    { url: `${siteUrl}/privacy-policy`, lastModified: new Date(), changeFrequency: "yearly", priority: 0.3 },
+    { url: `${siteUrl}/terms`, lastModified: new Date(), changeFrequency: "yearly", priority: 0.3 },
+    { url: `${siteUrl}/seller-agreement`, lastModified: new Date(), changeFrequency: "yearly", priority: 0.3 },
+    { url: `${siteUrl}/contact`, lastModified: new Date(), changeFrequency: "yearly", priority: 0.3 },
   ];
 
-  const listingRoutes: MetadataRoute.Sitemap = (listings ?? []).map((l) => ({
-    url: `${BASE_URL}/shop/${l.id}`,
-    lastModified: l.created_at ? new Date(l.created_at) : new Date(),
+  const listingPages: MetadataRoute.Sitemap = (listings ?? []).map((l) => ({
+    url: `${siteUrl}/shop/${l.id}`,
+    lastModified: new Date(l.updated_at),
     changeFrequency: "daily",
     priority: 0.8,
   }));
 
-  const auctionRoutes: MetadataRoute.Sitemap = (auctions ?? []).map((a) => ({
-    url: `${BASE_URL}/auctions/${a.id}`,
-    lastModified: a.created_at ? new Date(a.created_at) : new Date(),
+  const auctionPages: MetadataRoute.Sitemap = (auctions ?? []).map((a) => ({
+    url: `${siteUrl}/auctions/${a.id}`,
+    lastModified: new Date(a.created_at),
     changeFrequency: "hourly",
-    priority: 0.9,
+    priority: 0.8,
   }));
 
-  const sellerRoutes: MetadataRoute.Sitemap = (profiles ?? []).map((p) => ({
-    url: `${BASE_URL}/sellers/${p.username}`,
-    lastModified: p.created_at ? new Date(p.created_at) : new Date(),
+  const sellerPages: MetadataRoute.Sitemap = (sellers ?? []).map((s) => ({
+    url: `${siteUrl}/sellers/${s.username}`,
+    lastModified: new Date(s.updated_at),
     changeFrequency: "weekly",
-    priority: 0.6,
+    priority: 0.7,
   }));
 
-  return [...staticRoutes, ...listingRoutes, ...auctionRoutes, ...sellerRoutes];
+  return [...staticPages, ...listingPages, ...auctionPages, ...sellerPages];
 }
