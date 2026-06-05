@@ -652,7 +652,50 @@ function WeekStrip({
     }
   }
 
-  async function logSelected() {
+  async function logAllOverdue() {
+    const overdueEntries = entries.filter((e) => e.daysUntilDue < 0 && !loggedKeys.has(`${e.plantId}-${e.careType}`));
+    if (!overdueEntries.length) return;
+    const toLog = overdueEntries.map((e) => ({ plantId: e.plantId, careType: e.careType }));
+    const res = await fetch("/api/garden/bulk-log-care", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: toLog, date: todayStr() }),
+    });
+    if (res.ok) {
+      setLoggedKeys((p) => new Set([...p, ...toLog.map((i) => `${i.plantId}-${i.careType}`)]));
+      toast.success(`Logged ${overdueEntries.length} missed task${overdueEntries.length !== 1 ? "s" : ""}`);
+      onLogged("", "");
+    } else {
+      toast.error("Failed to log missed tasks");
+    }
+  }
+
+  async function dismissAllOverdue() {
+    const overdueEntries = entries.filter((e) => e.daysUntilDue < 0 && !loggedKeys.has(`${e.plantId}-${e.careType}`));
+    if (!overdueEntries.length) return;
+    // Group by plantId, collect intervals per care type
+    const plantGroups: Record<string, Record<string, number>> = {};
+    const fieldMap: Record<string, string> = { Water: "waterInterval", Fertilize: "fertilizeInterval", Repot: "repotInterval", Prune: "pruneInterval" };
+    for (const e of overdueEntries) {
+      if (!plantGroups[e.plantId]) plantGroups[e.plantId] = {};
+      const field = fieldMap[e.careType];
+      if (field) plantGroups[e.plantId][field] = e.interval;
+    }
+    // startDate = tomorrow → nextDue = tomorrow, clears overdue without logging care
+    const d = new Date(); d.setDate(d.getDate() + 1);
+    const tomorrowStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    await Promise.all(
+      Object.entries(plantGroups).map(([plantId, intervals]) =>
+        fetch("/api/garden/update-intervals", {
+          method: "PATCH", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ plantIds: [plantId], ...intervals, startDate: tomorrowStr }),
+        })
+      )
+    );
+    toast.success("Overdue tasks dismissed — schedules reset from tomorrow");
+    onLogged("", "");
+  }
+
+  async function logSelected(autoOpenNotes = false) {
     setBulkLogging(true);
     const careKeys = [...panelSelected].filter((k) => !k.startsWith("reminder-"));
     const rIds = [...panelSelected].filter((k) => k.startsWith("reminder-")).map((k) => k.slice(9));
@@ -693,7 +736,10 @@ function WeekStrip({
     if (logged > 0) {
       toast.success(`Logged ${logged} task${logged !== 1 ? "s" : ""}`);
       setPanelSelected(new Set());
-      if (allNoteEvents.length > 0) setPendingNoteEvents(allNoteEvents);
+      if (allNoteEvents.length > 0) {
+        if (autoOpenNotes) setNotesDialogEvents(allNoteEvents);
+        else setPendingNoteEvents(allNoteEvents);
+      }
     }
   }
 
@@ -761,14 +807,23 @@ function WeekStrip({
     <div className="space-y-3">
       {/* Overdue chip — only when on current week and tasks are overdue */}
       {overdueCount > 0 && (
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-1.5 text-xs font-medium text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-1.5 hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors"
-        >
-          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-          {overdueCount} task{overdueCount !== 1 ? "s" : ""} missed from earlier — view past days
-          <ChevronLeft size={12} />
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-1.5 text-xs font-medium text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-1.5 hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+            {overdueCount} task{overdueCount !== 1 ? "s" : ""} missed — view past days
+            <ChevronLeft size={12} />
+          </button>
+          <button onClick={logAllOverdue} className="text-xs font-medium text-leaf hover:text-forest transition-colors">
+            Log all
+          </button>
+          <span className="text-xs text-muted-foreground">·</span>
+          <button onClick={dismissAllOverdue} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+            Dismiss
+          </button>
+        </div>
       )}
 
       {/* 7-day strip */}
@@ -893,9 +948,18 @@ function WeekStrip({
               )}
               {hasActive && (
                 panelSelected.size > 0 ? (
-                  <Button size="sm" variant="outline" onClick={logSelected} disabled={bulkLogging} className="shrink-0">
-                    {bulkLogging ? "Logging…" : `Log selected (${panelSelected.size})`}
-                  </Button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => logSelected(true)} disabled={bulkLogging}
+                      className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 disabled:opacity-50 transition-colors"
+                      title="Log selected with notes"
+                    >
+                      <StickyNote size={13} />
+                    </button>
+                    <Button size="sm" variant="outline" onClick={() => logSelected(false)} disabled={bulkLogging}>
+                      {bulkLogging ? "Logging…" : `Log selected (${panelSelected.size})`}
+                    </Button>
+                  </div>
                 ) : (
                   <Button size="sm" variant="outline" onClick={logAll} disabled={bulkLogging} className="shrink-0">
                     {bulkLogging ? "Logging…" : "Log all"}
@@ -1253,17 +1317,25 @@ function ManagePlantRow({ plant, selectionMode, selected, onToggle, onEdit, onQu
             )}
           </>
         ) : (
-          <div className="flex items-center gap-1 mt-0.5 flex-wrap">
-            <span className="text-[11px] text-muted-foreground mr-0.5">💧 water:</span>
-            {[3, 7, 14, 30].map((d) => (
-              <button
-                key={d}
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onQuickWater(d); }}
-                className="text-[11px] font-medium px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
-              >
-                {d}d
-              </button>
-            ))}
+          <div className="space-y-1 mt-0.5">
+            <div className="flex items-center gap-1 flex-wrap">
+              <span className="text-[11px] text-muted-foreground mr-0.5">💧 water:</span>
+              {[3, 7, 14, 30].map((d) => (
+                <button
+                  key={d}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); onQuickWater(d); }}
+                  className="text-[11px] font-medium px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
+                >
+                  {d}d
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(); }}
+              className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+            >
+              + fertilize, prune, repot…
+            </button>
           </div>
         )}
       </div>
