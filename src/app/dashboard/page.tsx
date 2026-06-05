@@ -112,7 +112,7 @@ export default async function DashboardPage() {
     returnPolicy:     !!(profile as { return_policy_type?: string | null } | null)?.return_policy_type,
     inventory:     (inventoryCount ?? 0) > 0,
     listing:       hasListing,
-    storefront:    !!profile?.username,
+    storefront:    !!(profile as { storefront_previewed?: boolean } | null)?.storefront_previewed,
     garden:        (gardenPlantCount ?? 0) > 0 && !!profile?.garden_public,
   };
   // garden is optional — don't block allDone on it

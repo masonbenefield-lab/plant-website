@@ -112,6 +112,11 @@ export default async function SellerStorefront({
     : { data: [] };
   const reviewerMap = Object.fromEntries((reviewers ?? []).map((r) => [r.id, r]));
 
+  // Mark storefront as previewed the first time the owner visits
+  if (user?.id === profile.id && !profile.storefront_previewed) {
+    adminClient.from("profiles").update({ storefront_previewed: true }).eq("id", profile.id).then(() => {});
+  }
+
   // Fetch which reviews the seller has already reported (only needed on their own profile)
   const reportedRatingIds = new Set<string>();
   if (user?.id === profile.id && (ratings?.length ?? 0) > 0) {
