@@ -28,15 +28,30 @@ export async function GET(request: Request) {
   today.setHours(0, 0, 0, 0);
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
-  // 1 — opted-in profiles with at least one care interval set
+  // 1 — opted-in profiles (include vacation fields to skip vacationing users + apply pause offset)
   const { data: profiles } = await admin
     .from("profiles")
-    .select("id, username")
+    .select("id, username, vacation_start, vacation_end, schedule_pause_offset")
     .eq("daily_care_emails", true);
 
   if (!profiles?.length) return NextResponse.json({ sent: 0, reason: "No eligible profiles" });
 
-  const profileIds = profiles.map((p) => p.id);
+  // Skip users currently on vacation
+  const activeProfiles = profiles.filter((p) => {
+    if (!p.vacation_end) return true;
+    const end = new Date(p.vacation_end + "T00:00:00");
+    end.setHours(0, 0, 0, 0);
+    return end < today;
+  });
+  if (!activeProfiles.length) return NextResponse.json({ sent: 0, reason: "All users on vacation" });
+
+  // Build pause-offset map per user
+  const pauseOffsetMap: Record<string, number> = {};
+  for (const p of activeProfiles) {
+    pauseOffsetMap[p.id] = p.schedule_pause_offset ?? 0;
+  }
+
+  const profileIds = activeProfiles.map((p) => p.id);
 
   // 2 — fetch all garden plants with intervals for these users
   const { data: plants } = await admin
@@ -77,13 +92,14 @@ export async function GET(request: Request) {
       const lastDateStr = lastEvent[plant.id]?.[eventKey] ?? null;
       let daysUntilDue: number;
 
+      const pauseOffset = pauseOffsetMap[plant.user_id] ?? 0;
       if (lastDateStr) {
         const last = new Date(lastDateStr + "T00:00:00");
         last.setHours(0, 0, 0, 0);
         const nextDue = new Date(last.getTime() + interval * 86400000);
-        daysUntilDue = Math.round((nextDue.getTime() - today.getTime()) / 86400000);
+        daysUntilDue = Math.round((nextDue.getTime() - today.getTime()) / 86400000) + pauseOffset;
       } else {
-        daysUntilDue = 0;
+        daysUntilDue = pauseOffset;
       }
 
       if (daysUntilDue <= 0) {
@@ -133,7 +149,7 @@ export async function GET(request: Request) {
     if (u.email) emailMap[u.id] = u.email;
   }
 
-  const profileMap = Object.fromEntries(profiles.map((p) => [p.id, p.username]));
+  const profileMap = Object.fromEntries(activeProfiles.map((p) => [p.id, p.username]));
 
   // 6 — send emails
   let sent = 0;

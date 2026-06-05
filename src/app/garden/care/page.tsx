@@ -10,6 +10,12 @@ export default async function CareSchedulePage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("vacation_start, vacation_end, schedule_pause_offset, sitter_token")
+    .eq("id", user.id)
+    .single();
+
   const { data: plants } = await supabase
     .from("garden_plants")
     .select("id, name, variety, images, location, water_interval_days, fertilize_interval_days, repot_interval_days, prune_interval_days")
@@ -39,6 +45,18 @@ export default async function CareSchedulePage() {
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+
+  // Pause offset: cumulative days from past vacations + days elapsed in any active vacation
+  const basePauseOffset = profile?.schedule_pause_offset ?? 0;
+  const vacationStart = profile?.vacation_start ?? null;
+  const vacationEnd   = profile?.vacation_end   ?? null;
+  let totalPauseOffset = basePauseOffset;
+  if (vacationStart) {
+    const vStart = new Date(vacationStart + "T00:00:00");
+    vStart.setHours(0, 0, 0, 0);
+    const elapsed = Math.floor((today.getTime() - vStart.getTime()) / 86400000);
+    if (elapsed > 0) totalPauseOffset += elapsed;
+  }
 
   type CareEntry = {
     plantId: string;
@@ -74,9 +92,9 @@ export default async function CareSchedulePage() {
         const last = new Date(lastDateStr + "T00:00:00");
         last.setHours(0, 0, 0, 0);
         const nextDue = new Date(last.getTime() + interval * 86400000);
-        daysUntilDue = Math.round((nextDue.getTime() - today.getTime()) / 86400000);
+        daysUntilDue = Math.round((nextDue.getTime() - today.getTime()) / 86400000) + totalPauseOffset;
       } else {
-        daysUntilDue = 0;
+        daysUntilDue = totalPauseOffset;
       }
       entries.push({ plantId: plant.id, plantName: name, image, location, careType: type, eventKey, interval, lastDate: lastDateStr, daysUntilDue });
     }
@@ -184,6 +202,9 @@ export default async function CareSchedulePage() {
           }))}
           totalWithSchedule={plantsWithSchedule.length}
           plantIntervals={plantIntervals}
+          vacationStart={vacationStart}
+          vacationEnd={vacationEnd}
+          sitterToken={profile?.sitter_token ?? null}
         />
       )}
     </div>

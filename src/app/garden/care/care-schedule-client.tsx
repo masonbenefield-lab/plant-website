@@ -647,8 +647,8 @@ function WeekStrip({
   const isCurrentWeek = weekOffset === 0;
   const isFutureWeek = weekOffset > 0;
 
-  // Overdue task count (for the "missed tasks" chip when on current week)
-  const overdueCount = isCurrentWeek && !overdueDismissed
+  // Overdue task count (for the "missed tasks" chip when on current week — hidden during vacation)
+  const overdueCount = isCurrentWeek && !overdueDismissed && !isVacationActive
     ? entries.filter((e) => e.daysUntilDue < 0 && Math.abs(e.daysUntilDue) < e.interval && !loggedKeys.has(`${e.plantId}-${e.careType}`)).length
     : 0;
 
@@ -1636,6 +1636,9 @@ export function CareScheduleClient({
   plantsWithoutSchedule: _plantsWithoutSchedule,
   totalWithSchedule,
   plantIntervals,
+  vacationStart: initialVacationStart,
+  vacationEnd: initialVacationEnd,
+  sitterToken,
 }: {
   entries: CareEntry[];
   reminderEntries: ReminderEntry[];
@@ -1643,6 +1646,9 @@ export function CareScheduleClient({
   plantsWithoutSchedule: SimplePlant[];
   totalWithSchedule: number;
   plantIntervals: PlantWithIntervals[];
+  vacationStart: string | null;
+  vacationEnd: string | null;
+  sitterToken: string | null;
 }) {
   const router = useRouter();
   const [reminders, setReminders] = useState(initialReminders);
@@ -1652,6 +1658,60 @@ export function CareScheduleClient({
   const [editTarget, setEditTarget] = useState<{ ids: string[]; tab: "intervals" | "onetime" | "history" } | null>(null);
   const [showAddReminder, setShowAddReminder] = useState(false);
   const editPlantIds = editTarget?.ids ?? null;
+
+  // Vacation state
+  const [vacationEnd, setVacationEnd] = useState(initialVacationEnd);
+  const [vacationStart, setVacationStart] = useState(initialVacationStart);
+  const [vacationDialogOpen, setVacationDialogOpen] = useState(false);
+  const [vacationDateInput, setVacationDateInput] = useState("");
+  const [vacationLoading, setVacationLoading] = useState(false);
+  const [sitterDialogOpen, setSitterDialogOpen] = useState(false);
+  const [sitterCopied, setSitterCopied] = useState(false);
+  const isVacationActive = !!vacationEnd;
+
+  async function handleSetVacation() {
+    if (!vacationDateInput) return;
+    setVacationLoading(true);
+    const res = await fetch("/api/garden/vacation", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ vacation_end: vacationDateInput }),
+    });
+    setVacationLoading(false);
+    if (res.ok) {
+      const today = new Date();
+      const todayStr = today.toISOString().split("T")[0];
+      setVacationStart(todayStr);
+      setVacationEnd(vacationDateInput);
+      setVacationDialogOpen(false);
+      setVacationDateInput("");
+      toast.success("Vacation mode on — schedules paused");
+    } else {
+      toast.error("Failed to set vacation mode");
+    }
+  }
+
+  async function handleEndVacation() {
+    setVacationLoading(true);
+    const res = await fetch("/api/garden/vacation", { method: "DELETE" });
+    setVacationLoading(false);
+    if (res.ok) {
+      setVacationStart(null);
+      setVacationEnd(null);
+      toast.success("Welcome back! Schedules updated.");
+      router.refresh();
+    } else {
+      toast.error("Failed to end vacation mode");
+    }
+  }
+
+  function copySitterLink() {
+    const url = `${window.location.origin}/garden/care/sitter-guide?token=${sitterToken}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setSitterCopied(true);
+      setTimeout(() => setSitterCopied(false), 2000);
+    });
+  }
 
   // Manage tab filter/search
   const [manageFilter, setManageFilter] = useState<"all" | "scheduled" | "notset">("all");
@@ -1735,6 +1795,38 @@ export function CareScheduleClient({
   return (
     <>
       <div className="space-y-6">
+        {/* Vacation banner */}
+        {isVacationActive ? (
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-sky-200 dark:border-sky-800 bg-sky-50 dark:bg-sky-900/20 px-4 py-3">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="text-lg shrink-0">🏖️</span>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-sky-800 dark:text-sky-200">Vacation mode — schedules paused</p>
+                <p className="text-xs text-sky-600 dark:text-sky-400 truncate">
+                  Returns {new Date(vacationEnd! + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                  {vacationStart && ` · started ${new Date(vacationStart + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}`}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleEndVacation}
+              disabled={vacationLoading}
+              className="text-xs font-medium text-sky-700 dark:text-sky-300 hover:text-sky-900 dark:hover:text-sky-100 whitespace-nowrap shrink-0 disabled:opacity-50 transition-colors"
+            >
+              {vacationLoading ? "Updating…" : "I'm back"}
+            </button>
+          </div>
+        ) : (
+          <div className="flex justify-end">
+            <button
+              onClick={() => setVacationDialogOpen(true)}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              🏖️ Going away?
+            </button>
+          </div>
+        )}
+
         {/* Sub-tab navigation */}
         <div className="flex gap-2 p-1 bg-muted/40 rounded-lg w-fit">
           {(["week", "manage"] as const).map((tab) => (
@@ -1749,7 +1841,13 @@ export function CareScheduleClient({
         {/* ── WEEK AHEAD ── */}
         {activeTab === "week" && (
           <div className="space-y-4">
-            <div className="flex justify-end">
+            <div className="flex items-center justify-between gap-2">
+              <button
+                onClick={() => setSitterDialogOpen(true)}
+                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                🌿 Share sitter guide
+              </button>
               <Button size="sm" variant="outline" onClick={() => setShowAddReminder(true)} className="flex items-center gap-1.5">
                 <Plus size={13} /> Add reminder
               </Button>
@@ -1893,6 +1991,81 @@ export function CareScheduleClient({
             onClose={() => setShowAddReminder(false)}
           />
         )}
+      </Dialog>
+
+      {/* Vacation mode dialog */}
+      <Dialog open={vacationDialogOpen} onOpenChange={(open: boolean) => { if (!open) { setVacationDialogOpen(false); setVacationDateInput(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>🏖️ Going away?</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-1">
+            <p className="text-sm text-muted-foreground">
+              Set your return date and all care schedules will be paused. When you&apos;re back, due dates shift forward so nothing is overdue.
+            </p>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Return date</label>
+              <Input
+                type="date"
+                value={vacationDateInput}
+                onChange={(e) => setVacationDateInput(e.target.value)}
+                min={new Date(Date.now() + 86400000).toISOString().split("T")[0]}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setVacationDialogOpen(false); setVacationDateInput(""); }}>Cancel</Button>
+            <Button
+              className="bg-sky-600 hover:bg-sky-700 text-white"
+              disabled={!vacationDateInput || vacationLoading}
+              onClick={handleSetVacation}
+            >
+              {vacationLoading ? "Saving…" : "Pause schedules"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Sitter guide dialog */}
+      <Dialog open={sitterDialogOpen} onOpenChange={(open: boolean) => { if (!open) setSitterDialogOpen(false); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>🌿 Share with your plant sitter</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-1">
+            <p className="text-sm text-muted-foreground">
+              Share this link with whoever is looking after your plants. It shows a printable day-by-day care schedule for the next 30 days — no login required.
+            </p>
+            {sitterToken ? (
+              <div className="flex gap-2">
+                <Input
+                  readOnly
+                  value={typeof window !== "undefined" ? `${window.location.origin}/garden/care/sitter-guide?token=${sitterToken}` : ""}
+                  className="text-xs font-mono"
+                />
+                <Button variant="outline" onClick={copySitterLink} className="shrink-0">
+                  {sitterCopied ? <Check size={14} /> : "Copy"}
+                </Button>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No share link available — try refreshing.</p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Anyone with this link can view (but not change) your care schedule.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSitterDialogOpen(false)}>Close</Button>
+            {sitterToken && (
+              <Button
+                className="bg-leaf hover:bg-forest text-white"
+                onClick={() => window.open(`/garden/care/sitter-guide?token=${sitterToken}`, "_blank")}
+              >
+                Open guide
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
     </>
   );

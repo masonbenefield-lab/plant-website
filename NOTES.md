@@ -1214,3 +1214,34 @@ None — DB columns (shipping_weight_oz, box_length_in, box_width_in, box_height
 
 ### Environment variables
 - `SHIPPO_API_KEY` is no longer used (can be removed from .env.local and Vercel, but not urgent)
+
+---
+
+## 2026-06-05 — Vacation Mode + Sitter Guide
+
+### Features built
+- **Vacation / pause mode**: "🏖️ Going away?" button on the care schedule page opens a dialog to set a return date. All care schedules pause for the duration — due dates shift forward, overdue banner hides, and daily emails are skipped. "I'm back" button ends vacation early. Pause duration is tracked as a cumulative offset so multiple vacations stack correctly.
+- **Sitter guide**: "🌿 Share sitter guide" link in the Week Ahead tab opens a dialog with a shareable URL (`/garden/care/sitter-guide?token=<uuid>`). The page is public (no login), shows a 30-day day-by-day care schedule with printable checkboxes, and has a "Print / Save as PDF" button. Printing uses CSS `@media print` — no extra dependencies.
+
+### Files changed
+- `src/app/garden/care/page.tsx` — fetches profile vacation fields + sitter_token; adds pause offset to daysUntilDue; passes vacationStart, vacationEnd, sitterToken props to CareScheduleClient
+- `src/app/garden/care/care-schedule-client.tsx` — new props (vacationStart, vacationEnd, sitterToken); vacation banner + "Going away?" link; vacation dialog; sitter share dialog; overdue banner suppressed during vacation
+- `src/app/api/garden/vacation/route.ts` — new file; POST to set vacation, DELETE to end it
+- `src/app/garden/care/sitter-guide/page.tsx` — new file; token-authenticated public page; 30-day schedule
+- `src/app/garden/care/sitter-guide/print-button.tsx` — new file; client component for window.print()
+- `src/app/api/cron/daily-care-reminder/route.ts` — skips vacationing users; applies schedule_pause_offset to daysUntilDue
+
+### SQL migrations needed
+Run `supabase/migrations/015_vacation_mode.sql` in the Supabase dashboard:
+```sql
+ALTER TABLE profiles
+  ADD COLUMN IF NOT EXISTS vacation_start      DATE,
+  ADD COLUMN IF NOT EXISTS vacation_end        DATE,
+  ADD COLUMN IF NOT EXISTS schedule_pause_offset INTEGER NOT NULL DEFAULT 0;
+
+ALTER TABLE profiles
+  ADD COLUMN IF NOT EXISTS sitter_token UUID NOT NULL DEFAULT gen_random_uuid();
+```
+
+### Environment variables
+None new.
