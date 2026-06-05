@@ -609,7 +609,7 @@ type LoggedEntry    = CompletedCareEntry & { actualDay: number; eventId?: string
 type LoggedReminder = { reminder: ReminderEntry; actualDay: number };
 
 function WeekStrip({
-  entries, reminders, completedToday, onLogged, onReminderCompleted, onReminderUncompleted, onEditSchedule, onViewHistory,
+  entries, reminders, completedToday, onLogged, onReminderCompleted, onReminderUncompleted, onEditSchedule, onViewHistory, vacationActive,
 }: {
   entries: CareEntry[];
   reminders: ReminderEntry[];
@@ -619,6 +619,7 @@ function WeekStrip({
   onReminderUncompleted: (reminder: ReminderEntry) => void;
   onEditSchedule?: (plantId: string) => void;
   onViewHistory?: (plantId: string) => void;
+  vacationActive?: boolean;
 }) {
   // weekOffset: 0 = this week, -7 = last week, -14 = two weeks ago …
   const [weekOffset, setWeekOffset]   = useState(0);
@@ -648,7 +649,7 @@ function WeekStrip({
   const isFutureWeek = weekOffset > 0;
 
   // Overdue task count (for the "missed tasks" chip when on current week — hidden during vacation)
-  const overdueCount = isCurrentWeek && !overdueDismissed && !isVacationActive
+  const overdueCount = isCurrentWeek && !overdueDismissed && !vacationActive
     ? entries.filter((e) => e.daysUntilDue < 0 && Math.abs(e.daysUntilDue) < e.interval && !loggedKeys.has(`${e.plantId}-${e.careType}`)).length
     : 0;
 
@@ -1863,6 +1864,7 @@ export function CareScheduleClient({
                 onReminderUncompleted={handleReminderUncompleted}
                 onEditSchedule={(plantId) => setEditTarget({ ids: [plantId], tab: "intervals" })}
                 onViewHistory={(plantId) => setEditTarget({ ids: [plantId], tab: "history" })}
+                vacationActive={isVacationActive}
               />
             ) : hasAnyPlants ? (
               <div className="rounded-xl border bg-muted/30 px-5 py-6 space-y-3">
