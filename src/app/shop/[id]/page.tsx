@@ -259,7 +259,7 @@ export default async function ListingPage({
             {isPaused ? (
               <p className="text-sm font-medium text-muted-foreground">This item is not currently available.</p>
             ) : !seller?.stripe_onboarded ? (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground" aria-hidden="true">
                 This seller has not set up payments yet.
               </p>
             ) : isSoldOut ? (

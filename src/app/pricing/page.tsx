@@ -1,5 +1,15 @@
 export const dynamic = "force-dynamic";
 
+import type { Metadata } from "next";
+export const metadata: Metadata = {
+  title: "Seller Plans & Pricing — Plantet",
+  description: "Start selling plants for free on Plantet. Choose a plan that fits your needs — whether you're a hobbyist or a full nursery.",
+  openGraph: {
+    title: "Seller Plans & Pricing — Plantet",
+    description: "Start selling plants for free on Plantet. Choose a plan that fits your needs — whether you're a hobbyist or a full nursery.",
+  },
+};
+
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";

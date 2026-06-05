@@ -1,7 +1,17 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
+
+export const metadata: Metadata = {
+  title: "Live Plant Auctions — Plantet",
+  description: "Bid on rare plants in live auctions from independent growers. New auctions added regularly — find your next favorite plant.",
+  openGraph: {
+    title: "Live Plant Auctions — Plantet",
+    description: "Bid on rare plants in live auctions from independent growers. New auctions added regularly — find your next favorite plant.",
+  },
+};
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { centsToDisplay } from "@/lib/stripe";

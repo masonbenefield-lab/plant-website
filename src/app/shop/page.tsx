@@ -1,7 +1,17 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
+
+export const metadata: Metadata = {
+  title: "Buy Plants Online — Plantet",
+  description: "Shop rare and everyday plants from independent growers across the US. New listings added daily.",
+  openGraph: {
+    title: "Buy Plants Online — Plantet",
+    description: "Shop rare and everyday plants from independent growers across the US. New listings added daily.",
+  },
+};
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { centsToDisplay } from "@/lib/stripe";
