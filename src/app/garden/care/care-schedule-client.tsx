@@ -610,7 +610,7 @@ function WeekStrip({
         if (withNote) setNotesDialogEvents([{ eventId, plantName: entry.plantName, careType: entry.careType }]);
       }
     }
-    setLoggedKeys((p) => new Set([...p, key]));
+    if (actualSelectedOffset === 0) setLoggedKeys((p) => new Set([...p, key]));
     setPanelSelected((p) => { const n = new Set(p); n.delete(key); return n; });
     onLogged(plantId, careType);
   }
@@ -701,7 +701,7 @@ function WeekStrip({
             if (entry) setDoneEntryList((p) => [...p, { plantId: entry.plantId, plantName: entry.plantName, image: entry.image, location: entry.location, careType: entry.careType, actualDay: actualSelectedOffset, eventId, logDate }]);
           });
         }
-        setLoggedKeys((p) => new Set([...p, ...toLog.map((i) => `${i.plantId}-${i.careType}`)]));
+        if (actualSelectedOffset === 0) setLoggedKeys((p) => new Set([...p, ...toLog.map((i) => `${i.plantId}-${i.careType}`)]));
         toLog.forEach(({ plantId, careType }) => onLogged(plantId, careType));
       }
     }
@@ -747,7 +747,7 @@ function WeekStrip({
             if (entry) setDoneEntryList((p) => [...p, { plantId: entry.plantId, plantName: entry.plantName, image: entry.image, location: entry.location, careType: entry.careType, actualDay: actualSelectedOffset, eventId, logDate }]);
           });
         }
-        setLoggedKeys((p) => new Set([...p, ...toLog.map((i) => `${i.plantId}-${i.careType}`)]));
+        if (actualSelectedOffset === 0) setLoggedKeys((p) => new Set([...p, ...toLog.map((i) => `${i.plantId}-${i.careType}`)]));
         toLog.forEach(({ plantId, careType }) => onLogged(plantId, careType));
       }
     }
