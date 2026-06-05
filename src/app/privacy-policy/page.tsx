@@ -191,6 +191,8 @@ export default function PrivacyPolicyPage() {
         </section>
 
         <div className="pt-4 border-t text-sm text-muted-foreground">
+          <Link href="/terms" className="underline hover:text-foreground">Terms of Service</Link>
+          {" · "}
           <Link href="/seller-agreement" className="underline hover:text-foreground">Seller Agreement</Link>
           {" · "}
           <Link href="/" className="underline hover:text-foreground">Back to Plantet</Link>
