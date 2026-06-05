@@ -14,7 +14,10 @@ export default function Footer() {
           <Link href="/seller-agreement" className="hover:text-foreground transition-colors">Seller Agreement</Link>
           <Link href="/contact" className="hover:text-foreground transition-colors">Contact</Link>
         </nav>
-        <span className="text-xs">&copy; {new Date().getFullYear()} Plantet</span>
+        <div className="flex flex-col items-center sm:items-end gap-1">
+          <span className="text-xs">&copy; {new Date().getFullYear()} Plantet</span>
+          <a href="https://ko-fi.com/plantet" target="_blank" rel="noopener noreferrer" className="text-xs hover:text-foreground transition-colors">Love Plantet? Support us on Ko-fi ☕</a>
+        </div>
       </div>
     </footer>
   );
