@@ -1625,44 +1625,46 @@ export default function InventoryClient({
       <div key={group.key} className="border rounded-lg overflow-hidden mb-2">
         <button
           onClick={() => toggleGroup(group.key)}
-          className="w-full flex items-center gap-3 px-4 py-3 bg-muted/30 hover:bg-muted/50 transition-colors text-left"
+          className="w-full flex items-start gap-3 px-4 py-3 bg-muted/30 hover:bg-muted/50 transition-colors text-left"
         >
           {isOpen
-            ? <ChevronDown size={16} className="shrink-0 text-muted-foreground" />
-            : <ChevronRight size={16} className="shrink-0 text-muted-foreground" />}
+            ? <ChevronDown size={16} className="shrink-0 text-muted-foreground mt-0.5" />
+            : <ChevronRight size={16} className="shrink-0 text-muted-foreground mt-0.5" />}
           {first?.images?.[0] && (
             <Image src={first.images[0]} alt="" width={32} height={32} className="w-8 h-8 rounded object-cover shrink-0 border" />
           )}
           <div className="flex-1 min-w-0">
-            <span className="font-semibold">{group.plant_name}</span>
-            {group.variety && <span className="text-muted-foreground ml-2 font-normal">· {group.variety}</span>}
-          </div>
-          <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
-            {hasShop && (
-              <span className="hidden sm:inline-flex items-center gap-1 text-xs text-leaf bg-[#DFE7D4] dark:bg-forest/40 dark:text-sage rounded-full px-2 py-0.5">
-                <Store size={10} /> Shop
+            <div className="flex flex-wrap items-baseline gap-x-1.5">
+              <span className="font-semibold">{group.plant_name}</span>
+              {group.variety && <span className="text-muted-foreground font-normal text-sm">· {group.variety}</span>}
+            </div>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-0.5">
+              {hasShop && (
+                <span className="inline-flex items-center gap-1 text-xs text-leaf bg-[#DFE7D4] dark:bg-forest/40 dark:text-sage rounded-full px-2 py-0.5">
+                  <Store size={10} /> Shop
+                </span>
+              )}
+              {hasSoldOut && (
+                <span className="inline-flex items-center gap-1 text-xs text-amber-700 bg-amber-100 dark:bg-amber-900/40 dark:text-amber-400 rounded-full px-2 py-0.5">
+                  Sold out
+                </span>
+              )}
+              <span className="text-xs text-muted-foreground">
+                {group.variants.length} {first && isSupply(first) ? "option" : "size"}{group.variants.length !== 1 ? "s" : ""} · {totalQty} total
+                {totalAvail !== totalQty && <span className="ml-1">({totalAvail} avail)</span>}
               </span>
-            )}
-            {hasSoldOut && (
-              <span className="hidden sm:inline-flex items-center gap-1 text-xs text-amber-700 bg-amber-100 dark:bg-amber-900/40 dark:text-amber-400 rounded-full px-2 py-0.5">
-                Sold out
-              </span>
-            )}
-            <span className="text-sm text-muted-foreground whitespace-nowrap">
-              {group.variants.length} {first && isSupply(first) ? "option" : "size"}{group.variants.length !== 1 ? "s" : ""} · {totalQty} total
-              {totalAvail !== totalQty && <span className="ml-1 text-xs">({totalAvail} avail)</span>}
-            </span>
-            <button
-              type="button"
-              onClick={e => {
-                e.stopPropagation();
-                openModal({ type: "add-variant", plant_name: group.plant_name, variety: group.variety, category: first?.category ?? null });
-              }}
-              className="inline-flex items-center gap-1 text-xs text-leaf hover:text-forest border border-[#C5D4BC] hover:border-sage rounded-full px-2.5 py-0.5 transition-colors bg-background"
-            >
-              <Plus size={11} /> Variant
-            </button>
+            </div>
           </div>
+          <button
+            type="button"
+            onClick={e => {
+              e.stopPropagation();
+              openModal({ type: "add-variant", plant_name: group.plant_name, variety: group.variety, category: first?.category ?? null });
+            }}
+            className="inline-flex items-center gap-1 text-xs text-leaf hover:text-forest border border-[#C5D4BC] hover:border-sage rounded-full px-2.5 py-0.5 transition-colors bg-background shrink-0 mt-0.5"
+          >
+            <Plus size={11} /> Variant
+          </button>
         </button>
 
         {isOpen && (
