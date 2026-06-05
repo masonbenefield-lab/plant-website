@@ -629,7 +629,7 @@ type LoggedEntry    = CompletedCareEntry & { actualDay: number; eventId?: string
 type LoggedReminder = { reminder: ReminderEntry; actualDay: number };
 
 function WeekStrip({
-  entries, reminders, completedToday, onLogged, onReminderCompleted, onReminderUncompleted, onEditSchedule, onViewHistory, vacationActive, onSnooze,
+  entries, reminders, completedToday, onLogged, onReminderCompleted, onReminderUncompleted, onEditSchedule, onViewHistory, vacationActive, onSnooze, snoozedEntryKeys,
 }: {
   entries: CareEntry[];
   reminders: ReminderEntry[];
