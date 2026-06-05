@@ -641,6 +641,7 @@ function WeekStrip({
   const [bulkConfirming, setBulkConfirming] = useState(false);
   const [doneSelected, setDoneSelected] = useState<Set<string>>(new Set());
   const [overdueDismissed, setOverdueDismissed] = useState(false);
+  const [dayTab, setDayTab] = useState<"due" | "overdue">("overdue");
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -743,6 +744,23 @@ function WeekStrip({
   const hasActive = dayEntries.length > 0 || dayReminders.length > 0;
   const hasDone   = currentDoneEntries.length > 0 || currentDoneReminders.length > 0;
   const totalActive = dayEntries.length + dayReminders.length;
+
+  // Today-only tab split: genuine overdue vs due today
+  const isSelectedToday = actualSelectedOffset === 0;
+  const overdueEntries = isSelectedToday
+    ? dayEntries.filter((e) => e.daysUntilDue < 0 && Math.abs(e.daysUntilDue) < e.interval)
+    : [];
+  const dueTodayEntries = isSelectedToday
+    ? dayEntries.filter((e) => !(e.daysUntilDue < 0 && Math.abs(e.daysUntilDue) < e.interval))
+    : dayEntries;
+  const showDayTabs = isSelectedToday && overdueEntries.length > 0 && dueTodayEntries.length > 0;
+  const activeEntries = showDayTabs ? (dayTab === "overdue" ? overdueEntries : dueTodayEntries) : dayEntries;
+
+  // Reset tab and selection when the viewed day changes
+  useEffect(() => {
+    setDayTab("overdue");
+    setPanelSelected(new Set());
+  }, [actualSelectedOffset]);
 
   function togglePanel(key: string) {
     setPanelSelected((prev) => {
@@ -1066,8 +1084,8 @@ function WeekStrip({
                         const careKeys = [...panelSelected].filter((k) => !k.startsWith("reminder-"));
                         const rIds = [...panelSelected].filter((k) => k.startsWith("reminder-")).map((k) => k.slice(9));
                         setBulkConfirmState({
-                          careItems: dayEntries.filter((e) => careKeys.includes(`${e.plantId}-${e.careType}`)),
-                          reminderItems: dayReminders.filter((r) => rIds.includes(r.id)),
+                          careItems: activeEntries.filter((e) => careKeys.includes(`${e.plantId}-${e.careType}`)),
+                          reminderItems: showDayTabs ? [] : dayReminders.filter((r) => rIds.includes(r.id)),
                           date: logDate,
                         });
                       }}
@@ -1077,7 +1095,7 @@ function WeekStrip({
                   </div>
                 ) : (
                   <Button size="sm" variant="outline" disabled={bulkLogging} className="shrink-0"
-                    onClick={() => setBulkConfirmState({ careItems: dayEntries, reminderItems: dayReminders, date: logDate })}
+                    onClick={() => setBulkConfirmState({ careItems: activeEntries, reminderItems: showDayTabs ? [] : dayReminders, date: logDate })}
                   >
                     Log all
                   </Button>
@@ -1086,11 +1104,34 @@ function WeekStrip({
             </div>
           </div>
 
+          {showDayTabs && (
+            <div className="flex gap-0.5 p-0.5 bg-muted/40 rounded-lg w-fit">
+              {(["overdue", "due"] as const).map((tab) => {
+                const count = tab === "overdue" ? overdueEntries.length : dueTodayEntries.length;
+                const label = tab === "overdue" ? "Overdue" : "Due today";
+                return (
+                  <button
+                    key={tab}
+                    onClick={() => { setDayTab(tab); setPanelSelected(new Set()); }}
+                    className={cn(
+                      "px-3 py-1 rounded-md text-xs font-medium transition-colors",
+                      dayTab === tab
+                        ? "bg-background shadow-sm text-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {label} <span className={cn("ml-0.5", dayTab === tab && tab === "overdue" ? "text-red-500" : "")}>{count}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
           {hasActive ? (
             <div className="space-y-1.5">
               {(() => {
                 // Group entries by plantId (preserve first-appearance order)
-                const grouped = dayEntries.reduce<{ plantId: string; entries: CareEntry[] }[]>((acc, e) => {
+                const grouped = activeEntries.reduce<{ plantId: string; entries: CareEntry[] }[]>((acc, e) => {
                   const g = acc.find((x) => x.plantId === e.plantId);
                   if (g) g.entries.push(e); else acc.push({ plantId: e.plantId, entries: [e] });
                   return acc;
