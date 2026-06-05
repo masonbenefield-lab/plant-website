@@ -95,7 +95,7 @@ export default async function AuctionPage({
   const siteUrl = "https://www.plantet.shop";
   const ratingCount = sellerRatings?.length ?? 0;
   const avgRating = ratingCount > 0
-    ? (sellerRatings.reduce((s, r) => s + r.score, 0) / ratingCount).toFixed(1)
+    ? ((sellerRatings ?? []).reduce((s, r) => s + r.score, 0) / ratingCount).toFixed(1)
     : null;
 
   const jsonLd = {
