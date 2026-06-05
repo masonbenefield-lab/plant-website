@@ -29,6 +29,7 @@ import {
   buildReserveOfferAcceptedSellerHtml,
   buildReserveOfferDeclinedHtml,
   buildReserveOfferExpiredHtml,
+  buildWeeklyCareSummaryHtml,
 } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
@@ -365,6 +366,21 @@ export default async function EmailPreviewPage() {
         plantName: "Monstera Deliciosa",
         bidCents: 2800,
         dashboardUrl: `${PREVIEW_SITE}/dashboard/auctions`,
+      }),
+    },
+    {
+      id: "weekly-care-summary",
+      label: "Weekly Care Summary",
+      category: "Account",
+      html: buildWeeklyCareSummaryHtml({
+        username: "plantlover",
+        days: [
+          { label: "Mon, Jun 9",  tasks: [{ plantName: "Monstera deliciosa", careType: "Water" }, { plantName: "Hoya kerrii", careType: "Fertilize" }] },
+          { label: "Wed, Jun 11", tasks: [{ plantName: "Philodendron gloriosum", careType: "Water" }] },
+          { label: "Fri, Jun 13", tasks: [{ plantName: "Monstera deliciosa", careType: "Prune" }, { plantName: "Hoya kerrii", careType: "Water" }] },
+        ],
+        totalCount: 8,
+        weekRange: "Jun 9 – Jun 15",
       }),
     },
     {
