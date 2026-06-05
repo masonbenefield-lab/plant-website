@@ -2005,6 +2005,19 @@ export function CareScheduleClient({
             <p className="text-sm text-muted-foreground">
               Set your return date and all care schedules will be paused. When you&apos;re back, due dates shift forward so nothing is overdue.
             </p>
+            <div className="flex items-start gap-2 rounded-lg bg-muted/50 border px-3 py-2.5 text-sm">
+              <span className="shrink-0 mt-px">🌿</span>
+              <p className="text-muted-foreground leading-snug">
+                Don&apos;t forget to share your{" "}
+                <button
+                  onClick={() => { setVacationDialogOpen(false); setVacationDateInput(""); setSitterDialogOpen(true); }}
+                  className="font-medium text-foreground underline underline-offset-2 hover:text-leaf transition-colors"
+                >
+                  sitter guide
+                </button>
+                {" "}with whoever is watching your plants.
+              </p>
+            </div>
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Return date</label>
               <Input
