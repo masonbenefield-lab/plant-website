@@ -641,6 +641,7 @@ function WeekStrip({
   onViewHistory?: (plantId: string) => void;
   vacationActive?: boolean;
   onSnooze?: (entries: CareEntry[]) => void;
+  snoozedEntryKeys?: Set<string>;
 }) {
   // weekOffset: 0 = this week, -7 = last week, -14 = two weeks ago …
   const [weekOffset, setWeekOffset]   = useState(0);
@@ -742,6 +743,7 @@ function WeekStrip({
   // Day panel: active tasks
   const dayEntries = actualSelectedOffset !== null
     ? entries.filter((e) => {
+        if (snoozedEntryKeys?.has(`${e.plantId}-${e.eventKey}`)) return false; // optimistically hidden after snooze
         // Same rule as strip counts: only hide while daysUntilDue ≤ 0
         if (loggedKeys.has(`${e.plantId}-${e.careType}`) && e.daysUntilDue <= 0) return false;
         if (actualSelectedOffset < 0) return e.daysUntilDue === actualSelectedOffset;
@@ -1855,19 +1857,33 @@ export function CareScheduleClient({
   // Snooze state
   const [snoozeDialogEntries, setSnoozeDialogEntries] = useState<CareEntry[] | null>(null);
   const [snoozeSaving, setSnoozeSaving] = useState(false);
+  // Optimistic set: hides snoozed entries from the day panel before router.refresh() completes
+  const [snoozedEntryKeys, setSnoozedEntryKeys] = useState<Set<string>>(new Set());
 
   async function handleSnooze(entries: CareEntry[], snoozedUntil: string) {
     setSnoozeSaving(true);
-    await Promise.all(entries.map((e) =>
-      fetch("/api/garden/snooze", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plantId: e.plantId, eventType: e.eventKey, snoozedUntil }),
-      })
-    ));
+    const results = await Promise.all(
+      entries.map((e) =>
+        fetch("/api/garden/snooze", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ plantId: e.plantId, eventType: e.eventKey, snoozedUntil }),
+        }).then((r) => ({ ok: r.ok, entry: e }))
+      )
+    );
     setSnoozeSaving(false);
-    setSnoozeDialogEntries(null);
-    toast.success(entries.length === 1 ? "Task snoozed" : `${entries.length} tasks snoozed`);
-    router.refresh();
+    const succeeded = results.filter((r) => r.ok).map((r) => r.entry);
+    const failedCount = results.filter((r) => !r.ok).length;
+    if (succeeded.length > 0) {
+      setSnoozedEntryKeys((prev) => {
+        const next = new Set(prev);
+        succeeded.forEach((e) => next.add(`${e.plantId}-${e.eventKey}`));
+        return next;
+      });
+      setSnoozeDialogEntries(null);
+      toast.success(succeeded.length === 1 ? "Task snoozed" : `${succeeded.length} tasks snoozed`);
+      router.refresh();
+    }
+    if (failedCount > 0) toast.error(`Failed to snooze ${failedCount} task${failedCount !== 1 ? "s" : ""}`);
   }
 
   // Vacation state
@@ -2082,6 +2098,7 @@ export function CareScheduleClient({
                 onViewHistory={(plantId) => setEditTarget({ ids: [plantId], tab: "history" })}
                 vacationActive={isVacationActive}
                 onSnooze={(entriesToSnooze) => setSnoozeDialogEntries(entriesToSnooze)}
+                snoozedEntryKeys={snoozedEntryKeys}
               />
             ) : hasAnyPlants ? (
               <div className="rounded-xl border bg-muted/30 px-5 py-6 space-y-3">
