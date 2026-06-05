@@ -282,6 +282,7 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
           <MobileLink href="/shop" onClick={closeMenu}>Shop</MobileLink>
           <MobileLink href="/auctions" onClick={closeMenu}>Auctions</MobileLink>
           <MobileLink href="/community" onClick={closeMenu}>Community</MobileLink>
+          <MobileLink href="/giveaway" onClick={closeMenu}>Giveaway</MobileLink>
           <MobileLink href="/pricing" onClick={closeMenu}>Pricing</MobileLink>
 
           {user ? (

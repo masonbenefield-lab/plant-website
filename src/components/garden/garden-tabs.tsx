@@ -12,10 +12,10 @@ export default function GardenTabs() {
   const isMyGarden = !isCommunity && !isWishlist && !isCare;
 
   return (
-    <div className="flex gap-1 border-b mb-6">
+    <div className="flex gap-1 border-b mb-6 overflow-x-auto [&::-webkit-scrollbar]:hidden scrollbar-none">
       <TabLink href="/garden" active={isMyGarden}>My Garden</TabLink>
-      <TabLink href="/garden/care" active={isCare}>Care Schedule</TabLink>
-      <TabLink href="/garden/community" active={isCommunity}>Community Gardens</TabLink>
+      <TabLink href="/garden/care" active={isCare}><span className="sm:hidden">Care</span><span className="hidden sm:inline">Care Schedule</span></TabLink>
+      <TabLink href="/garden/community" active={isCommunity}><span className="sm:hidden">Community</span><span className="hidden sm:inline">Community Gardens</span></TabLink>
       <TabLink href="/garden/wishlist" active={isWishlist}>Wishlist</TabLink>
     </div>
   );

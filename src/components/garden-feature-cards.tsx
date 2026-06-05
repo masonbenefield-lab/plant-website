@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Fragment } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
@@ -218,30 +218,41 @@ export default function GardenFeatureCards() {
               {row.map((f, colIdx) => {
                 const i = rowIdx * COLS + colIdx;
                 return (
-                  <button
-                    key={f.title}
-                    onClick={() => setSelected(selected === i ? null : i)}
-                    className={cn(
-                      "text-left bg-card rounded-2xl border p-5 shadow-sm transition-all duration-200 hover:shadow-md hover:border-leaf/40",
-                      selected === i && "border-leaf ring-1 ring-leaf shadow-md"
+                  <Fragment key={f.title}>
+                    <button
+                      onClick={() => setSelected(selected === i ? null : i)}
+                      className={cn(
+                        "text-left bg-card rounded-2xl border p-5 shadow-sm transition-all duration-200 hover:shadow-md hover:border-leaf/40",
+                        selected === i && "border-leaf ring-1 ring-leaf shadow-md"
+                      )}
+                    >
+                      <span className="text-2xl mb-3 block">{f.icon}</span>
+                      <p className="font-semibold mb-1">{f.title}</p>
+                      <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
+                      <p className={cn(
+                        "text-xs mt-2 font-medium transition-colors",
+                        selected === i ? "text-leaf" : "text-muted-foreground"
+                      )}>
+                        {selected === i ? "Hide example ↑" : "See example →"}
+                      </p>
+                    </button>
+                    {/* Mobile: expand appears right below the clicked card */}
+                    {selected === i && (
+                      <div className="sm:hidden col-span-full rounded-2xl border bg-card p-5 shadow-sm animate-in fade-in duration-200">
+                        <p className="text-xs font-semibold text-leaf uppercase tracking-wide mb-4">
+                          {f.icon} {f.title} — example
+                        </p>
+                        {f.example}
+                      </div>
                     )}
-                  >
-                    <span className="text-2xl mb-3 block">{f.icon}</span>
-                    <p className="font-semibold mb-1">{f.title}</p>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
-                    <p className={cn(
-                      "text-xs mt-2 font-medium transition-colors",
-                      selected === i ? "text-leaf" : "text-muted-foreground"
-                    )}>
-                      {selected === i ? "Hide example ↑" : "See example →"}
-                    </p>
-                  </button>
+                  </Fragment>
                 );
               })}
             </div>
 
+            {/* Desktop: expand at end of row */}
             {expandedInRow !== null && (
-              <div className="rounded-2xl border bg-card p-5 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="hidden sm:block rounded-2xl border bg-card p-5 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200">
                 <p className="text-xs font-semibold text-leaf uppercase tracking-wide mb-4">
                   {features[expandedInRow].icon} {features[expandedInRow].title} — example
                 </p>
