@@ -197,9 +197,9 @@ export default async function AuctionsPage({
               return (
                 <Card key={auction.id} className="overflow-hidden hover:shadow-md transition-shadow">
                   <Link href={`/auctions/${auction.id}`} className="block">
-                    <div className="relative h-48 bg-muted">
+                    <div className="relative aspect-[4/3] bg-muted">
                       {auction.images[0] ? (
-                        <Image src={auction.images[0]} alt={auction.plant_name} fill className="object-cover" />
+                        <Image src={auction.images[0]} alt={auction.plant_name} fill className="object-cover object-center" sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw" />
                       ) : (
                         <div className="flex items-center justify-center h-full text-4xl">🌿</div>
                       )}

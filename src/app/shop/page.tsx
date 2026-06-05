@@ -263,9 +263,9 @@ export default async function ShopPage({
               return (
                 <Card key={listing.id} className="overflow-hidden hover:shadow-md transition-shadow">
                   <Link href={`/shop/${listing.id}`} className="block">
-                    <div className="relative h-48 bg-muted">
+                    <div className="relative aspect-[4/3] bg-muted">
                       {listing.images[0] ? (
-                        <Image src={listing.images[0]} alt={listing.plant_name} fill className="object-cover" />
+                        <Image src={listing.images[0]} alt={listing.plant_name} fill className="object-cover object-center" sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw" />
                       ) : (
                         <div className="flex items-center justify-center h-full text-4xl">🌿</div>
                       )}
