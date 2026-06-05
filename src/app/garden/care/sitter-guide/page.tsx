@@ -111,6 +111,8 @@ export default async function SitterGuidePage({
           header, footer { display: none !important; }
           body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           .print-wrap { padding: 0.65in; }
+          body, body * { color: #111111 !important; }
+          .print-muted { color: #555555 !important; }
         }
       `}</style>
 
@@ -169,7 +171,7 @@ export default async function SitterGuidePage({
                         <span className="text-base shrink-0">{task.emoji}</span>
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium truncate">{task.plantName}</p>
-                          <p className="text-xs text-muted-foreground print:text-gray-500">{task.careType}</p>
+                          <p className="text-xs text-muted-foreground print-muted">{task.careType}</p>
                         </div>
                         <div className="ml-auto w-5 h-5 rounded border-2 border-muted-foreground/40 print:border-gray-400 shrink-0" />
                       </div>
@@ -181,7 +183,7 @@ export default async function SitterGuidePage({
           </div>
         )}
 
-        <p className="mt-8 text-xs text-muted-foreground print:text-gray-400 text-center">
+        <p className="mt-8 text-xs text-muted-foreground print-muted text-center">
           plantet.shop · View-only link
         </p>
       </div>
