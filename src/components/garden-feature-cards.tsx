@@ -34,7 +34,7 @@ const features = [
   {
     icon: "🗓️",
     title: "Care schedule",
-    desc: "Set intervals for watering, fertilizing, repotting, and pruning.",
+    desc: "See every task due this week at a glance. Log care in one tap, snooze anything that can wait, and pause everything while you're away. Weekly email reminders and a shareable sitter guide included.",
     example: (
       <div className="space-y-3">
         {/* Week calendar */}
