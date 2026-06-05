@@ -240,7 +240,8 @@ export default async function LandingPage() {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                   <div className="absolute bottom-0 left-0 right-0 p-3">
-                    <p className="text-white text-sm font-semibold leading-tight truncate">{plant.name}</p>
+                    <p className="text-white text-sm font-semibold leading-tight truncate">{plant.variety ?? plant.name}</p>
+                    {plant.variety && <p className="text-white/60 text-xs truncate">{plant.name}</p>}
                     <p className="text-white/70 text-xs truncate">by {plant.displayName}</p>
                   </div>
                 </Link>
