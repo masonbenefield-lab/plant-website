@@ -88,7 +88,7 @@ export async function PATCH(request: Request) {
           .eq("event_type", INTERVAL_TO_EVENT[k])
           .gte("event_date", baselineDateStr);
 
-        await supabase.from("garden_events").insert(
+        const { error: insertError } = await supabase.from("garden_events").insert(
           plantIds.map((plantId) => ({
             plant_id:   plantId,
             user_id:    user.id,
@@ -96,6 +96,7 @@ export async function PATCH(request: Request) {
             event_date: baselineDateStr,
           }))
         );
+        if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 });
       }
     }
   }
