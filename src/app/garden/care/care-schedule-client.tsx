@@ -252,9 +252,12 @@ function DayTaskRow({ entry, logDate, selected, isToday, onToggle, onLog, onEdit
 
 // ─── Plant group header (used when a plant has 2+ tasks in the day panel) ─────
 
-function PlantGroupHeader({ entry, onLogAll }: { entry: CareEntry; onLogAll: () => void }) {
+function PlantGroupHeader({ entry, allSelected, onToggleAll, onLogAll }: {
+  entry: CareEntry; allSelected: boolean; onToggleAll: () => void; onLogAll: () => void;
+}) {
   return (
     <div className="flex items-center gap-2.5 px-3 py-2 bg-muted/40">
+      <SelectCheckbox checked={allSelected} onToggle={onToggleAll} />
       <Link href={`/garden/${entry.plantId}`} className="shrink-0">
         {entry.image
           ? <Image src={entry.image} alt={entry.plantName} width={28} height={28} className="rounded-md object-cover border w-7 h-7" />
@@ -1109,6 +1112,17 @@ function WeekStrip({
                     <div key={plantId} className="rounded-lg border bg-background overflow-hidden">
                       <PlantGroupHeader
                         entry={group[0]}
+                        allSelected={group.every((e) => panelSelected.has(`${e.plantId}-${e.careType}`))}
+                        onToggleAll={() => {
+                          const keys = group.map((e) => `${e.plantId}-${e.careType}`);
+                          const allChecked = keys.every((k) => panelSelected.has(k));
+                          setPanelSelected((prev) => {
+                            const next = new Set(prev);
+                            if (allChecked) keys.forEach((k) => next.delete(k));
+                            else keys.forEach((k) => next.add(k));
+                            return next;
+                          });
+                        }}
                         onLogAll={() => setBulkConfirmState({ careItems: group, reminderItems: [], date: logDate })}
                       />
                       <div className="divide-y">
