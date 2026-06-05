@@ -168,14 +168,12 @@ function SelectCheckbox({ checked, onToggle }: { checked: boolean; onToggle: () 
 
 // ─── Day panel rows ───────────────────────────────────────────────────────────
 
-function DayTaskRow({ entry, logDate, selected, isToday, onToggle, onLog }: {
-  entry: CareEntry; logDate: string; selected: boolean; isToday?: boolean; onToggle: () => void;
+function DayTaskRow({ entry, logDate, selected, onToggle, onLog }: {
+  entry: CareEntry; logDate: string; selected: boolean; onToggle: () => void;
   onLog: (eventId: string, withNote: boolean) => void;
 }) {
   const meta = CARE_META[entry.careType];
-  const { label, color } = isToday && entry.daysUntilDue < 0
-    ? urgencyLabel(0)
-    : urgencyLabel(entry.daysUntilDue);
+  const { label, color } = urgencyLabel(entry.daysUntilDue);
   const [loading, setLoading] = useState(false);
 
   async function handleLog(withNote: boolean) {
@@ -961,7 +959,6 @@ function WeekStrip({
                 return (
                   <DayTaskRow key={`${key}-${idx}`} entry={e} logDate={logDate}
                     selected={panelSelected.has(key)}
-                    isToday={actualSelectedOffset === 0}
                     onToggle={() => togglePanel(key)}
                     onLog={(eventId, withNote) => handleLog(e.plantId, e.careType, eventId, withNote)} />
                 );
