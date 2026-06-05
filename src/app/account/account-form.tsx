@@ -704,9 +704,9 @@ export default function AccountForm({
         <CardContent>
           <div className="flex items-start justify-between gap-4 rounded-lg border px-4 py-4">
             <div>
-              <p className="text-sm font-medium">Monthly plant digest</p>
+              <p className="text-sm font-medium">Weekly plant digest</p>
               <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                Receive a monthly email with new arrivals from shops you follow, fresh picks from around the marketplace, and hot auctions. Sent once per month — unsubscribe anytime.
+                Receive a weekly email with new arrivals from shops you follow, fresh picks from around the marketplace, and hot auctions. Sent every Sunday — unsubscribe anytime.
               </p>
             </div>
             <button
