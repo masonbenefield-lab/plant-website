@@ -22,12 +22,35 @@ const bricolage = Bricolage_Grotesque({
   weight: ["700"],
 });
 
+const siteUrl = "https://www.plantet.shop";
+
 export const metadata: Metadata = {
   title: "Plantet — Buy, Sell & Auction Plants",
   description:
     "A marketplace for nurseries and hobbyists to buy, sell, and auction plants.",
   icons: {
     icon: "/plantet-mark-color.svg",
+  },
+  openGraph: {
+    title: "Plantet — Buy, Sell & Auction Plants",
+    description: "A marketplace for nurseries and hobbyists to buy, sell, and auction plants.",
+    siteName: "Plantet",
+    url: siteUrl,
+    type: "website",
+    images: [
+      {
+        url: `${siteUrl}/plantet-facebook-green.png`,
+        width: 1200,
+        height: 630,
+        alt: "Plantet — Buy, Sell & Auction Plants",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Plantet — Buy, Sell & Auction Plants",
+    description: "A marketplace for nurseries and hobbyists to buy, sell, and auction plants.",
+    images: [`${siteUrl}/plantet-facebook-green.png`],
   },
 };
 
