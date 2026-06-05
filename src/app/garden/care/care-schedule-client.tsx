@@ -169,13 +169,14 @@ function SelectCheckbox({ checked, onToggle }: { checked: boolean; onToggle: () 
 // ─── Day panel rows ───────────────────────────────────────────────────────────
 
 function DayTaskRow({ entry, logDate, selected, onToggle, onLog }: {
-  entry: CareEntry; logDate: string; selected: boolean; onToggle: () => void; onLog: (eventId: string) => void;
+  entry: CareEntry; logDate: string; selected: boolean; onToggle: () => void;
+  onLog: (eventId: string, withNote: boolean) => void;
 }) {
   const meta = CARE_META[entry.careType];
   const { label, color } = urgencyLabel(entry.daysUntilDue);
   const [loading, setLoading] = useState(false);
 
-  async function handleLog() {
+  async function handleLog(withNote: boolean) {
     setLoading(true);
     const res = await fetch("/api/garden/log-care", {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -185,7 +186,7 @@ function DayTaskRow({ entry, logDate, selected, onToggle, onLog }: {
     if (res.ok) {
       const { eventId } = await res.json() as { eventId: string };
       toast.success(`${entry.careType} logged!`);
-      onLog(eventId);
+      onLog(eventId, withNote);
     } else toast.error("Failed to log");
   }
 
@@ -210,9 +211,18 @@ function DayTaskRow({ entry, logDate, selected, onToggle, onLog }: {
           <span className={cn("text-[11px] font-medium", color)}>{label}</span>
         </div>
       </div>
-      <button onClick={handleLog} disabled={loading} className="text-xs font-medium text-leaf hover:text-forest disabled:opacity-50 transition-colors whitespace-nowrap shrink-0">
-        {loading ? "…" : "Log ✓"}
-      </button>
+      <div className="flex items-center gap-2 shrink-0">
+        <button
+          onClick={() => handleLog(true)} disabled={loading}
+          className="text-muted-foreground hover:text-foreground disabled:opacity-50 transition-colors"
+          title="Log with note"
+        >
+          <StickyNote size={13} />
+        </button>
+        <button onClick={() => handleLog(false)} disabled={loading} className="text-xs font-medium text-leaf hover:text-forest disabled:opacity-50 transition-colors whitespace-nowrap">
+          {loading ? "…" : "Log ✓"}
+        </button>
+      </div>
     </div>
   );
 }
@@ -367,7 +377,9 @@ function LogNotesDialog({ events, open, onClose }: {
   );
 }
 
-function DoneEntryRow({ entry, onUndo }: { entry: CompletedCareEntry; onUndo: () => void }) {
+function DoneEntryRow({ entry, onUndo, onAddNote }: {
+  entry: LoggedEntry; onUndo: () => void; onAddNote?: () => void;
+}) {
   const meta = CARE_META[entry.careType];
   return (
     <div className="flex items-center gap-2.5 rounded-lg border bg-background/50 px-3 py-2 opacity-60 hover:opacity-80 transition-opacity">
@@ -389,9 +401,16 @@ function DoneEntryRow({ entry, onUndo }: { entry: CompletedCareEntry; onUndo: ()
           {meta.icon} {entry.careType}
         </span>
       </div>
-      <button onClick={onUndo} className="text-[11px] text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap shrink-0">
-        Undo
-      </button>
+      <div className="flex items-center gap-2 shrink-0">
+        {entry.eventId && onAddNote && (
+          <button onClick={onAddNote} className="text-muted-foreground hover:text-foreground transition-colors" title="Add note">
+            <StickyNote size={12} />
+          </button>
+        )}
+        <button onClick={onUndo} className="text-[11px] text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap">
+          Undo
+        </button>
+      </div>
     </div>
   );
 }
@@ -438,7 +457,7 @@ function DoneReminderRow({ reminder, onUndo }: { reminder: ReminderEntry; onUndo
 
 // ─── WeekStrip (self-contained: strip + day panel + logging state) ────────────
 
-type LoggedEntry    = CompletedCareEntry & { actualDay: number };
+type LoggedEntry    = CompletedCareEntry & { actualDay: number; eventId?: string };
 type LoggedReminder = { reminder: ReminderEntry; actualDay: number };
 
 function WeekStrip({
@@ -467,6 +486,8 @@ function WeekStrip({
   const [panelSelected, setPanelSelected] = useState<Set<string>>(new Set());
   const [bulkLogging, setBulkLogging]     = useState(false);
   const [notesDialogEvents, setNotesDialogEvents] = useState<{ eventId: string; plantName: string; careType: string }[] | null>(null);
+  // Bulk-logged events pending optional notes (shown as a button, not auto-opened)
+  const [pendingNoteEvents, setPendingNoteEvents] = useState<{ eventId: string; plantName: string; careType: string }[] | null>(null);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -573,13 +594,13 @@ function WeekStrip({
     });
   }
 
-  function handleLog(plantId: string, careType: string, eventId: string) {
+  function handleLog(plantId: string, careType: string, eventId: string, withNote: boolean) {
     const key = `${plantId}-${careType}`;
     if (actualSelectedOffset !== null) {
       const entry = entries.find((e) => e.plantId === plantId && e.careType === careType);
       if (entry) {
-        setDoneEntryList((p) => [...p, { plantId: entry.plantId, plantName: entry.plantName, image: entry.image, location: entry.location, careType: entry.careType, actualDay: actualSelectedOffset }]);
-        setNotesDialogEvents([{ eventId, plantName: entry.plantName, careType: entry.careType }]);
+        setDoneEntryList((p) => [...p, { plantId: entry.plantId, plantName: entry.plantName, image: entry.image, location: entry.location, careType: entry.careType, actualDay: actualSelectedOffset, eventId }]);
+        if (withNote) setNotesDialogEvents([{ eventId, plantName: entry.plantName, careType: entry.careType }]);
       }
     }
     setLoggedKeys((p) => new Set([...p, key]));
@@ -645,9 +666,11 @@ function WeekStrip({
         logged += n;
         if (bulkEvents) allNoteEvents.push(...bulkEvents.map((ev) => ({ eventId: ev.eventId, plantName: ev.plantName, careType: ev.careType })));
         if (actualSelectedOffset !== null) {
+          const bulkEventMap = Object.fromEntries((bulkEvents ?? []).map((ev) => [`${ev.plantId}-${ev.careType}`, ev.eventId]));
           toLog.forEach(({ plantId, careType }) => {
             const entry = entries.find((e) => e.plantId === plantId && e.careType === careType);
-            if (entry) setDoneEntryList((p) => [...p, { plantId: entry.plantId, plantName: entry.plantName, image: entry.image, location: entry.location, careType: entry.careType, actualDay: actualSelectedOffset }]);
+            const eventId = bulkEventMap[`${plantId}-${careType}`];
+            if (entry) setDoneEntryList((p) => [...p, { plantId: entry.plantId, plantName: entry.plantName, image: entry.image, location: entry.location, careType: entry.careType, actualDay: actualSelectedOffset, eventId }]);
           });
         }
         setLoggedKeys((p) => new Set([...p, ...toLog.map((i) => `${i.plantId}-${i.careType}`)]));
@@ -670,7 +693,7 @@ function WeekStrip({
     if (logged > 0) {
       toast.success(`Logged ${logged} task${logged !== 1 ? "s" : ""}`);
       setPanelSelected(new Set());
-      if (allNoteEvents.length > 0) setNotesDialogEvents(allNoteEvents);
+      if (allNoteEvents.length > 0) setPendingNoteEvents(allNoteEvents);
     }
   }
 
@@ -686,9 +709,11 @@ function WeekStrip({
         logged += n;
         if (bulkEvents) allNoteEvents.push(...bulkEvents.map((ev) => ({ eventId: ev.eventId, plantName: ev.plantName, careType: ev.careType })));
         if (actualSelectedOffset !== null) {
+          const bulkEventMap = Object.fromEntries((bulkEvents ?? []).map((ev) => [`${ev.plantId}-${ev.careType}`, ev.eventId]));
           toLog.forEach(({ plantId, careType }) => {
             const entry = entries.find((e) => e.plantId === plantId && e.careType === careType);
-            if (entry) setDoneEntryList((p) => [...p, { plantId: entry.plantId, plantName: entry.plantName, image: entry.image, location: entry.location, careType: entry.careType, actualDay: actualSelectedOffset }]);
+            const eventId = bulkEventMap[`${plantId}-${careType}`];
+            if (entry) setDoneEntryList((p) => [...p, { plantId: entry.plantId, plantName: entry.plantName, image: entry.image, location: entry.location, careType: entry.careType, actualDay: actualSelectedOffset, eventId }]);
           });
         }
         setLoggedKeys((p) => new Set([...p, ...toLog.map((i) => `${i.plantId}-${i.careType}`)]));
@@ -707,7 +732,7 @@ function WeekStrip({
     setBulkLogging(false);
     if (logged > 0) {
       toast.success(`Logged ${logged} task${logged !== 1 ? "s" : ""}`);
-      if (allNoteEvents.length > 0) setNotesDialogEvents(allNoteEvents);
+      if (allNoteEvents.length > 0) setPendingNoteEvents(allNoteEvents);
     }
     setPanelSelected(new Set());
   }
@@ -857,17 +882,27 @@ function WeekStrip({
                 </span>
               )}
             </div>
-            {hasActive && (
-              panelSelected.size > 0 ? (
-                <Button size="sm" variant="outline" onClick={logSelected} disabled={bulkLogging} className="shrink-0">
-                  {bulkLogging ? "Logging…" : `Log selected (${panelSelected.size})`}
-                </Button>
-              ) : (
-                <Button size="sm" variant="outline" onClick={logAll} disabled={bulkLogging} className="shrink-0">
-                  {bulkLogging ? "Logging…" : "Log all"}
-                </Button>
-              )
-            )}
+            <div className="flex items-center gap-2 shrink-0">
+              {pendingNoteEvents && (
+                <button
+                  onClick={() => { setNotesDialogEvents(pendingNoteEvents); setPendingNoteEvents(null); }}
+                  className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                >
+                  <StickyNote size={12} /> Add notes
+                </button>
+              )}
+              {hasActive && (
+                panelSelected.size > 0 ? (
+                  <Button size="sm" variant="outline" onClick={logSelected} disabled={bulkLogging} className="shrink-0">
+                    {bulkLogging ? "Logging…" : `Log selected (${panelSelected.size})`}
+                  </Button>
+                ) : (
+                  <Button size="sm" variant="outline" onClick={logAll} disabled={bulkLogging} className="shrink-0">
+                    {bulkLogging ? "Logging…" : "Log all"}
+                  </Button>
+                )
+              )}
+            </div>
           </div>
 
           {hasActive ? (
@@ -878,7 +913,7 @@ function WeekStrip({
                   <DayTaskRow key={`${key}-${idx}`} entry={e} logDate={logDate}
                     selected={panelSelected.has(key)}
                     onToggle={() => togglePanel(key)}
-                    onLog={(eventId) => handleLog(e.plantId, e.careType, eventId)} />
+                    onLog={(eventId, withNote) => handleLog(e.plantId, e.careType, eventId, withNote)} />
                 );
               })}
               {dayReminders.map((r) => (
@@ -900,7 +935,10 @@ function WeekStrip({
             <div className={cn("space-y-1.5", hasActive && "border-t pt-3 mt-1")}>
               <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Completed</p>
               {currentDoneEntries.map((d, idx) => (
-                <DoneEntryRow key={`${d.plantId}-${d.careType}-${idx}`} entry={d} onUndo={() => handleUnlog(d.plantId, d.careType)} />
+                <DoneEntryRow key={`${d.plantId}-${d.careType}-${idx}`} entry={d}
+                  onUndo={() => handleUnlog(d.plantId, d.careType)}
+                  onAddNote={d.eventId ? () => setNotesDialogEvents([{ eventId: d.eventId!, plantName: d.plantName, careType: d.careType }]) : undefined}
+                />
               ))}
               {currentDoneReminders.map((r) => (
                 <DoneReminderRow key={r.id} reminder={r} onUndo={() => handleUndoReminder(r.id)} />
@@ -1170,9 +1208,15 @@ function AddReminderModal({
 
 // ─── Manage Schedules row ─────────────────────────────────────────────────────
 
-function ManagePlantRow({ plant, selectionMode, selected, onToggle, onEdit, onQuickWater }: {
+const INTERVAL_TO_CARE_TYPE: Record<string, string> = {
+  waterInterval: "Water", fertilizeInterval: "Fertilize",
+  repotInterval: "Repot", pruneInterval: "Prune",
+};
+
+function ManagePlantRow({ plant, selectionMode, selected, onToggle, onEdit, onQuickWater, dueDays }: {
   plant: PlantWithIntervals; selectionMode: boolean; selected: boolean;
   onToggle: () => void; onEdit: () => void; onQuickWater: (days: number) => void;
+  dueDays?: Record<string, number>;
 }) {
   const setIntervals = INTERVAL_DISPLAY.filter(({ key }) => plant[key] !== null);
   return (
@@ -1190,15 +1234,28 @@ function ManagePlantRow({ plant, selectionMode, selected, onToggle, onEdit, onQu
           {plant.location && <span className="text-xs text-muted-foreground truncate shrink-0">· {plant.location}</span>}
         </div>
         {setIntervals.length > 0 ? (
-          <div className="flex flex-wrap gap-2 mt-0.5">
-            {setIntervals.map(({ key, emoji }) => (
-              <span key={key} className="text-xs text-muted-foreground">{emoji} {plant[key]}d</span>
-            ))}
-          </div>
+          <>
+            <div className="flex flex-wrap gap-2 mt-0.5">
+              {setIntervals.map(({ key, emoji }) => (
+                <span key={key} className="text-xs text-muted-foreground">{emoji} {plant[key]}d</span>
+              ))}
+            </div>
+            {dueDays && Object.keys(dueDays).length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-0.5">
+                {setIntervals.map(({ key, emoji }) => {
+                  const careType = INTERVAL_TO_CARE_TYPE[key];
+                  const days = dueDays[careType];
+                  if (days === undefined) return null;
+                  const { label, color } = urgencyLabel(days);
+                  return <span key={key} className={cn("text-[11px]", color)}>{emoji} {label}</span>;
+                })}
+              </div>
+            )}
+          </>
         ) : (
           <div className="flex items-center gap-1 mt-0.5 flex-wrap">
             <span className="text-[11px] text-muted-foreground mr-0.5">💧 water:</span>
-            {[3, 7, 14].map((d) => (
+            {[3, 7, 14, 30].map((d) => (
               <button
                 key={d}
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); onQuickWater(d); }}
@@ -1315,6 +1372,13 @@ export function CareScheduleClient({
   }
 
   const hasAnyPlants = plantIntervals.length > 0;
+
+  // Build map: plantId → careType → daysUntilDue (for Manage Schedules next-due display)
+  const dueMap: Record<string, Record<string, number>> = {};
+  for (const entry of entries) {
+    if (!dueMap[entry.plantId]) dueMap[entry.plantId] = {};
+    dueMap[entry.plantId][entry.careType] = entry.daysUntilDue;
+  }
 
   return (
     <>
@@ -1435,7 +1499,8 @@ export function CareScheduleClient({
                       <ManagePlantRow key={plant.id} plant={plant}
                         selectionMode={selectionMode} selected={selected.has(plant.id)}
                         onToggle={() => toggleSelect(plant.id)} onEdit={() => setEditPlantIds([plant.id])}
-                        onQuickWater={(days) => handleQuickWater(plant.id, days)} />
+                        onQuickWater={(days) => handleQuickWater(plant.id, days)}
+                        dueDays={dueMap[plant.id]} />
                     ))}
                   </div>
                 )}
