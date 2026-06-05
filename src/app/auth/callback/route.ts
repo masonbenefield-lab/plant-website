@@ -21,6 +21,11 @@ async function handleSession(
     .eq("id", user.id)
     .single();
 
+  // Google OAuth users who haven't picked a username yet — send to complete setup
+  if (!profile?.username) {
+    return NextResponse.redirect(`${origin}/signup/complete`);
+  }
+
   const isNewUser = Date.now() - new Date(user.created_at).getTime() < 10 * 60 * 1000;
   if (isNewUser && user.email && profile?.username) {
     sendWelcomeEmail({ recipientEmail: user.email, username: profile.username }).catch(() => {});
