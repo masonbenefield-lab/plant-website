@@ -457,7 +457,7 @@ function DoneReminderRow({ reminder, onUndo }: { reminder: ReminderEntry; onUndo
 
 // ─── WeekStrip (self-contained: strip + day panel + logging state) ────────────
 
-type LoggedEntry    = CompletedCareEntry & { actualDay: number; eventId?: string };
+type LoggedEntry    = CompletedCareEntry & { actualDay: number; eventId?: string; logDate?: string };
 type LoggedReminder = { reminder: ReminderEntry; actualDay: number };
 
 function WeekStrip({
@@ -496,7 +496,7 @@ function WeekStrip({
 
   // Overdue task count (for the "missed tasks" chip when on current week)
   const overdueCount = isCurrentWeek
-    ? entries.filter((e) => e.daysUntilDue < 0 && !loggedKeys.has(`${e.plantId}-${e.careType}`)).length
+    ? entries.filter((e) => e.daysUntilDue < 0 && Math.abs(e.daysUntilDue) < e.interval && !loggedKeys.has(`${e.plantId}-${e.careType}`)).length
     : 0;
 
   // Strip days: actual offset from today = weekOffset + i
@@ -514,8 +514,8 @@ function WeekStrip({
       if (isPast) {
         return e.daysUntilDue === actualOffset ? sum + 1 : sum;
       }
-      // Also count overdue tasks in today's total so they appear in today's panel
-      if (isToday && e.daysUntilDue < 0) return sum + 1;
+      // Count overdue tasks in today's total, but only within one interval (cap)
+      if (isToday && e.daysUntilDue < 0 && Math.abs(e.daysUntilDue) < e.interval) return sum + 1;
       return sum + (getStripDays(e.daysUntilDue, e.interval).has(actualOffset) ? 1 : 0);
     }, 0);
 
@@ -569,8 +569,8 @@ function WeekStrip({
         // Same rule as strip counts: only hide while daysUntilDue ≤ 0
         if (loggedKeys.has(`${e.plantId}-${e.careType}`) && e.daysUntilDue <= 0) return false;
         if (actualSelectedOffset < 0) return e.daysUntilDue === actualSelectedOffset;
-        // Show overdue tasks in today's panel so they can be logged without navigating to past days
-        if (actualSelectedOffset === 0 && e.daysUntilDue < 0) return true;
+        // Show overdue tasks in today's panel only within one interval (cap prevents indefinite overdue)
+        if (actualSelectedOffset === 0 && e.daysUntilDue < 0 && Math.abs(e.daysUntilDue) < e.interval) return true;
         return getStripDays(e.daysUntilDue, e.interval).has(actualSelectedOffset);
       })
     : [];
@@ -603,7 +603,7 @@ function WeekStrip({
     if (actualSelectedOffset !== null) {
       const entry = entries.find((e) => e.plantId === plantId && e.careType === careType);
       if (entry) {
-        setDoneEntryList((p) => [...p, { plantId: entry.plantId, plantName: entry.plantName, image: entry.image, location: entry.location, careType: entry.careType, actualDay: actualSelectedOffset, eventId }]);
+        setDoneEntryList((p) => [...p, { plantId: entry.plantId, plantName: entry.plantName, image: entry.image, location: entry.location, careType: entry.careType, actualDay: actualSelectedOffset, eventId, logDate }]);
         if (withNote) setNotesDialogEvents([{ eventId, plantName: entry.plantName, careType: entry.careType }]);
       }
     }
@@ -622,10 +622,10 @@ function WeekStrip({
     onReminderCompleted(id);
   }
 
-  async function handleUnlog(plantId: string, careType: string) {
+  async function handleUnlog(plantId: string, careType: string, date?: string) {
     const res = await fetch("/api/garden/unlog-care", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ plantId, careType }),
+      body: JSON.stringify({ plantId, careType, date }),
     });
     if (res.ok) {
       const key = `${plantId}-${careType}`;
@@ -657,7 +657,7 @@ function WeekStrip({
   }
 
   async function logAllOverdue() {
-    const overdueEntries = entries.filter((e) => e.daysUntilDue < 0 && !loggedKeys.has(`${e.plantId}-${e.careType}`));
+    const overdueEntries = entries.filter((e) => e.daysUntilDue < 0 && Math.abs(e.daysUntilDue) < e.interval && !loggedKeys.has(`${e.plantId}-${e.careType}`));
     if (!overdueEntries.length) return;
     const toLog = overdueEntries.map((e) => ({ plantId: e.plantId, careType: e.careType }));
     const res = await fetch("/api/garden/bulk-log-care", {
@@ -674,7 +674,7 @@ function WeekStrip({
   }
 
   async function dismissAllOverdue() {
-    const overdueEntries = entries.filter((e) => e.daysUntilDue < 0 && !loggedKeys.has(`${e.plantId}-${e.careType}`));
+    const overdueEntries = entries.filter((e) => e.daysUntilDue < 0 && Math.abs(e.daysUntilDue) < e.interval && !loggedKeys.has(`${e.plantId}-${e.careType}`));
     if (!overdueEntries.length) return;
     // Group by plantId, collect intervals per care type
     const plantGroups: Record<string, Record<string, number>> = {};
@@ -717,7 +717,7 @@ function WeekStrip({
           toLog.forEach(({ plantId, careType }) => {
             const entry = entries.find((e) => e.plantId === plantId && e.careType === careType);
             const eventId = bulkEventMap[`${plantId}-${careType}`];
-            if (entry) setDoneEntryList((p) => [...p, { plantId: entry.plantId, plantName: entry.plantName, image: entry.image, location: entry.location, careType: entry.careType, actualDay: actualSelectedOffset, eventId }]);
+            if (entry) setDoneEntryList((p) => [...p, { plantId: entry.plantId, plantName: entry.plantName, image: entry.image, location: entry.location, careType: entry.careType, actualDay: actualSelectedOffset, eventId, logDate }]);
           });
         }
         setLoggedKeys((p) => new Set([...p, ...toLog.map((i) => `${i.plantId}-${i.careType}`)]));
@@ -763,7 +763,7 @@ function WeekStrip({
           toLog.forEach(({ plantId, careType }) => {
             const entry = entries.find((e) => e.plantId === plantId && e.careType === careType);
             const eventId = bulkEventMap[`${plantId}-${careType}`];
-            if (entry) setDoneEntryList((p) => [...p, { plantId: entry.plantId, plantName: entry.plantName, image: entry.image, location: entry.location, careType: entry.careType, actualDay: actualSelectedOffset, eventId }]);
+            if (entry) setDoneEntryList((p) => [...p, { plantId: entry.plantId, plantName: entry.plantName, image: entry.image, location: entry.location, careType: entry.careType, actualDay: actualSelectedOffset, eventId, logDate }]);
           });
         }
         setLoggedKeys((p) => new Set([...p, ...toLog.map((i) => `${i.plantId}-${i.careType}`)]));
@@ -1004,7 +1004,7 @@ function WeekStrip({
               <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Completed</p>
               {currentDoneEntries.map((d, idx) => (
                 <DoneEntryRow key={`${d.plantId}-${d.careType}-${idx}`} entry={d}
-                  onUndo={() => handleUnlog(d.plantId, d.careType)}
+                  onUndo={() => handleUnlog(d.plantId, d.careType, d.logDate)}
                   onAddNote={d.eventId ? () => setNotesDialogEvents([{ eventId: d.eventId!, plantName: d.plantName, careType: d.careType }]) : undefined}
                 />
               ))}

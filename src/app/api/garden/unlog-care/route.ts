@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { plantId, careType } = await request.json() as { plantId: string; careType: string };
+  const { plantId, careType, date } = await request.json() as { plantId: string; careType: string; date?: string };
   const eventType = CARE_EVENT_MAP[careType];
   if (!plantId || !eventType) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
 
@@ -19,11 +19,11 @@ export async function POST(request: Request) {
     .from("garden_plants").select("id").eq("id", plantId).eq("user_id", user.id).single();
   if (!plant) return NextResponse.json({ error: "Plant not found" }, { status: 404 });
 
-  const today = new Date().toISOString().split("T")[0];
+  const targetDate = date ?? new Date().toISOString().split("T")[0];
   const { data: event } = await supabase
     .from("garden_events").select("id")
     .eq("plant_id", plantId).eq("user_id", user.id)
-    .eq("event_type", eventType).eq("event_date", today)
+    .eq("event_type", eventType).eq("event_date", targetDate)
     .order("created_at", { ascending: false }).limit(1).single();
 
   if (!event) return NextResponse.json({ error: "No event to unlog" }, { status: 404 });
