@@ -7,7 +7,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const supabase = await createClient();
 
   const [{ data: listings }, { data: auctions }, { data: sellers }] = await Promise.all([
-    supabase.from("listings").select("id, updated_at").eq("status", "active").limit(1000),
+    supabase.from("listings").select("id, created_at").eq("status", "active").limit(1000),
     supabase.from("auctions").select("id, created_at").eq("status", "active").limit(500),
     supabase.from("profiles").select("username, updated_at").eq("stripe_onboarded", true).is("deleted_at", null).limit(500),
   ]);
@@ -25,7 +25,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const listingPages: MetadataRoute.Sitemap = (listings ?? []).map((l) => ({
     url: `${siteUrl}/shop/${l.id}`,
-    lastModified: new Date(l.updated_at),
+    lastModified: new Date(l.created_at),
     changeFrequency: "daily",
     priority: 0.8,
   }));
