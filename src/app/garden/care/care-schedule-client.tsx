@@ -1711,10 +1711,11 @@ const INTERVAL_TO_CARE_TYPE: Record<string, string> = {
   repotInterval: "Repot", pruneInterval: "Prune",
 };
 
-function ManagePlantRow({ plant, selectionMode, selected, onToggle, onEdit, onQuickWater, onViewHistory, dueDays, snoozedTypes }: {
+function ManagePlantRow({ plant, selectionMode, selected, onToggle, onEdit, onQuickWater, onViewHistory, dueDays, snoozedTypes, onUnsnooze }: {
   plant: PlantWithIntervals; selectionMode: boolean; selected: boolean;
   onToggle: () => void; onEdit: () => void; onQuickWater: (days: number) => void;
   onViewHistory?: () => void; dueDays?: Record<string, number>; snoozedTypes?: Set<string>;
+  onUnsnooze?: (eventType: string) => void;
 }) {
   const setIntervals = INTERVAL_DISPLAY.filter(({ key }) => plant[key] !== null);
   return (
@@ -1749,8 +1750,17 @@ function ManagePlantRow({ plant, selectionMode, selected, onToggle, onEdit, onQu
                   const { label, color } = urgencyLabel(effectiveDays);
                   const isSnoozed = snoozedTypes?.has(careType);
                   return (
-                    <span key={key} className={cn("text-[11px]", isSnoozed ? "text-muted-foreground/60" : color)}>
+                    <span key={key} className={cn("text-[11px] inline-flex items-center gap-1", isSnoozed ? "text-muted-foreground/60" : color)}>
                       {emoji} {isSnoozed ? "💤 Snoozed" : label}
+                      {isSnoozed && onUnsnooze && (
+                        <button
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onUnsnooze(DISPLAY_TO_EVENT_TYPE[careType] ?? careType.toLowerCase()); }}
+                          className="hover:text-foreground transition-colors"
+                          title="Clear snooze"
+                        >
+                          <X size={10} />
+                        </button>
+                      )}
                     </span>
                   );
                 })}
@@ -1762,8 +1772,17 @@ function ManagePlantRow({ plant, selectionMode, selected, onToggle, onEdit, onQu
                   const { label, color } = urgencyLabel(effectiveDays);
                   const isSnoozed = snoozedTypes?.has(cs.label);
                   return (
-                    <span key={cs.id} className={cn("text-[11px]", isSnoozed ? "text-muted-foreground/60" : color)}>
+                    <span key={cs.id} className={cn("text-[11px] inline-flex items-center gap-1", isSnoozed ? "text-muted-foreground/60" : color)}>
                       ✨ {isSnoozed ? "💤 Snoozed" : label}
+                      {isSnoozed && onUnsnooze && (
+                        <button
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onUnsnooze(`custom:${cs.id}`); }}
+                          className="hover:text-foreground transition-colors"
+                          title="Clear snooze"
+                        >
+                          <X size={10} />
+                        </button>
+                      )}
                     </span>
                   );
                 })}
@@ -1797,8 +1816,17 @@ function ManagePlantRow({ plant, selectionMode, selected, onToggle, onEdit, onQu
                   const { label, color } = urgencyLabel(effectiveDays);
                   const isSnoozed = snoozedTypes?.has(cs.label);
                   return (
-                    <span key={cs.id} className={cn("text-[11px]", isSnoozed ? "text-muted-foreground/60" : color)}>
+                    <span key={cs.id} className={cn("text-[11px] inline-flex items-center gap-1", isSnoozed ? "text-muted-foreground/60" : color)}>
                       ✨ {cs.label} · {isSnoozed ? "💤 Snoozed" : label}
+                      {isSnoozed && onUnsnooze && (
+                        <button
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onUnsnooze(`custom:${cs.id}`); }}
+                          className="hover:text-foreground transition-colors"
+                          title="Clear snooze"
+                        >
+                          <X size={10} />
+                        </button>
+                      )}
                     </span>
                   );
                 })}
@@ -1902,10 +1930,38 @@ export function CareScheduleClient({
         return next;
       });
       setSnoozeDialogEntries(null);
-      toast.success(succeeded.length === 1 ? "Task snoozed" : `${succeeded.length} tasks snoozed`);
+      const msg = succeeded.length === 1 ? "Task snoozed" : `${succeeded.length} tasks snoozed`;
+      toast.success(msg, {
+        action: { label: "Undo", onClick: () => handleUnsnoozeBatch(succeeded) },
+      });
       router.refresh();
     }
     if (failedCount > 0) toast.error(`Failed to snooze ${failedCount} task${failedCount !== 1 ? "s" : ""}`);
+  }
+
+  async function handleUnsnoozeBatch(entries: CareEntry[]) {
+    await Promise.all(entries.map((e) =>
+      fetch("/api/garden/snooze", {
+        method: "DELETE", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plantId: e.plantId, eventType: e.eventKey }),
+      })
+    ));
+    setSnoozedEntryKeys((prev) => {
+      const next = new Set(prev);
+      entries.forEach((e) => next.delete(`${e.plantId}-${e.eventKey}`));
+      return next;
+    });
+    toast.success("Snooze cancelled");
+    router.refresh();
+  }
+
+  async function handleUnsnoozeType(plantId: string, eventType: string) {
+    const res = await fetch("/api/garden/snooze", {
+      method: "DELETE", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plantId, eventType }),
+    });
+    if (res.ok) { toast.success("Snooze cleared"); router.refresh(); }
+    else toast.error("Failed to clear snooze");
   }
 
   // Vacation state
@@ -2213,7 +2269,8 @@ export function CareScheduleClient({
                         onViewHistory={() => setEditTarget({ ids: [plant.id], tab: "history" })}
                         onQuickWater={(days) => handleQuickWater(plant.id, days)}
                         dueDays={dueMap[plant.id]}
-                        snoozedTypes={snoozedMap[plant.id]} />
+                        snoozedTypes={snoozedMap[plant.id]}
+                        onUnsnooze={(eventType) => handleUnsnoozeType(plant.id, eventType)} />
                     ))}
                   </div>
                 )}
