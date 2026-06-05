@@ -514,6 +514,8 @@ function WeekStrip({
       if (isPast) {
         return e.daysUntilDue === actualOffset ? sum + 1 : sum;
       }
+      // Also count overdue tasks in today's total so they appear in today's panel
+      if (isToday && e.daysUntilDue < 0) return sum + 1;
       return sum + (getStripDays(e.daysUntilDue, e.interval).has(actualOffset) ? 1 : 0);
     }, 0);
 
@@ -567,6 +569,8 @@ function WeekStrip({
         // Same rule as strip counts: only hide while daysUntilDue ≤ 0
         if (loggedKeys.has(`${e.plantId}-${e.careType}`) && e.daysUntilDue <= 0) return false;
         if (actualSelectedOffset < 0) return e.daysUntilDue === actualSelectedOffset;
+        // Show overdue tasks in today's panel so they can be logged without navigating to past days
+        if (actualSelectedOffset === 0 && e.daysUntilDue < 0) return true;
         return getStripDays(e.daysUntilDue, e.interval).has(actualSelectedOffset);
       })
     : [];
@@ -1034,7 +1038,13 @@ function IntervalsModal({
   const [values, setValues] = useState<Record<string, string>>(
     Object.fromEntries(fields.map(({ key, meta }) => [key, meta.defaultValue]))
   );
-  const [startDate, setStartDate] = useState(todayStr());
+  // Leave startDate blank for plants that already have a schedule — only populate
+  // it (and reset baselines) when the user explicitly picks a date, or when this
+  // is a fresh plant with no intervals yet.
+  const hasExistingSchedule = plants.some(
+    (p) => p.waterInterval || p.fertilizeInterval || p.repotInterval || p.pruneInterval
+  );
+  const [startDate, setStartDate] = useState(hasExistingSchedule ? "" : todayStr());
   const [saving, setSaving] = useState(false);
 
   const [reminderType, setReminderType] = useState<string>("Water");
@@ -1134,7 +1144,7 @@ function IntervalsModal({
                 <span className="text-sm text-muted-foreground w-36 shrink-0">📅 First due</span>
                 <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="h-8 text-sm flex-1 min-w-0" />
               </div>
-              <p className="text-xs text-muted-foreground pl-[152px]">Task first appears on this date. Leave blank to show immediately.</p>
+              <p className="text-xs text-muted-foreground pl-[152px]">Set to re-anchor the schedule. Leave blank to keep the current rhythm.</p>
             </div>
           </div>
           <DialogFooter showCloseButton>
