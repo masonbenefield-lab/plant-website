@@ -220,7 +220,7 @@ export default function CreateInventoryPage() {
         if (!s.listInShop || !s.shopPrice) continue;
         const inventoryId = invRows[i].id;
         const invQty = Math.max(1, Number(s.quantity) || 1);
-        const listedQty = Math.min(Math.max(1, Number(s.shopQuantity) || invQty), invQty);
+        const listedQty = Math.min(Math.max(0, s.shopQuantity !== "" ? Number(s.shopQuantity) : 0), invQty);
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data: listing, error: listErr } = await (supabase
@@ -604,8 +604,8 @@ export default function CreateInventoryPage() {
                           <Input
                             id={`shop-qty-${size.id}`}
                             type="number"
-                            min={1}
-                            placeholder={size.quantity || "1"}
+                            min={0}
+                            placeholder="0"
                             value={size.shopQuantity}
                             onChange={e => updateSize(size.id, "shopQuantity", e.target.value)}
                             className={size.shopQuantity !== "" && Number(size.shopQuantity) > (Number(size.quantity) || 1) ? "border-destructive focus-visible:ring-destructive" : ""}
