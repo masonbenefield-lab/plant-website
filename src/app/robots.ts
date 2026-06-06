@@ -5,8 +5,8 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: ["/", "/shop", "/auctions", "/sellers", "/pricing", "/contact", "/privacy-policy", "/terms", "/seller-agreement"],
-        disallow: ["/dashboard", "/account", "/garden", "/gardens", "/admin", "/api", "/login", "/signup", "/welcome", "/orders", "/messages"],
+        allow: ["/", "/shop", "/auctions", "/sellers", "/pricing", "/contact", "/privacy-policy", "/terms", "/seller-agreement", "/gardens"],
+        disallow: ["/dashboard", "/account", "/garden", "/admin", "/api", "/login", "/signup", "/welcome", "/orders", "/messages"],
       },
     ],
     sitemap: "https://www.plantet.shop/sitemap.xml",
