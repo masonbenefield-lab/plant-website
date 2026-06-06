@@ -28,11 +28,7 @@
       "path": "/api/cron/dispute-reminders",
       "schedule": "0 12 * * *"
     },
-    {
-      "path": "/api/cron/daily-care-reminder",
-      "schedule": "0 13 * * *"
-    },
-    {
+{
       "path": "/api/cron/weekly-care-summary",
       "schedule": "0 13 * * 1"
     }
