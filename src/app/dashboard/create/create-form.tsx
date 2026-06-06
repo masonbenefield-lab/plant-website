@@ -236,7 +236,7 @@ export default function CreateInventoryPage() {
             pot_size: itemType === "plant" ? (s.potSize || null) : null,
             price_cents: dollarsToCents(s.shopPrice),
             inventory_id: inventoryId,
-            status: "active",
+            status: listedQty === 0 ? "sold_out" : "active",
             item_type: itemType,
             free_shipping: s.shippingMode === "free",
             shipping_cost_cents: s.shippingMode === "flat" && s.shippingCost ? dollarsToCents(s.shippingCost) : null,
