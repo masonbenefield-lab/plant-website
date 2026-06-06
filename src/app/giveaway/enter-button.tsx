@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,6 +53,7 @@ function isUSAddress(addr: ShippingAddress): boolean {
 }
 
 export function EnterButton({ monthLabel, initialEntered, referralCode, savedAddress }: Props) {
+  const router = useRouter();
   const [entered, setEntered] = useState(initialEntered);
   const [isPending, startTransition] = useTransition();
   const [copied, setCopied] = useState(false);
@@ -81,6 +83,7 @@ export function EnterButton({ monthLabel, initialEntered, referralCode, savedAdd
         return;
       }
       setEntered(true);
+      router.refresh();
       if (!json.already) toast.success(`You're entered for ${monthLabel}! Good luck!`);
     });
   }
