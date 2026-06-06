@@ -32,13 +32,23 @@ const US_STATES = [
   "VA","WA","WV","WI","WY","DC",
 ];
 
+const US_STATE_NAMES: Record<string, string> = {
+  "ALABAMA":"AL","ALASKA":"AK","ARIZONA":"AZ","ARKANSAS":"AR","CALIFORNIA":"CA",
+  "COLORADO":"CO","CONNECTICUT":"CT","DELAWARE":"DE","FLORIDA":"FL","GEORGIA":"GA",
+  "HAWAII":"HI","IDAHO":"ID","ILLINOIS":"IL","INDIANA":"IN","IOWA":"IA","KANSAS":"KS",
+  "KENTUCKY":"KY","LOUISIANA":"LA","MAINE":"ME","MARYLAND":"MD","MASSACHUSETTS":"MA",
+  "MICHIGAN":"MI","MINNESOTA":"MN","MISSISSIPPI":"MS","MISSOURI":"MO","MONTANA":"MT",
+  "NEBRASKA":"NE","NEVADA":"NV","NEW HAMPSHIRE":"NH","NEW JERSEY":"NJ","NEW MEXICO":"NM",
+  "NEW YORK":"NY","NORTH CAROLINA":"NC","NORTH DAKOTA":"ND","OHIO":"OH","OKLAHOMA":"OK",
+  "OREGON":"OR","PENNSYLVANIA":"PA","RHODE ISLAND":"RI","SOUTH CAROLINA":"SC",
+  "SOUTH DAKOTA":"SD","TENNESSEE":"TN","TEXAS":"TX","UTAH":"UT","VERMONT":"VT",
+  "VIRGINIA":"VA","WASHINGTON":"WA","WEST VIRGINIA":"WV","WISCONSIN":"WI","WYOMING":"WY","DISTRICT OF COLUMBIA":"DC",
+};
+
 function isUSAddress(addr: ShippingAddress): boolean {
   if (addr.country && addr.country !== "US") return false;
   const state = addr.state.trim().toUpperCase();
-  return US_STATES.includes(state) || US_STATES.includes(
-    // handle full state names being entered
-    state.slice(0, 2)
-  );
+  return US_STATES.includes(state) || !!US_STATE_NAMES[state];
 }
 
 export function EnterButton({ monthLabel, initialEntered, referralCode, savedAddress }: Props) {
