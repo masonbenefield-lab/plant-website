@@ -443,7 +443,11 @@ export default function CreateInventoryPage() {
                   {imageUrls.map((url, i) => (
                     <div key={i} className="relative group">
                       <Image src={url} alt="" width={80} height={80} className="w-20 h-20 object-cover rounded border" />
-                      <button type="button" onClick={() => setImageUrls(prev => prev.filter((_, idx) => idx !== i))} className="absolute -top-1.5 -right-1.5 hidden group-hover:flex items-center justify-center w-5 h-5 rounded-full bg-red-500 text-white text-xs leading-none">×</button>
+                      <button type="button" onClick={() => setImageUrls(prev => prev.filter((_, idx) => idx !== i))} className="absolute -top-1.5 -right-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 flex items-center justify-center w-5 h-5 rounded-full bg-red-500 text-white text-xs leading-none transition-opacity">×</button>
+                      <div className="absolute bottom-0.5 left-0 right-0 flex justify-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                        {i > 0 && <button type="button" onClick={() => setImageUrls(prev => { const a = [...prev]; [a[i-1], a[i]] = [a[i], a[i-1]]; return a; })} className="flex items-center justify-center w-5 h-5 rounded-full bg-black/60 text-white text-xs" aria-label="Move left">‹</button>}
+                        {i < imageUrls.length - 1 && <button type="button" onClick={() => setImageUrls(prev => { const a = [...prev]; [a[i], a[i+1]] = [a[i+1], a[i]]; return a; })} className="flex items-center justify-center w-5 h-5 rounded-full bg-black/60 text-white text-xs" aria-label="Move right">›</button>}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -528,8 +532,12 @@ export default function CreateInventoryPage() {
                           <button
                             type="button"
                             onClick={() => setSizes(prev => prev.map(s => s.id === size.id ? { ...s, sizeImages: s.sizeImages.filter((_, idx) => idx !== i) } : s))}
-                            className="absolute -top-1.5 -right-1.5 hidden group-hover:flex items-center justify-center w-4 h-4 rounded-full bg-red-500 text-white text-xs leading-none"
+                            className="absolute -top-1.5 -right-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 flex items-center justify-center w-4 h-4 rounded-full bg-red-500 text-white text-xs leading-none transition-opacity"
                           >×</button>
+                          <div className="absolute bottom-0.5 left-0 right-0 flex justify-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                            {i > 0 && <button type="button" onClick={() => setSizes(prev => prev.map(s => { if (s.id !== size.id) return s; const a = [...s.sizeImages]; [a[i-1], a[i]] = [a[i], a[i-1]]; return { ...s, sizeImages: a }; }))} className="flex items-center justify-center w-4 h-4 rounded-full bg-black/60 text-white text-xs" aria-label="Move left">‹</button>}
+                            {i < size.sizeImages.length - 1 && <button type="button" onClick={() => setSizes(prev => prev.map(s => { if (s.id !== size.id) return s; const a = [...s.sizeImages]; [a[i], a[i+1]] = [a[i+1], a[i]]; return { ...s, sizeImages: a }; }))} className="flex items-center justify-center w-4 h-4 rounded-full bg-black/60 text-white text-xs" aria-label="Move right">›</button>}
+                          </div>
                         </div>
                       ))}
                       <label
