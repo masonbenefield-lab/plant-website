@@ -2769,3 +2769,62 @@ export async function sendGiveawayEntryEmail({
     html: buildGiveawayEntryHtml({ displayName, username, monthLabel, plantName, referralLink }),
   });
 }
+
+export async function sendDailyAdminDigest({
+  newUsers,
+  totalUsers,
+  newGiveawayEntries,
+  totalGiveawayEntries,
+  dateLabel,
+}: {
+  newUsers: number;
+  totalUsers: number;
+  newGiveawayEntries: number;
+  totalGiveawayEntries: number;
+  dateLabel: string;
+}) {
+  const siteUrl = siteBase();
+  const body = `
+    <p style="margin:0 0 24px;font-size:15px;color:#16201B;">Here's your daily snapshot for <strong>${dateLabel}</strong>.</p>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+      <tr>
+        <td style="padding:16px;background:#EBF0E6;border-radius:12px;text-align:center;width:48%;">
+          <p style="margin:0 0 4px;font-size:28px;font-weight:700;color:#1F4736;">${newUsers}</p>
+          <p style="margin:0;font-size:13px;color:#6B7E72;">New users today</p>
+          <p style="margin:4px 0 0;font-size:12px;color:#A8BF9A;">${totalUsers} total</p>
+        </td>
+        <td style="width:4%;"></td>
+        <td style="padding:16px;background:#EBF0E6;border-radius:12px;text-align:center;width:48%;">
+          <p style="margin:0 0 4px;font-size:28px;font-weight:700;color:#1F4736;">${newGiveawayEntries}</p>
+          <p style="margin:0;font-size:13px;color:#6B7E72;">New giveaway entries</p>
+          <p style="margin:4px 0 0;font-size:12px;color:#A8BF9A;">${totalGiveawayEntries} total this month</p>
+        </td>
+      </tr>
+    </table>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:8px;">
+      <tr>
+        <td align="center">
+          <a href="${siteUrl}/admin" style="display:inline-block;background:#1F4736;color:#F6F2E9;font-size:14px;font-weight:600;padding:12px 28px;border-radius:8px;text-decoration:none;">View Admin Dashboard</a>
+        </td>
+      </tr>
+    </table>
+  `;
+
+  const html = emailBase({
+    title: `Plantet Daily Digest — ${dateLabel}`,
+    heading: "Daily Digest",
+    subheading: dateLabel,
+    body,
+    footerNote: "This is an automated daily summary sent only to the Plantet admin.",
+  });
+
+  const resend = getResend();
+  await resend.emails.send({
+    from: FROM,
+    to: "masonbenefield@gmail.com",
+    subject: `Plantet Daily — ${newUsers} new user${newUsers !== 1 ? "s" : ""}, ${newGiveawayEntries} giveaway entr${newGiveawayEntries !== 1 ? "ies" : "y"}`,
+    html,
+  });
+}
