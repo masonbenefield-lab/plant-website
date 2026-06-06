@@ -6,7 +6,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: ["/", "/shop", "/auctions", "/sellers", "/pricing", "/contact", "/privacy-policy", "/terms", "/seller-agreement"],
-        disallow: ["/dashboard", "/account", "/garden", "/admin", "/api", "/login", "/signup", "/welcome", "/orders", "/messages"],
+        disallow: ["/dashboard", "/account", "/garden", "/gardens", "/admin", "/api", "/login", "/signup", "/welcome", "/orders", "/messages"],
       },
     ],
     sitemap: "https://www.plantet.shop/sitemap.xml",
