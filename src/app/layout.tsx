@@ -10,6 +10,7 @@ import { CartDrawer } from "@/components/cart-drawer";
 import { Analytics } from "@vercel/analytics/next";
 import { createClient } from "@/lib/supabase/server";
 import { unstable_noStore as noStore } from "next/cache";
+import Script from "next/script";
 
 const inter = Inter({
   variable: "--font-sans",
@@ -117,6 +118,13 @@ export default async function RootLayout({
             <Analytics />
           </CartProvider>
         </ThemeProvider>
+        <Script src="https://www.googletagmanager.com/gtag/js?id=G-DK3GZD3KHM" strategy="afterInteractive" />
+        <Script id="google-analytics" strategy="afterInteractive">{`
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', 'G-DK3GZD3KHM');
+        `}</Script>
       </body>
     </html>
   );
