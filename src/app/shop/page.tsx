@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import Image from "next/image";
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 
@@ -18,6 +17,7 @@ import { centsToDisplay } from "@/lib/stripe";
 import { PLANT_CATEGORIES, SUPPLY_CATEGORIES } from "@/lib/categories";
 import ShopFilterBar from "@/components/shop-filter-bar";
 import WishlistButton from "@/components/wishlist-button";
+import AuctionCardGallery from "@/components/auction-card-gallery";
 import RecentlyViewedStrip from "@/components/recently-viewed-strip";
 import { Pagination } from "@/components/pagination";
 
@@ -273,31 +273,29 @@ export default async function ShopPage({
               const displayPrice = onSale ? listing.sale_price_cents! : listing.price_cents;
               return (
                 <Card key={listing.id} className="overflow-hidden hover:shadow-md transition-shadow">
-                  <Link href={`/shop/${listing.id}`} className="block">
-                    <div className="relative aspect-[4/3] bg-muted">
-                      {listing.images[0] ? (
-                        <Image src={listing.images[0]} alt={listing.plant_name} fill className="object-cover object-center" sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw" />
-                      ) : (
-                        <div className="flex items-center justify-center h-full text-4xl">🌿</div>
-                      )}
-                      <WishlistButton
-                        userId={user?.id ?? null}
-                        listingId={listing.id}
-                        initialWishlisted={wishlistedSet.has(listing.id)}
-                        compact
-                        className="absolute top-2 left-2 z-10"
-                      />
-                      {onSale && (
-                        <span className="absolute top-2 right-2 z-10 bg-red-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
-                          SALE
-                        </span>
-                      )}
-                      {!onSale && isNew && (
-                        <span className="absolute top-2 right-2 z-10 bg-leaf text-white text-xs font-semibold px-2 py-0.5 rounded-full">
-                          New
+                  <div className="relative">
+                    <Link href={`/shop/${listing.id}`} className="block">
+                      <AuctionCardGallery images={listing.images as string[]} alt={listing.plant_name} objectFit="cover" />
+                    </Link>
+                    <WishlistButton
+                      userId={user?.id ?? null}
+                      listingId={listing.id}
+                      initialWishlisted={wishlistedSet.has(listing.id)}
+                      compact
+                      className="absolute top-2 left-2 z-10"
+                    />
+                    {onSale && (
+                      <span className="absolute top-2 right-2 z-10 bg-red-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
+                        SALE
+                      </span>
+                    )}
+                    {!onSale && isNew && (
+                      <span className="absolute top-2 right-2 z-10 bg-leaf text-white text-xs font-semibold px-2 py-0.5 rounded-full">
+                        New
                         </span>
                       )}
                     </div>
+                  <Link href={`/shop/${listing.id}`} className="block">
                     <CardContent className="p-4">
                       {listing.category && (
                         <span className="inline-block text-xs font-medium text-leaf dark:text-sage bg-[#DFE7D4] dark:bg-forest/40 px-2 py-0.5 rounded-full mb-1.5">

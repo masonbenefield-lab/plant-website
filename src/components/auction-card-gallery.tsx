@@ -4,7 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-export default function AuctionCardGallery({ images, alt }: { images: string[]; alt: string }) {
+export default function AuctionCardGallery({ images, alt, objectFit = "contain" }: { images: string[]; alt: string; objectFit?: "contain" | "cover" }) {
   const [idx, setIdx] = useState(0);
 
   if (!images.length) {
@@ -15,7 +15,7 @@ export default function AuctionCardGallery({ images, alt }: { images: string[]; 
 
   return (
     <div className="relative aspect-[4/3] bg-muted">
-      <Image src={images[idx]} alt={alt} fill className="object-contain" sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw" />
+      <Image src={images[idx]} alt={alt} fill className={objectFit === "cover" ? "object-cover object-center" : "object-contain"} sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw" />
       {idx > 0 && (
         <button
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIdx((i) => i - 1); }}
