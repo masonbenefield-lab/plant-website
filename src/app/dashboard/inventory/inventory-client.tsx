@@ -524,7 +524,7 @@ export default function InventoryClient({
     await Promise.all([
       supabase.from("listings").update({
         quantity: newShopQty,
-        ...(newShopQty > 0 ? { status: "active" } : {}),
+        ...(newShopQty > 0 ? { status: "active" } : { status: "sold_out" }),
       }).eq("id", row.listing_id),
       !isNaN(stockVal) && stockVal >= 0
         ? supabase.from("inventory").update({ quantity: stockVal, listing_quantity: newShopQty }).eq("id", row.id)
