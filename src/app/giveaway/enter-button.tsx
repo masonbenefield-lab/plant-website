@@ -61,6 +61,7 @@ export function EnterButton({ monthLabel, initialEntered, referralCode, savedAdd
     savedAddress ?? { name: "", line1: "", line2: "", city: "", state: "", zip: "", country: "US" }
   );
   const [savingAddress, setSavingAddress] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof ShippingAddress, string>>>({});
 
   function handleCopy() {
     if (!referralCode) return;
@@ -85,14 +86,21 @@ export function EnterButton({ monthLabel, initialEntered, referralCode, savedAdd
   }
 
   async function handleConfirmAddress() {
-    if (!address.name || !address.line1 || !address.city || !address.state || !address.zip) {
-      toast.error("Please fill in all required address fields");
+    const errors: Partial<Record<keyof ShippingAddress, string>> = {};
+    if (!address.name) errors.name = "Required";
+    if (!address.line1) errors.line1 = "Required";
+    if (!address.city) errors.city = "Required";
+    if (!address.zip) errors.zip = "Required";
+    if (!address.state) {
+      errors.state = "Required";
+    } else if (!isUSAddress(address)) {
+      errors.state = "Must be a valid US state";
+    }
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
-    if (!isUSAddress(address)) {
-      toast.error("This giveaway is open to US residents only.");
-      return;
-    }
+    setFieldErrors({});
     setSavingAddress(true);
     await fetch("/api/stripe/buyer-profile", {
       method: "PATCH",
@@ -105,14 +113,19 @@ export function EnterButton({ monthLabel, initialEntered, referralCode, savedAdd
   }
 
   function field(label: string, key: keyof ShippingAddress, required = false, half = false) {
+    const error = fieldErrors[key];
     return (
       <div className={half ? "col-span-1" : "col-span-2"}>
         <Label className="text-xs mb-1 block">{label}{required && <span className="text-destructive ml-0.5">*</span>}</Label>
         <Input
           value={address[key] ?? ""}
-          onChange={(e) => setAddress((a) => ({ ...a, [key]: e.target.value }))}
-          className="h-8 text-sm"
+          onChange={(e) => {
+            setAddress((a) => ({ ...a, [key]: e.target.value }));
+            if (fieldErrors[key]) setFieldErrors((prev) => ({ ...prev, [key]: undefined }));
+          }}
+          className={`h-8 text-sm ${error ? "border-destructive focus-visible:ring-destructive" : ""}`}
         />
+        {error && <p className="text-xs text-destructive mt-0.5">{error}</p>}
       </div>
     );
   }
