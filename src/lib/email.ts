@@ -2692,3 +2692,80 @@ export async function sendWeeklyCareSummary({
     html: buildWeeklyCareSummaryHtml({ username, displayName, days, totalCount, weekRange }),
   });
 }
+
+// ─── Giveaway entry confirmation ─────────────────────────────────────────────
+
+export function buildGiveawayEntryHtml({
+  displayName,
+  username,
+  monthLabel,
+  plantName,
+  referralLink,
+}: {
+  displayName?: string | null;
+  username: string;
+  monthLabel: string;
+  plantName: string;
+  referralLink: string;
+}): string {
+  const siteUrl = siteBase();
+  const name = displayName ?? username;
+  return emailBase({
+    title: `You're entered for ${monthLabel}! — Plantet`,
+    heading: `You're entered! 🌿`,
+    subheading: `${monthLabel} Giveaway — ${plantName}`,
+    body: `
+      <p style="margin:0 0 20px;">Hey ${name},</p>
+      <p style="margin:0 0 20px;">You're officially entered for a chance to win a <strong>${plantName}</strong> this month. One lucky winner gets it shipped free to their door on <strong>July 1st</strong>.</p>
+
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#EFE7D6;border:1px solid #DED6C4;border-radius:10px;margin:0 0 28px;overflow:hidden;">
+        <tr>
+          <td style="padding:20px 24px;">
+            <p style="margin:0 0 6px;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#6B7E72;">Want better odds?</p>
+            <p style="margin:0 0 16px;font-size:15px;color:#16201B;line-height:1.6;">Share your referral link and earn bonus entries:<br>
+              <strong>+1 entry</strong> when a friend signs up and adds their first plant<br>
+              <strong>+2 entries</strong> when a friend makes their first sale
+            </p>
+            <a href="${referralLink}" style="display:inline-block;background:#2F7D54;color:#F6F2E9;font-size:14px;font-weight:600;text-decoration:none;padding:12px 28px;border-radius:8px;">Copy my referral link &#8594;</a>
+          </td>
+        </tr>
+      </table>
+
+      <div style="border-top:1px solid #DED6C4;padding-top:24px;margin-top:8px;">
+        <p style="margin:0 0 8px;font-size:13px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:#6B7E72;">While you're here — did you know?</p>
+        <p style="margin:0 0 12px;font-size:15px;color:#16201B;line-height:1.65;">Plantet has a free <strong>Garden Log &amp; Care Schedule</strong> built right in. Track every plant you own, log care history, and get reminders when it's time to water, fertilize, or repot.</p>
+        <p style="margin:0 0 20px;font-size:14px;color:#6B7E72;">It's free for all Plantet users — no purchase needed.</p>
+        ${ctaBtn("Explore the Garden Log", `${siteUrl}/garden`)}
+      </div>
+    `,
+    footerNote: "You're receiving this because you entered the Plantet monthly giveaway.",
+  });
+}
+
+export async function sendGiveawayEntryEmail({
+  recipientEmail,
+  displayName,
+  username,
+  monthLabel,
+  plantName,
+  referralCode,
+}: {
+  recipientEmail: string;
+  displayName?: string | null;
+  username: string;
+  monthLabel: string;
+  plantName: string;
+  referralCode?: string | null;
+}) {
+  const siteUrl = siteBase();
+  const referralLink = referralCode
+    ? `${siteUrl}/signup?ref=${referralCode}`
+    : `${siteUrl}/giveaway`;
+  const resend = getResend();
+  await resend.emails.send({
+    from: FROM,
+    to: recipientEmail,
+    subject: `🌿 You're entered for ${monthLabel}!`,
+    html: buildGiveawayEntryHtml({ displayName, username, monthLabel, plantName, referralLink }),
+  });
+}

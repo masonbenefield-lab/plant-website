@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { sendGiveawayEntryEmail } from "@/lib/email";
 
 const US_STATES = new Set([
   "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA",
@@ -32,9 +33,11 @@ export async function POST() {
   // Check eligibility via saved shipping address
   const { data: profile } = await supabase
     .from("profiles")
-    .select("saved_shipping_address")
+    .select("saved_shipping_address, username, display_name, referral_code")
     .eq("id", user.id)
     .single();
+
+  const { data: authUser } = await supabase.auth.getUser();
 
   const addr = profile?.saved_shipping_address as { state?: string; country?: string } | null;
   if (!addr?.state) {
@@ -57,6 +60,12 @@ export async function POST() {
 
   if (!giveaway) return NextResponse.json({ error: "No active giveaway this month" }, { status: 400 });
 
+  const { data: giveawayDetails } = await supabase
+    .from("giveaway_months")
+    .select("plant_name")
+    .eq("month", month)
+    .single();
+
   const { error } = await supabase
     .from("giveaway_entries")
     .insert({ user_id: user.id, month });
@@ -64,6 +73,20 @@ export async function POST() {
   if (error) {
     if (error.code === "23505") return NextResponse.json({ already: true });
     return NextResponse.json({ error: "Failed to enter" }, { status: 500 });
+  }
+
+  // Send confirmation email (fire and forget — don't block the response)
+  const email = authUser?.user?.email;
+  const monthLabel = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  if (email && profile?.username && giveawayDetails?.plant_name) {
+    sendGiveawayEntryEmail({
+      recipientEmail: email,
+      username: profile.username,
+      displayName: (profile as any).display_name,
+      monthLabel,
+      plantName: giveawayDetails.plant_name,
+      referralCode: (profile as any).referral_code,
+    }).catch(() => {});
   }
 
   return NextResponse.json({ ok: true });
