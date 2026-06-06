@@ -291,7 +291,7 @@ export default function CreateInventoryPage() {
         My Stock
       </Link>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold">Add to Inventory</h1>
+        <h1 className="text-2xl font-bold">Add to My Stock</h1>
         <p className="text-muted-foreground mt-1">
           {isSupply
             ? "Add a gardening supply to your inventory. You can list it in the shop from your Inventory page."
@@ -361,7 +361,7 @@ export default function CreateInventoryPage() {
           <CardContent className="space-y-4">
             <div className={isSupply ? "space-y-1" : "grid grid-cols-2 gap-4"}>
               <div className="space-y-1">
-                <Label htmlFor="plant_name">{isSupply ? "Item Name" : "Plant Name"} *</Label>
+                <Label htmlFor="plant_name">{isSupply ? "Item Name" : "Plant Type"} *</Label>
                 <Input
                   id="plant_name"
                   value={plantName}
