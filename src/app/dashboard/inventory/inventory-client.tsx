@@ -799,7 +799,11 @@ export default function InventoryClient({
         onClick: async () => {
           const db = createClient();
           await db.from("inventory").update({ archived_at: null }).eq("id", id);
-          if (listingId) await db.from("listings").update({ status: "active" }).eq("id", listingId);
+          if (listingId) {
+            const { data: inv } = await db.from("inventory").select("listing_quantity").eq("id", id).single();
+            const listingStatus = (inv?.listing_quantity ?? 0) > 0 ? "active" : "sold_out";
+            await db.from("listings").update({ status: listingStatus }).eq("id", listingId);
+          }
           router.refresh();
           toast.success("Restored!");
         },
@@ -807,12 +811,13 @@ export default function InventoryClient({
     });
   }
 
-  async function restoreItem(id: string, listingId: string | null) {
-    setLoadingId(id);
+  async function restoreItem(row: Row) {
+    setLoadingId(row.id);
     const supabase = createClient();
-    const { error } = await supabase.from("inventory").update({ archived_at: null }).eq("id", id);
-    if (!error && listingId) {
-      await supabase.from("listings").update({ status: "active" }).eq("id", listingId);
+    const { error } = await supabase.from("inventory").update({ archived_at: null }).eq("id", row.id);
+    if (!error && row.listing_id) {
+      const listingStatus = (row.listing_quantity ?? 0) > 0 ? "active" : "sold_out";
+      await supabase.from("listings").update({ status: listingStatus }).eq("id", row.listing_id);
     }
     setLoadingId(null);
     if (error) { toast.error(error.message); return; }
@@ -2135,7 +2140,7 @@ export default function InventoryClient({
                         ) : (
                           <div className="ml-auto flex items-center gap-3">
                             <button
-                              onClick={() => restoreItem(row.id, row.listing_id)}
+                              onClick={() => restoreItem(row)}
                               disabled={loadingId === row.id}
                               className="text-xs text-leaf hover:underline disabled:opacity-50"
                             >
