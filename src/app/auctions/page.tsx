@@ -202,8 +202,14 @@ export default async function AuctionsPage({
               const seller = sellerMap[auction.seller_id];
               const endsAt = new Date(auction.ends_at);
               const timeLeft = endsAt.getTime() - Date.now();
-              const hoursLeft = Math.floor(timeLeft / (1000 * 60 * 60));
+              const daysLeft = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+              const hoursLeft = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
               const minutesLeft = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+              const timeLabel = daysLeft >= 1
+                ? `${daysLeft}d ${hoursLeft}h`
+                : hoursLeft > 0
+                  ? `${hoursLeft}h ${minutesLeft}m`
+                  : `${minutesLeft}m`;
 
               return (
                 <Card key={auction.id} className="overflow-hidden hover:shadow-md transition-shadow">
@@ -224,7 +230,7 @@ export default async function AuctionsPage({
                       </Badge>
                     ) : (
                       <Badge className="absolute top-2 right-2 z-10 bg-red-600">
-                        {hoursLeft > 0 ? `${hoursLeft}h ${minutesLeft}m` : `${minutesLeft}m`} left
+                        {timeLabel} left
                       </Badge>
                     )}
                   </div>
