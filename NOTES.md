@@ -1271,3 +1271,41 @@ Run `supabase/migrations/016_snooze_custom_care.sql` in the Supabase dashboard.
 
 ### Environment variables
 None new.
+
+---
+
+## 2026-06-05 — Weekly care summary email + landing page care schedule update
+
+### Features added
+
+#### Weekly garden care summary email
+- New /api/cron/weekly-care-summary/route.ts cron: runs Monday 1 PM UTC (  13 * * 1), sends a 7-day care forecast to users with daily_care_emails = true
+- Shows tasks due in the next 7 days (offsets 1–7), grouped by day label (Mon Jun 9, Wed Jun 11, etc.)
+- Capped at 10 task rows; shows "+ N more tasks this week" overflow note with link to care schedule
+- Skips vacation users and snoozed tasks; handles both built-in and custom care types
+- uildWeeklyCareSummaryHtml() + sendWeeklyCareSummary() + WeeklyCareDay type added to src/lib/email.ts
+- Account ? Email Preferences label updated from "Daily garden care reminders" to "Weekly garden care reminders" with corrected description
+
+#### Admin email preview
+- Weekly Care Summary added to /admin/email-preview under Account category with sample data
+- Legacy "Garden Care Reminder" template removed from preview (superseded by Weekly Care Summary)
+- "Monthly plant digest" label fixed to "Weekly plant digest" (cron fires weekly, not monthly)
+
+#### Landing page care schedule card
+- Description updated to reflect current features: week-ahead view, one-tap logging, snooze, vacation mode, email reminders, sitter guide
+- Example widget updated: added amber "3 tasks missed" overdue banner, Overdue/Due today tabs, emoji-prefixed care badges, "Due today" labels on task rows
+
+### No migrations required
+
+### Files created
+- src/app/api/cron/weekly-care-summary/route.ts
+
+### Files modified
+- src/lib/email.ts — WeeklyCareDay type, buildWeeklyCareSummaryHtml(), sendWeeklyCareSummary()
+- src/app/account/account-form.tsx — Weekly care reminders label + description; Weekly plant digest label
+- src/app/admin/email-preview/page.tsx — Added Weekly Care Summary, removed Garden Care Reminder
+- src/components/garden-feature-cards.tsx — Care schedule description + example widget
+- ercel.json — Added weekly-care-summary cron (Monday 1 PM UTC)
+
+### Parking lot
+- #12 iCal calendar feed deferred — details in parking_lot.md

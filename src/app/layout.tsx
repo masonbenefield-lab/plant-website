@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Bricolage_Grotesque } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
@@ -25,12 +25,22 @@ const bricolage = Bricolage_Grotesque({
 
 const siteUrl = "https://www.plantet.shop";
 
+export const viewport: Viewport = {
+  themeColor: "#2F7D54",
+};
+
 export const metadata: Metadata = {
   title: "Plantet — Your Plants. Your People. Your Garden.",
   description:
     "Track your plants, connect with fellow growers, and buy or sell — all in one place built for the plant-obsessed.",
   icons: {
     icon: "/plantet-mark-color.svg",
+    apple: "/plantet-app-icon.png",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Plantet",
   },
   openGraph: {
     title: "Plantet — Your Plants. Your People. Your Garden.",
