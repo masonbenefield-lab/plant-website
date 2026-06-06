@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { Lock } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
@@ -65,7 +66,25 @@ export default async function PublicGardenPage({
     .eq("username", username)
     .single();
 
-  if (!profile || !profile.garden_public) notFound();
+  if (!profile) notFound();
+
+  if (!profile.garden_public) {
+    const rawName = profile.display_name || profile.username;
+    return (
+      <div className="max-w-5xl mx-auto px-4 py-24 flex flex-col items-center text-center space-y-4">
+        <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center">
+          <Lock size={24} className="text-muted-foreground" />
+        </div>
+        <h1 className="text-xl font-bold">This garden is private</h1>
+        <p className="text-muted-foreground text-sm max-w-xs">
+          {rawName} hasn&apos;t made their garden public yet.
+        </p>
+        <Link href="/" className="text-sm text-leaf hover:underline font-medium">
+          Back to Plantet
+        </Link>
+      </div>
+    );
+  }
 
   const admin = createAdminClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
