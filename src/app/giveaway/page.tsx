@@ -63,9 +63,9 @@ export default async function GiveawayPage() {
   // Fetch winner usernames
   const winnerIds = (pastGiveaways ?? []).map((g) => g.winner_user_id).filter(Boolean) as string[];
   const { data: winnerProfiles } = winnerIds.length
-    ? await admin.from("profiles").select("id, username").in("id", winnerIds)
-    : { data: [] as { id: string; username: string }[] };
-  const winnerMap = Object.fromEntries((winnerProfiles ?? []).map((p) => [p.id, p.username]));
+    ? await admin.from("profiles").select("id, username, display_name").in("id", winnerIds)
+    : { data: [] as { id: string; username: string; display_name: string | null }[] };
+  const winnerMap = Object.fromEntries((winnerProfiles ?? []).map((p) => [p.id, { username: p.username, name: p.display_name ?? p.username }]));
 
   // Check if current user has already entered + has open sponsor request + referral data
   let alreadyEntered = false;
@@ -309,9 +309,9 @@ export default async function GiveawayPage() {
                   )}
                 </div>
                 {g.winner_user_id && winnerMap[g.winner_user_id] && (
-                  <Link href={`/sellers/${winnerMap[g.winner_user_id]}`} className="flex items-center gap-1.5 shrink-0 hover:text-leaf transition-colors">
+                  <Link href={`/sellers/${winnerMap[g.winner_user_id].username}`} className="flex items-center gap-1.5 shrink-0 hover:text-leaf transition-colors">
                     <Trophy size={13} className="text-amber-500" />
-                    <span className="text-xs font-medium hover:underline">{winnerMap[g.winner_user_id]}</span>
+                    <span className="text-xs font-medium hover:underline">{winnerMap[g.winner_user_id].name}</span>
                   </Link>
                 )}
               </div>
