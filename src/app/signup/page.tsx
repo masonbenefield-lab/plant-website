@@ -74,6 +74,11 @@ export default function SignupPage() {
       return;
     }
 
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
+
     setLoading(true);
     const supabase = createClient();
 
@@ -235,6 +240,7 @@ export default function SignupPage() {
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
+              <p className="text-xs text-muted-foreground">Must be at least 8 characters.</p>
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-3">
