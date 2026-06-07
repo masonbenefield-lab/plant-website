@@ -31,6 +31,9 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: "Plantet — Your Plants. Your People. Your Garden.",
+  verification: {
+    other: { "msvalidate.01": "FCF283760296C32C971F534080A523B1" },
+  },
   description:
     "Track your plants, connect with fellow growers, and buy or sell — all in one place built for the plant-obsessed.",
   icons: {
