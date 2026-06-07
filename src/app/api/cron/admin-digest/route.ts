@@ -17,6 +17,7 @@ export async function GET(request: Request) {
 
   const now = new Date();
   const since = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+  const stuckDate = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString();
   const month = now.toISOString().slice(0, 7);
   const dateLabel = now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
 
@@ -25,11 +26,21 @@ export async function GET(request: Request) {
     { count: totalUsers },
     { count: newGiveawayEntries },
     { count: totalGiveawayEntries },
+    { count: newOrders },
+    { count: newListings },
+    { count: openDisputes },
+    { count: pendingReports },
+    { count: stuckOrders },
   ] = await Promise.all([
     admin.from("profiles").select("*", { count: "exact", head: true }).gte("created_at", since),
     admin.from("profiles").select("*", { count: "exact", head: true }),
     admin.from("giveaway_entries").select("*", { count: "exact", head: true }).gte("created_at", since),
     admin.from("giveaway_entries").select("*", { count: "exact", head: true }).eq("month", month),
+    admin.from("orders").select("*", { count: "exact", head: true }).gte("created_at", since),
+    admin.from("listings").select("*", { count: "exact", head: true }).gte("created_at", since),
+    admin.from("order_disputes").select("*", { count: "exact", head: true }).in("status", ["open", "seller_notified", "seller_responded"]),
+    admin.from("reports").select("*", { count: "exact", head: true }).eq("status", "pending"),
+    admin.from("orders").select("*", { count: "exact", head: true }).eq("status", "paid").lt("created_at", stuckDate),
   ]);
 
   await sendDailyAdminDigest({
@@ -37,8 +48,13 @@ export async function GET(request: Request) {
     totalUsers: totalUsers ?? 0,
     newGiveawayEntries: newGiveawayEntries ?? 0,
     totalGiveawayEntries: totalGiveawayEntries ?? 0,
+    newOrders: newOrders ?? 0,
+    newListings: newListings ?? 0,
+    openDisputes: openDisputes ?? 0,
+    pendingReports: pendingReports ?? 0,
+    stuckOrders: stuckOrders ?? 0,
     dateLabel,
   });
 
-  return NextResponse.json({ ok: true, newUsers, newGiveawayEntries });
+  return NextResponse.json({ ok: true, newUsers, newOrders, newListings, openDisputes, stuckOrders });
 }

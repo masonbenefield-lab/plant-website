@@ -2775,42 +2775,88 @@ export async function sendDailyAdminDigest({
   totalUsers,
   newGiveawayEntries,
   totalGiveawayEntries,
+  newOrders,
+  newListings,
+  openDisputes,
+  pendingReports,
+  stuckOrders,
   dateLabel,
 }: {
   newUsers: number;
   totalUsers: number;
   newGiveawayEntries: number;
   totalGiveawayEntries: number;
+  newOrders: number;
+  newListings: number;
+  openDisputes: number;
+  pendingReports: number;
+  stuckOrders: number;
   dateLabel: string;
 }) {
   const siteUrl = siteBase();
-  const body = `
-    <p style="margin:0 0 24px;font-size:15px;color:#16201B;">Here's your daily snapshot for <strong>${dateLabel}</strong>.</p>
 
-    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+  const statBox = (value: number | string, label: string, sub: string) => `
+    <td style="padding:16px;background:#EBF0E6;border-radius:12px;text-align:center;">
+      <p style="margin:0 0 4px;font-size:26px;font-weight:700;color:#1F4736;">${value}</p>
+      <p style="margin:0;font-size:12px;color:#6B7E72;">${label}</p>
+      <p style="margin:4px 0 0;font-size:11px;color:#A8BF9A;">${sub}</p>
+    </td>`;
+
+  const alertItems: string[] = [];
+  if (stuckOrders > 0) alertItems.push(`&#9203; <strong>${stuckOrders}</strong> order${stuckOrders !== 1 ? "s" : ""} stuck in &ldquo;paid&rdquo; for 5+ days — seller may not have shipped`);
+  if (openDisputes > 0) alertItems.push(`&#9888;&#65039; <strong>${openDisputes}</strong> open dispute${openDisputes !== 1 ? "s" : ""} awaiting resolution`);
+  if (pendingReports > 0) alertItems.push(`&#128681; <strong>${pendingReports}</strong> pending user report${pendingReports !== 1 ? "s" : ""} to review`);
+
+  const alertsSection = alertItems.length > 0 ? `
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0;">
       <tr>
-        <td style="padding:16px;background:#EBF0E6;border-radius:12px;text-align:center;width:48%;">
-          <p style="margin:0 0 4px;font-size:28px;font-weight:700;color:#1F4736;">${newUsers}</p>
-          <p style="margin:0;font-size:13px;color:#6B7E72;">New users today</p>
-          <p style="margin:4px 0 0;font-size:12px;color:#A8BF9A;">${totalUsers} total</p>
+        <td style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:12px;padding:16px 20px;">
+          <p style="margin:0 0 10px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#92400E;">Action needed</p>
+          ${alertItems.map(a => `<p style="margin:0 0 6px;font-size:14px;color:#78350F;">${a}</p>`).join("")}
+          <p style="margin:12px 0 0;">
+            <a href="${siteUrl}/admin/orders" style="font-size:13px;font-weight:600;color:#92400E;text-decoration:underline;">View orders &rarr;</a>
+            &nbsp;&nbsp;
+            <a href="${siteUrl}/admin/reports" style="font-size:13px;font-weight:600;color:#92400E;text-decoration:underline;">View reports &rarr;</a>
+          </p>
         </td>
-        <td style="width:4%;"></td>
-        <td style="padding:16px;background:#EBF0E6;border-radius:12px;text-align:center;width:48%;">
-          <p style="margin:0 0 4px;font-size:28px;font-weight:700;color:#1F4736;">${newGiveawayEntries}</p>
-          <p style="margin:0;font-size:13px;color:#6B7E72;">New giveaway entries</p>
-          <p style="margin:4px 0 0;font-size:12px;color:#A8BF9A;">${totalGiveawayEntries} total this month</p>
-        </td>
+      </tr>
+    </table>` : "";
+
+  const body = `
+    <p style="margin:0 0 20px;font-size:15px;color:#16201B;">Here's your daily snapshot for <strong>${dateLabel}</strong>.</p>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-spacing:8px;margin-bottom:8px;">
+      <tr>
+        ${statBox(newUsers, "New users today", `${totalUsers} total`)}
+        <td style="width:8px;"></td>
+        ${statBox(newOrders, "New orders today", "last 24h")}
+        <td style="width:8px;"></td>
+        ${statBox(newListings, "New listings today", "last 24h")}
+      </tr>
+    </table>
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:8px;">
+      <tr>
+        ${statBox(newGiveawayEntries, "New giveaway entries", `${totalGiveawayEntries} total this month`)}
+        <td style="width:8px;"></td>
+        ${statBox(openDisputes, "Open disputes", openDisputes > 0 ? "needs attention" : "all clear")}
+        <td style="width:8px;"></td>
+        ${statBox(pendingReports, "Pending reports", pendingReports > 0 ? "needs review" : "all clear")}
       </tr>
     </table>
 
-    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:8px;">
+    ${alertsSection}
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;">
       <tr>
         <td align="center">
-          <a href="${siteUrl}/admin" style="display:inline-block;background:#1F4736;color:#F6F2E9;font-size:14px;font-weight:600;padding:12px 28px;border-radius:8px;text-decoration:none;">View Admin Dashboard</a>
+          <a href="${siteUrl}/admin" style="display:inline-block;background:#1F4736;color:#F6F2E9;font-size:14px;font-weight:600;padding:12px 28px;border-radius:8px;text-decoration:none;">View Admin Dashboard &rarr;</a>
         </td>
       </tr>
     </table>
   `;
+
+  const actionCount = alertItems.length;
+  const subjectSuffix = actionCount > 0 ? ` · ${actionCount} action${actionCount !== 1 ? "s" : ""} needed` : "";
 
   const html = emailBase({
     title: `Plantet Daily Digest — ${dateLabel}`,
@@ -2824,7 +2870,7 @@ export async function sendDailyAdminDigest({
   await resend.emails.send({
     from: FROM,
     to: "masonbenefield@gmail.com",
-    subject: `Plantet Daily — ${newUsers} new user${newUsers !== 1 ? "s" : ""}, ${newGiveawayEntries} giveaway entr${newGiveawayEntries !== 1 ? "ies" : "y"}`,
+    subject: `Plantet Daily — ${newUsers} new user${newUsers !== 1 ? "s" : ""}, ${newOrders} order${newOrders !== 1 ? "s" : ""}${subjectSuffix}`,
     html,
   });
 }

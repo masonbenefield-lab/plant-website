@@ -22,7 +22,7 @@ export default async function AdminUsersPage({
 
   let query = supabase
     .from("profiles")
-    .select("id, username, bio, stripe_onboarded, is_admin, deleted_at, created_at")
+    .select("id, username, bio, stripe_onboarded, is_admin, deleted_at, created_at, plan")
     .order("created_at", { ascending: false });
 
   query = showArchived
@@ -122,6 +122,7 @@ export default async function AdminUsersPage({
                   <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Joined</th>
                   <th className="text-left px-4 py-3 font-medium">Listings</th>
                   <th className="text-left px-4 py-3 font-medium">Auctions</th>
+                  <th className="text-left px-4 py-3 font-medium hidden sm:table-cell">Plan</th>
                   <th className="text-left px-4 py-3 font-medium hidden sm:table-cell">Payments</th>
                 </>
               )}
@@ -152,6 +153,15 @@ export default async function AdminUsersPage({
                     </td>
                     <td className="px-4 py-3">{listingMap[p.id] ?? 0}</td>
                     <td className="px-4 py-3">{auctionMap[p.id] ?? 0}</td>
+                    <td className="px-4 py-3 hidden sm:table-cell">
+                      {p.plan && p.plan !== "seedling" ? (
+                        <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                          {p.plan.charAt(0).toUpperCase() + p.plan.slice(1)}
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Free</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 hidden sm:table-cell">
                       {p.stripe_onboarded ? (
                         <Badge variant="secondary" className="bg-[#DFE7D4] text-leaf dark:bg-forest/40 dark:text-sage">
