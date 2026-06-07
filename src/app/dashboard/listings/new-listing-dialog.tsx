@@ -97,6 +97,7 @@ export default function NewListingDialog({ sellerId, planLimit, currentCount, ph
     if (error) {
       toast.error(error.message);
     } else {
+      fetch("/api/referral/activate-first-listing", { method: "POST" }).catch(() => {});
       toast.success("Listing created!");
       setOpen(false);
       setImageUrls([]);

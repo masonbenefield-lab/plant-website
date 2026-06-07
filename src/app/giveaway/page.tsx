@@ -91,7 +91,7 @@ export default async function GiveawayPage() {
     alreadyEntered = !!entry;
     hasOpenSponsorRequest = !!sponsorReq;
     bonusEntriesThisMonth = (bonusActivations ?? []).reduce(
-      (sum, a) => sum + (a.type === "first_sale" ? 2 : 1), 0
+      (sum, a) => sum + (a.type === "first_sale" || a.type === "first_listing" ? 2 : 1), 0
     );
     savedAddress = (profile?.saved_shipping_address as typeof savedAddress) ?? null;
 

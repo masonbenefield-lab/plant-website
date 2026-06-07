@@ -195,6 +195,7 @@ export default function NewAuctionDialog({ sellerId, planLimit, currentCount, ph
     if (error) {
       toast.error(error.message);
     } else {
+      fetch("/api/referral/activate-first-listing", { method: "POST" }).catch(() => {});
       if (prefill && !keepOriginal) {
         await supabase.from("auctions").delete().eq("id", prefill.id);
         toast.success("Auction relisted!");
