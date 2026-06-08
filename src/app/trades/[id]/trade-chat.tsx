@@ -55,14 +55,10 @@ export function TradeChat({
       .channel(`trade-messages:${tradeId}`)
       .on(
         "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "trade_messages",
-          filter: `trade_id=eq.${tradeId}`,
-        },
+        { event: "INSERT", schema: "public", table: "trade_messages" },
         (payload) => {
           const newMsg = payload.new as Message;
+          if (newMsg.trade_id !== tradeId) return;
           setMessages((prev) => {
             if (prev.some((m) => m.id === newMsg.id)) return prev;
             return [...prev, newMsg];
