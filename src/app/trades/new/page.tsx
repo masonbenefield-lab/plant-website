@@ -114,7 +114,7 @@ export default function NewTradePage() {
               <textarea
                 value={offerDescription}
                 onChange={(e) => setOfferDescription(e.target.value)}
-                placeholder="e.g. Monstera Thai Constellation cutting, well-rooted in 4" pot"
+                placeholder="e.g. Monstera Thai Constellation cutting, well-rooted in 4-inch pot"
                 rows={3}
                 maxLength={500}
                 required
