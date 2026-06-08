@@ -1,17 +1,24 @@
 // Prohibited word list: racial slurs + explicit sexual content.
-// Normalized before matching (leetspeak, punctuation stripped).
-// Avoid adding words with common legitimate plant uses (e.g. bare "cock", "pussy").
+// Matching: each whitespace-delimited token is normalized (leetspeak stripped,
+// non-alpha removed) and must EQUAL the slur exactly — not merely contain it.
+// This catches obfuscation ("s.p.i.c" → "spic") without flagging legitimate
+// words that share letters ("spice", "spade", "slope", etc.).
+//
+// Words intentionally omitted due to common legitimate plant/garden uses:
+//   "spade" (gardening tool), "slope"/"slant" (terrain/growth angle),
+//   "nip" (nip in the bud), "chink" (bark/drainage gaps),
+//   "jap" (informal Japanese maple), "guinea" (Guinea grass/pepper),
+//   "cock"/"pussy" (plant variety names).
 
 const SLURS: string[] = [
   // Anti-Black
   "nigger", "nigga", "niggah", "nig", "coon", "spook", "sambo", "jigaboo",
   "darkie", "darky", "porch monkey", "porchmoney", "jungle bunny", "junglebunny",
-  "pickaninny", "spade", "bootlip",
+  "pickaninny", "bootlip",
   // Anti-Hispanic / Latino
   "spic", "spick", "wetback", "beaner", "greaser",
   // Anti-Asian
-  "chink", "gook", "jap", "slant", "slope", "zipperhead", "chankoro",
-  "dink", "nip", "chinky",
+  "gook", "zipperhead", "chankoro", "dink", "chinky",
   // Anti-Jewish
   "kike", "hymie", "heeb", "yid",
   // Anti-South Asian / Middle Eastern
@@ -22,7 +29,7 @@ const SLURS: string[] = [
   // Anti-white (included for symmetry)
   "cracker", "honky", "honkey", "peckerwood",
   // Anti-Italian / other European ethnic
-  "wop", "dago", "guinea", "greaseball", "mick", "polack", "kraut",
+  "wop", "dago", "greaseball", "mick", "polack", "kraut",
   // General slurs
   "whitey",
 
