@@ -1576,7 +1576,8 @@ export function buildDigestHtml({
                   <td style="padding:24px 28px;">
                     <p style="margin:0 0 4px;font-size:18px;">&#127873;</p>
                     <p style="margin:0 0 6px;font-size:15px;font-weight:700;color:#1F4736;">Monthly Giveaway</p>
-                    <p style="margin:0 0 16px;font-size:13px;color:#2F7D54;line-height:1.6;">Enter for a chance to win this month's plant prize. One entry per member — entries reset each month.</p>
+                    <p style="margin:0 0 8px;font-size:13px;color:#2F7D54;line-height:1.6;">Enter for a chance to win this month's plant prize. One entry per member — entries reset each month.</p>
+                    <p style="margin:0 0 16px;font-size:12px;color:#5A6E5A;line-height:1.6;">Bonus entries: <strong>+1</strong> when a friend signs up and adds their first plant &nbsp;·&nbsp; <strong>+2</strong> when a friend lists an item or starts an auction.</p>
                     <a href="${siteUrl}/giveaway" style="display:inline-block;background:#2F7D54;color:#F6F2E9;font-size:13px;font-weight:600;text-decoration:none;padding:10px 24px;border-radius:7px;">Enter the giveaway &#8594;</a>
                   </td>
                 </tr>
