@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { CheckCircle2, Loader2, Trash2, Upload, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ReportButton from "@/components/report-button";
+import { ReplyLikeButton } from "@/components/community/reply-like-button";
 import { findProhibitedWord, censorWord, logViolation } from "@/lib/profanity";
 
 type Reply = {
@@ -23,6 +24,8 @@ type Reply = {
   created_at: string;
   username: string;
   avatar_url: string | null;
+  likeCount?: number;
+  liked?: boolean;
 };
 
 interface Props {
@@ -84,12 +87,21 @@ export function CommunityReplies({ postId, postType, postOwnerId, currentUserId,
         .single();
       if (error) { toast.error("Failed to post reply"); return; }
 
+      // Notify post author (fire-and-forget)
+      fetch("/api/community/notify-reply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ postId, replyBody: body.trim() }),
+      }).catch(() => {});
+
       const { data: profile } = await supabase.from("profiles").select("username, avatar_url").eq("id", user.id).single();
       setReplies((prev) => [...prev, {
         ...data,
         photos: data.photos as string[],
         username: profile?.username ?? "unknown",
         avatar_url: profile?.avatar_url ?? null,
+        likeCount: 0,
+        liked: false,
       }]);
       setBody("");
       setPhotos([]);
@@ -182,22 +194,30 @@ export function CommunityReplies({ postId, postType, postOwnerId, currentUserId,
                   ))}
                 </div>
               )}
-              {isHelpPost && isPostOwner && !reply.is_solution && (
-                <button
-                  onClick={() => markSolution(reply.id)}
-                  className="mt-2 flex items-center gap-1 text-xs text-muted-foreground hover:text-leaf transition-colors"
-                >
-                  <CheckCircle2 size={12} /> Mark as solution
-                </button>
-              )}
-              {isHelpPost && isPostOwner && reply.is_solution && (
-                <button
-                  onClick={() => unmarkSolution(reply.id)}
-                  className="mt-2 flex items-center gap-1 text-xs text-leaf hover:text-muted-foreground transition-colors"
-                >
-                  <CheckCircle2 size={12} /> Unmark solution
-                </button>
-              )}
+              <div className="flex items-center gap-3 mt-2">
+                <ReplyLikeButton
+                  replyId={reply.id}
+                  initialLiked={reply.liked ?? false}
+                  initialCount={reply.likeCount ?? 0}
+                  currentUserId={currentUserId}
+                />
+                {isHelpPost && isPostOwner && !reply.is_solution && (
+                  <button
+                    onClick={() => markSolution(reply.id)}
+                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-leaf transition-colors"
+                  >
+                    <CheckCircle2 size={12} /> Mark as solution
+                  </button>
+                )}
+                {isHelpPost && isPostOwner && reply.is_solution && (
+                  <button
+                    onClick={() => unmarkSolution(reply.id)}
+                    className="flex items-center gap-1 text-xs text-leaf hover:text-muted-foreground transition-colors"
+                  >
+                    <CheckCircle2 size={12} /> Unmark solution
+                  </button>
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
               {currentUserId !== reply.user_id && (

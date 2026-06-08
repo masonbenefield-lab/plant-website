@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Sprout, ArrowLeftRight, Search } from "lucide-react";
+import { Sprout, ArrowLeftRight, Search, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Profile {
@@ -111,8 +111,8 @@ export default function CommunityGardensGrid({
                         </AvatarFallback>
                       </Avatar>
                       <p className="font-semibold text-sm leading-tight truncate">{name}</p>
-                      {profile.open_to_trades && (
-                        !isOwnGarden ? (
+                      {!isOwnGarden && (
+                        profile.open_to_trades ? (
                           <Link
                             href={`/messages?to=${profile.username}`}
                             onClick={(e) => e.stopPropagation()}
@@ -122,11 +122,21 @@ export default function CommunityGardensGrid({
                             Trades
                           </Link>
                         ) : (
-                          <span className="ml-auto shrink-0 flex items-center gap-1 text-[10px] font-medium text-leaf bg-[#DFE7D4] dark:bg-forest/40 dark:text-sage px-1.5 py-0.5 rounded-full whitespace-nowrap">
-                            <ArrowLeftRight size={9} />
-                            Trades
-                          </span>
+                          <Link
+                            href={`/messages?to=${profile.username}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="ml-auto shrink-0 flex items-center gap-1 text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full whitespace-nowrap hover:text-foreground transition-colors"
+                          >
+                            <MessageCircle size={9} />
+                            Message
+                          </Link>
                         )
+                      )}
+                      {isOwnGarden && profile.open_to_trades && (
+                        <span className="ml-auto shrink-0 flex items-center gap-1 text-[10px] font-medium text-leaf bg-[#DFE7D4] dark:bg-forest/40 dark:text-sage px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                          <ArrowLeftRight size={9} />
+                          Trades
+                        </span>
                       )}
                     </div>
                     {profile.garden_bio && (

@@ -2874,3 +2874,60 @@ export async function sendDailyAdminDigest({
     html,
   });
 }
+
+// ─── Community reply notification ────────────────────────────────────────────
+
+export async function sendCommunityReplyNotification({
+  toEmail,
+  postTitle,
+  postId,
+  replierUsername,
+  replySnippet,
+}: {
+  toEmail: string;
+  postTitle: string;
+  postId: string;
+  replierUsername: string;
+  replySnippet: string;
+}) {
+  const siteUrl = siteBase();
+  const postUrl = `${siteUrl}/community/${postId}`;
+
+  const body = `
+    <tr>
+      <td style="padding:28px 32px 0;">
+        <p style="margin:0 0 16px;font-size:15px;color:#3D3929;line-height:1.6;">
+          <strong>${replierUsername}</strong> replied to your post:
+        </p>
+        <div style="background:#F0EDE4;border-left:3px solid #2F7D54;border-radius:4px;padding:14px 18px;margin-bottom:24px;">
+          <p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#1F4736;">${postTitle}</p>
+          <p style="margin:0;font-size:13px;color:#5A5544;line-height:1.6;">${replySnippet}</p>
+        </div>
+        <table cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+          <tr>
+            <td style="background:#2F7D54;border-radius:8px;">
+              <a href="${postUrl}" style="display:inline-block;padding:12px 24px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;">
+                View reply →
+              </a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  `;
+
+  const html = emailBase({
+    title: "New reply on Plantet",
+    heading: "Someone replied to your post",
+    body,
+    footerNote: "You're receiving this because someone replied to your Plantet community post.",
+  });
+
+  const resend = getResend();
+  await resend.emails.send({
+    from: FROM,
+    to: toEmail,
+    subject: `${replierUsername} replied to your post on Plantet`,
+    html,
+  });
+}

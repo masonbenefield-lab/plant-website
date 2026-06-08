@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { MessageCircle, CheckCircle2, Bookmark } from "lucide-react";
 import { CommunitySearchBar } from "@/components/community-search-bar";
 import { PostFollowButton } from "@/components/community/post-follow-button";
+import { PostLikeButton } from "@/components/community/post-like-button";
 import CommunityGardensGrid from "@/components/garden/community-gardens-grid";
 import ReportButton from "@/components/report-button";
 import { DeletePostButton } from "@/components/community/delete-post-button";
@@ -25,7 +26,7 @@ const TYPE_COLOR = {
 
 type PostType = "help" | "show_and_tell" | "discussion";
 
-function buildHref(params: { type?: string; sort?: string; q?: string; view?: string }) {
+function buildHref(params: { type?: string; sort?: string; q?: string; view?: string; page?: number }) {
   const p = new URLSearchParams();
   if (params.q) p.set("q", params.q);
   if (params.view) p.set("view", params.view);
@@ -33,17 +34,21 @@ function buildHref(params: { type?: string; sort?: string; q?: string; view?: st
     if (params.type) p.set("type", params.type);
     if (params.sort && params.sort !== "newest") p.set("sort", params.sort);
   }
+  if (params.page && params.page > 1) p.set("page", String(params.page));
   const s = p.toString();
   return s ? `/community?${s}` : "/community";
 }
 
+const PAGE_SIZE = 25;
+
 export default async function CommunityPage({
   searchParams,
 }: {
-  searchParams: Promise<{ type?: string; sort?: string; q?: string; view?: string }>;
+  searchParams: Promise<{ type?: string; sort?: string; q?: string; view?: string; page?: string }>;
 }) {
   const supabase = await createClient();
-  const { type, sort, q, view } = await searchParams;
+  const { type, sort, q, view, page: pageParam } = await searchParams;
+  const page = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
   const { data: { user } } = await supabase.auth.getUser();
 
   const isSavedView = view === "saved";
@@ -125,7 +130,7 @@ export default async function CommunityPage({
       .from("community_posts")
       .select("id, user_id, post_type, title, body, photos, solved, created_at")
       .order("created_at", { ascending: false })
-      .limit(50);
+      .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE); // fetch one extra to detect next page
 
     if (validType) query = query.eq("post_type", validType);
     if (searchQuery) query = query.or(`title.ilike.%${searchQuery}%,body.ilike.%${searchQuery}%`);
@@ -150,9 +155,23 @@ export default async function CommunityPage({
     replyCountMap[r.post_id] = (replyCountMap[r.post_id] ?? 0) + 1;
   }
 
-  // Fetch which posts the current user has saved (for bookmark state on cards)
+  // Fetch which posts the current user has saved/liked (for bookmark/like state on cards)
   let followedPostIds = new Set<string>();
   let reportedPostIds = new Set<string>();
+  let likedPostIds = new Set<string>();
+  const likeCountMap: Record<string, number> = {};
+
+  if (postIds.length) {
+    const { data: allLikes } = await supabase
+      .from("community_post_likes")
+      .select("post_id, user_id")
+      .in("post_id", postIds);
+    for (const l of allLikes ?? []) {
+      likeCountMap[l.post_id] = (likeCountMap[l.post_id] ?? 0) + 1;
+    }
+    if (user) likedPostIds = new Set((allLikes ?? []).filter((l) => l.user_id === user.id).map((l) => l.post_id));
+  }
+
   if (user && postIds.length) {
     const [{ data: userFollows }, { data: userReports }] = await Promise.all([
       supabase.from("community_post_follows").select("post_id").eq("user_id", user.id).in("post_id", postIds),
@@ -171,13 +190,19 @@ export default async function CommunityPage({
     }
   }
 
+  const hasNextPage = !isSavedView && !isMineView && posts.length > PAGE_SIZE;
+  const visiblePosts = (isSavedView || isMineView) ? posts : posts.slice(0, PAGE_SIZE);
+
   return (
     <div className={cn("mx-auto px-4 py-10", isGardensView ? "max-w-5xl" : "max-w-3xl")}>
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold">Community</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Ask questions, share plants, and connect with other growers</p>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Ask questions, share plants, and connect with other growers ·{" "}
+            <Link href="/community/guidelines" className="hover:text-foreground underline underline-offset-2">Guidelines</Link>
+          </p>
         </div>
         {!isGardensView && (
           user ? (
@@ -282,7 +307,7 @@ export default async function CommunityPage({
             </div>
           ) : (
             <div className="space-y-3">
-              {posts.map((post) => {
+              {visiblePosts.map((post) => {
                 const author = authorMap[post.user_id];
                 const replyCount = replyCountMap[post.id] ?? 0;
                 const isFollowed = followedPostIds.has(post.id);
@@ -320,6 +345,12 @@ export default async function CommunityPage({
                             <span className="flex items-center gap-1">
                               <MessageCircle size={11} /> {replyCount} {replyCount === 1 ? "reply" : "replies"}
                             </span>
+                            <PostLikeButton
+                              postId={post.id}
+                              initialLiked={likedPostIds.has(post.id)}
+                              initialCount={likeCountMap[post.id] ?? 0}
+                              currentUserId={user?.id ?? null}
+                            />
                           </div>
                         </div>
                         {(post.photos as string[]).length > 0 && (
@@ -351,6 +382,29 @@ export default async function CommunityPage({
                   </div>
                 );
               })}
+            </div>
+          )}
+
+          {/* Pagination */}
+          {!isSavedView && !isMineView && (page > 1 || hasNextPage) && (
+            <div className="flex items-center justify-between mt-6 pt-4 border-t">
+              {page > 1 ? (
+                <Link
+                  href={buildHref({ type: validType, sort: validSort, q: searchQuery, page: page - 1 })}
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  ← Previous
+                </Link>
+              ) : <span />}
+              <span className="text-xs text-muted-foreground">Page {page}</span>
+              {hasNextPage ? (
+                <Link
+                  href={buildHref({ type: validType, sort: validSort, q: searchQuery, page: page + 1 })}
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Next →
+                </Link>
+              ) : <span />}
             </div>
           )}
         </>
