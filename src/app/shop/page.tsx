@@ -302,9 +302,13 @@ export default async function ShopPage({
                           {listing.category}
                         </span>
                       )}
-                      <p className="font-semibold truncate">{listing.variety ?? listing.plant_name}</p>
+                      <p className="font-semibold truncate">
+                        {activeTab === "plants" ? (listing.variety ?? listing.plant_name) : listing.plant_name}
+                      </p>
                       {listing.variety && (
-                        <p className="text-sm text-muted-foreground truncate">{listing.plant_name}</p>
+                        <p className="text-sm text-muted-foreground truncate">
+                          {activeTab === "plants" ? listing.plant_name : listing.variety}
+                        </p>
                       )}
                       <div className="flex items-center justify-between mt-2">
                         <div className="flex items-center gap-1.5">
