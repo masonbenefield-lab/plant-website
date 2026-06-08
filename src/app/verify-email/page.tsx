@@ -24,11 +24,6 @@ function VerifyEmailContent() {
     return () => clearTimeout(t);
   }, [countdown]);
 
-  // Auto-trigger when arriving with a pre-filled email (e.g. from expired link error)
-  useEffect(() => {
-    if (emailParam) resend();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   async function resend() {
     if (!email || countdown > 0) return;
