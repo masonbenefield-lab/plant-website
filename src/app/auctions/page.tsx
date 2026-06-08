@@ -241,9 +241,9 @@ export default async function AuctionsPage({
                           {auction.category}
                         </span>
                       )}
-                      <p className="font-semibold truncate">{auction.plant_name}</p>
+                      <p className="font-semibold truncate">{auction.variety ?? auction.plant_name}</p>
                       {auction.variety && (
-                        <p className="text-sm text-muted-foreground truncate">{auction.variety}</p>
+                        <p className="text-sm text-muted-foreground truncate">{auction.plant_name}</p>
                       )}
                       <div className="mt-2 flex items-end justify-between gap-2">
                         <div>
@@ -331,9 +331,9 @@ export default async function AuctionsPage({
                       Sold
                     </span>
                   </div>
-                  <p className="text-sm font-medium truncate leading-tight">{auction.plant_name}</p>
+                  <p className="text-sm font-medium truncate leading-tight">{auction.variety ?? auction.plant_name}</p>
                   {auction.variety && (
-                    <p className="text-xs text-muted-foreground truncate">{auction.variety}</p>
+                    <p className="text-xs text-muted-foreground truncate">{auction.plant_name}</p>
                   )}
                   <p className="text-sm font-bold text-leaf mt-0.5">{centsToDisplay(auction.current_bid_cents)}</p>
                   <p className="text-[11px] text-muted-foreground">
