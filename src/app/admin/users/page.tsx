@@ -42,9 +42,11 @@ export default async function AdminUsersPage({
   ]);
 
   const ids = (profiles ?? []).map(p => p.id);
-  const [{ data: listingRows }, { data: auctionRows }] = await Promise.all([
+  const [{ data: listingRows }, { data: auctionRows }, { data: gardenRows }, { data: wishlistRows }] = await Promise.all([
     ids.length ? supabase.from("listings").select("seller_id").in("seller_id", ids) : { data: [] },
     ids.length ? supabase.from("auctions").select("seller_id").in("seller_id", ids) : { data: [] },
+    ids.length ? supabase.from("garden_plants").select("profile_id").in("profile_id", ids) : { data: [] },
+    ids.length ? supabase.from("wishlist_items").select("user_id").in("user_id", ids) : { data: [] },
   ]);
 
   const listingMap: Record<string, number> = {};
@@ -52,6 +54,12 @@ export default async function AdminUsersPage({
 
   const auctionMap: Record<string, number> = {};
   (auctionRows ?? []).forEach(r => { auctionMap[r.seller_id] = (auctionMap[r.seller_id] ?? 0) + 1; });
+
+  const gardenMap: Record<string, number> = {};
+  (gardenRows ?? []).forEach(r => { gardenMap[r.profile_id] = (gardenMap[r.profile_id] ?? 0) + 1; });
+
+  const wishlistMap: Record<string, number> = {};
+  (wishlistRows ?? []).forEach(r => { wishlistMap[r.user_id] = (wishlistMap[r.user_id] ?? 0) + 1; });
 
   function tabHref(t: "active" | "archived") {
     const params = new URLSearchParams();
@@ -122,6 +130,8 @@ export default async function AdminUsersPage({
                   <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Joined</th>
                   <th className="text-left px-4 py-3 font-medium">Listings</th>
                   <th className="text-left px-4 py-3 font-medium">Auctions</th>
+                  <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">Garden</th>
+                  <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">Wishlist</th>
                   <th className="text-left px-4 py-3 font-medium hidden sm:table-cell">Plan</th>
                   <th className="text-left px-4 py-3 font-medium hidden sm:table-cell">Payments</th>
                 </>
@@ -153,6 +163,8 @@ export default async function AdminUsersPage({
                     </td>
                     <td className="px-4 py-3">{listingMap[p.id] ?? 0}</td>
                     <td className="px-4 py-3">{auctionMap[p.id] ?? 0}</td>
+                    <td className="px-4 py-3 hidden lg:table-cell">{gardenMap[p.id] ?? 0}</td>
+                    <td className="px-4 py-3 hidden lg:table-cell">{wishlistMap[p.id] ?? 0}</td>
                     <td className="px-4 py-3 hidden sm:table-cell">
                       {p.plan && p.plan !== "seedling" ? (
                         <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
