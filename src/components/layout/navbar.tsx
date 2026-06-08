@@ -30,9 +30,10 @@ interface NavbarProps {
   pendingSalesOrders?: number;
   pendingBuyerPayments?: number;
   actionableDisputeCount?: number;
+  pendingTrades?: number;
 }
 
-export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessages = 0, pendingReports = 0, pendingSalesOrders = 0, pendingBuyerPayments = 0, actionableDisputeCount = 0 }: NavbarProps) {
+export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessages = 0, pendingReports = 0, pendingSalesOrders = 0, pendingBuyerPayments = 0, actionableDisputeCount = 0, pendingTrades = 0 }: NavbarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const headerRef = useRef<HTMLElement>(null);
@@ -207,6 +208,11 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
                       {pendingReports > 9 ? "9+" : pendingReports}
                     </span>
                   )}
+                  {!isAdmin && pendingTrades > 0 && (
+                    <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-leaf text-white text-[8px] font-bold flex items-center justify-center ring-2 ring-background">
+                      {pendingTrades > 9 ? "9+" : pendingTrades}
+                    </span>
+                  )}
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
                   <DropdownMenuItem><Link href="/account" className="block w-full">Account Settings</Link></DropdownMenuItem>
@@ -220,8 +226,7 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
                   <DropdownMenuItem><Link href="/wishlist" className="block w-full">My Saved</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href="/dashboard/inventory" className="block w-full">My Stock</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href={`/sellers/${username}`} className="block w-full">My Storefront</Link></DropdownMenuItem>
-                  <DropdownMenuItem><Link href="/dashboard/offers" className="block w-full">Offers</Link></DropdownMenuItem>
-                  <DropdownMenuItem><Link href="/trades" className="block w-full">Trades</Link></DropdownMenuItem>
+                  <DropdownMenuItem><Link href="/dashboard/offers" className="block w-full">Offers & Trades{pendingTrades > 0 ? ` (${pendingTrades})` : ""}</Link></DropdownMenuItem>
                   {isAdmin && (
                     <>
                       <DropdownMenuSeparator />
@@ -316,7 +321,7 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
               <p className="px-3 pt-1 pb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Community</p>
               <MobileLink href="/feed" onClick={closeMenu}>Feed</MobileLink>
               <MobileLink href="/garden" onClick={closeMenu}>My Garden</MobileLink>
-              <MobileLink href="/trades" onClick={closeMenu}>Trades</MobileLink>
+              <MobileLink href="/dashboard/offers?tab=trades" onClick={closeMenu}>Trades{pendingTrades > 0 ? ` (${pendingTrades})` : ""}</MobileLink>
               <MobileLink href="/following" onClick={closeMenu}>Following</MobileLink>
               <MobileLink href="/giveaway" onClick={closeMenu}>Giveaway</MobileLink>
 

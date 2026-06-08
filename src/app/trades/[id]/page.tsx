@@ -58,7 +58,7 @@ export default async function TradePage({
   return (
     <div className="max-w-2xl mx-auto px-4 py-10">
       <Link
-        href="/trades"
+        href="/dashboard/offers?tab=trades"
         className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-6"
       >
         <ChevronLeft size={16} />
