@@ -73,6 +73,7 @@ export default async function GiveawayPage() {
   let referralCode: string | null = null;
   let bonusEntriesThisMonth = 0;
   let savedAddress: { name: string; line1: string; line2?: string; city: string; state: string; zip: string; country: string } | null = null;
+  let emailOptedIn = false;
 
   if (user) {
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
@@ -82,7 +83,7 @@ export default async function GiveawayPage() {
         ? supabase.from("giveaway_entries").select("id").eq("user_id", user.id).eq("month", month).single()
         : Promise.resolve({ data: null }),
       supabase.from("giveaway_sponsor_requests").select("id").eq("user_id", user.id).eq("status", "open").maybeSingle(),
-      admin.from("profiles").select("referral_code, saved_shipping_address").eq("id", user.id).single(),
+      admin.from("profiles").select("referral_code, saved_shipping_address, email_marketing_opt_in").eq("id", user.id).single(),
       admin.from("referral_activations").select("type")
         .eq("referrer_id", user.id)
         .gte("activated_at", monthStart),
@@ -94,6 +95,7 @@ export default async function GiveawayPage() {
       (sum, a) => sum + (a.type === "first_sale" || a.type === "first_listing" ? 2 : 1), 0
     );
     savedAddress = (profile?.saved_shipping_address as typeof savedAddress) ?? null;
+    emailOptedIn = profile?.email_marketing_opt_in ?? false;
 
     // Backfill referral code for existing users who signed up before this feature
     if (profile?.referral_code) {
@@ -196,7 +198,7 @@ export default async function GiveawayPage() {
                     </p>
                   </div>
                 ) : (
-                  <EnterButton monthLabel={monthLabel} initialEntered={alreadyEntered} referralCode={referralCode} savedAddress={savedAddress} />
+                  <EnterButton monthLabel={monthLabel} initialEntered={alreadyEntered} referralCode={referralCode} savedAddress={savedAddress} emailOptedIn={emailOptedIn} />
                 )}
               </div>
             </div>

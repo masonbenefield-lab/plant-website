@@ -24,6 +24,7 @@ interface Props {
   initialEntered: boolean;
   referralCode?: string | null;
   savedAddress?: ShippingAddress | null;
+  emailOptedIn?: boolean;
 }
 
 const US_STATES = [
@@ -52,12 +53,13 @@ function isUSAddress(addr: ShippingAddress): boolean {
   return US_STATES.includes(state) || !!US_STATE_NAMES[state];
 }
 
-export function EnterButton({ monthLabel, initialEntered, referralCode, savedAddress }: Props) {
+export function EnterButton({ monthLabel, initialEntered, referralCode, savedAddress, emailOptedIn = false }: Props) {
   const router = useRouter();
   const [entered, setEntered] = useState(initialEntered);
   const [isPending, startTransition] = useTransition();
   const [copied, setCopied] = useState(false);
   const [agreedToRules, setAgreedToRules] = useState(false);
+  const [emailOptIn, setEmailOptIn] = useState(false);
   const [showAddressStep, setShowAddressStep] = useState(false);
   const [address, setAddress] = useState<ShippingAddress>(
     savedAddress ?? { name: "", line1: "", line2: "", city: "", state: "", zip: "", country: "US" }
@@ -76,6 +78,13 @@ export function EnterButton({ monthLabel, initialEntered, referralCode, savedAdd
 
   function doEnter() {
     startTransition(async () => {
+      if (!emailOptedIn && emailOptIn) {
+        fetch("/api/profile/update", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email_marketing_opt_in: true }),
+        }).catch(() => {});
+      }
       const res = await fetch("/api/giveaway/enter", { method: "POST" });
       const json = await res.json();
       if (!res.ok) {
@@ -215,6 +224,19 @@ export function EnterButton({ monthLabel, initialEntered, referralCode, savedAdd
           . No purchase necessary. Open to US residents 18+.
         </span>
       </label>
+      {!emailOptedIn && (
+        <label className="flex items-start gap-2.5 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={emailOptIn}
+            onChange={(e) => setEmailOptIn(e.target.checked)}
+            className="mt-0.5 h-4 w-4 rounded border-input accent-leaf cursor-pointer shrink-0"
+          />
+          <span className="text-xs text-muted-foreground leading-relaxed">
+            I&apos;d like to receive plant updates, giveaway announcements, and news from Plantet. (Optional)
+          </span>
+        </label>
+      )}
       <Button
         size="lg"
         className="bg-leaf hover:bg-forest text-white px-10 text-base disabled:opacity-50"
