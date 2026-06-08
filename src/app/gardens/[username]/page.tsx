@@ -145,11 +145,11 @@ export default async function PublicGardenPage({
             <div className="flex items-center gap-1.5 mt-2">
               {isVisitor ? (
                 <Link
-                  href={`/messages?to=${profile.username}`}
+                  href={`/trades/new?to=${profile.username}`}
                   className="flex items-center gap-1.5 text-xs font-medium text-leaf bg-[#DFE7D4] dark:bg-forest/40 dark:text-sage px-2.5 py-1 rounded-full hover:bg-[#c8d8bc] dark:hover:bg-forest/60 transition-colors"
                 >
                   <ArrowLeftRight size={11} />
-                  Open to trades · Message to arrange
+                  Open to trades
                 </Link>
               ) : (
                 <span className="flex items-center gap-1.5 text-xs font-medium text-leaf bg-[#DFE7D4] dark:bg-forest/40 dark:text-sage px-2.5 py-1 rounded-full">

@@ -280,7 +280,7 @@ export default async function SellerStorefront({
             <div className="flex flex-wrap items-center gap-2 mt-2">
               {user && user.id !== profile.id ? (
                 <Link
-                  href={`/messages?to=${profile.username}`}
+                  href={`/trades/new?to=${profile.username}`}
                   className="flex items-center gap-1 text-xs font-medium text-leaf bg-[#DFE7D4] dark:bg-forest/40 dark:text-sage px-2.5 py-1 rounded-full hover:bg-[#c8d8bc] dark:hover:bg-forest/60 transition-colors"
                 >
                   <ArrowLeftRight size={11} />
