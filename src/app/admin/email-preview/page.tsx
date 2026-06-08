@@ -30,6 +30,7 @@ import {
   buildReserveOfferExpiredHtml,
   buildWeeklyCareSummaryHtml,
   buildGiveawayEntryHtml,
+  buildOnboardingEmailHtml,
   buildCommunityReplyNotificationHtml,
   buildTradeProposedHtml,
   buildTradeAcceptedHtml,
@@ -370,6 +371,16 @@ export default async function EmailPreviewPage() {
         plantName: "Monstera Deliciosa",
         bidCents: 2800,
         dashboardUrl: `${PREVIEW_SITE}/dashboard/auctions`,
+      }),
+    },
+    {
+      id: "onboarding",
+      label: "Day-3 Onboarding",
+      category: "Account",
+      html: buildOnboardingEmailHtml({
+        username: "plantlover",
+        displayName: "Jane",
+        referralCode: "abc123",
       }),
     },
     {
