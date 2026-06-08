@@ -66,12 +66,21 @@ export function containsSlur(text: string): boolean {
 
 /** Returns the matched slur from our list, or null if clean. */
 export function findProhibitedWord(text: string): string | null {
-  const normalizedInput = normalize(text);
   const lowered = text.toLowerCase();
+  // Split into individual tokens so "flesh. It" doesn't collapse into "fleshit"
+  const tokens = text.split(/\s+/);
+
   for (const slur of SLURS) {
+    // Multi-word slurs (e.g. "sand nigger"): match directly in lowered text
+    if (slur.includes(" ")) {
+      if (lowered.includes(slur)) return slur;
+      continue;
+    }
+    // Single-word slurs: check each token after normalizing for leetspeak/punctuation
+    // This catches "n-i-g-g-e-r" or "f.u.c.k" while preserving word boundaries
     const normalizedSlur = normalize(slur);
-    if (normalizedInput.includes(normalizedSlur) || lowered.includes(slur)) {
-      return slur;
+    for (const token of tokens) {
+      if (normalize(token).includes(normalizedSlur)) return slur;
     }
   }
   return null;
