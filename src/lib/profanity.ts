@@ -76,11 +76,13 @@ export function findProhibitedWord(text: string): string | null {
       if (lowered.includes(slur)) return slur;
       continue;
     }
-    // Single-word slurs: check each token after normalizing for leetspeak/punctuation
-    // This catches "n-i-g-g-e-r" or "f.u.c.k" while preserving word boundaries
+    // Single-word slurs: normalized token must EQUAL the normalized slur.
+    // This catches obfuscation ("s.p.i.c" → "spic") while preventing false
+    // positives from legitimate words that contain slurs as substrings
+    // ("spice" → "spice" ≠ "spic", "flesh" + "it" are separate tokens ≠ "shit").
     const normalizedSlur = normalize(slur);
     for (const token of tokens) {
-      if (normalize(token).includes(normalizedSlur)) return slur;
+      if (normalize(token) === normalizedSlur) return slur;
     }
   }
   return null;
