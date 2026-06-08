@@ -2932,7 +2932,80 @@ export async function sendCommunityReplyNotification({
   });
 }
 
+// ─── Community reply notification ────────────────────────────────────────────
+
+export function buildCommunityReplyNotificationHtml({
+  postTitle,
+  replierUsername,
+  replySnippet,
+  postId,
+}: {
+  postTitle: string;
+  replierUsername: string;
+  replySnippet: string;
+  postId: string;
+}): string {
+  const siteUrl = siteBase();
+  const postUrl = `${siteUrl}/community/${postId}`;
+  const body = `
+    <tr>
+      <td style="padding:28px 32px 0;">
+        <p style="margin:0 0 16px;font-size:15px;color:#3D3929;line-height:1.6;">
+          <strong>${replierUsername}</strong> replied to your post:
+        </p>
+        <div style="background:#F0EDE4;border-left:3px solid #2F7D54;border-radius:4px;padding:14px 18px;margin-bottom:24px;">
+          <p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#1F4736;">${postTitle}</p>
+          <p style="margin:0;font-size:13px;color:#5A5544;line-height:1.6;">${replySnippet}</p>
+        </div>
+        <table cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+          <tr>
+            <td style="background:#2F7D54;border-radius:8px;">
+              <a href="${postUrl}" style="display:inline-block;padding:12px 24px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;">
+                View reply →
+              </a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  `;
+  return emailBase({
+    title: "New reply on Plantet",
+    heading: "Someone replied to your post",
+    body,
+    footerNote: "You're receiving this because someone replied to your Plantet community post.",
+  });
+}
+
 // ─── Trade proposed (to recipient) ───────────────────────────────────────────
+
+export function buildTradeProposedHtml({
+  proposerUsername,
+  offerDescription,
+  wantDescription,
+  tradeId,
+}: {
+  proposerUsername: string;
+  offerDescription: string;
+  wantDescription: string;
+  tradeId: string;
+}): string {
+  const tradeUrl = `${siteBase()}/trades/${tradeId}`;
+  return emailBase({
+    title: `${proposerUsername} wants to trade with you`,
+    heading: "New trade proposal",
+    subheading: `${proposerUsername} sent you a trade offer`,
+    body: `
+      <p style="margin:0 0 16px;"><strong>${proposerUsername}</strong> wants to make a trade with you on Plantet.</p>
+      ${infoCard([
+        { label: "They're offering", value: offerDescription },
+        { label: "They want from you", value: wantDescription },
+      ])}
+      ${ctaBtn("View Trade", tradeUrl)}
+    `,
+    footerNote: "You're receiving this because someone sent you a trade proposal on Plantet.",
+  });
+}
 
 export async function sendTradeProposed({
   toEmail,
@@ -2976,6 +3049,29 @@ export async function sendTradeProposed({
 
 // ─── Trade accepted (to proposer) ────────────────────────────────────────────
 
+export function buildTradeAcceptedHtml({
+  recipientUsername,
+  offerDescription,
+  tradeId,
+}: {
+  recipientUsername: string;
+  offerDescription: string;
+  tradeId: string;
+}): string {
+  const tradeUrl = `${siteBase()}/trades/${tradeId}`;
+  return emailBase({
+    title: `${recipientUsername} accepted your trade`,
+    heading: "Trade accepted!",
+    subheading: `${recipientUsername} is in`,
+    body: `
+      <p style="margin:0 0 16px;">Great news — <strong>${recipientUsername}</strong> accepted your trade proposal. Head over to the trade to coordinate next steps.</p>
+      ${infoCard([{ label: "Your offer", value: offerDescription }])}
+      ${ctaBtn("View Trade", tradeUrl)}
+    `,
+    footerNote: "You're receiving this because your trade proposal was accepted on Plantet.",
+  });
+}
+
 export async function sendTradeAccepted({
   toEmail,
   proposerUsername,
@@ -3012,6 +3108,26 @@ export async function sendTradeAccepted({
 }
 
 // ─── Trade declined (to proposer) ────────────────────────────────────────────
+
+export function buildTradeDeclinedHtml({
+  recipientUsername,
+  offerDescription,
+}: {
+  recipientUsername: string;
+  offerDescription: string;
+}): string {
+  return emailBase({
+    title: `${recipientUsername} declined your trade`,
+    heading: "Trade declined",
+    subheading: `${recipientUsername} passed on this one`,
+    body: `
+      <p style="margin:0 0 16px;"><strong>${recipientUsername}</strong> declined your trade proposal. Feel free to browse other gardens and propose a new trade.</p>
+      ${infoCard([{ label: "Your offer", value: offerDescription }])}
+      ${ctaBtn("Browse Gardens", `${siteBase()}/gardens`)}
+    `,
+    footerNote: "You're receiving this because your trade proposal was declined on Plantet.",
+  });
+}
 
 export async function sendTradeDeclined({
   toEmail,

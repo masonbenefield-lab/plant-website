@@ -29,6 +29,11 @@ import {
   buildReserveOfferDeclinedHtml,
   buildReserveOfferExpiredHtml,
   buildWeeklyCareSummaryHtml,
+  buildGiveawayEntryHtml,
+  buildCommunityReplyNotificationHtml,
+  buildTradeProposedHtml,
+  buildTradeAcceptedHtml,
+  buildTradeDeclinedHtml,
 } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
@@ -365,6 +370,59 @@ export default async function EmailPreviewPage() {
         plantName: "Monstera Deliciosa",
         bidCents: 2800,
         dashboardUrl: `${PREVIEW_SITE}/dashboard/auctions`,
+      }),
+    },
+    {
+      id: "giveaway-entry",
+      label: "Giveaway Entry Confirmation",
+      category: "Account",
+      html: buildGiveawayEntryHtml({
+        username: "plantlover",
+        displayName: "Jane",
+        monthLabel: "June 2026",
+        plantName: "Monstera deliciosa — Thai Constellation",
+        referralLink: `${PREVIEW_SITE}/signup?ref=abc123`,
+      }),
+    },
+    {
+      id: "community-reply",
+      label: "Community Reply Notification",
+      category: "Community",
+      html: buildCommunityReplyNotificationHtml({
+        postTitle: "Why are my Monstera leaves turning yellow?",
+        replierUsername: "planthaus",
+        replySnippet: "This usually means overwatering — let the top inch of soil dry out before watering again and make sure your pot has drainage holes.",
+        postId: "preview-post-id",
+      }),
+    },
+    {
+      id: "trade-proposed",
+      label: "Trade Proposed (Recipient)",
+      category: "Trades",
+      html: buildTradeProposedHtml({
+        proposerUsername: "planthaus",
+        offerDescription: "Monstera Thai Constellation cutting, well-rooted in 4-inch pot",
+        wantDescription: "Philodendron White Princess or similar rare Philodendron",
+        tradeId: "preview-trade-id",
+      }),
+    },
+    {
+      id: "trade-accepted",
+      label: "Trade Accepted (Proposer)",
+      category: "Trades",
+      html: buildTradeAcceptedHtml({
+        recipientUsername: "leaflover",
+        offerDescription: "Monstera Thai Constellation cutting, well-rooted in 4-inch pot",
+        tradeId: "preview-trade-id",
+      }),
+    },
+    {
+      id: "trade-declined",
+      label: "Trade Declined (Proposer)",
+      category: "Trades",
+      html: buildTradeDeclinedHtml({
+        recipientUsername: "leaflover",
+        offerDescription: "Monstera Thai Constellation cutting, well-rooted in 4-inch pot",
       }),
     },
     {
