@@ -45,7 +45,7 @@ export default async function AdminUsersPage({
   const [{ data: listingRows }, { data: auctionRows }, { data: gardenRows }, { data: wishlistRows }] = await Promise.all([
     ids.length ? supabase.from("listings").select("seller_id").in("seller_id", ids) : { data: [] },
     ids.length ? supabase.from("auctions").select("seller_id").in("seller_id", ids) : { data: [] },
-    ids.length ? supabase.from("garden_plants").select("profile_id").in("profile_id", ids) : { data: [] },
+    ids.length ? supabase.from("garden_plants").select("user_id").in("user_id", ids) : { data: [] },
     ids.length ? supabase.from("wishlist_items").select("user_id").in("user_id", ids) : { data: [] },
   ]);
 
@@ -56,7 +56,7 @@ export default async function AdminUsersPage({
   (auctionRows ?? []).forEach(r => { auctionMap[r.seller_id] = (auctionMap[r.seller_id] ?? 0) + 1; });
 
   const gardenMap: Record<string, number> = {};
-  (gardenRows ?? []).forEach(r => { gardenMap[r.profile_id] = (gardenMap[r.profile_id] ?? 0) + 1; });
+  (gardenRows ?? []).forEach(r => { gardenMap[r.user_id] = (gardenMap[r.user_id] ?? 0) + 1; });
 
   const wishlistMap: Record<string, number> = {};
   (wishlistRows ?? []).forEach(r => { wishlistMap[r.user_id] = (wishlistMap[r.user_id] ?? 0) + 1; });
