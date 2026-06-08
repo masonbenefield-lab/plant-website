@@ -2724,7 +2724,7 @@ export function buildGiveawayEntryHtml({
             <p style="margin:0 0 6px;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#6B7E72;">Want better odds?</p>
             <p style="margin:0 0 16px;font-size:15px;color:#16201B;line-height:1.6;">Share your referral link and earn bonus entries:<br>
               <strong>+1 entry</strong> when a friend signs up and adds their first plant<br>
-              <strong>+2 entries</strong> when a friend makes their first sale
+              <strong>+2 entries</strong> when a friend lists an item or starts an auction
             </p>
             <a href="${referralLink}" style="display:inline-block;background:#2F7D54;color:#F6F2E9;font-size:14px;font-weight:600;text-decoration:none;padding:12px 28px;border-radius:8px;">Copy my referral link &#8594;</a>
           </td>
