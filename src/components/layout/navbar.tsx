@@ -221,6 +221,7 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
                   <DropdownMenuItem><Link href="/dashboard/inventory" className="block w-full">My Stock</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href={`/sellers/${username}`} className="block w-full">My Storefront</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link href="/dashboard/offers" className="block w-full">Offers</Link></DropdownMenuItem>
+                  <DropdownMenuItem><Link href="/trades" className="block w-full">Trades</Link></DropdownMenuItem>
                   {isAdmin && (
                     <>
                       <DropdownMenuSeparator />
@@ -315,6 +316,7 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
               <p className="px-3 pt-1 pb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Community</p>
               <MobileLink href="/feed" onClick={closeMenu}>Feed</MobileLink>
               <MobileLink href="/garden" onClick={closeMenu}>My Garden</MobileLink>
+              <MobileLink href="/trades" onClick={closeMenu}>Trades</MobileLink>
               <MobileLink href="/following" onClick={closeMenu}>Following</MobileLink>
               <MobileLink href="/giveaway" onClick={closeMenu}>Giveaway</MobileLink>
 

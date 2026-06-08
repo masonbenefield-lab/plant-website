@@ -114,7 +114,7 @@ export default function CommunityGardensGrid({
                       {!isOwnGarden && (
                         profile.open_to_trades ? (
                           <Link
-                            href={`/messages?to=${profile.username}`}
+                            href={`/trades/new?to=${profile.username}`}
                             onClick={(e) => e.stopPropagation()}
                             className="ml-auto shrink-0 flex items-center gap-1 text-[10px] font-medium text-leaf bg-[#DFE7D4] dark:bg-forest/40 dark:text-sage px-1.5 py-0.5 rounded-full whitespace-nowrap hover:bg-[#c8d8bc] dark:hover:bg-forest/60 transition-colors"
                           >
@@ -123,7 +123,7 @@ export default function CommunityGardensGrid({
                           </Link>
                         ) : (
                           <Link
-                            href={`/messages?to=${profile.username}`}
+                            href={`/trades/new?to=${profile.username}`}
                             onClick={(e) => e.stopPropagation()}
                             className="ml-auto shrink-0 flex items-center gap-1 text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full whitespace-nowrap hover:text-foreground transition-colors"
                           >

@@ -2931,3 +2931,119 @@ export async function sendCommunityReplyNotification({
     html,
   });
 }
+
+// ─── Trade proposed (to recipient) ───────────────────────────────────────────
+
+export async function sendTradeProposed({
+  toEmail,
+  recipientUsername,
+  proposerUsername,
+  offerDescription,
+  wantDescription,
+  tradeId,
+}: {
+  toEmail: string;
+  recipientUsername: string;
+  proposerUsername: string;
+  offerDescription: string;
+  wantDescription: string;
+  tradeId: string;
+}) {
+  const siteUrl = siteBase();
+  const tradeUrl = `${siteUrl}/trades/${tradeId}`;
+  const html = emailBase({
+    title: `${proposerUsername} wants to trade with you`,
+    heading: "New trade proposal",
+    subheading: `${proposerUsername} sent you a trade offer`,
+    body: `
+      <p style="margin:0 0 16px;"><strong>${proposerUsername}</strong> wants to make a trade with you on Plantet.</p>
+      ${infoCard([
+        { label: "They're offering", value: offerDescription },
+        { label: "They want from you", value: wantDescription },
+      ])}
+      ${ctaBtn("View Trade", tradeUrl)}
+    `,
+    footerNote: "You're receiving this because someone sent you a trade proposal on Plantet.",
+  });
+  const resend = getResend();
+  await resend.emails.send({
+    from: FROM,
+    to: toEmail,
+    subject: `${proposerUsername} wants to trade with you on Plantet`,
+    html,
+  });
+}
+
+// ─── Trade accepted (to proposer) ────────────────────────────────────────────
+
+export async function sendTradeAccepted({
+  toEmail,
+  proposerUsername,
+  recipientUsername,
+  offerDescription,
+  tradeId,
+}: {
+  toEmail: string;
+  proposerUsername: string;
+  recipientUsername: string;
+  offerDescription: string;
+  tradeId: string;
+}) {
+  const siteUrl = siteBase();
+  const tradeUrl = `${siteUrl}/trades/${tradeId}`;
+  const html = emailBase({
+    title: `${recipientUsername} accepted your trade`,
+    heading: "Trade accepted!",
+    subheading: `${recipientUsername} is in`,
+    body: `
+      <p style="margin:0 0 16px;">Great news — <strong>${recipientUsername}</strong> accepted your trade proposal. Head over to the trade to coordinate next steps.</p>
+      ${infoCard([{ label: "Your offer", value: offerDescription }])}
+      ${ctaBtn("View Trade", tradeUrl)}
+    `,
+    footerNote: "You're receiving this because your trade proposal was accepted on Plantet.",
+  });
+  const resend = getResend();
+  await resend.emails.send({
+    from: FROM,
+    to: toEmail,
+    subject: `${recipientUsername} accepted your trade on Plantet`,
+    html,
+  });
+}
+
+// ─── Trade declined (to proposer) ────────────────────────────────────────────
+
+export async function sendTradeDeclined({
+  toEmail,
+  proposerUsername,
+  recipientUsername,
+  offerDescription,
+  tradeId,
+}: {
+  toEmail: string;
+  proposerUsername: string;
+  recipientUsername: string;
+  offerDescription: string;
+  tradeId: string;
+}) {
+  const siteUrl = siteBase();
+  const tradeUrl = `${siteUrl}/trades/${tradeId}`;
+  const html = emailBase({
+    title: `${recipientUsername} declined your trade`,
+    heading: "Trade declined",
+    subheading: `${recipientUsername} passed on this one`,
+    body: `
+      <p style="margin:0 0 16px;"><strong>${recipientUsername}</strong> declined your trade proposal. Feel free to browse other gardens and propose a new trade.</p>
+      ${infoCard([{ label: "Your offer", value: offerDescription }])}
+      ${ctaBtn("Browse Gardens", `${siteBase()}/gardens`)}
+    `,
+    footerNote: "You're receiving this because your trade proposal was declined on Plantet.",
+  });
+  const resend = getResend();
+  await resend.emails.send({
+    from: FROM,
+    to: toEmail,
+    subject: `${recipientUsername} declined your trade on Plantet`,
+    html,
+  });
+}
