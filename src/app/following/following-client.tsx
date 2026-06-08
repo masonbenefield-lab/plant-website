@@ -252,55 +252,57 @@ function UserCard({
         </AvatarFallback>
       </Avatar>
 
-      <div className="flex-1 min-w-0">
-        <Link
-          href={`/sellers/${profile.username}`}
-          className="font-medium text-sm hover:text-leaf hover:underline block truncate"
-        >
-          {profile.display_name ?? profile.username}
-        </Link>
-        {profile.display_name && (
-          <span className="text-xs text-muted-foreground block truncate">@{profile.username}</span>
-        )}
-        {tab === "followers" && (
-          <span className="text-xs text-muted-foreground">
-            {following.has(profile.id) ? "Follows you back" : "Follows you"}
-          </span>
-        )}
-      </div>
+      <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center sm:gap-3">
+        <div className="flex-1 min-w-0 mb-2 sm:mb-0">
+          <Link
+            href={`/sellers/${profile.username}`}
+            className="font-medium text-sm hover:text-leaf hover:underline block truncate"
+          >
+            {profile.display_name ?? profile.username}
+          </Link>
+          {profile.display_name && (
+            <span className="text-xs text-muted-foreground block truncate">@{profile.username}</span>
+          )}
+          {tab === "followers" && (
+            <span className="text-xs text-muted-foreground">
+              {following.has(profile.id) ? "Follows you back" : "Follows you"}
+            </span>
+          )}
+        </div>
 
-      <div className="flex items-center gap-2 shrink-0">
-        {tab !== "blocked" ? (
-          <>
-            <MessageButton recipientId={profile.id} />
-            <FollowButton
-              userId={currentUserId}
-              sellerId={profile.id}
-              initialFollowing={following.has(profile.id)}
-              initialCount={0}
-            />
-            <DropdownMenu>
-              <DropdownMenuTrigger>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
-                  <MoreHorizontal size={15} />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="min-w-[180px]">
-                <DropdownMenuItem
-                  onClick={() => onBlock(profile.id)}
-                  className="text-red-600 focus:text-red-600 whitespace-nowrap"
-                >
-                  <ShieldOff size={14} className="mr-2" />
-                  Block {profile.username}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </>
-        ) : (
-          <Button variant="outline" size="sm" onClick={() => onUnblock(profile.id)}>
-            Unblock
-          </Button>
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          {tab !== "blocked" ? (
+            <>
+              <MessageButton recipientId={profile.id} />
+              <FollowButton
+                userId={currentUserId}
+                sellerId={profile.id}
+                initialFollowing={following.has(profile.id)}
+                initialCount={0}
+              />
+              <DropdownMenu>
+                <DropdownMenuTrigger>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+                    <MoreHorizontal size={15} />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="min-w-[180px]">
+                  <DropdownMenuItem
+                    onClick={() => onBlock(profile.id)}
+                    className="text-red-600 focus:text-red-600 whitespace-nowrap"
+                  >
+                    <ShieldOff size={14} className="mr-2" />
+                    Block {profile.username}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
+          ) : (
+            <Button variant="outline" size="sm" onClick={() => onUnblock(profile.id)}>
+              Unblock
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );
