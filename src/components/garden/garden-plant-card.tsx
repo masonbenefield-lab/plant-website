@@ -3,11 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Pencil } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { PlantVisibilityToggle } from "@/components/garden/plant-visibility-toggle";
 import PinPlantButton from "@/components/garden/pin-plant-button";
+import { GardenEditModal } from "@/components/garden/garden-edit-modal";
 import type { GardenPlantStatus } from "@/lib/garden-types";
 
 const STATUS_LABEL: Record<GardenPlantStatus, string> = {
@@ -83,13 +83,11 @@ export default function GardenPlantCard({
             )}
           </Link>
           <div className="pt-1.5 border-t border-border/60 mt-1">
-            <Link
-              href={`/garden/${plant.id}/edit?from=garden`}
-              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground font-medium transition-colors w-fit"
-            >
-              <Pencil size={11} />
-              Edit
-            </Link>
+            <GardenEditModal
+              plantId={plant.id}
+              plantName={plant.name}
+              plantVariety={plant.variety}
+            />
           </div>
         </CardContent>
       </Card>
