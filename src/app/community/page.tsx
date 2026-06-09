@@ -168,7 +168,7 @@ export default async function CommunityPage({
 
   const authorIds = [...new Set(posts.map((p) => p.user_id))];
   const { data: authors } = authorIds.length
-    ? await supabase.from("profiles").select("id, username, avatar_url").in("id", authorIds)
+    ? await supabase.from("profiles").select("id, username, display_name, avatar_url").in("id", authorIds)
     : { data: [] };
   const authorMap = Object.fromEntries((authors ?? []).map((a) => [a.id, a]));
 
@@ -428,7 +428,7 @@ function PostsList({
   validSort,
 }: {
   posts: { id: string; user_id: string; post_type: string; title: string; body: string | null; photos: unknown; solved: boolean; created_at: string; plant_tag?: string | null }[];
-  authorMap: Record<string, { id: string; username: string; avatar_url: string | null } | undefined>;
+  authorMap: Record<string, { id: string; username: string; display_name: string | null; avatar_url: string | null } | undefined>;
   replyCountMap: Record<string, number>;
   likeCountMap: Record<string, number>;
   likedPostIds: Set<string>;
@@ -528,7 +528,7 @@ function PostsList({
                     <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">{post.body}</p>
                   )}
                   <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                    <span>{author?.username}</span>
+                    <span>{author?.display_name || author?.username}</span>
                     <span>{new Date(post.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
                     <span className="flex items-center gap-1">
                       <MessageCircle size={11} /> {replyCount} {replyCount === 1 ? "reply" : "replies"}

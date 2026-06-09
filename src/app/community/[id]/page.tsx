@@ -42,7 +42,7 @@ export default async function CommunityPostPage({
   if (!post) notFound();
 
   const [{ data: author }, { data: replies }, { data: followRow }, { data: reportRow }, { data: postLikes }] = await Promise.all([
-    supabase.from("profiles").select("id, username, avatar_url").eq("id", post.user_id).single(),
+    supabase.from("profiles").select("id, username, display_name, avatar_url").eq("id", post.user_id).single(),
     supabase
       .from("community_replies")
       .select("id, user_id, body, photos, is_solution, created_at")
@@ -74,7 +74,7 @@ export default async function CommunityPostPage({
   const replyAuthorIds = [...new Set((replies ?? []).map((r) => r.user_id))];
   const [{ data: replyAuthors }, { data: relatedPosts }] = await Promise.all([
     replyAuthorIds.length
-      ? supabase.from("profiles").select("id, username, avatar_url").in("id", replyAuthorIds)
+      ? supabase.from("profiles").select("id, username, display_name, avatar_url").in("id", replyAuthorIds)
       : Promise.resolve({ data: [] }),
     supabase
       .from("community_posts")
@@ -133,7 +133,7 @@ export default async function CommunityPostPage({
             </AvatarFallback>
           </Avatar>
           <Link href={`/sellers/${author?.username}`} className="text-sm font-medium hover:underline">
-            {author?.username}
+            {author?.display_name || author?.username}
           </Link>
           <span className="text-xs text-muted-foreground">
             {new Date(post.created_at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
@@ -192,6 +192,7 @@ export default async function CommunityPostPage({
           is_solution: r.is_solution,
           created_at: r.created_at,
           username: replyAuthorMap[r.user_id]?.username ?? "unknown",
+          display_name: (replyAuthorMap[r.user_id] as { display_name?: string | null } | undefined)?.display_name ?? null,
           avatar_url: replyAuthorMap[r.user_id]?.avatar_url ?? null,
           likeCount: replyLikeCountMap[r.id] ?? 0,
           liked: replyLikedSet.has(r.id),

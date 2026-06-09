@@ -23,6 +23,7 @@ type Reply = {
   is_solution: boolean;
   created_at: string;
   username: string;
+  display_name: string | null;
   avatar_url: string | null;
   likeCount?: number;
   liked?: boolean;
@@ -94,11 +95,12 @@ export function CommunityReplies({ postId, postType, postOwnerId, currentUserId,
         body: JSON.stringify({ postId, replyBody: body.trim() }),
       }).catch(() => {});
 
-      const { data: profile } = await supabase.from("profiles").select("username, avatar_url").eq("id", user.id).single();
+      const { data: profile } = await supabase.from("profiles").select("username, display_name, avatar_url").eq("id", user.id).single();
       setReplies((prev) => [...prev, {
         ...data,
         photos: data.photos as string[],
         username: profile?.username ?? "unknown",
+        display_name: profile?.display_name ?? null,
         avatar_url: profile?.avatar_url ?? null,
         likeCount: 0,
         liked: false,
@@ -176,7 +178,7 @@ export function CommunityReplies({ postId, postType, postOwnerId, currentUserId,
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
                 <Link href={`/sellers/${reply.username}`} className="text-sm font-medium hover:underline">
-                  {reply.username}
+                  {reply.display_name || reply.username}
                 </Link>
                 <span className="text-xs text-muted-foreground">
                   {new Date(reply.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
