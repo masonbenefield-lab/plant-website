@@ -261,7 +261,7 @@ export function GardenEditModal({
                 {/* Name + Variety */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label>Plant name *</Label>
+                    <Label>Plant type *</Label>
                     <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Monstera" required />
                   </div>
                   <div className="space-y-1.5">
