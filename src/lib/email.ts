@@ -2920,7 +2920,7 @@ export function buildOnboardingEmailHtml({
           <td style="padding:22px 24px;">
             <p style="margin:0 0 4px;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#2F7D54;">Start here</p>
             <p style="margin:4px 0 6px;font-size:15px;font-weight:700;color:#1F4736;">🪴 Add your first plant — it takes 30 seconds</p>
-            <p style="margin:0 0 16px;font-size:13px;color:#4A5E51;line-height:1.6;">Your garden is a living log of every plant you own. Never forget when you last watered, fertilized, or repotted. Set care intervals and get a weekly digest of what needs attention — free for every member.</p>
+            <p style="margin:0 0 16px;font-size:13px;color:#4A5E51;line-height:1.6;">Your garden is a living log of every plant you own. Never forget when you last watered, fertilized, or repotted. Set care intervals and get a weekly digest of what needs attention — free for every member. Make it public and share the link with friends so they can browse your collection with photos.</p>
             <a href="${siteUrl}/garden" style="display:inline-block;background:#2F7D54;color:#F6F2E9;font-size:13px;font-weight:600;text-decoration:none;padding:11px 24px;border-radius:7px;">Start my garden &#8594;</a>
           </td>
         </tr>
@@ -2939,8 +2939,8 @@ export function buildOnboardingEmailHtml({
       <table width="100%" cellpadding="0" cellspacing="0" style="background:#F4F0E6;border:1px solid #DED6C4;border-radius:10px;margin:0 0 12px;overflow:hidden;">
         <tr>
           <td style="padding:18px 20px;">
-            <p style="margin:0 0 6px;font-size:14px;font-weight:700;color:#1F4736;">🌿 Shop &amp; Auctions — rare plants from real growers</p>
-            <p style="margin:0 0 10px;font-size:13px;color:#4A5E51;line-height:1.6;">Browse hard-to-find plants listed by growers across the US. New listings go up daily. Auctions run weekly — bid on something you've been hunting for. <a href="${siteUrl}/shop" style="color:#2F7D54;font-weight:600;">Browse the shop</a></p>
+            <p style="margin:0 0 6px;font-size:14px;font-weight:700;color:#1F4736;">🌱 Wishlist — save plants you're hunting for</p>
+            <p style="margin:0 0 10px;font-size:13px;color:#4A5E51;line-height:1.6;">See a plant you want but not ready to buy? Add it to your wishlist. Browse the shop, save what catches your eye, and come back when the time is right. It's also a great way to let other growers know what you're looking for. <a href="${siteUrl}/shop" style="color:#2F7D54;font-weight:600;">Browse the shop</a></p>
           </td>
         </tr>
       </table>
