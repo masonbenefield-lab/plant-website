@@ -2906,53 +2906,62 @@ export function buildOnboardingEmailHtml({
     </table>`;
 
   return emailBase({
-    title: "You've only seen part of Plantet",
-    heading: "You just scratched the surface 🌱",
-    subheading: `Here's everything else waiting for you, ${name}`,
+    title: "5 things Plantet members do (besides the giveaway)",
+    heading: "There's a lot more here, ${name} 🌿".replace("${name}", name),
+    subheading: "Most people find us through the giveaway. Here's what keeps them around.",
     body: `
-      <p style="margin:0 0 20px;font-size:15px;color:#16201B;line-height:1.7;">
-        You signed up a few days ago — great to have you. Most people find Plantet through the giveaway, but there's a lot more going on. Here's a quick look at what you might have missed.
+      <p style="margin:0 0 6px;font-size:15px;color:#16201B;line-height:1.7;">
+        Glad you're here. The giveaway is just the front door — here's what's inside.
       </p>
 
-      ${featureCard(
-        "🪴",
-        "Garden Log & Care Schedule",
-        "Track every plant you own. Log watering, fertilizing, and repotting history. Set care intervals and get a weekly reminder of what needs attention — free for all members.",
-        "Start my garden",
-        `${siteUrl}/garden`
-      )}
+      <!-- Primary CTA: Garden -->
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#F4F0E6;border:2px solid #2F7D54;border-radius:10px;margin:20px 0 12px;overflow:hidden;">
+        <tr>
+          <td style="padding:22px 24px;">
+            <p style="margin:0 0 4px;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#2F7D54;">Start here</p>
+            <p style="margin:4px 0 6px;font-size:15px;font-weight:700;color:#1F4736;">🪴 Add your first plant — it takes 30 seconds</p>
+            <p style="margin:0 0 16px;font-size:13px;color:#4A5E51;line-height:1.6;">Your garden is a living log of every plant you own. Never forget when you last watered, fertilized, or repotted. Set care intervals and get a weekly digest of what needs attention — free for every member.</p>
+            <a href="${siteUrl}/garden" style="display:inline-block;background:#2F7D54;color:#F6F2E9;font-size:13px;font-weight:600;text-decoration:none;padding:11px 24px;border-radius:7px;">Start my garden &#8594;</a>
+          </td>
+        </tr>
+      </table>
 
-      ${featureCard(
-        "💬",
-        "Community",
-        "Ask a care question, share a new arrival, or browse what other growers are talking about. Post in Help, Show & Tell, or Discussion — all skill levels welcome.",
-        "Visit the community",
-        `${siteUrl}/community`
-      )}
+      <!-- Secondary features: no buttons, just links -->
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#F4F0E6;border:1px solid #DED6C4;border-radius:10px;margin:0 0 12px;overflow:hidden;">
+        <tr>
+          <td style="padding:18px 20px;">
+            <p style="margin:0 0 6px;font-size:14px;font-weight:700;color:#1F4736;">💬 Community — ask anything, share everything</p>
+            <p style="margin:0 0 10px;font-size:13px;color:#4A5E51;line-height:1.6;">Got a plant that's not doing well? Post a Help request and get advice from real growers. Scored a new cutting? Share it in Show &amp; Tell. Browse by plant type to see what others are growing. <a href="${siteUrl}/community" style="color:#2F7D54;font-weight:600;">Visit the community</a></p>
+          </td>
+        </tr>
+      </table>
 
-      ${featureCard(
-        "🌿",
-        "Shop & Auctions",
-        "Browse rare and hard-to-find plants from growers across the US. New listings added daily. Auctions end every week — bid on something you've been hunting for.",
-        "Browse the shop",
-        `${siteUrl}/shop`
-      )}
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#F4F0E6;border:1px solid #DED6C4;border-radius:10px;margin:0 0 12px;overflow:hidden;">
+        <tr>
+          <td style="padding:18px 20px;">
+            <p style="margin:0 0 6px;font-size:14px;font-weight:700;color:#1F4736;">🌿 Shop &amp; Auctions — rare plants from real growers</p>
+            <p style="margin:0 0 10px;font-size:13px;color:#4A5E51;line-height:1.6;">Browse hard-to-find plants listed by growers across the US. New listings go up daily. Auctions run weekly — bid on something you've been hunting for. <a href="${siteUrl}/shop" style="color:#2F7D54;font-weight:600;">Browse the shop</a></p>
+          </td>
+        </tr>
+      </table>
 
-      ${featureCard(
-        "🔄",
-        "Trades",
-        "Find a grower with something you want and propose a plant-for-plant swap. No money involved — just plants. Browse public gardens and send a trade proposal.",
-        "Browse gardens",
-        `${siteUrl}/gardens`
-      )}
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#F4F0E6;border:1px solid #DED6C4;border-radius:10px;margin:0 0 20px;overflow:hidden;">
+        <tr>
+          <td style="padding:18px 20px;">
+            <p style="margin:0 0 6px;font-size:14px;font-weight:700;color:#1F4736;">🔄 Trades — swap plants, no money needed</p>
+            <p style="margin:0 0 10px;font-size:13px;color:#4A5E51;line-height:1.6;">See something in another grower's public garden you want? Send a trade proposal. Browse gardens, find a match, make an offer. <a href="${siteUrl}/gardens" style="color:#2F7D54;font-weight:600;">Browse gardens</a></p>
+          </td>
+        </tr>
+      </table>
 
-      <table width="100%" cellpadding="0" cellspacing="0" style="background:#EFE7D6;border:1px solid #DED6C4;border-radius:10px;margin:20px 0 0;overflow:hidden;">
+      <!-- Referral section — elevated position -->
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#EFE7D6;border:1px solid #DED6C4;border-radius:10px;margin:0 0 0;overflow:hidden;">
         <tr>
           <td style="padding:20px 24px;">
-            <p style="margin:0 0 4px;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#6B7E72;">Boost your giveaway entries</p>
+            <p style="margin:0 0 4px;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#6B7E72;">Earn more giveaway entries</p>
             <p style="margin:0 0 12px;font-size:14px;color:#16201B;line-height:1.6;">
-              Share your referral link and earn bonus entries each month:<br>
-              <strong>+1 entry</strong> when a friend adds their first plant to their garden<br>
+              Share your referral link — every friend you bring in earns you bonus entries:<br>
+              <strong>+1 entry</strong> when a friend adds their first garden plant<br>
               <strong>+1 entry</strong> when a friend makes their first community post<br>
               <strong>+2 entries</strong> when a friend lists an item or starts an auction<br>
               <strong>+3 entries</strong> when a friend makes their first purchase
@@ -2981,7 +2990,7 @@ export async function sendOnboardingEmail({
   await resend.emails.send({
     from: FROM,
     to: recipientEmail,
-    subject: "Here's what else Plantet can do for you",
+    subject: "5 things Plantet members do (besides the giveaway)",
     html: buildOnboardingEmailHtml({ username, displayName, referralCode }),
   });
 }
