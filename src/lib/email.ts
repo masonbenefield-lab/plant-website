@@ -2920,7 +2920,7 @@ export function buildOnboardingEmailHtml({
           <td style="padding:22px 24px;">
             <p style="margin:0 0 4px;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#2F7D54;">Start here</p>
             <p style="margin:4px 0 6px;font-size:15px;font-weight:700;color:#1F4736;">🪴 Add your first plant — it takes 30 seconds</p>
-            <p style="margin:0 0 16px;font-size:13px;color:#4A5E51;line-height:1.6;">Your garden is a living log of every plant you own. Never forget when you last watered, fertilized, or repotted. Set care intervals and get a weekly digest of what needs attention — free for every member. Make it public and share the link with friends so they can browse your collection with photos.</p>
+            <p style="margin:0 0 16px;font-size:13px;color:#4A5E51;line-height:1.6;">Your garden is a living log of every plant you own. Make it public and share the link with friends so they can browse your collection with photos. Never forget when you last watered, fertilized, or repotted. Set care intervals and get a weekly digest of what needs attention — free for every member.</p>
             <a href="${siteUrl}/garden" style="display:inline-block;background:#2F7D54;color:#F6F2E9;font-size:13px;font-weight:600;text-decoration:none;padding:11px 24px;border-radius:7px;">Start my garden &#8594;</a>
           </td>
         </tr>
