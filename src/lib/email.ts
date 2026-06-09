@@ -1577,7 +1577,7 @@ export function buildDigestHtml({
                     <p style="margin:0 0 4px;font-size:18px;">&#127873;</p>
                     <p style="margin:0 0 6px;font-size:15px;font-weight:700;color:#1F4736;">Monthly Giveaway</p>
                     <p style="margin:0 0 8px;font-size:13px;color:#2F7D54;line-height:1.6;">Enter for a chance to win this month's plant prize. One entry per member — entries reset each month.</p>
-                    <p style="margin:0 0 16px;font-size:12px;color:#5A6E5A;line-height:1.6;">Bonus entries: <strong>+1</strong> when a friend signs up and adds their first plant to their garden &nbsp;·&nbsp; <strong>+2</strong> when a friend lists an item or starts an auction.</p>
+                    <p style="margin:0 0 16px;font-size:12px;color:#5A6E5A;line-height:1.6;">Bonus entries: <strong>+1</strong> garden plant &nbsp;·&nbsp; <strong>+1</strong> community post &nbsp;·&nbsp; <strong>+2</strong> listing or auction &nbsp;·&nbsp; <strong>+3</strong> first purchase.</p>
                     <a href="${siteUrl}/giveaway" style="display:inline-block;background:#2F7D54;color:#F6F2E9;font-size:13px;font-weight:600;text-decoration:none;padding:10px 24px;border-radius:7px;">Enter the giveaway &#8594;</a>
                   </td>
                 </tr>
@@ -2724,8 +2724,10 @@ export function buildGiveawayEntryHtml({
           <td style="padding:20px 24px;">
             <p style="margin:0 0 6px;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#6B7E72;">Want better odds?</p>
             <p style="margin:0 0 16px;font-size:15px;color:#16201B;line-height:1.6;">Share your referral link and earn bonus entries:<br>
-              <strong>+1 entry</strong> when a friend signs up and adds their first plant to their garden<br>
-              <strong>+2 entries</strong> when a friend lists an item or starts an auction
+              <strong>+1 entry</strong> when a friend adds their first plant to their garden<br>
+              <strong>+1 entry</strong> when a friend makes their first community post<br>
+              <strong>+2 entries</strong> when a friend lists an item or starts an auction<br>
+              <strong>+3 entries</strong> when a friend makes their first purchase
             </p>
             <a href="${referralLink}" style="display:inline-block;background:#2F7D54;color:#F6F2E9;font-size:14px;font-weight:600;text-decoration:none;padding:12px 28px;border-radius:8px;">Copy my referral link &#8594;</a>
           </td>
@@ -2950,8 +2952,10 @@ export function buildOnboardingEmailHtml({
             <p style="margin:0 0 4px;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#6B7E72;">Boost your giveaway entries</p>
             <p style="margin:0 0 12px;font-size:14px;color:#16201B;line-height:1.6;">
               Share your referral link and earn bonus entries each month:<br>
-              <strong>+1 entry</strong> when a friend signs up and adds their first plant to their garden<br>
-              <strong>+2 entries</strong> when a friend lists an item or starts an auction
+              <strong>+1 entry</strong> when a friend adds their first plant to their garden<br>
+              <strong>+1 entry</strong> when a friend makes their first community post<br>
+              <strong>+2 entries</strong> when a friend lists an item or starts an auction<br>
+              <strong>+3 entries</strong> when a friend makes their first purchase
             </p>
             <a href="${referralLink}" style="display:inline-block;background:#2F7D54;color:#F6F2E9;font-size:13px;font-weight:600;text-decoration:none;padding:10px 22px;border-radius:7px;">Get my referral link &#8594;</a>
           </td>

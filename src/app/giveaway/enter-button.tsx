@@ -153,7 +153,7 @@ export function EnterButton({ monthLabel, initialEntered, referralCode, savedAdd
         {referralCode && (
           <div className="rounded-lg border border-[#C5D4BC] dark:border-forest bg-[#EBF0E6] dark:bg-forest/20 px-4 py-3 space-y-2">
             <p className="text-xs font-medium text-forest dark:text-[#A8BF9A]">
-              Boost your chances — share your referral link. +1 entry when a friend adds their first plant to their garden, +2 when they list an item or start an auction.
+              Boost your chances — share your referral link. +1 garden plant · +1 community post · +2 listing or auction · +3 first purchase.
             </p>
             <button
               onClick={handleCopy}

@@ -35,8 +35,15 @@ export function ReferralCard({
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-sm">Refer friends for bonus entries</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Share your link and earn bonus entries: <strong className="text-foreground">+1</strong> when a friend signs up and adds their first plant to their garden, <strong className="text-foreground">+2</strong> when a friend lists an item or starts an auction. No limit — the more you refer, the more entries you earn.
+              Share your link and earn bonus entries for every friend you bring in:
             </p>
+            <ul className="text-xs text-muted-foreground mt-1.5 space-y-0.5 list-none">
+              <li><strong className="text-foreground">+1</strong> when they add their first plant to their garden</li>
+              <li><strong className="text-foreground">+1</strong> when they make their first community post</li>
+              <li><strong className="text-foreground">+2</strong> when they list an item or start an auction</li>
+              <li><strong className="text-foreground">+3</strong> when they make their first purchase</li>
+            </ul>
+            <p className="text-xs text-muted-foreground mt-1.5">No limit — the more you refer, the more entries you earn.</p>
           </div>
         </div>
 

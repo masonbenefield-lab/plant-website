@@ -42,12 +42,19 @@ export async function POST(req: Request) {
     .gte("activated_at", monthStart)
     .lt("activated_at", monthEnd);
 
-  // Count activations per user by type (plant_added=+1, first_sale=+2)
+  // Count activations per user by type
+  // plant_added=+1, first_listing=+2, first_community_post=+1, first_purchase=+3
   const plantAddedCounts: Record<string, number> = {};
-  const firstSaleCounts: Record<string, number> = {};
+  const firstListingCounts: Record<string, number> = {};
+  const firstCommunityPostCounts: Record<string, number> = {};
+  const firstPurchaseCounts: Record<string, number> = {};
   for (const a of activations ?? []) {
-    if (a.type === "first_sale") {
-      firstSaleCounts[a.referrer_id] = (firstSaleCounts[a.referrer_id] ?? 0) + 1;
+    if (a.type === "first_listing" || a.type === "first_sale") {
+      firstListingCounts[a.referrer_id] = (firstListingCounts[a.referrer_id] ?? 0) + 1;
+    } else if (a.type === "first_purchase") {
+      firstPurchaseCounts[a.referrer_id] = (firstPurchaseCounts[a.referrer_id] ?? 0) + 1;
+    } else if (a.type === "first_community_post") {
+      firstCommunityPostCounts[a.referrer_id] = (firstCommunityPostCounts[a.referrer_id] ?? 0) + 1;
     } else {
       plantAddedCounts[a.referrer_id] = (plantAddedCounts[a.referrer_id] ?? 0) + 1;
     }
@@ -56,7 +63,11 @@ export async function POST(req: Request) {
   // Build weighted pool
   const pool: string[] = [];
   for (const entry of entries) {
-    const bonus = (plantAddedCounts[entry.user_id] ?? 0) + (firstSaleCounts[entry.user_id] ?? 0) * 2;
+    const bonus =
+      (plantAddedCounts[entry.user_id] ?? 0) * 1 +
+      (firstListingCounts[entry.user_id] ?? 0) * 2 +
+      (firstCommunityPostCounts[entry.user_id] ?? 0) * 1 +
+      (firstPurchaseCounts[entry.user_id] ?? 0) * 3;
     const weight = 1 + bonus;
     for (let i = 0; i < weight; i++) pool.push(entry.user_id);
   }
@@ -83,8 +94,11 @@ export async function POST(req: Request) {
   const profileMap = Object.fromEntries((profiles ?? []).map((p) => [p.id, p]));
 
   const results = picked.map((id, index) => {
-    const plantBonus = plantAddedCounts[id] ?? 0;
-    const saleBonus = (firstSaleCounts[id] ?? 0) * 2;
+    const bonus =
+      (plantAddedCounts[id] ?? 0) * 1 +
+      (firstListingCounts[id] ?? 0) * 2 +
+      (firstCommunityPostCounts[id] ?? 0) * 1 +
+      (firstPurchaseCounts[id] ?? 0) * 3;
     return {
       rank: index, // 0 = winner, 1-5 = backups
       user_id: id,
@@ -92,8 +106,8 @@ export async function POST(req: Request) {
       display_name: profileMap[id]?.display_name ?? null,
       avatar_url: profileMap[id]?.avatar_url ?? null,
       base_entries: 1,
-      bonus_entries: plantBonus + saleBonus,
-      total_entries: 1 + plantBonus + saleBonus,
+      bonus_entries: bonus,
+      total_entries: 1 + bonus,
       total_pool: pool.length,
     };
   });

@@ -127,6 +127,23 @@ export async function POST(request: Request) {
         await sendOrderConfirmation({ buyerEmail: buyer.email, plantName, amountCents: order.amount_cents, orderId: order.id, items: emailItems }).catch(() => {});
       }
 
+      // Award first-purchase referral bonus (fire-and-forget, idempotent)
+      ;(async () => {
+        const { data: buyerProfile } = await supabase
+          .from("profiles")
+          .select("referred_by")
+          .eq("id", order.buyer_id)
+          .single();
+        if (!buyerProfile?.referred_by) return;
+        const { error } = await supabase
+          .from("referral_activations")
+          .insert({ referrer_id: buyerProfile.referred_by, referred_id: order.buyer_id, type: "first_purchase" });
+        if (!error) {
+          const { data: referrer } = await supabase.from("profiles").select("total_referrals").eq("id", buyerProfile.referred_by).single();
+          await supabase.from("profiles").update({ total_referrals: (referrer?.total_referrals ?? 0) + 1 }).eq("id", buyerProfile.referred_by);
+        }
+      })().catch(() => {});
+
       // Notify seller
       const { data: { user: seller } } = await supabase.auth.admin.getUserById(order.seller_id);
       if (seller?.email && order.shipping_address && !isAutoChargedAuction) {

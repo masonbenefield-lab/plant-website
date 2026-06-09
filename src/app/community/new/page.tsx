@@ -148,6 +148,7 @@ export default function NewCommunityPost() {
 
       if (error) { toast.error("Failed to create post"); return; }
       toast.success("Post created");
+      fetch("/api/referral/activate-first-community-post", { method: "POST" }).catch(() => {});
       router.push(`/community/${data.id}`);
     });
   }
