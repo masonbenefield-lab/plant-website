@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useRef, useTransition, useEffect } from "react";
+import { useState, useRef, useTransition, useEffect, useCallback } from "react";
 import { compressImage } from "@/lib/compress-image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Upload, X, Loader2, HelpCircle, Camera, MessageSquare } from "lucide-react";
+import { Upload, X, Loader2, HelpCircle, Camera, MessageSquare, Leaf } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { findProhibitedWord, censorWord, logViolation } from "@/lib/profanity";
 
@@ -45,6 +45,7 @@ const POST_TYPES = [
 
 export default function NewCommunityPost() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
   const [postType, setPostType] = useState<"help" | "show_and_tell" | "discussion">("help");
 
@@ -56,11 +57,41 @@ export default function NewCommunityPost() {
       }
     });
   }, [router]);
+
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [photos, setPhotos] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Plant tag combobox
+  const [plantTag, setPlantTag] = useState(() => searchParams.get("plant") ?? "");
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  const fetchSuggestions = useCallback(async (val: string) => {
+    if (val.length < 2) { setSuggestions([]); setShowSuggestions(false); return; }
+    try {
+      const res = await fetch(`/api/community/plant-suggestions?q=${encodeURIComponent(val)}`);
+      const json = await res.json();
+      setSuggestions(json.suggestions ?? []);
+      setShowSuggestions((json.suggestions ?? []).length > 0);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  function handlePlantTagChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const val = e.target.value;
+    setPlantTag(val);
+    fetchSuggestions(val);
+  }
+
+  function selectSuggestion(name: string) {
+    setPlantTag(name);
+    setSuggestions([]);
+    setShowSuggestions(false);
+  }
 
   async function handlePhotoUpload(files: FileList) {
     if (photos.length >= MAX_PHOTOS) { toast.error(`Max ${MAX_PHOTOS} photos`); return; }
@@ -110,6 +141,7 @@ export default function NewCommunityPost() {
           title: title.trim(),
           body: body.trim() || null,
           photos,
+          plant_tag: plantTag.trim() || null,
         })
         .select("id")
         .single();
@@ -184,6 +216,45 @@ export default function NewCommunityPost() {
             maxLength={2000}
             className="resize-none"
           />
+        </div>
+
+        {/* Plant tag */}
+        <div className="space-y-1.5 relative">
+          <Label htmlFor="plant-tag" className="flex items-center gap-1.5">
+            <Leaf size={13} className="text-leaf" />
+            Tag a plant <span className="text-muted-foreground font-normal">(optional)</span>
+          </Label>
+          <Input
+            id="plant-tag"
+            value={plantTag}
+            onChange={handlePlantTagChange}
+            onFocus={() => { if (suggestions.length) setShowSuggestions(true); }}
+            onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+            placeholder="e.g. Monstera Deliciosa"
+            autoComplete="off"
+          />
+          {showSuggestions && suggestions.length > 0 && (
+            <ul className="absolute z-10 top-full mt-1 w-full bg-background border rounded-lg shadow-lg overflow-hidden">
+              {suggestions.map((s) => (
+                <li key={s}>
+                  <button
+                    type="button"
+                    onMouseDown={() => selectSuggestion(s)}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors flex items-center gap-2"
+                  >
+                    <Leaf size={11} className="text-leaf shrink-0" />
+                    {s}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {plantTag && (
+            <p className="text-xs text-muted-foreground">
+              This post will appear under{" "}
+              <span className="text-leaf font-medium">{plantTag}</span> in the Plants tab.
+            </p>
+          )}
         </div>
 
         {/* Photos */}

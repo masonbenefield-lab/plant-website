@@ -1372,3 +1372,32 @@ alter publication supabase_realtime add table trade_messages;
 ### Environment variables
 - None added
 
+
+---
+
+## 2026-06-09 — Community Plants tab
+
+### Features built
+- Added plant_tag (text, nullable) column to community_posts — lets users optionally tag a post with a plant name
+- New **Plants tab** on /community with a searchable plant directory (grid of all distinct plant tags + post counts)
+- Clicking a plant shows all community posts tagged with that plant, with a breadcrumb back to the directory
+- "Post about this plant" button pre-fills the tag on the new post form when coming from a plant page
+- Plant tag combobox on new post form with live autocomplete (pulls from listings plant names + existing community tags)
+- Plant tag badge shown on post cards throughout community feed
+- New API route: GET /api/community/plant-suggestions?q= — returns merged, deduplicated plant name suggestions
+
+### SQL migration (run in Supabase SQL editor)
+```sql
+alter table community_posts add column plant_tag text;
+create index community_posts_plant_tag_idx on community_posts (plant_tag) where plant_tag is not null;
+```
+
+### Files changed
+- src/lib/supabase/types.ts — added plant_tag to community_posts Row/Insert/Update
+- src/app/community/page.tsx — Plants tab, directory, plant-filtered posts, plant tag badges on cards
+- src/app/community/new/page.tsx — plant tag combobox with autocomplete, pre-fills from ?plant= query param
+- src/components/community/plants-grid.tsx — new client component (searchable plant directory grid)
+- src/app/api/community/plant-suggestions/route.ts — new autocomplete API route
+
+### Environment variables
+- None added
