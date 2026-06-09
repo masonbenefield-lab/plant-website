@@ -3,7 +3,6 @@ import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdmin } from "@supabase/supabase-js";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { GROUNDBREAKER_CAP } from "@/lib/plan-limits";
-import { sendWelcomeEmail } from "@/lib/email";
 
 async function handleSession(
   user: { id: string; email?: string; created_at: string },
@@ -27,11 +26,7 @@ async function handleSession(
   }
 
   const isNewUser = Date.now() - new Date(user.created_at).getTime() < 10 * 60 * 1000;
-  if (isNewUser && user.email && profile?.username) {
-    sendWelcomeEmail({ recipientEmail: user.email, username: profile.username, displayName: (profile as { display_name?: string | null }).display_name }).catch(() => {});
-    // Override destination — send new users to the welcome page instead of dashboard
-    if (next === "/dashboard") next = "/welcome?confirmed=true";
-  }
+  if (isNewUser && next === "/dashboard") next = "/welcome?confirmed=true";
 
   if (!profile?.groundbreaker) {
     const { count } = await admin

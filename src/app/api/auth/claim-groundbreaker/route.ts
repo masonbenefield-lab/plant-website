@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdmin } from "@supabase/supabase-js";
 import { GROUNDBREAKER_CAP } from "@/lib/plan-limits";
-import { sendWelcomeEmail } from "@/lib/email";
 
 function generateReferralCode(): string {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
@@ -26,11 +25,6 @@ export async function POST() {
     .single();
 
   if (profile?.groundbreaker) return NextResponse.json({ ok: true, already: true });
-
-  // Send welcome email on first signup
-  if (user.email && profile?.username) {
-    sendWelcomeEmail({ recipientEmail: user.email, username: profile.username }).catch(() => {});
-  }
 
   // Generate a unique referral code for this user
   let referralCode = profile?.referral_code;
