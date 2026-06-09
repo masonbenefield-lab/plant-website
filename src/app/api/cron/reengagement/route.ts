@@ -20,10 +20,15 @@ export async function GET(request: Request) {
   const fortyFiveDaysAgo = new Date(Date.now() - INACTIVE_DAYS * 24 * 60 * 60 * 1000).toISOString();
 
   // 1 — opted-in users who haven't received a re-engagement email recently
+  // Exclude users who signed up within the last 30 days — they get the day-3
+  // onboarding email instead and shouldn't receive re-engagement so soon.
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
   const { data: profiles, error: profileErr } = await admin
     .from("profiles")
     .select("id, username, display_name")
     .eq("email_marketing_opt_in", true)
+    .lt("created_at", thirtyDaysAgo)
     .or(`last_reengagement_sent.is.null,last_reengagement_sent.lt.${fortyFiveDaysAgo}`);
 
   if (profileErr || !profiles?.length) {
