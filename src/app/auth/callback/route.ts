@@ -64,6 +64,11 @@ export async function GET(request: Request) {
     if (!error && session?.user) {
       return handleSession(session.user, origin, next);
     }
+    // Code already used or expired — if they already have a session they're confirmed, just continue
+    const { data: { session: existing } } = await supabase.auth.getSession();
+    if (existing?.user) {
+      return handleSession(existing.user, origin, next);
+    }
   }
 
   // OTP / magic link flow — admin-sent magic links, password recovery
@@ -74,6 +79,11 @@ export async function GET(request: Request) {
     });
     if (!error && session?.user) {
       return handleSession(session.user, origin, next);
+    }
+    // Token already used — check for existing session before erroring
+    const { data: { session: existing } } = await supabase.auth.getSession();
+    if (existing?.user) {
+      return handleSession(existing.user, origin, next);
     }
   }
 

@@ -71,7 +71,7 @@ export default function LoginPage() {
             {authError === "auth_callback_failed" && (
               <div className="text-sm bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-md px-3 py-3 space-y-2">
                 <p className="font-semibold text-destructive">Confirmation link expired or already used.</p>
-                <p className="text-xs text-muted-foreground">Links expire after 1 hour and can only be used once. Enter your email below to get a fresh one.</p>
+                <p className="text-xs text-muted-foreground">If you&apos;ve already confirmed your email, just sign in below. Otherwise, links expire after 1 hour — get a fresh one here.</p>
                 <Link
                   href={`/verify-email${email ? `?email=${encodeURIComponent(email)}` : ""}`}
                   className="inline-flex items-center justify-center w-full mt-1 px-3 py-1.5 rounded-md bg-leaf text-white text-xs font-semibold hover:bg-forest transition-colors"
