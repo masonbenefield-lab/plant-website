@@ -22,20 +22,37 @@ function ResetForm() {
 
   useEffect(() => {
     const supabase = createClient();
+    let timerHandle: ReturnType<typeof setTimeout>;
 
     // Only trust the PASSWORD_RECOVERY event — never an existing session.
     // Using getSession() here would pick up any already-logged-in user and
     // update the wrong account's password.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") setReady(true);
+      if (event === "PASSWORD_RECOVERY") {
+        clearTimeout(timerHandle);
+        setReady(true);
+      }
     });
 
-    // If no PASSWORD_RECOVERY event fires after a reasonable wait, the link is bad
-    const timer = setTimeout(() => setInvalid(true), 3000);
+    // PKCE flow: Supabase may put a code in the URL instead of a hash fragment.
+    // Exchange it so the PASSWORD_RECOVERY event fires via onAuthStateChange above.
+    const code = new URLSearchParams(window.location.search).get("code");
+    if (code) {
+      supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
+        if (error) {
+          clearTimeout(timerHandle);
+          setInvalid(true);
+        }
+      });
+    }
+
+    // Generous timeout for slow connections (Gmail on mobile is especially slow).
+    // PASSWORD_RECOVERY event clears this before it fires.
+    timerHandle = setTimeout(() => setInvalid(true), 10000);
 
     return () => {
       subscription.unsubscribe();
-      clearTimeout(timer);
+      clearTimeout(timerHandle);
     };
   }, []);
 
@@ -74,7 +91,7 @@ function ResetForm() {
   if (!ready) {
     return (
       <div className="flex items-center justify-center py-20">
-        <p className="text-sm text-muted-foreground">Verifying reset link…</p>
+        <p className="text-sm text-muted-foreground">Verifying reset link — this can take a few seconds…</p>
       </div>
     );
   }
