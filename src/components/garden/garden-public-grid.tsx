@@ -106,12 +106,12 @@ export function GardenPublicGrid({
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
           {filtered.map((plant) => (
             <div key={plant.id} className="relative">
               <Link href={`/gardens/${username}/${plant.id}`}>
               <Card className="overflow-hidden h-full hover:shadow-md transition-shadow group">
-                <div className="aspect-[4/3] relative bg-muted">
+                <div className="aspect-square relative bg-muted">
                   {plant.images?.[0] ? (
                     <Image
                       src={plant.images[0]}
