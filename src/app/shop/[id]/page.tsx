@@ -42,13 +42,24 @@ export async function generateMetadata({
   const description = data.description || `Buy ${data.plant_name} on Plantet for ${centsToDisplay(data.price_cents)}`;
   const siteUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://plantet.com").replace(/\/$/, "");
 
+  const ogImageUrl = `${siteUrl}/api/og?type=listing&id=${id}`;
+
   return {
     title,
     description,
     openGraph: {
       title,
       description,
-      images: [{ url: `${siteUrl}/api/og?type=listing&id=${id}`, width: 1200, height: 630 }],
+      url: `${siteUrl}/shop/${id}`,
+      siteName: "Plantet",
+      type: "website",
+      images: [{ url: ogImageUrl, width: 1200, height: 630, alt: title }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [ogImageUrl],
     },
   };
 }
