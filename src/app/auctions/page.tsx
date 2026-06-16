@@ -152,15 +152,19 @@ export default async function AuctionsPage({
   }
 
   // ── Recently sold auctions ──────────────────────────────────────────────
-  const { data: soldAuctions } = await supabase
+  const { data: soldAuctionsRaw } = await supabase
     .from("auctions")
-    .select("id, plant_name, variety, images, current_bid_cents, ends_at, seller_id, bid_count")
+    .select("id, plant_name, variety, images, current_bid_cents, reserve_price_cents, ends_at, seller_id, bid_count")
     .eq("status", "ended")
     .not("current_bidder_id", "is", null)
     .or("category.neq.Hidden,category.is.null")
     .in("seller_id", onboardedSellerIds.length ? onboardedSellerIds : ["00000000-0000-0000-0000-000000000000"])
     .order("ends_at", { ascending: false })
-    .limit(8);
+    .limit(24);
+  // Only show auctions where the reserve was actually met
+  const soldAuctions = (soldAuctionsRaw ?? [])
+    .filter((a) => !a.reserve_price_cents || a.current_bid_cents >= a.reserve_price_cents)
+    .slice(0, 8);
 
   const soldSellerIds = [...new Set((soldAuctions ?? []).map((a) => a.seller_id))];
   const { data: soldSellers } = soldSellerIds.length
