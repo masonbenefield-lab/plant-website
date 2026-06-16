@@ -11,7 +11,13 @@ const supabase = createClient(
 async function renderImage(jsx: React.ReactElement): Promise<Response> {
   const res = new ImageResponse(jsx, { width: 1200, height: 630 });
   const buf = await res.arrayBuffer();
-  return new Response(buf, { headers: { "Content-Type": "image/png", "Cache-Control": "public, max-age=3600" } });
+  return new Response(buf, {
+    headers: {
+      "Content-Type": "image/png",
+      "Cache-Control": "public, max-age=3600",
+      "Content-Length": String(buf.byteLength),
+    },
+  });
 }
 
 export async function GET(request: Request) {
