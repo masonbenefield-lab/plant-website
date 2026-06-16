@@ -48,7 +48,13 @@ export default function LoginPage() {
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      setError(error.message);
+      if (error.message === "Email not confirmed") {
+        setError("unconfirmed");
+      } else if (error.message === "Invalid login credentials") {
+        setError("invalid");
+      } else {
+        setError(error.message);
+      }
       setLoading(false);
     } else {
       router.push(redirectTo);
@@ -80,7 +86,27 @@ export default function LoginPage() {
                 </Link>
               </div>
             )}
-            {error && (
+            {error === "unconfirmed" && (
+              <div className="text-sm bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md px-3 py-3 space-y-2">
+                <p className="font-semibold text-amber-800 dark:text-amber-400">Email not confirmed yet.</p>
+                <p className="text-xs text-muted-foreground">Check your inbox (and spam) for a confirmation link, or get a new one below.</p>
+                <Link
+                  href={`/verify-email${email ? `?email=${encodeURIComponent(email)}` : ""}`}
+                  className="inline-flex items-center justify-center w-full mt-1 px-3 py-1.5 rounded-md bg-leaf text-white text-xs font-semibold hover:bg-forest transition-colors"
+                >
+                  Resend confirmation email →
+                </Link>
+              </div>
+            )}
+            {error === "invalid" && (
+              <div className="text-sm bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-md px-3 py-3 space-y-1">
+                <p className="font-semibold text-destructive">Email or password is incorrect.</p>
+                <p className="text-xs text-muted-foreground">
+                  Signed up with Google? Use &ldquo;Continue with Google&rdquo; below instead. Otherwise, reset your password using the link at the bottom.
+                </p>
+              </div>
+            )}
+            {error && error !== "unconfirmed" && error !== "invalid" && (
               <p className="text-sm text-destructive">{error}</p>
             )}
             <div className="space-y-1">
