@@ -36,7 +36,14 @@ export async function generateMetadata({
     `Bid on ${data.plant_name} on Plantet. Current bid: ${centsToDisplay(data.current_bid_cents)}`;
   const siteUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://plantet.com").replace(/\/$/, "");
 
-  const ogImageUrl = `${siteUrl}/api/og?type=auction&id=${id}&v=6`;
+  // Use the actual plant photo as og:image so Facebook can display it reliably.
+  // Transform via Supabase render endpoint for consistent 1200x630 framing.
+  const rawPhoto = (data.images as string[])?.[0] ?? "";
+  const ogPhotoUrl = rawPhoto.includes("/storage/v1/object/public/")
+    ? rawPhoto.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/") +
+      "?width=1200&height=630&resize=cover&quality=80"
+    : rawPhoto;
+  const cardUrl = `${siteUrl}/api/og?type=auction&id=${id}`;
 
   return {
     title,
@@ -47,13 +54,15 @@ export async function generateMetadata({
       url: `${siteUrl}/auctions/${id}`,
       siteName: "Plantet",
       type: "website",
-      images: [{ url: ogImageUrl, width: 1200, height: 630, alt: title }],
+      images: ogPhotoUrl
+        ? [{ url: ogPhotoUrl, width: 1200, height: 630, alt: title }]
+        : [{ url: cardUrl, width: 1200, height: 630, alt: title }],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: [ogImageUrl],
+      images: [cardUrl],
     },
   };
 }
@@ -114,7 +123,7 @@ export default async function AuctionPage({
     "@type": "Product",
     name: auction.variety ? `${auction.plant_name} ${auction.variety}` : auction.plant_name,
     description: auction.description ?? undefined,
-    image: `${siteUrl}/api/og?type=auction&id=${auction.id}&v=6`,
+    image: (auction.images as string[]).slice(0, 3),
     offers: {
       "@type": "Offer",
       priceCurrency: "USD",
