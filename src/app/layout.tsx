@@ -8,6 +8,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { CartProvider } from "@/lib/cart";
 import { CartDrawer } from "@/components/cart-drawer";
 import { Analytics } from "@vercel/analytics/next";
+import { PushNotificationProvider } from "@/components/push-notification-provider";
 import { createClient } from "@/lib/supabase/server";
 import { unstable_noStore as noStore } from "next/cache";
 import Script from "next/script";
@@ -134,6 +135,7 @@ export default async function RootLayout({
             <CartDrawer />
             <Toaster richColors />
             <Analytics />
+            <PushNotificationProvider />
           </CartProvider>
         </ThemeProvider>
         <Script src="https://www.googletagmanager.com/gtag/js?id=G-DK3GZD3KHM" strategy="afterInteractive" />

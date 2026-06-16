@@ -13,6 +13,7 @@ import {
 } from "@/lib/email";
 import { getStripe } from "@/lib/stripe";
 import { planFeePercent, type Plan } from "@/lib/plan-limits";
+import { sendPushToUser } from "@/lib/push";
 import { createStripeTaxCalculation } from "@/lib/tax";
 
 const PAYMENT_DEADLINE_HOURS = 24; // fallback manual window (was 48)
@@ -60,6 +61,12 @@ export async function GET(request: Request) {
         const { data: auth } = await supabase.auth.admin.getUserById(bidderId);
         const email = auth?.user?.email;
         if (email) await sendAuctionEndingSoon({ email, plantName: displayName, auctionUrl, endsAt: auction.ends_at });
+        sendPushToUser(
+          bidderId,
+          'Auction ending soon',
+          `${displayName} closes in less than 1 hour. Don't miss out!`,
+          { url: `/auctions/${auction.id}` }
+        );
       })
     );
 
@@ -210,6 +217,13 @@ export async function GET(request: Request) {
               }).catch(() => {});
             }
 
+            sendPushToUser(
+              auction.current_bidder_id!,
+              'You won the auction!',
+              `Your card was charged for ${displayName}. Check your orders for tracking.`,
+              { url: `/orders` }
+            );
+
             if (sellerEmail) {
               const { data: winnerProfile } = await supabase
                 .from("profiles").select("username").eq("id", auction.current_bidder_id!).single();
@@ -224,6 +238,13 @@ export async function GET(request: Request) {
               }).catch(() => {});
             }
 
+            sendPushToUser(
+              auction.seller_id,
+              'You made a sale!',
+              `${displayName} sold for $${(auction.current_bid_cents / 100).toFixed(2)}. Head to orders to ship it.`,
+              { url: `/orders?tab=sales` }
+            );
+
           } catch {
             // Stripe charge declined — clear the card and send manual checkout link
             await supabase.from("profiles").update({ default_payment_method_id: null }).eq("id", auction.current_bidder_id!);
@@ -233,6 +254,18 @@ export async function GET(request: Request) {
       } else {
         // Buyer has no saved payment method or address — fall back to manual checkout
         await fallbackToManualCheckout(supabase, auction, now, appUrl, winnerEmail, sellerEmail, PAYMENT_DEADLINE_HOURS);
+        sendPushToUser(
+          auction.current_bidder_id!,
+          'You won! Complete your purchase',
+          `You won ${displayName}. Tap to complete checkout before the deadline.`,
+          { url: `/checkout?auction=${auction.id}` }
+        );
+        sendPushToUser(
+          auction.seller_id,
+          'You made a sale!',
+          `${displayName} sold for $${(auction.current_bid_cents / 100).toFixed(2)}. Waiting for buyer payment.`,
+          { url: `/orders?tab=sales` }
+        );
       }
     } else {
       // No winner — release inventory if linked

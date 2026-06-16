@@ -5,6 +5,7 @@ import type { Database } from "@/lib/supabase/types";
 import { isBlocked } from "@/lib/blocks";
 import { sendOutbidNotification } from "@/lib/email";
 import { getStripe } from "@/lib/stripe";
+import { sendPushToUser } from "@/lib/push";
 
 function adminClient() {
   return createSupabaseAdmin<Database>(
@@ -36,6 +37,28 @@ async function notifyOutbid(
   } catch {
     // Email failure is non-fatal
   }
+  sendPushToUser(
+    bidderId,
+    "You've been outbid",
+    `Someone outbid you on ${plantName}. Bid $${(newBidCents / 100).toFixed(2)} or more to retake the lead.`,
+    { url: `/auctions/${auctionId}` }
+  );
+}
+
+function notifyNewBid(
+  sellerId: string,
+  bidderId: string,
+  plantName: string,
+  auctionId: string,
+  amountCents: number
+) {
+  if (sellerId === bidderId) return;
+  sendPushToUser(
+    sellerId,
+    'New bid on your auction',
+    `Someone bid $${(amountCents / 100).toFixed(2)} on ${plantName}.`,
+    { url: `/auctions/${auctionId}` }
+  );
 }
 
 export async function POST(request: Request) {
@@ -189,11 +212,13 @@ export async function POST(request: Request) {
         if (finalLeaderId === user.id) {
           // Incoming bidder won the proxy war — notify the displaced leader
           notifyOutbid(admin, auction.current_bidder_id!, proxyDisplayName, auctionId, finalBidCents);
+          notifyNewBid(auction.seller_id, user.id, proxyDisplayName, auctionId, finalBidCents);
           return NextResponse.json({ ok: true, extended, wonProxyWar: true, finalBid: finalBidCents });
         }
 
         // Leader's proxy held — notify incoming bidder they were outbid
         notifyOutbid(admin, user.id, proxyDisplayName, auctionId, finalBidCents);
+        notifyNewBid(auction.seller_id, user.id, proxyDisplayName, auctionId, finalBidCents);
         return NextResponse.json({ ok: true, outbidByProxy: true, proxyBid: finalBidCents });
       }
     }
@@ -217,11 +242,14 @@ export async function POST(request: Request) {
 
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
 
+  const bidDisplayName = auction.variety ? `${auction.plant_name} — ${auction.variety}` : auction.plant_name;
+
   // Notify the displaced leader server-side
   if (auction.current_bidder_id && auction.current_bidder_id !== user.id) {
-    const outbidDisplayName = auction.variety ? `${auction.plant_name} — ${auction.variety}` : auction.plant_name;
-    notifyOutbid(admin, auction.current_bidder_id, outbidDisplayName, auctionId, amountCents);
+    notifyOutbid(admin, auction.current_bidder_id, bidDisplayName, auctionId, amountCents);
   }
+
+  notifyNewBid(auction.seller_id, user.id, bidDisplayName, auctionId, amountCents);
 
   return NextResponse.json({ ok: true, extended });
 }

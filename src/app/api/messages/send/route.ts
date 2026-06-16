@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
 import { containsSlur, findProhibitedWord, censorWord } from "@/lib/profanity";
 import { isBlocked } from "@/lib/blocks";
+import { sendPushToUser } from "@/lib/push";
 
 function adminClient() {
   return createSupabaseAdmin(
@@ -81,6 +82,20 @@ export async function POST(req: Request) {
       last_message_preview: trimmedBody.slice(0, 100),
     })
     .eq("id", conversationId);
+
+  // Fetch sender username for the push title
+  const { data: senderProfile } = await supabase
+    .from("profiles")
+    .select("username")
+    .eq("id", user.id)
+    .single();
+
+  sendPushToUser(
+    otherId,
+    senderProfile?.username ? `New message from ${senderProfile.username}` : 'New message',
+    trimmedBody.length > 100 ? trimmedBody.slice(0, 97) + '…' : trimmedBody,
+    { url: `/messages/${conversationId}` }
+  );
 
   return NextResponse.json({ message });
 }

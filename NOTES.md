@@ -1274,13 +1274,13 @@ None new.
 
 ---
 
-## 2026-06-05 — Weekly care summary email + landing page care schedule update
+## 2026-06-05 ï¿½ Weekly care summary email + landing page care schedule update
 
 ### Features added
 
 #### Weekly garden care summary email
 - New /api/cron/weekly-care-summary/route.ts cron: runs Monday 1 PM UTC (  13 * * 1), sends a 7-day care forecast to users with daily_care_emails = true
-- Shows tasks due in the next 7 days (offsets 1–7), grouped by day label (Mon Jun 9, Wed Jun 11, etc.)
+- Shows tasks due in the next 7 days (offsets 1ï¿½7), grouped by day label (Mon Jun 9, Wed Jun 11, etc.)
 - Capped at 10 task rows; shows "+ N more tasks this week" overflow note with link to care schedule
 - Skips vacation users and snoozed tasks; handles both built-in and custom care types
 - uildWeeklyCareSummaryHtml() + sendWeeklyCareSummary() + WeeklyCareDay type added to src/lib/email.ts
@@ -1301,40 +1301,40 @@ None new.
 - src/app/api/cron/weekly-care-summary/route.ts
 
 ### Files modified
-- src/lib/email.ts — WeeklyCareDay type, buildWeeklyCareSummaryHtml(), sendWeeklyCareSummary()
-- src/app/account/account-form.tsx — Weekly care reminders label + description; Weekly plant digest label
-- src/app/admin/email-preview/page.tsx — Added Weekly Care Summary, removed Garden Care Reminder
-- src/components/garden-feature-cards.tsx — Care schedule description + example widget
-- ercel.json — Added weekly-care-summary cron (Monday 1 PM UTC)
+- src/lib/email.ts ï¿½ WeeklyCareDay type, buildWeeklyCareSummaryHtml(), sendWeeklyCareSummary()
+- src/app/account/account-form.tsx ï¿½ Weekly care reminders label + description; Weekly plant digest label
+- src/app/admin/email-preview/page.tsx ï¿½ Added Weekly Care Summary, removed Garden Care Reminder
+- src/components/garden-feature-cards.tsx ï¿½ Care schedule description + example widget
+- ercel.json ï¿½ Added weekly-care-summary cron (Monday 1 PM UTC)
 
 ### Parking lot
-- #12 iCal calendar feed deferred — details in parking_lot.md
+- #12 iCal calendar feed deferred ï¿½ details in parking_lot.md
 
 ---
 
-## 2026-06-08 — Trades feature + community fixes + UX fixes
+## 2026-06-08 ï¿½ Trades feature + community fixes + UX fixes
 
 ### Features built
-- **Trades system** — full plant-for-plant swap feature:
-  - src/app/api/trades/route.ts — POST create trade offer
-  - src/app/api/trades/[id]/route.ts — PATCH accept/decline/cancel
-  - src/app/api/trades/[id]/messages/route.ts — POST send chat message
-  - src/app/trades/[id]/page.tsx — trade detail page (offer summary + actions)
-  - src/app/trades/[id]/trade-actions.tsx — accept/decline/cancel client component
-  - src/app/trades/[id]/trade-chat.tsx — real-time chat per trade
-  - src/app/trades/new/page.tsx — propose trade form
-  - src/app/trades/page.tsx — redirects to /dashboard/offers?tab=trades
+- **Trades system** ï¿½ full plant-for-plant swap feature:
+  - src/app/api/trades/route.ts ï¿½ POST create trade offer
+  - src/app/api/trades/[id]/route.ts ï¿½ PATCH accept/decline/cancel
+  - src/app/api/trades/[id]/messages/route.ts ï¿½ POST send chat message
+  - src/app/trades/[id]/page.tsx ï¿½ trade detail page (offer summary + actions)
+  - src/app/trades/[id]/trade-actions.tsx ï¿½ accept/decline/cancel client component
+  - src/app/trades/[id]/trade-chat.tsx ï¿½ real-time chat per trade
+  - src/app/trades/new/page.tsx ï¿½ propose trade form
+  - src/app/trades/page.tsx ï¿½ redirects to /dashboard/offers?tab=trades
   - Email notifications: sendTradeProposed, sendTradeAccepted, sendTradeDeclined added to email.ts
-- **Offers page tabs** — /dashboard/offers now has Offers and Trades tabs
-- **Navbar** — pending trade badge on avatar, "Offers & Trades (N)" in dropdown, Trades in mobile menu
-- **Garden/seller profile** — "Open to trades" buttons now link to /trades/new?to=username (was /messages)
-- **Confirmation email UX** — expired link error now shows prominent green button; /verify-email auto-triggers resend when email is pre-filled, immediately shows "already confirmed — sign in" if applicable
+- **Offers page tabs** ï¿½ /dashboard/offers now has Offers and Trades tabs
+- **Navbar** ï¿½ pending trade badge on avatar, "Offers & Trades (N)" in dropdown, Trades in mobile menu
+- **Garden/seller profile** ï¿½ "Open to trades" buttons now link to /trades/new?to=username (was /messages)
+- **Confirmation email UX** ï¿½ expired link error now shows prominent green button; /verify-email auto-triggers resend when email is pre-filled, immediately shows "already confirmed ï¿½ sign in" if applicable
 
 ### Bugs fixed
 - types.ts missing newlines between community_post_likes/community_post_follows and community_reply_likes/community_replies (caused TypeScript build failures)
 - Placeholder string with literal quote character broke Turbopack parse in trades/new/page.tsx
 - Trades "Open to trades" link on garden profile page and seller storefront page still pointed to /messages
-- Trade chat realtime subscription used row-level filter — changed to client-side filtering for reliability
+- Trade chat realtime subscription used row-level filter ï¿½ changed to client-side filtering for reliability
 
 ### SQL migrations to run
 `sql
@@ -1401,3 +1401,53 @@ create index community_posts_plant_tag_idx on community_posts (plant_tag) where 
 
 ### Environment variables
 - None added
+
+---
+
+## 2026-06-15 â€” Capacitor native app + push notifications
+
+### New features
+- Capacitor 8 integration: `capacitor.config.ts` pointing `server.url` to `https://www.plantet.shop` so the native shell loads the live site with full server-side features intact
+- Push notifications via Firebase Cloud Messaging (FCM) â€” works on both iOS and Android
+- Push notification tokens stored in new `push_tokens` Supabase table (per-device, auto-cleaned when tokens go stale)
+- Push notifications fire for: outbid on an auction, new bid on your auction, auction won (auto-charged), auction won (manual checkout needed), auction sold, message received, auction ending soon (< 1 hour)
+
+### SQL migrations to run
+```sql
+-- Run 019_push_tokens.sql in Supabase SQL editor
+-- (file: supabase/migrations/019_push_tokens.sql)
+```
+
+### Files created
+- `capacitor.config.ts` â€” Capacitor app config (appId: shop.plantet.app)
+- `cap-web/index.html` â€” placeholder webDir required by Capacitor CLI
+- `supabase/migrations/019_push_tokens.sql` â€” push_tokens table + RLS
+- `src/lib/firebase-admin.ts` â€” Firebase Admin SDK singleton
+- `src/lib/push.ts` â€” `sendPushToUser()` helper (queries tokens, sends via FCM, prunes stale tokens)
+- `src/app/api/push-tokens/route.ts` â€” POST to register token, DELETE to remove
+- `src/components/push-notification-provider.tsx` â€” client component that runs in the native app only
+
+### Files modified
+- `src/app/layout.tsx` â€” added PushNotificationProvider
+- `src/app/api/bids/place/route.ts` â€” push on outbid + push to seller on new bid
+- `src/app/api/messages/send/route.ts` â€” push to recipient on new message
+- `src/app/api/auctions/close/route.ts` â€” push on ending soon, auction won, sale made
+- `.env.local.example` â€” added FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY
+
+### Environment variables added
+- `FIREBASE_PROJECT_ID` â€” Firebase project ID
+- `FIREBASE_CLIENT_EMAIL` â€” service account email
+- `FIREBASE_PRIVATE_KEY` â€” service account private key (keep newlines as `\n` in Vercel)
+
+### Next steps for publishing (manual)
+1. Create Firebase project at console.firebase.google.com
+2. Add Android app (package: `shop.plantet.app`) â†’ download `google-services.json`
+3. Add iOS app (bundle: `shop.plantet.app`) â†’ download `GoogleService-Info.plist`
+4. Add FIREBASE_* env vars to `.env.local` and Vercel dashboard
+5. Run `npx cap add android` and `npx cap add ios` from project root
+6. Place `google-services.json` in `android/app/`
+7. Place `GoogleService-Info.plist` in `ios/App/App/`
+8. Run `npx cap sync` after any changes
+9. Open Android in Android Studio: `npx cap open android`
+10. Open iOS in Xcode (Mac only): `npx cap open ios`
+11. Accounts needed: Apple Developer ($99/yr) and Google Play ($25 one-time)
