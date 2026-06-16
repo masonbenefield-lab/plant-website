@@ -1,12 +1,7 @@
 import { ImageResponse } from "next/og";
 import { createClient } from "@supabase/supabase-js";
 
-export const runtime = "nodejs";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+export const runtime = "edge";
 
 async function renderImage(jsx: React.ReactElement): Promise<Response> {
   const res = new ImageResponse(jsx, { width: 1200, height: 630 });
@@ -21,6 +16,10 @@ async function renderImage(jsx: React.ReactElement): Promise<Response> {
 }
 
 export async function GET(request: Request) {
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
   const { searchParams } = new URL(request.url);
   const type = searchParams.get("type") ?? "listing";
   const id = searchParams.get("id");
