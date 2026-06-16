@@ -31,7 +31,6 @@ export async function GET(request: Request) {
   let variety = "";
   let priceLine = "";
   let buyNowLine = "";
-  let imageUrl = "";
   let sellerDisplay = "";
   let category = "";
   let isAuction = false;
@@ -39,7 +38,7 @@ export async function GET(request: Request) {
   if (type === "listing") {
     const { data } = await supabase
       .from("listings")
-      .select("plant_name, variety, price_cents, images, category, seller_id")
+      .select("plant_name, variety, price_cents, category, seller_id")
       .eq("id", id)
       .single();
 
@@ -47,7 +46,6 @@ export async function GET(request: Request) {
       plantName = data.plant_name;
       variety = data.variety ?? "";
       priceLine = `$${(data.price_cents / 100).toFixed(2)}`;
-      imageUrl = (data.images as string[])?.[0] ?? "";
       category = data.category ?? "";
       const { data: seller } = await supabase.from("profiles").select("username, display_name").eq("id", data.seller_id).single();
       sellerDisplay = seller?.display_name || (seller?.username ? `@${seller.username}` : "");
@@ -56,7 +54,7 @@ export async function GET(request: Request) {
     isAuction = true;
     const { data } = await supabase
       .from("auctions")
-      .select("plant_name, variety, current_bid_cents, buy_now_price_cents, images, category, seller_id")
+      .select("plant_name, variety, current_bid_cents, buy_now_price_cents, category, seller_id")
       .eq("id", id)
       .single();
 
@@ -67,7 +65,6 @@ export async function GET(request: Request) {
       if (data.buy_now_price_cents) {
         buyNowLine = `Buy Now: $${(data.buy_now_price_cents / 100).toFixed(2)}`;
       }
-      imageUrl = (data.images as string[])?.[0] ?? "";
       category = data.category ?? "";
       const { data: seller } = await supabase.from("profiles").select("username, display_name").eq("id", data.seller_id).single();
       sellerDisplay = seller?.display_name || (seller?.username ? `@${seller.username}` : "");
@@ -75,31 +72,6 @@ export async function GET(request: Request) {
   }
 
   if (!plantName) return new Response("Not found", { status: 404 });
-
-  // Pre-fetch plant image using Supabase render endpoint (small resized copy).
-  let imageSrc = "";
-  if (imageUrl) {
-    try {
-      const fetchUrl = imageUrl.includes("/storage/v1/object/public/")
-        ? imageUrl.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/") + "?width=400&quality=75"
-        : imageUrl;
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 5000);
-      const imgRes = await fetch(fetchUrl, { signal: controller.signal });
-      clearTimeout(timer);
-      if (imgRes.ok) {
-        const mime = imgRes.headers.get("content-type") ?? "";
-        if (mime.startsWith("image/")) {
-          const buf = await imgRes.arrayBuffer();
-          if (buf.byteLength <= 800 * 1024) {
-            imageSrc = `data:${mime};base64,${Buffer.from(buf).toString("base64")}`;
-          }
-        }
-      }
-    } catch {
-      // proceed without photo
-    }
-  }
 
   // Satori CSS rules:
   // - no multi-value shorthands (use paddingTop/Right/Bottom/Left individually)
@@ -122,20 +94,6 @@ export async function GET(request: Request) {
         position: "relative",
       }}
     >
-      {imageSrc && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={imageSrc}
-          alt=""
-          style={{
-            width: "260px",
-            height: "260px",
-            borderRadius: "20px",
-            objectFit: "cover",
-            flexShrink: 0,
-          }}
-        />
-      )}
       <div style={{ display: "flex", flexDirection: "column", flex: 1, color: "white", overflow: "hidden" }}>
         {/* Badges — use individual padding props, no multi-value shorthand */}
         <div style={{ display: "flex", gap: "10px", marginBottom: "16px", alignItems: "center" }}>

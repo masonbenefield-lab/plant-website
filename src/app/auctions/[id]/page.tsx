@@ -36,7 +36,7 @@ export async function generateMetadata({
     `Bid on ${data.plant_name} on Plantet. Current bid: ${centsToDisplay(data.current_bid_cents)}`;
   const siteUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://plantet.com").replace(/\/$/, "");
 
-  const ogImageUrl = `${siteUrl}/api/og?type=auction&id=${id}&v=4`;
+  const ogImageUrl = `${siteUrl}/api/og?type=auction&id=${id}&v=5`;
 
   return {
     title,
@@ -114,7 +114,7 @@ export default async function AuctionPage({
     "@type": "Product",
     name: auction.variety ? `${auction.plant_name} ${auction.variety}` : auction.plant_name,
     description: auction.description ?? undefined,
-    image: `${siteUrl}/api/og?type=auction&id=${auction.id}&v=4`,
+    image: `${siteUrl}/api/og?type=auction&id=${auction.id}&v=5`,
     offers: {
       "@type": "Offer",
       priceCurrency: "USD",
