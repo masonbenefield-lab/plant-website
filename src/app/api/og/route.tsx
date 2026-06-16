@@ -64,6 +64,22 @@ export async function GET(request: Request) {
 
   if (!plantName) return new Response("Not found", { status: 404 });
 
+  // Pre-fetch the plant image as base64 so Satori doesn't make an external
+  // request at render time (which can fail silently and crash the whole response)
+  let imageSrc = "";
+  if (imageUrl) {
+    try {
+      const imgRes = await fetch(imageUrl);
+      if (imgRes.ok) {
+        const buffer = await imgRes.arrayBuffer();
+        const mime = imgRes.headers.get("content-type") || "image/jpeg";
+        imageSrc = `data:${mime};base64,${Buffer.from(buffer).toString("base64")}`;
+      }
+    } catch {
+      // render without plant photo rather than crashing
+    }
+  }
+
   return new ImageResponse(
     (
       <div
@@ -78,10 +94,10 @@ export async function GET(request: Request) {
           position: "relative",
         }}
       >
-        {imageUrl && (
+        {imageSrc && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={imageUrl}
+            src={imageSrc}
             alt=""
             style={{
               width: "260px",
