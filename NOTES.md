@@ -1188,6 +1188,26 @@ Weight-based shipping via Shippo created financial risk: if a seller enters the 
 - `src/app/api/address/validate/route.ts`
 - `src/app/dashboard/orders/get-label-modal.tsx`
 - `src/app/api/profile/update-shipping/route.ts`
+
+---
+
+## 2026-06-16 — Auth fixes, garden display fix, Facebook OG images
+
+### Bug fixes
+- **Duplicate signup prevention** (`src/app/signup/page.tsx`): Supabase silently returns `identities: []` when email already exists. Added check after `signUp()` to detect this and show "An account with this email already exists. Sign in instead." instead of getting stuck on the "Check your inbox" screen.
+- **Login error messages** (`src/app/login/page.tsx`): Replaced generic "Invalid login credentials" with specific banners — "Email not confirmed" → amber banner with resend link; "Invalid login credentials" → red banner noting Google signup option and forgot-password link.
+- **Garden name/variety display** (`src/app/garden/[id]/page.tsx`, `src/app/gardens/[username]/[id]/page.tsx`, `src/components/garden/garden-plant-card.tsx`, `src/components/garden/garden-public-grid.tsx`): Plant name and variety were swapped in garden views — fixed display order.
+- **Facebook OG images for auctions** (`src/app/auctions/[id]/page.tsx`): Custom `/api/og` route (Satori/ImageResponse) was being rejected by Facebook as "Corrupted Image" across all versions and runtimes (Node.js and Edge). Root cause never fully resolved — Facebook's image validator rejects our route despite curl confirming valid PNG. Fixed by switching `og:image` to use the auction's first plant photo via Supabase render endpoint (`/storage/v1/render/image/public/...?width=1200&height=630&resize=cover&quality=80`). Twitter card still uses the styled `/api/og` card.
+- **Facebook OG images for shop listings** (`src/app/shop/[id]/page.tsx`): Applied same plant photo approach for consistency.
+
+### OG route changes (`src/app/api/og/route.tsx`)
+- Switched to Edge runtime (`export const runtime = "edge"`) to eliminate cold start latency
+- Removed Supabase image pre-fetch (was downloading plant photos as base64 to embed in card) — route now renders text-only green branded card
+- Added `Content-Length` header to response
+- Route still used for Twitter card on both auctions and shop listings
+
+### No SQL migrations required
+### No new environment variables
 - `src/app/admin/shipping-adjustments/page.tsx`
 
 ### Files changed
