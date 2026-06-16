@@ -64,16 +64,25 @@ export async function GET(request: Request) {
 
   if (!plantName) return new Response("Not found", { status: 404 });
 
-  // Pre-fetch the plant image as base64 so Satori doesn't make an external
-  // request at render time (which can fail silently and crash the whole response)
+  // Pre-fetch the plant image as base64. Use Supabase's render endpoint to
+  // get a small resized copy (Pro plan+) so we're not loading a 5MB phone photo.
+  // Cap at 800KB and timeout at 5s — degrade to text-only on any failure.
   let imageSrc = "";
   if (imageUrl) {
     try {
-      const imgRes = await fetch(imageUrl);
+      const fetchUrl = imageUrl.includes("/storage/v1/object/public/")
+        ? imageUrl.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/") + "?width=400&quality=75"
+        : imageUrl;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 5000);
+      const imgRes = await fetch(fetchUrl, { signal: controller.signal });
+      clearTimeout(timer);
       if (imgRes.ok) {
         const buffer = await imgRes.arrayBuffer();
-        const mime = imgRes.headers.get("content-type") || "image/jpeg";
-        imageSrc = `data:${mime};base64,${Buffer.from(buffer).toString("base64")}`;
+        if (buffer.byteLength <= 800 * 1024) {
+          const mime = imgRes.headers.get("content-type") ?? "image/jpeg";
+          imageSrc = `data:${mime};base64,${Buffer.from(buffer).toString("base64")}`;
+        }
       }
     } catch {
       // render without plant photo rather than crashing
