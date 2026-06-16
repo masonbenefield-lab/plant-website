@@ -199,14 +199,15 @@ export async function GET(request: Request) {
     </div>
   );
 
-  // Try full card with photo, fall back to text-only, then plain error
+  // Minimal smoke test — if this fails, it's a Satori/runtime issue, not our JSX
   try {
-    return await renderImage(card(true));
-  } catch {
-    try {
-      return await renderImage(card(false));
-    } catch {
-      return new Response("Image generation failed", { status: 500 });
-    }
+    const smoke = (
+      <div style={{ display: "flex", width: "100%", height: "100%", background: "#14532d", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ fontSize: 48, color: "white", fontWeight: "bold" }}>{plantName}</div>
+      </div>
+    );
+    return await renderImage(smoke);
+  } catch (e) {
+    return new Response(`Satori error: ${e}`, { status: 500 });
   }
 }
