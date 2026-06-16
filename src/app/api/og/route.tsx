@@ -9,8 +9,6 @@ const supabase = createClient(
 );
 
 async function renderImage(jsx: React.ReactElement): Promise<Response> {
-  // Force eager rendering — ImageResponse streams lazily so errors escape try-catch
-  // unless we consume the buffer here while we can still handle them.
   const res = new ImageResponse(jsx, { width: 1200, height: 630 });
   const buf = await res.arrayBuffer();
   return new Response(buf, { headers: { "Content-Type": "image/png", "Cache-Control": "public, max-age=3600" } });
@@ -72,8 +70,7 @@ export async function GET(request: Request) {
 
   if (!plantName) return new Response("Not found", { status: 404 });
 
-  // Pre-fetch plant image using Supabase render endpoint (smaller resized copy).
-  // Must be base64 so Satori doesn't make a lazy external fetch that can't be caught.
+  // Pre-fetch plant image using Supabase render endpoint (small resized copy).
   let imageSrc = "";
   if (imageUrl) {
     try {
@@ -98,7 +95,15 @@ export async function GET(request: Request) {
     }
   }
 
-  const card = (withPhoto: boolean) => (
+  // Satori CSS rules:
+  // - no multi-value shorthands (use paddingTop/Right/Bottom/Left individually)
+  // - lineHeight must be a number (not a string)
+  // - borderRadius % values may not work — use px
+  // - no border shorthand — use borderWidth/Style/Color
+  // - flex:1 shorthand is fine
+  // - &&/|| conditionals are fine; so are ternaries
+
+  const jsx = (
     <div
       style={{
         display: "flex",
@@ -111,7 +116,7 @@ export async function GET(request: Request) {
         position: "relative",
       }}
     >
-      {withPhoto && imageSrc && (
+      {imageSrc && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={imageSrc}
@@ -122,66 +127,71 @@ export async function GET(request: Request) {
             borderRadius: "20px",
             objectFit: "cover",
             flexShrink: 0,
-            border: "3px solid rgba(255,255,255,0.15)",
           }}
         />
       )}
       <div style={{ display: "flex", flexDirection: "column", flex: 1, color: "white", overflow: "hidden" }}>
+        {/* Badges — use individual padding props, no multi-value shorthand */}
         <div style={{ display: "flex", gap: "10px", marginBottom: "16px", alignItems: "center" }}>
-          {isAuction ? (
+          {isAuction && (
             <div
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: "8px",
                 background: "#dc2626",
                 borderRadius: "100px",
-                padding: "5px 16px",
+                paddingTop: 5,
+                paddingBottom: 5,
+                paddingLeft: 16,
+                paddingRight: 16,
                 fontSize: "16px",
                 fontWeight: "700",
                 color: "white",
               }}
             >
-              <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: "white", flexShrink: 0 }}></div>
-              <span>LIVE AUCTION</span>
+              LIVE AUCTION
             </div>
-          ) : null}
-          {category ? (
+          )}
+          {category && (
             <div
               style={{
                 display: "flex",
                 background: "rgba(255,255,255,0.15)",
                 borderRadius: "100px",
-                padding: "5px 16px",
+                paddingTop: 5,
+                paddingBottom: 5,
+                paddingLeft: 16,
+                paddingRight: 16,
                 fontSize: "16px",
                 color: "#bbf7d0",
               }}
             >
               {category}
             </div>
-          ) : null}
+          )}
         </div>
-        <div style={{ fontSize: "52px", fontWeight: "bold", lineHeight: "1.1", marginBottom: "8px" }}>
+        {/* lineHeight must be a number in Satori */}
+        <div style={{ fontSize: "52px", fontWeight: "bold", lineHeight: 1.1, marginBottom: "8px" }}>
           {plantName}
         </div>
-        {variety ? (
+        {variety && (
           <div style={{ fontSize: "26px", color: "#bbf7d0", marginBottom: "16px" }}>
             {variety}
           </div>
-        ) : null}
+        )}
         <div style={{ fontSize: "38px", fontWeight: "bold", color: "#4ade80", marginBottom: buyNowLine ? "6px" : "16px" }}>
           {priceLine}
         </div>
-        {buyNowLine ? (
+        {buyNowLine && (
           <div style={{ fontSize: "22px", color: "rgba(255,255,255,0.7)", marginBottom: "16px" }}>
             {buyNowLine}
           </div>
-        ) : null}
-        {sellerDisplay ? (
+        )}
+        {sellerDisplay && (
           <div style={{ fontSize: "20px", color: "rgba(255,255,255,0.65)" }}>
             by {sellerDisplay}
           </div>
-        ) : null}
+        )}
       </div>
       <div
         style={{
@@ -199,15 +209,9 @@ export async function GET(request: Request) {
     </div>
   );
 
-  // Minimal smoke test — if this fails, it's a Satori/runtime issue, not our JSX
   try {
-    const smoke = (
-      <div style={{ display: "flex", width: "100%", height: "100%", background: "#14532d", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ fontSize: 48, color: "white", fontWeight: "bold" }}>{plantName}</div>
-      </div>
-    );
-    return await renderImage(smoke);
+    return await renderImage(jsx);
   } catch (e) {
-    return new Response(`Satori error: ${e}`, { status: 500 });
+    return new Response(`OG render error: ${e}`, { status: 500 });
   }
 }
