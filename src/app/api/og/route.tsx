@@ -18,9 +18,11 @@ export async function GET(request: Request) {
   let plantName = "";
   let variety = "";
   let priceLine = "";
+  let buyNowLine = "";
   let imageUrl = "";
-  let sellerUsername = "";
+  let sellerDisplay = "";
   let category = "";
+  let isAuction = false;
 
   if (type === "listing") {
     const { data } = await supabase
@@ -35,13 +37,14 @@ export async function GET(request: Request) {
       priceLine = `$${(data.price_cents / 100).toFixed(2)}`;
       imageUrl = (data.images as string[])?.[0] ?? "";
       category = data.category ?? "";
-      const { data: seller } = await supabase.from("profiles").select("username").eq("id", data.seller_id).single();
-      sellerUsername = seller?.username ?? "";
+      const { data: seller } = await supabase.from("profiles").select("username, display_name").eq("id", data.seller_id).single();
+      sellerDisplay = seller?.display_name || (seller?.username ? `@${seller.username}` : "");
     }
   } else {
+    isAuction = true;
     const { data } = await supabase
       .from("auctions")
-      .select("plant_name, variety, current_bid_cents, images, category, seller_id")
+      .select("plant_name, variety, current_bid_cents, buy_now_cents, images, category, seller_id")
       .eq("id", id)
       .single();
 
@@ -49,10 +52,13 @@ export async function GET(request: Request) {
       plantName = data.plant_name;
       variety = data.variety ?? "";
       priceLine = `Current bid: $${(data.current_bid_cents / 100).toFixed(2)}`;
+      if (data.buy_now_cents) {
+        buyNowLine = `Buy Now: $${(data.buy_now_cents / 100).toFixed(2)}`;
+      }
       imageUrl = (data.images as string[])?.[0] ?? "";
       category = data.category ?? "";
-      const { data: seller } = await supabase.from("profiles").select("username").eq("id", data.seller_id).single();
-      sellerUsername = seller?.username ?? "";
+      const { data: seller } = await supabase.from("profiles").select("username, display_name").eq("id", data.seller_id).single();
+      sellerDisplay = seller?.display_name || (seller?.username ? `@${seller.username}` : "");
     }
   }
 
@@ -88,22 +94,41 @@ export async function GET(request: Request) {
           />
         )}
         <div style={{ display: "flex", flexDirection: "column", flex: 1, color: "white", overflow: "hidden" }}>
-          {category && (
-            <div
-              style={{
-                display: "flex",
-                background: "rgba(255,255,255,0.15)",
-                borderRadius: "100px",
-                padding: "4px 14px",
-                fontSize: "18px",
-                color: "#bbf7d0",
-                marginBottom: "16px",
-                alignSelf: "flex-start",
-              }}
-            >
-              {category}
-            </div>
-          )}
+          {/* Badges row */}
+          <div style={{ display: "flex", gap: "10px", marginBottom: "16px", alignItems: "center" }}>
+            {isAuction && (
+              <div
+                style={{
+                  display: "flex",
+                  background: "#dc2626",
+                  borderRadius: "100px",
+                  padding: "5px 16px",
+                  fontSize: "16px",
+                  fontWeight: "700",
+                  color: "white",
+                  letterSpacing: "0.05em",
+                  textTransform: "uppercase",
+                }}
+              >
+                🔴 Live Auction
+              </div>
+            )}
+            {category && (
+              <div
+                style={{
+                  display: "flex",
+                  background: "rgba(255,255,255,0.15)",
+                  borderRadius: "100px",
+                  padding: "5px 16px",
+                  fontSize: "16px",
+                  color: "#bbf7d0",
+                }}
+              >
+                {category}
+              </div>
+            )}
+          </div>
+
           <div style={{ fontSize: "52px", fontWeight: "bold", lineHeight: 1.1, marginBottom: "8px" }}>
             {plantName}
           </div>
@@ -112,12 +137,17 @@ export async function GET(request: Request) {
               {variety}
             </div>
           )}
-          <div style={{ fontSize: "38px", fontWeight: "bold", color: "#4ade80", marginBottom: "16px" }}>
+          <div style={{ fontSize: "38px", fontWeight: "bold", color: "#4ade80", marginBottom: buyNowLine ? "6px" : "16px" }}>
             {priceLine}
           </div>
-          {sellerUsername && (
+          {buyNowLine && (
+            <div style={{ fontSize: "22px", color: "rgba(255,255,255,0.7)", marginBottom: "16px" }}>
+              {buyNowLine}
+            </div>
+          )}
+          {sellerDisplay && (
             <div style={{ fontSize: "20px", color: "rgba(255,255,255,0.65)" }}>
-              by @{sellerUsername}
+              by {sellerDisplay}
             </div>
           )}
         </div>
@@ -134,7 +164,7 @@ export async function GET(request: Request) {
             gap: "8px",
           }}
         >
-          🌿 plantet.com
+          🌿 plantet.shop
         </div>
       </div>
     ),
