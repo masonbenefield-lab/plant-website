@@ -124,9 +124,9 @@ export function GardenPublicGrid({
                   )}
                 </div>
                 <CardContent className="p-4 space-y-1.5">
-                  <p className="font-semibold leading-tight">{plant.variety || plant.name}</p>
+                  <p className="font-semibold leading-tight">{plant.name}</p>
                   {plant.variety && (
-                    <p className="text-sm text-muted-foreground leading-tight">{plant.name}</p>
+                    <p className="text-sm text-muted-foreground leading-tight">{plant.variety}</p>
                   )}
                   <div className="flex items-center gap-2 flex-wrap pt-0.5">
                     <span className={cn("text-xs px-2 py-0.5 rounded-full font-medium", STATUS_COLOR[plant.status] ?? "bg-muted text-muted-foreground")}>
