@@ -189,7 +189,7 @@ export async function GET(request: Request) {
         )}
         {sellerDisplay && (
           <div style={{ fontSize: "20px", color: "rgba(255,255,255,0.65)" }}>
-            by {sellerDisplay}
+            {`by ${sellerDisplay}`}
           </div>
         )}
       </div>
