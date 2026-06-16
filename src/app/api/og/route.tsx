@@ -8,24 +8,12 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-async function fetchImageAsBase64(imageUrl: string): Promise<string> {
-  try {
-    const fetchUrl = imageUrl.includes("/storage/v1/object/public/")
-      ? imageUrl.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/") + "?width=400&quality=75"
-      : imageUrl;
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 5000);
-    const res = await fetch(fetchUrl, { signal: controller.signal });
-    clearTimeout(timer);
-    if (!res.ok) return "";
-    const mime = res.headers.get("content-type") ?? "";
-    if (!mime.startsWith("image/")) return "";
-    const buf = await res.arrayBuffer();
-    if (buf.byteLength > 800 * 1024) return "";
-    return `data:${mime};base64,${Buffer.from(buf).toString("base64")}`;
-  } catch {
-    return "";
-  }
+async function renderImage(jsx: React.ReactElement): Promise<Response> {
+  // Force eager rendering — ImageResponse streams lazily so errors escape try-catch
+  // unless we consume the buffer here while we can still handle them.
+  const res = new ImageResponse(jsx, { width: 1200, height: 630 });
+  const buf = await res.arrayBuffer();
+  return new Response(buf, { headers: { "Content-Type": "image/png", "Cache-Control": "public, max-age=3600" } });
 }
 
 export async function GET(request: Request) {
@@ -84,9 +72,33 @@ export async function GET(request: Request) {
 
   if (!plantName) return new Response("Not found", { status: 404 });
 
-  const imageSrc = imageUrl ? await fetchImageAsBase64(imageUrl) : "";
+  // Pre-fetch plant image using Supabase render endpoint (smaller resized copy).
+  // Must be base64 so Satori doesn't make a lazy external fetch that can't be caught.
+  let imageSrc = "";
+  if (imageUrl) {
+    try {
+      const fetchUrl = imageUrl.includes("/storage/v1/object/public/")
+        ? imageUrl.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/") + "?width=400&quality=75"
+        : imageUrl;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 5000);
+      const imgRes = await fetch(fetchUrl, { signal: controller.signal });
+      clearTimeout(timer);
+      if (imgRes.ok) {
+        const mime = imgRes.headers.get("content-type") ?? "";
+        if (mime.startsWith("image/")) {
+          const buf = await imgRes.arrayBuffer();
+          if (buf.byteLength <= 800 * 1024) {
+            imageSrc = `data:${mime};base64,${Buffer.from(buf).toString("base64")}`;
+          }
+        }
+      }
+    } catch {
+      // proceed without photo
+    }
+  }
 
-  const makeImage = (withPhoto: boolean) => (
+  const card = (withPhoto: boolean) => (
     <div
       style={{
         display: "flex",
@@ -116,7 +128,7 @@ export async function GET(request: Request) {
       )}
       <div style={{ display: "flex", flexDirection: "column", flex: 1, color: "white", overflow: "hidden" }}>
         <div style={{ display: "flex", gap: "10px", marginBottom: "16px", alignItems: "center" }}>
-          {isAuction && (
+          {isAuction ? (
             <div
               style={{
                 display: "flex",
@@ -130,11 +142,11 @@ export async function GET(request: Request) {
                 color: "white",
               }}
             >
-              <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: "white" }} />
-              LIVE AUCTION
+              <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: "white", flexShrink: 0 }}></div>
+              <span>LIVE AUCTION</span>
             </div>
-          )}
-          {category && (
+          ) : null}
+          {category ? (
             <div
               style={{
                 display: "flex",
@@ -147,29 +159,29 @@ export async function GET(request: Request) {
             >
               {category}
             </div>
-          )}
+          ) : null}
         </div>
-        <div style={{ fontSize: "52px", fontWeight: "bold", lineHeight: 1.1, marginBottom: "8px" }}>
+        <div style={{ fontSize: "52px", fontWeight: "bold", lineHeight: "1.1", marginBottom: "8px" }}>
           {plantName}
         </div>
-        {variety && (
+        {variety ? (
           <div style={{ fontSize: "26px", color: "#bbf7d0", marginBottom: "16px" }}>
             {variety}
           </div>
-        )}
+        ) : null}
         <div style={{ fontSize: "38px", fontWeight: "bold", color: "#4ade80", marginBottom: buyNowLine ? "6px" : "16px" }}>
           {priceLine}
         </div>
-        {buyNowLine && (
+        {buyNowLine ? (
           <div style={{ fontSize: "22px", color: "rgba(255,255,255,0.7)", marginBottom: "16px" }}>
             {buyNowLine}
           </div>
-        )}
-        {sellerDisplay && (
+        ) : null}
+        {sellerDisplay ? (
           <div style={{ fontSize: "20px", color: "rgba(255,255,255,0.65)" }}>
             by {sellerDisplay}
           </div>
-        )}
+        ) : null}
       </div>
       <div
         style={{
@@ -187,12 +199,12 @@ export async function GET(request: Request) {
     </div>
   );
 
+  // Try full card with photo, fall back to text-only, then plain error
   try {
-    return new ImageResponse(makeImage(true), { width: 1200, height: 630 });
+    return await renderImage(card(true));
   } catch {
-    // Photo caused a crash — retry without it
     try {
-      return new ImageResponse(makeImage(false), { width: 1200, height: 630 });
+      return await renderImage(card(false));
     } catch {
       return new Response("Image generation failed", { status: 500 });
     }
