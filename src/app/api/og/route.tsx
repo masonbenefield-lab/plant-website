@@ -8,6 +8,26 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
+async function fetchImageAsBase64(imageUrl: string): Promise<string> {
+  try {
+    const fetchUrl = imageUrl.includes("/storage/v1/object/public/")
+      ? imageUrl.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/") + "?width=400&quality=75"
+      : imageUrl;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch(fetchUrl, { signal: controller.signal });
+    clearTimeout(timer);
+    if (!res.ok) return "";
+    const mime = res.headers.get("content-type") ?? "";
+    if (!mime.startsWith("image/")) return "";
+    const buf = await res.arrayBuffer();
+    if (buf.byteLength > 800 * 1024) return "";
+    return `data:${mime};base64,${Buffer.from(buf).toString("base64")}`;
+  } catch {
+    return "";
+  }
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const type = searchParams.get("type") ?? "listing";
@@ -64,135 +84,117 @@ export async function GET(request: Request) {
 
   if (!plantName) return new Response("Not found", { status: 404 });
 
-  // Pre-fetch the plant image as base64. Use Supabase's render endpoint to
-  // get a small resized copy (Pro plan+) so we're not loading a 5MB phone photo.
-  // Cap at 800KB and timeout at 5s — degrade to text-only on any failure.
-  let imageSrc = "";
-  if (imageUrl) {
-    try {
-      const fetchUrl = imageUrl.includes("/storage/v1/object/public/")
-        ? imageUrl.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/") + "?width=400&quality=75"
-        : imageUrl;
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 5000);
-      const imgRes = await fetch(fetchUrl, { signal: controller.signal });
-      clearTimeout(timer);
-      if (imgRes.ok) {
-        const buffer = await imgRes.arrayBuffer();
-        if (buffer.byteLength <= 800 * 1024) {
-          const mime = imgRes.headers.get("content-type") ?? "image/jpeg";
-          imageSrc = `data:${mime};base64,${Buffer.from(buffer).toString("base64")}`;
-        }
-      }
-    } catch {
-      // render without plant photo rather than crashing
-    }
-  }
+  const imageSrc = imageUrl ? await fetchImageAsBase64(imageUrl) : "";
 
-  return new ImageResponse(
-    (
+  const makeImage = (withPhoto: boolean) => (
+    <div
+      style={{
+        display: "flex",
+        width: "100%",
+        height: "100%",
+        background: "linear-gradient(135deg, #14532d 0%, #166534 60%, #15803d 100%)",
+        padding: "48px",
+        gap: "40px",
+        alignItems: "center",
+        position: "relative",
+      }}
+    >
+      {withPhoto && imageSrc && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={imageSrc}
+          alt=""
+          style={{
+            width: "260px",
+            height: "260px",
+            borderRadius: "20px",
+            objectFit: "cover",
+            flexShrink: 0,
+            border: "3px solid rgba(255,255,255,0.15)",
+          }}
+        />
+      )}
+      <div style={{ display: "flex", flexDirection: "column", flex: 1, color: "white", overflow: "hidden" }}>
+        <div style={{ display: "flex", gap: "10px", marginBottom: "16px", alignItems: "center" }}>
+          {isAuction && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                background: "#dc2626",
+                borderRadius: "100px",
+                padding: "5px 16px",
+                fontSize: "16px",
+                fontWeight: "700",
+                color: "white",
+              }}
+            >
+              <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: "white" }} />
+              LIVE AUCTION
+            </div>
+          )}
+          {category && (
+            <div
+              style={{
+                display: "flex",
+                background: "rgba(255,255,255,0.15)",
+                borderRadius: "100px",
+                padding: "5px 16px",
+                fontSize: "16px",
+                color: "#bbf7d0",
+              }}
+            >
+              {category}
+            </div>
+          )}
+        </div>
+        <div style={{ fontSize: "52px", fontWeight: "bold", lineHeight: 1.1, marginBottom: "8px" }}>
+          {plantName}
+        </div>
+        {variety && (
+          <div style={{ fontSize: "26px", color: "#bbf7d0", marginBottom: "16px" }}>
+            {variety}
+          </div>
+        )}
+        <div style={{ fontSize: "38px", fontWeight: "bold", color: "#4ade80", marginBottom: buyNowLine ? "6px" : "16px" }}>
+          {priceLine}
+        </div>
+        {buyNowLine && (
+          <div style={{ fontSize: "22px", color: "rgba(255,255,255,0.7)", marginBottom: "16px" }}>
+            {buyNowLine}
+          </div>
+        )}
+        {sellerDisplay && (
+          <div style={{ fontSize: "20px", color: "rgba(255,255,255,0.65)" }}>
+            by {sellerDisplay}
+          </div>
+        )}
+      </div>
       <div
         style={{
+          position: "absolute",
+          bottom: "32px",
+          right: "48px",
+          fontSize: "22px",
+          color: "rgba(255,255,255,0.4)",
+          fontWeight: "600",
           display: "flex",
-          width: "100%",
-          height: "100%",
-          background: "linear-gradient(135deg, #14532d 0%, #166534 60%, #15803d 100%)",
-          padding: "48px",
-          gap: "40px",
-          alignItems: "center",
-          position: "relative",
         }}
       >
-        {imageSrc && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={imageSrc}
-            alt=""
-            style={{
-              width: "260px",
-              height: "260px",
-              borderRadius: "20px",
-              objectFit: "cover",
-              flexShrink: 0,
-              border: "3px solid rgba(255,255,255,0.15)",
-            }}
-          />
-        )}
-        <div style={{ display: "flex", flexDirection: "column", flex: 1, color: "white", overflow: "hidden" }}>
-          {/* Badges row */}
-          <div style={{ display: "flex", gap: "10px", marginBottom: "16px", alignItems: "center" }}>
-            {isAuction && (
-              <div
-                style={{
-                  display: "flex",
-                  background: "#dc2626",
-                  borderRadius: "100px",
-                  padding: "5px 16px",
-                  fontSize: "16px",
-                  fontWeight: "700",
-                  color: "white",
-                  letterSpacing: "0.05em",
-                  textTransform: "uppercase",
-                }}
-              >
-                🔴 Live Auction
-              </div>
-            )}
-            {category && (
-              <div
-                style={{
-                  display: "flex",
-                  background: "rgba(255,255,255,0.15)",
-                  borderRadius: "100px",
-                  padding: "5px 16px",
-                  fontSize: "16px",
-                  color: "#bbf7d0",
-                }}
-              >
-                {category}
-              </div>
-            )}
-          </div>
-
-          <div style={{ fontSize: "52px", fontWeight: "bold", lineHeight: 1.1, marginBottom: "8px" }}>
-            {plantName}
-          </div>
-          {variety && (
-            <div style={{ fontSize: "26px", color: "#bbf7d0", marginBottom: "16px" }}>
-              {variety}
-            </div>
-          )}
-          <div style={{ fontSize: "38px", fontWeight: "bold", color: "#4ade80", marginBottom: buyNowLine ? "6px" : "16px" }}>
-            {priceLine}
-          </div>
-          {buyNowLine && (
-            <div style={{ fontSize: "22px", color: "rgba(255,255,255,0.7)", marginBottom: "16px" }}>
-              {buyNowLine}
-            </div>
-          )}
-          {sellerDisplay && (
-            <div style={{ fontSize: "20px", color: "rgba(255,255,255,0.65)" }}>
-              by {sellerDisplay}
-            </div>
-          )}
-        </div>
-        <div
-          style={{
-            position: "absolute",
-            bottom: "32px",
-            right: "48px",
-            fontSize: "22px",
-            color: "rgba(255,255,255,0.4)",
-            fontWeight: "600",
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-          }}
-        >
-          🌿 plantet.shop
-        </div>
+        plantet.shop
       </div>
-    ),
-    { width: 1200, height: 630 }
+    </div>
   );
+
+  try {
+    return new ImageResponse(makeImage(true), { width: 1200, height: 630 });
+  } catch {
+    // Photo caused a crash — retry without it
+    try {
+      return new ImageResponse(makeImage(false), { width: 1200, height: 630 });
+    } catch {
+      return new Response("Image generation failed", { status: 500 });
+    }
+  }
 }
