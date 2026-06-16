@@ -97,6 +97,13 @@ export default function SignupPage() {
       return;
     }
 
+    // Supabase returns an empty identities array when the email is already registered
+    if (data.user && data.user.identities && data.user.identities.length === 0) {
+      setError("An account with this email already exists. Sign in instead.");
+      setLoading(false);
+      return;
+    }
+
     if (data.user) {
       router.push(`/verify-email?email=${encodeURIComponent(email)}`);
     }
