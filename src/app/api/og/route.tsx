@@ -64,7 +64,7 @@ export async function GET(request: Request) {
     isAuction = true;
     const { data } = await supabase
       .from("auctions")
-      .select("plant_name, variety, current_bid_cents, buy_now_cents, images, category, seller_id")
+      .select("plant_name, variety, current_bid_cents, buy_now_price_cents, images, category, seller_id")
       .eq("id", id)
       .single();
 
@@ -72,8 +72,8 @@ export async function GET(request: Request) {
       plantName = data.plant_name;
       variety = data.variety ?? "";
       priceLine = `Current bid: $${(data.current_bid_cents / 100).toFixed(2)}`;
-      if (data.buy_now_cents) {
-        buyNowLine = `Buy Now: $${(data.buy_now_cents / 100).toFixed(2)}`;
+      if (data.buy_now_price_cents) {
+        buyNowLine = `Buy Now: $${(data.buy_now_price_cents / 100).toFixed(2)}`;
       }
       imageUrl = (data.images as string[])?.[0] ?? "";
       category = data.category ?? "";
