@@ -1471,3 +1471,65 @@ create index community_posts_plant_tag_idx on community_posts (plant_tag) where 
 9. Open Android in Android Studio: `npx cap open android`
 10. Open iOS in Xcode (Mac only): `npx cap open ios`
 11. Accounts needed: Apple Developer ($99/yr) and Google Play ($25 one-time)
+
+---
+
+## 2026-06-22 — iOS native app shipped to device + push fully working
+
+### Outcome
+Android app submitted to Google Play **open testing** (built signed AAB, awaiting/への review).
+iOS app built and **running on a physical iPhone via Xcode** with Firebase push notifications
+working end-to-end (message, bid, auction notifications confirmed delivering in background).
+
+### Key identifiers / accounts (IMPORTANT — durable facts)
+- **iOS bundle ID:** `shop.plantet.ios` (NOT `shop.plantet.app` — that string was already
+  claimed by another Apple team and is globally unavailable, so iOS uses a distinct bundle ID.
+  Android keeps `shop.plantet.app`.)
+- **Android package:** `shop.plantet.app`
+- **Apple Developer team:** Plantet LLC — Team ID `WG3VYFNZD7` (enrolled as Organization)
+- **Single Firebase project for BOTH apps:** `plantet-6fa38` (under the plantet.shop Google
+  Workspace org). Earlier there were TWO Firebase projects split across a personal Google
+  account and the Plantet Workspace; consolidated into `plantet-6fa38`. Backend service
+  account + both app registrations all live here.
+- **APNs Auth Key:** Key ID `5N8HQ48F6Z`, Team ID `WG3VYFNZD7` — uploaded to Firebase Cloud
+  Messaging for the `shop.plantet.ios` app. (.p8 file — Apple only lets you download once.)
+- **Google Cloud org policy gotcha:** the plantet.shop Workspace enforces
+  `iam.disableServiceAccountKeyCreation` (legacy constraint), which blocked generating the
+  firebase-admin service-account key. Fixed via Cloud Shell:
+  `gcloud organizations add-iam-policy-binding 853487244283 --member="user:$(gcloud config get-value account)" --role="roles/orgpolicy.policyAdmin"`
+  then `gcloud resource-manager org-policies disable-enforce iam.disableServiceAccountKeyCreation --project=plantet-6fa38`.
+  Org ID is `853487244283`. Can be re-enforced after (the generated key keeps working).
+
+### Native architecture (don't re-derive)
+- Capacitor `server.url` points to `https://www.plantet.shop` — the native shell loads the live
+  site, so **web deploys update the app instantly; only native changes need a store resubmit.**
+- iOS push: `@capacitor/push-notifications` gives an APNs token; `AppDelegate.swift` was modified
+  to `FirebaseApp.configure()`, set `Messaging.delegate`, and in
+  `didRegisterForRemoteNotificationsWithDeviceToken` exchange the APNs token for an **FCM token**,
+  then post that to `.capacitorDidRegisterForRemoteNotifications`. This means the JS
+  `PushNotificationProvider` is unchanged and registers an FCM token on iOS just like Android.
+- Firebase iOS SDK (FirebaseMessaging) added via Swift Package Manager.
+- `GoogleService-Info.plist` MUST be added to the Xcode project (Add Files → uncheck "Copy items
+  if needed", check App target) — copying it to the folder on disk alone is NOT enough; Firebase
+  won't find it and `FirebaseApp.configure()` crashes.
+
+### Critical backend fix (applies to ALL push)
+Push sends were fire-and-forget (not awaited), so Vercel's serverless runtime killed the
+function before the FCM call ran — notifications only appeared when the app was reopened.
+**Fix: `await` every `sendPushToUser` call** so it completes before the response returns.
+Also added APNs headers `apns-priority: 10` + `apns-push-type: alert` and explicit `aps.alert`
+in `src/lib/push.ts` so iOS shows banners while the app is closed/backgrounded.
+
+### Files modified this session
+- `src/lib/push.ts` — APNs alert headers + explicit aps.alert + send logging
+- `src/app/api/messages/send/route.ts` — await sendPushToUser
+- `src/app/api/bids/place/route.ts` — await notifyOutbid/notifyNewBid (Promise.all)
+- `src/app/api/auctions/close/route.ts` — await all sendPushToUser calls
+- `ios/App/App/AppDelegate.swift` — Firebase init + APNs→FCM token exchange (on Mac, not committed from PC)
+- `ios/App/App/GoogleService-Info.plist` — now for `shop.plantet.ios` / project `plantet-6fa38` (on Mac)
+
+### Remaining for iOS launch
+1. Verify push works on a **production** build (TestFlight uses production APNs) — if it fails,
+   add a production APNs key in Firebase (the .p8 token key should cover both, but confirm).
+2. Archive in Xcode → upload to App Store Connect → TestFlight → submit for review.
+3. (Optional) Re-enforce the `iam.disableServiceAccountKeyCreation` org policy.
