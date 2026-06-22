@@ -34,7 +34,19 @@ export async function sendPushToUser(
             notification: { title, body },
             data: data ?? {},
             apns: {
-              payload: { aps: { badge: 1, sound: 'default' } },
+              headers: {
+                // Force a high-priority, user-visible alert so iOS shows the
+                // banner immediately even when the app is closed/backgrounded.
+                'apns-priority': '10',
+                'apns-push-type': 'alert',
+              },
+              payload: {
+                aps: {
+                  alert: { title, body },
+                  sound: 'default',
+                  badge: 1,
+                },
+              },
             },
             android: {
               priority: 'high',
