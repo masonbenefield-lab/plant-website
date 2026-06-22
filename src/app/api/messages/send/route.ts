@@ -90,7 +90,9 @@ export async function POST(req: Request) {
     .eq("id", user.id)
     .single();
 
-  sendPushToUser(
+  // Await so the push actually sends before the serverless function exits
+  // (fire-and-forget gets killed when the response returns on Vercel).
+  await sendPushToUser(
     otherId,
     senderProfile?.username ? `New message from ${senderProfile.username}` : 'New message',
     trimmedBody.length > 100 ? trimmedBody.slice(0, 97) + '…' : trimmedBody,
