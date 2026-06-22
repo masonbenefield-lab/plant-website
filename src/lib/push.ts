@@ -29,7 +29,7 @@ export async function sendPushToUser(
     await Promise.allSettled(
       rows.map(async (row) => {
         try {
-          await messaging.send({
+          const messageId = await messaging.send({
             token: row.token,
             notification: { title, body },
             data: data ?? {},
@@ -53,8 +53,11 @@ export async function sendPushToUser(
               notification: { sound: 'default' },
             },
           });
+          console.log(`[push] sent to user=${userId} messageId=${messageId}`);
         } catch (err: unknown) {
           const code = (err as { code?: string })?.code ?? '';
+          const message = (err as { message?: string })?.message ?? '';
+          console.error(`[push] send FAILED user=${userId} code=${code} message=${message}`);
           if (
             code === 'messaging/invalid-registration-token' ||
             code === 'messaging/registration-token-not-registered'
