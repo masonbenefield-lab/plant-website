@@ -61,7 +61,7 @@ export async function GET(request: Request) {
         const { data: auth } = await supabase.auth.admin.getUserById(bidderId);
         const email = auth?.user?.email;
         if (email) await sendAuctionEndingSoon({ email, plantName: displayName, auctionUrl, endsAt: auction.ends_at });
-        sendPushToUser(
+        await sendPushToUser(
           bidderId,
           'Auction ending soon',
           `${displayName} closes in less than 1 hour. Don't miss out!`,
@@ -217,7 +217,7 @@ export async function GET(request: Request) {
               }).catch(() => {});
             }
 
-            sendPushToUser(
+            await sendPushToUser(
               auction.current_bidder_id!,
               'You won the auction!',
               `Your card was charged for ${displayName}. Check your orders for tracking.`,
@@ -238,7 +238,7 @@ export async function GET(request: Request) {
               }).catch(() => {});
             }
 
-            sendPushToUser(
+            await sendPushToUser(
               auction.seller_id,
               'You made a sale!',
               `${displayName} sold for $${(auction.current_bid_cents / 100).toFixed(2)}. Head to orders to ship it.`,
@@ -254,13 +254,13 @@ export async function GET(request: Request) {
       } else {
         // Buyer has no saved payment method or address — fall back to manual checkout
         await fallbackToManualCheckout(supabase, auction, now, appUrl, winnerEmail, sellerEmail, PAYMENT_DEADLINE_HOURS);
-        sendPushToUser(
+        await sendPushToUser(
           auction.current_bidder_id!,
           'You won! Complete your purchase',
           `You won ${displayName}. Tap to complete checkout before the deadline.`,
           { url: `/checkout?auction=${auction.id}` }
         );
-        sendPushToUser(
+        await sendPushToUser(
           auction.seller_id,
           'You made a sale!',
           `${displayName} sold for $${(auction.current_bid_cents / 100).toFixed(2)}. Waiting for buyer payment.`,

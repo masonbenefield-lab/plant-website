@@ -37,7 +37,7 @@ async function notifyOutbid(
   } catch {
     // Email failure is non-fatal
   }
-  sendPushToUser(
+  await sendPushToUser(
     bidderId,
     "You've been outbid",
     `Someone outbid you on ${plantName}. Bid $${(newBidCents / 100).toFixed(2)} or more to retake the lead.`,
@@ -45,7 +45,7 @@ async function notifyOutbid(
   );
 }
 
-function notifyNewBid(
+async function notifyNewBid(
   sellerId: string,
   bidderId: string,
   plantName: string,
@@ -53,7 +53,7 @@ function notifyNewBid(
   amountCents: number
 ) {
   if (sellerId === bidderId) return;
-  sendPushToUser(
+  await sendPushToUser(
     sellerId,
     'New bid on your auction',
     `Someone bid $${(amountCents / 100).toFixed(2)} on ${plantName}.`,
@@ -211,14 +211,18 @@ export async function POST(request: Request) {
 
         if (finalLeaderId === user.id) {
           // Incoming bidder won the proxy war — notify the displaced leader
-          notifyOutbid(admin, auction.current_bidder_id!, proxyDisplayName, auctionId, finalBidCents);
-          notifyNewBid(auction.seller_id, user.id, proxyDisplayName, auctionId, finalBidCents);
+          await Promise.all([
+            notifyOutbid(admin, auction.current_bidder_id!, proxyDisplayName, auctionId, finalBidCents),
+            notifyNewBid(auction.seller_id, user.id, proxyDisplayName, auctionId, finalBidCents),
+          ]);
           return NextResponse.json({ ok: true, extended, wonProxyWar: true, finalBid: finalBidCents });
         }
 
         // Leader's proxy held — notify incoming bidder they were outbid
-        notifyOutbid(admin, user.id, proxyDisplayName, auctionId, finalBidCents);
-        notifyNewBid(auction.seller_id, user.id, proxyDisplayName, auctionId, finalBidCents);
+        await Promise.all([
+          notifyOutbid(admin, user.id, proxyDisplayName, auctionId, finalBidCents),
+          notifyNewBid(auction.seller_id, user.id, proxyDisplayName, auctionId, finalBidCents),
+        ]);
         return NextResponse.json({ ok: true, outbidByProxy: true, proxyBid: finalBidCents });
       }
     }
@@ -244,12 +248,14 @@ export async function POST(request: Request) {
 
   const bidDisplayName = auction.variety ? `${auction.plant_name} — ${auction.variety}` : auction.plant_name;
 
-  // Notify the displaced leader server-side
-  if (auction.current_bidder_id && auction.current_bidder_id !== user.id) {
-    notifyOutbid(admin, auction.current_bidder_id, bidDisplayName, auctionId, amountCents);
-  }
-
-  notifyNewBid(auction.seller_id, user.id, bidDisplayName, auctionId, amountCents);
+  // Notify the displaced leader + seller server-side (await so the push
+  // sends before the serverless function exits)
+  await Promise.all([
+    auction.current_bidder_id && auction.current_bidder_id !== user.id
+      ? notifyOutbid(admin, auction.current_bidder_id, bidDisplayName, auctionId, amountCents)
+      : Promise.resolve(),
+    notifyNewBid(auction.seller_id, user.id, bidDisplayName, auctionId, amountCents),
+  ]);
 
   return NextResponse.json({ ok: true, extended });
 }
