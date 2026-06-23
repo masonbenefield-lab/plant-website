@@ -114,8 +114,8 @@ export default async function RootLayout({
   }
 
   return (
-    <html lang="en" className={`${inter.variable} ${bricolage.variable} h-full antialiased`} suppressHydrationWarning>
-      <body className="min-h-full flex flex-col bg-background text-foreground">
+    <html lang="en" className={`${inter.variable} ${bricolage.variable} antialiased`} suppressHydrationWarning>
+      <body className="min-h-screen flex flex-col bg-background text-foreground">
         <ThemeProvider>
           <CartProvider>
             <Navbar
