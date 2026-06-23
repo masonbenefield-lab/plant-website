@@ -1539,6 +1539,20 @@ in `src/lib/push.ts` so iOS shows banners while the app is closed/backgrounded.
    since the app requires login) → submit for review. (In progress.)
 3. (Optional) Re-enforce the `iam.disableServiceAccountKeyCreation` org policy.
 
+### 2026-06-23 — iOS app SUBMITTED to App Store review
+- App Store Connect record created (name "Plantet", bundle `shop.plantet.ios`, SKU `plantet-ios`).
+- Listing: description (community-first, no emoji — App Store rejects emoji in description),
+  keywords, support URL `https://www.plantet.shop/contact`, category Primary **Shopping** /
+  Secondary **Lifestyle**.
+- Screenshots: App Store wanted **6.5" display** (1284 × 2778). iPhone shots are 1179 × 2556;
+  resized non-proportionally (~0.2% stretch, invisible) and **converted to JPEG** (App Store
+  rejects PNGs with alpha channel).
+- Demo account provided in App Review Information (app requires login).
+- Pricing: **Free**. NOTE: paid "higher status" tiers are NOT in this submission. Watch for a
+  possible **Guideline 3.1.1** rejection if the in-app upgrade (Stripe) is reachable — digital
+  subscriptions on iOS must use Apple IAP; physical plant sales via Stripe are fine/required.
+- Status: **Waiting for Review** (~24-48h, Apple emails the result).
+
 ### iOS UI fixes (web-only, deploy via Vercel — no rebuild)
 - Navbar was scrolling away in WebKit: caused by `html h-full` + `body min-h-full` percentage
   height chain. Fixed to `body min-h-screen` + dropped `html h-full` (commit 80ace58).
