@@ -28,6 +28,9 @@ const siteUrl = "https://www.plantet.shop";
 
 export const viewport: Viewport = {
   themeColor: "#2F7D54",
+  // Draw into the iOS safe areas so env(safe-area-inset-*) is available;
+  // the navbar adds top padding to cover the status-bar strip.
+  viewportFit: "cover",
 };
 
 export const metadata: Metadata = {

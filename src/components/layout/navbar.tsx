@@ -132,7 +132,7 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
   }
 
   return (
-    <header ref={headerRef} className="border-b bg-background sticky top-0 z-50">
+    <header ref={headerRef} className="border-b bg-background sticky top-0 z-50 pt-[env(safe-area-inset-top)]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
 
         {/* Left: logo + desktop nav */}
