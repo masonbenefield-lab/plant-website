@@ -1529,7 +1529,19 @@ in `src/lib/push.ts` so iOS shows banners while the app is closed/backgrounded.
 - `ios/App/App/GoogleService-Info.plist` — now for `shop.plantet.ios` / project `plantet-6fa38` (on Mac)
 
 ### Remaining for iOS launch
-1. Verify push works on a **production** build (TestFlight uses production APNs) — if it fails,
-   add a production APNs key in Firebase (the .p8 token key should cover both, but confirm).
-2. Archive in Xcode → upload to App Store Connect → TestFlight → submit for review.
+1. ~~Verify push works on a production build~~ ✅ DONE 2026-06-23. Production push initially
+   failed on TestFlight because Firebase only had the APNs key in the **Development** slot —
+   the **Production APNs auth key slot was empty**. Fixed by uploading the same `.p8`
+   (Key ID `5N8HQ48F6Z`, Team ID `WG3VYFNZD7`) to the production slot too (the key is scoped
+   Sandbox & Production, so the same file works for both). Build uploaded to App Store Connect,
+   TestFlight internal testing working.
+2. Fill App Store listing metadata (screenshots, privacy questionnaire, demo account for review
+   since the app requires login) → submit for review. (In progress.)
 3. (Optional) Re-enforce the `iam.disableServiceAccountKeyCreation` org policy.
+
+### iOS UI fixes (web-only, deploy via Vercel — no rebuild)
+- Navbar was scrolling away in WebKit: caused by `html h-full` + `body min-h-full` percentage
+  height chain. Fixed to `body min-h-screen` + dropped `html h-full` (commit 80ace58).
+- Content bled behind the iOS status bar on scroll: added `viewportFit: "cover"` to the viewport
+  export and `pt-[env(safe-area-inset-top)]` on the sticky `<header>` so its background covers
+  the status-bar strip (commit cd98eb4).
