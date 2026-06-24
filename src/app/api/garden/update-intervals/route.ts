@@ -84,6 +84,7 @@ export async function PATCH(request: Request) {
         await supabase
           .from("garden_events")
           .delete()
+          .eq("user_id", user.id)
           .in("plant_id", plantIds)
           .eq("event_type", INTERVAL_TO_EVENT[k])
           .gte("event_date", baselineDateStr);

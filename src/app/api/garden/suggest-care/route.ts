@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
+import { createClient as createServerClient } from "@/lib/supabase/server";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 // Untyped admin client — care_suggestions isn't in the generated types yet.
 function adminClient() {
@@ -27,6 +29,14 @@ function clampDays(key: keyof typeof BOUNDS, value: unknown): number {
 }
 
 export async function GET(request: Request) {
+  // Require a logged-in user — this endpoint triggers paid LLM calls on cache miss.
+  const ctx = await createServerClient();
+  const { data: { user } } = await ctx.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!checkRateLimit(`suggest-care:${user.id}`, 20, 60_000)) {
+    return NextResponse.json({ error: "Too many requests — please wait a moment" }, { status: 429 });
+  }
+
   const { searchParams } = new URL(request.url);
   const q = searchParams.get("q")?.trim().toLowerCase() ?? "";
   const potting = searchParams.get("potting") === "ground" ? "ground" : "pot";
