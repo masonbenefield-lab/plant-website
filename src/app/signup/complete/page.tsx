@@ -54,6 +54,8 @@ export default function CompleteSignupPage() {
 
     const data = await res.json();
     if (!res.ok) {
+      // Server-side US-only backstop — show the same US Only card.
+      if (data.geoBlocked) { setGeoBlocked(true); setLoading(false); return; }
       setError(data.error ?? "Something went wrong. Please try again.");
       setLoading(false);
       return;

@@ -1618,3 +1618,18 @@ order by accounts desc;
 
 ### TODO
 - Privacy policy: mention hashed-IP/country collection for fraud prevention.
+
+## 2026-06-24 — Hardened US-only signup gate (server-side)
+
+- The previous "US Only" gate was client-side only (cosmetic) — non-US users could sign up via VPN, the Google button, direct API calls, or null-country fail-open. This adds real server-side enforcement.
+- No DB trigger creates profiles (confirmed via migrations), so `!profile?.username` reliably means "brand-new signup" — used as the gate point in /auth/callback.
+- `src/lib/geo.ts`: `isGeoAllowed(country)` — fail-closed (unknown country blocked too), but ONLY in production (NODE_ENV), so local dev/preview aren't locked out. Allowed set = {US}.
+- `src/app/auth/callback/route.ts`: brand-new non-US signups get their just-created auth user DELETED (not banned — keeps auth clean, lets false-positive US users retry) and redirected to /us-only. Existing users are never geo-checked (travelers unaffected).
+- `src/app/api/auth/complete-profile/route.ts`: server-side 403 backstop so a profile can't be created from outside the US even if the client is bypassed.
+- `src/app/us-only/page.tsx`: static US-only landing. signup/complete now shows the US Only card on a 403 geoBlocked response.
+- Real seller enforcement remains Stripe Connect (US bank required) — IP geo is the deterrent.
+- Added migration files for repo consistency: 020_user_bans.sql (banned_at), 021_auth_events.sql.
+
+### Migrations / env (no NEW migration for the geo gate)
+- Still required if not already done: run 021_auth_events.sql in Supabase, and set IP_HASH_SECRET in Vercel.
+- Territories note: only "US" is allowed; Puerto Rico (PR) etc. resolve to their own codes and would be blocked — expand ALLOWED_COUNTRIES in src/lib/geo.ts if desired.

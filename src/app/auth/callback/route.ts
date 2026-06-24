@@ -3,11 +3,13 @@ import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdmin } from "@supabase/supabase-js";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { GROUNDBREAKER_CAP } from "@/lib/plan-limits";
+import { geoCountry, isGeoAllowed } from "@/lib/geo";
 
 async function handleSession(
   user: { id: string; email?: string; created_at: string },
   origin: string,
-  next: string
+  next: string,
+  country: string | null
 ) {
   const admin = createAdmin(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -20,8 +22,16 @@ async function handleSession(
     .eq("id", user.id)
     .single();
 
-  // Google OAuth users who haven't picked a username yet — send to complete setup
+  // No profile yet = brand-new signup (there's no DB trigger that creates one).
   if (!profile?.username) {
+    // US-only gate: drop the just-created account and bounce non-US signups.
+    // Deleting (vs banning) keeps auth clean and lets a false-positive US user
+    // simply retry rather than being stuck in a banned state.
+    if (!isGeoAllowed(country)) {
+      await admin.auth.admin.deleteUser(user.id).catch(() => {});
+      return NextResponse.redirect(`${origin}/us-only`);
+    }
+    // Google OAuth users who haven't picked a username yet — send to complete setup
     return NextResponse.redirect(`${origin}/signup/complete`);
   }
 
@@ -55,6 +65,7 @@ export async function GET(request: Request) {
   const tokenHash = searchParams.get("token_hash");
   const type = searchParams.get("type");
   const next = searchParams.get("next") ?? "/dashboard";
+  const country = geoCountry(request.headers);
 
   const supabase = await createClient();
 
@@ -62,12 +73,12 @@ export async function GET(request: Request) {
   if (code) {
     const { data: { session }, error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error && session?.user) {
-      return handleSession(session.user, origin, next);
+      return handleSession(session.user, origin, next, country);
     }
     // Code already used or expired — if they already have a session they're confirmed, just continue
     const { data: { session: existing } } = await supabase.auth.getSession();
     if (existing?.user) {
-      return handleSession(existing.user, origin, next);
+      return handleSession(existing.user, origin, next, country);
     }
   }
 
@@ -78,12 +89,12 @@ export async function GET(request: Request) {
       type: type as EmailOtpType,
     });
     if (!error && session?.user) {
-      return handleSession(session.user, origin, next);
+      return handleSession(session.user, origin, next, country);
     }
     // Token already used — check for existing session before erroring
     const { data: { session: existing } } = await supabase.auth.getSession();
     if (existing?.user) {
-      return handleSession(existing.user, origin, next);
+      return handleSession(existing.user, origin, next, country);
     }
   }
 

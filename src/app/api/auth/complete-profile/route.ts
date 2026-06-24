@@ -4,6 +4,7 @@ import { createClient as createAdmin } from "@supabase/supabase-js";
 import { sendWelcomeEmail } from "@/lib/email";
 import { containsSlur } from "@/lib/profanity";
 import { GROUNDBREAKER_CAP } from "@/lib/plan-limits";
+import { geoCountry, isGeoAllowed } from "@/lib/geo";
 
 export async function POST(req: Request) {
   const supabase = await createClient();
@@ -11,6 +12,15 @@ export async function POST(req: Request) {
 
   if (!user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  // US-only gate — server-side backstop so a profile can never be created from
+  // outside the US even if the client checks are bypassed.
+  if (!isGeoAllowed(geoCountry(req.headers))) {
+    return NextResponse.json(
+      { error: "Plantet is currently available in the United States only.", geoBlocked: true },
+      { status: 403 }
+    );
   }
 
   const { username, displayName, emailOptIn } = await req.json();
