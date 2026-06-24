@@ -1712,3 +1712,20 @@ alter table profiles add column if not exists timezone text;
 alter table profiles add column if not exists care_push_reminders boolean not null default false;
 ```
 (No env changes. Push uses existing Firebase infra. care-push cron needs CRON_SECRET, already set.)
+
+## 2026-06-24 — Frost alerts (weather, advisory push)
+
+- Opt-in frost alerts (026): profiles.postal_code + lat/lng + frost_alerts (default true). ZIP geocoded once on save via zippopotam.us (free, no key) -> lat/lng stored. Account > notifications has a Frost alerts toggle + ZIP input.
+- New hourly cron /api/cron/frost-alert: for opted-in users with coords, at their local 5pm, fetches tonight's overnight low from Open-Meteo (free, no key; tomorrow's daily temperature_2m_min). If <= 36°F, sends an APP push "❄️ Frost alert tonight — protect outdoor plants." Advisory only — never changes the care schedule. vercel.json schedule "0 * * * *".
+- Indoor/outdoor: handled as a per-USER location alert (not per-plant) — the user knows which plants are outside. No per-plant flag needed.
+- Rain notices intentionally deferred (noisy without an outdoor flag; advisory-only anyway → snooze already covers manual skip).
+- src/lib/weather.ts: geocodeUsZip + getOvernightLowF.
+
+### SQL migration to run (Supabase SQL editor)
+```sql
+alter table profiles add column if not exists postal_code text;
+alter table profiles add column if not exists lat double precision;
+alter table profiles add column if not exists lng double precision;
+alter table profiles add column if not exists frost_alerts boolean not null default true;
+```
+(No env/API keys — Open-Meteo and zippopotam.us are free no-key APIs.)

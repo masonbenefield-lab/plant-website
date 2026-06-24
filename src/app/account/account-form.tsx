@@ -53,6 +53,8 @@ export default function AccountForm({
   const [emailOptIn, setEmailOptIn] = useState(profile?.email_marketing_opt_in ?? false);
   const [dailyCareEmails, setDailyCareEmails] = useState(profile?.daily_care_emails ?? true);
   const [carePushReminders, setCarePushReminders] = useState((profile as { care_push_reminders?: boolean } | null)?.care_push_reminders ?? false);
+  const [postalCode, setPostalCode] = useState((profile as { postal_code?: string | null } | null)?.postal_code ?? "");
+  const [frostAlerts, setFrostAlerts] = useState((profile as { frost_alerts?: boolean } | null)?.frost_alerts ?? true);
   const [socialLinks, setSocialLinks] = useState<Record<string, string>>(
     (profile?.social_links as Record<string, string> | null) ?? {}
   );
@@ -167,6 +169,8 @@ export default function AccountForm({
         email_marketing_opt_in: emailOptIn,
         daily_care_emails: dailyCareEmails,
         care_push_reminders: carePushReminders,
+        postal_code: postalCode.trim() || null,
+        frost_alerts: frostAlerts,
         social_links: Object.fromEntries(
           Object.entries(socialLinks).filter(([, v]) => v.trim().length > 0)
         ),
@@ -754,6 +758,36 @@ export default function AccountForm({
             >
               <span className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition-transform ${carePushReminders ? "translate-x-5" : "translate-x-0"}`} />
             </button>
+          </div>
+          <div className="rounded-lg border px-4 py-4 mt-3 space-y-3">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium">Frost alerts</p>
+                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                  Get an evening app notification when overnight frost is forecast for your area, so you can protect outdoor plants. Needs your ZIP code below.
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={frostAlerts}
+                onClick={() => setFrostAlerts((v) => !v)}
+                className={`mt-0.5 relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${frostAlerts ? "bg-leaf" : "bg-input"}`}
+              >
+                <span className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition-transform ${frostAlerts ? "translate-x-5" : "translate-x-0"}`} />
+              </button>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="postal_code" className="text-xs">ZIP code (US) — used only for frost forecasts</Label>
+              <Input
+                id="postal_code"
+                value={postalCode}
+                onChange={(e) => setPostalCode(e.target.value.replace(/[^0-9]/g, "").slice(0, 5))}
+                placeholder="e.g. 78701"
+                inputMode="numeric"
+                className="max-w-[160px]"
+              />
+            </div>
           </div>
           <p className="text-xs text-muted-foreground mt-3">
             Save your profile above to apply changes to notification preferences.
