@@ -4,7 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Check, ChevronRight, X, Plus, Minus } from "lucide-react";
+import { Check, ChevronRight, X, Plus, Minus, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -37,6 +37,11 @@ const COLOR_CLASSES: Record<string, { selected: string; unselected: string }> = 
   amber:  { selected: "bg-amber-600 border-amber-600 text-white",  unselected: "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 hover:bg-amber-100" },
 };
 
+// Snap an AI-suggested interval to the closest preset chip for that care type.
+function nearestPreset(value: number, presets: readonly number[]): number {
+  return presets.reduce((best, p) => (Math.abs(p - value) < Math.abs(best - value) ? p : best), presets[0]);
+}
+
 function IntervalChip({ days, selected, onClick, color }: { days: number; selected: boolean; onClick: () => void; color: string }) {
   const cls = COLOR_CLASSES[color] ?? COLOR_CLASSES.blue;
   return (
@@ -60,6 +65,35 @@ export function SetupClient({ plants }: { plants: Plant[] }) {
   );
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
+  const [suggesting, setSuggesting] = useState<Set<string>>(new Set());
+
+  async function suggest(plant: Plant) {
+    setSuggesting((prev) => new Set(prev).add(plant.id));
+    try {
+      const q = plant.variety ? `${plant.name} ${plant.variety}` : plant.name;
+      const res = await fetch(`/api/garden/suggest-care?q=${encodeURIComponent(q)}`);
+      const data = await res.json();
+      const s = data.suggestion;
+      if (!s) { toast.error("No care suggestion found for this plant"); return; }
+      setSelections((prev) => ({
+        ...prev,
+        [plant.id]: {
+          water:     nearestPreset(s.water,     CARE_TYPES[0].presets),
+          fertilize: nearestPreset(s.fertilize, CARE_TYPES[1].presets),
+          prune:     nearestPreset(s.prune,     CARE_TYPES[2].presets),
+          repot:     nearestPreset(s.repot,     CARE_TYPES[3].presets),
+        },
+      }));
+      setExpanded((prev) => new Set(prev).add(plant.id));
+      toast.success(s.confidence === "low"
+        ? "Suggested a general default — double-check it for your plant"
+        : "Care schedule suggested ✨ — adjust as needed");
+    } catch {
+      toast.error("Couldn't get a suggestion — please try again");
+    } finally {
+      setSuggesting((prev) => { const next = new Set(prev); next.delete(plant.id); return next; });
+    }
+  }
 
   function toggle(plantId: string, type: keyof PlantSelections, days: number) {
     setSelections((prev) => ({
@@ -161,6 +195,16 @@ export function SetupClient({ plants }: { plants: Plant[] }) {
                   </button>
                 )}
               </div>
+
+              {/* AI suggestion — snaps to the nearest preset chips */}
+              <button
+                onClick={() => suggest(plant)}
+                disabled={suggesting.has(plant.id)}
+                className="mt-2.5 flex items-center gap-1 text-[11px] font-medium text-leaf hover:text-forest transition-colors disabled:opacity-50"
+              >
+                <Sparkles size={11} />
+                {suggesting.has(plant.id) ? "Suggesting…" : "Suggest schedule"}
+              </button>
 
               {/* Water row — always visible */}
               <div className="flex items-center gap-2 mt-3 flex-wrap">

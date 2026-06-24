@@ -1640,3 +1640,26 @@ order by accounts desc;
 - Fix (src/app/garden/care/care-schedule-client.tsx): overdue = `daysUntilDue < 0`, full stop — removed the one-interval cap everywhere (overdueCount, today strip count, today panel filter, overdue/dueToday split, bulk "log all overdue"). getStripDays() now returns empty for negative daysUntilDue so overdue tasks are never drawn on a future strip day. DayTaskRow shows the real overdue label.
 - Result: overdue tasks consolidate into Today's Overdue bucket with correct "Nd overdue" labels; future days show only genuine future recurrences.
 - No DB/schema/env changes.
+
+## 2026-06-24 — AI care-schedule suggestions (Claude Haiku)
+
+- New "Suggest schedule ✨" button on the care setup page that pre-fills water/fertilize/prune/repot intervals for each plant via Claude.
+- Reuses the existing plant-guide setup: same @anthropic-ai/sdk, same ANTHROPIC_API_KEY, same model (claude-haiku-4-5-20251001), same cache-first pattern as /api/plant-info.
+- New route `src/app/api/garden/suggest-care/route.ts`: normalized-name cache lookup in `care_suggestions` (365-day freshness) → Haiku on miss → JSON parse → clamp each interval to sane bounds (bad/out-of-range values fall back to a default) → upsert cache. Untyped admin client (table not in generated types). Returns confidence high/medium/low.
+- UI `src/app/garden/care/setup/setup-client.tsx`: button calls the route, snaps each suggested interval to the nearest existing preset chip, auto-expands the plant, toasts a "double-check it" note on low confidence.
+- Cost: ~$0.001–0.0015 per uncached lookup, $0 on cache hits (plant names repeat across users). No new env var or dependency.
+
+### SQL migration to run (Supabase SQL editor)
+```sql
+create table if not exists care_suggestions (
+  query text primary key,
+  water int not null,
+  fertilize int not null,
+  prune int not null,
+  repot int not null,
+  confidence text not null default 'medium',
+  created_at timestamptz not null default now()
+);
+alter table care_suggestions enable row level security;
+```
+(No env var changes — ANTHROPIC_API_KEY already set for the plant guide.)
