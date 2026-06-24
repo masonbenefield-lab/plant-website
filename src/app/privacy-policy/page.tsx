@@ -8,7 +8,7 @@ export default function PrivacyPolicyPage() {
   return (
     <div className="max-w-3xl mx-auto px-4 py-12">
       <h1 className="text-3xl font-bold mb-2">Privacy Policy</h1>
-      <p className="text-sm text-muted-foreground mb-10">Effective date: April 29, 2026</p>
+      <p className="text-sm text-muted-foreground mb-10">Effective date: June 24, 2026</p>
 
       <div className="prose prose-sm dark:prose-invert max-w-none space-y-8">
 
@@ -67,6 +67,15 @@ export default function PrivacyPolicyPage() {
               logs including IP addresses, browser type, pages visited, and timestamps. We do not sell or
               share this data for advertising purposes.</p>
             </div>
+            <div>
+              <h3 className="font-medium text-foreground">Fraud Prevention &amp; Security Data</h3>
+              <p>To protect the marketplace from fraud and abuse, when you sign in we record a one-way,
+              irreversible <strong>hash</strong> of your IP address (never the raw address itself), the
+              approximate country your connection resolves to, and your browser type. Storing only a hash
+              lets us detect patterns such as a single person operating many accounts, without retaining
+              your actual IP address. Plantet is currently available to users located in the United States
+              only, and we use the country your connection resolves to in order to enforce this at sign-up.</p>
+            </div>
           </div>
         </section>
 
@@ -77,7 +86,8 @@ export default function PrivacyPolicyPage() {
             <li>To process purchases, auctions, and payouts</li>
             <li>To display your public seller storefront</li>
             <li>To send transactional emails (order confirmations, bid notifications, shipping updates) via Resend</li>
-            <li>To detect and prevent fraud, abuse, and prohibited content</li>
+            <li>To detect and prevent fraud, abuse, and prohibited content — including identifying multiple accounts operated by the same person using hashed connection data</li>
+            <li>To enforce our current United States–only availability</li>
             <li>To comply with legal obligations</li>
             <li>To provide sellers with aggregated, anonymized analytics about their own orders (e.g. top shipping states) — no personally identifiable buyer information is included in these summaries</li>
           </ul>
