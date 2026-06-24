@@ -1,7 +1,0 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources>
-    <string name="app_name">Plantet</string>
-    <string name="title_activity_main">Plantet</string>
-    <string name="package_name">shop.plantet.app</string>
-    <string name="custom_url_scheme">shop.plantet.app</string>
-</resources>
