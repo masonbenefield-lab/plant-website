@@ -91,11 +91,12 @@ export async function PATCH(request: Request) {
 
         const { error: insertError } = await supabase.from("garden_events").insert(
           plantIds.map((plantId) => ({
-            plant_id:   plantId,
-            user_id:    user.id,
-            event_type: INTERVAL_TO_EVENT[k],
-            event_date: baselineDateStr,
-          }))
+            plant_id:    plantId,
+            user_id:     user.id,
+            event_type:  INTERVAL_TO_EVENT[k],
+            event_date:  baselineDateStr,
+            is_baseline: true,
+          })) as never
         );
         if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 });
       }

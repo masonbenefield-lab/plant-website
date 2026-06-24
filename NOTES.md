@@ -1729,3 +1729,14 @@ alter table profiles add column if not exists lng double precision;
 alter table profiles add column if not exists frost_alerts boolean not null default true;
 ```
 (No env/API keys — Open-Meteo and zippopotam.us are free no-key APIs.)
+
+## 2026-06-24 — Care streaks + baseline-event flag
+
+- garden_events.is_baseline (027): synthetic schedule-anchor events (inserted by update-intervals + custom-schedules) now set is_baseline=true, so streaks/stats count only real care logs. Existing pre-flag baselines stay false (counted) but minimally affect the *current* streak; self-corrects as schedules are re-set.
+- Care streak card on /garden/care: "🔥 N-day care streak · M tasks logged in the last 30 days." Computed server-side in page.tsx from is_baseline=false events in the user's timezone (careStreak + minusDaysStr helpers in care-date.ts). Only shown when there's activity.
+- Bonus fixes in custom-schedules: baseline date now uses local components (was toISOString UTC, off-by-one for US); DELETE event cleanup scoped by user_id.
+
+### SQL migration to run (Supabase SQL editor)
+```sql
+alter table garden_events add column if not exists is_baseline boolean not null default false;
+```

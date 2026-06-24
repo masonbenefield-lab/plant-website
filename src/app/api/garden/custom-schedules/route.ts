@@ -32,12 +32,13 @@ export async function POST(request: Request) {
   const baselineDate = new Date(startDate + "T00:00:00");
   baselineDate.setHours(0, 0, 0, 0);
   baselineDate.setDate(baselineDate.getDate() - intervalDays);
-  const baselineDateStr = baselineDate.toISOString().split("T")[0];
+  // Local-component date string (toISOString would shift it a day in US zones).
+  const baselineDateStr = `${baselineDate.getFullYear()}-${String(baselineDate.getMonth() + 1).padStart(2, "0")}-${String(baselineDate.getDate()).padStart(2, "0")}`;
   const eventType = `custom:${schedule.id}`;
 
   await supabase
     .from("garden_events")
-    .insert({ plant_id: plantId, user_id: user.id, event_type: eventType, event_date: baselineDateStr });
+    .insert({ plant_id: plantId, user_id: user.id, event_type: eventType, event_date: baselineDateStr, is_baseline: true } as never);
 
   return NextResponse.json({ ok: true, schedule: { id: schedule.id, label: label.trim(), interval_days: intervalDays, start_date: startDate } });
 }
@@ -60,7 +61,7 @@ export async function DELETE(request: Request) {
 
   // Clean up baseline event and any snooze
   await Promise.all([
-    supabase.from("garden_events").delete().eq("plant_id", sched.plant_id).eq("event_type", eventType),
+    supabase.from("garden_events").delete().eq("user_id", user.id).eq("plant_id", sched.plant_id).eq("event_type", eventType),
     supabase.from("care_snoozes").delete().eq("user_id", user.id).eq("event_type", eventType),
   ]);
 

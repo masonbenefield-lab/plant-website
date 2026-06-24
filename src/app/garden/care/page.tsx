@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { unstable_noStore as noStore } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { todayStrInTz } from "@/lib/care-date";
+import { todayStrInTz, careStreak, minusDaysStr } from "@/lib/care-date";
 import GardenTabs from "@/components/garden/garden-tabs";
 import { CareScheduleClient } from "./care-schedule-client";
 import type { PlantWithIntervals, ReminderEntry, CompletedCareEntry } from "./care-schedule-client";
@@ -230,6 +230,24 @@ export default async function CareSchedulePage() {
     }
   }
 
+  // Care streak + 30-day count from REAL logs only (exclude synthetic baselines).
+  let careStreakDays = 0;
+  let loggedLast30 = 0;
+  if (plantIds.length) {
+    const cutoff30 = minusDaysStr(todayDateStr, 30);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: realLogRows } = await (supabase as any)
+      .from("garden_events").select("event_date")
+      .in("plant_id", plantIds).eq("is_baseline", false)
+      .gte("event_date", minusDaysStr(todayDateStr, 120));
+    const loggedDays = new Set<string>();
+    for (const r of (realLogRows ?? []) as { event_date: string }[]) {
+      loggedDays.add(r.event_date);
+      if (r.event_date >= cutoff30) loggedLast30++;
+    }
+    careStreakDays = careStreak(loggedDays, todayDateStr);
+  }
+
   const plantsWithSchedule = allPlants.filter((p) =>
     p.water_interval_days || p.fertilize_interval_days || p.repot_interval_days || p.prune_interval_days ||
     (customByPlant[p.id]?.length ?? 0) > 0
@@ -261,6 +279,19 @@ export default async function CareSchedulePage() {
       </div>
 
       <GardenTabs />
+
+      {allPlants.length > 0 && (careStreakDays > 0 || loggedLast30 > 0) && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border bg-card px-4 py-3 text-sm">
+          {careStreakDays > 0 && (
+            <span className="font-medium">🔥 {careStreakDays}-day care streak</span>
+          )}
+          {loggedLast30 > 0 && (
+            <span className="text-muted-foreground">
+              {loggedLast30} task{loggedLast30 !== 1 ? "s" : ""} logged in the last 30 days
+            </span>
+          )}
+        </div>
+      )}
 
       {allPlants.length === 0 ? (
         <div className="text-center py-20 border rounded-xl bg-muted/30">

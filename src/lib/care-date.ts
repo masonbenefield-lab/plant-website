@@ -39,3 +39,28 @@ export function midnight(dateStr: string): Date {
   d.setHours(0, 0, 0, 0);
   return d;
 }
+
+/** "YYYY-MM-DD" n days before the given date string. */
+export function minusDaysStr(dateStr: string, n: number): string {
+  const d = midnight(dateStr);
+  d.setDate(d.getDate() - n);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/**
+ * Consecutive-day care streak: counts back from today (or yesterday, if today
+ * isn't logged yet so the streak hasn't broken) while each day has a real log.
+ */
+export function careStreak(loggedDays: Set<string>, todayStr: string): number {
+  let cursor = todayStr;
+  if (!loggedDays.has(cursor)) {
+    cursor = minusDaysStr(cursor, 1);
+    if (!loggedDays.has(cursor)) return 0;
+  }
+  let streak = 0;
+  while (loggedDays.has(cursor)) {
+    streak++;
+    cursor = minusDaysStr(cursor, 1);
+  }
+  return streak;
+}
