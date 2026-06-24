@@ -52,6 +52,7 @@ export default function AccountForm({
   const [announcementExpiresAt, setAnnouncementExpiresAt] = useState((profile as { announcement_expires_at?: string | null } | null)?.announcement_expires_at?.split("T")[0] ?? "");
   const [emailOptIn, setEmailOptIn] = useState(profile?.email_marketing_opt_in ?? false);
   const [dailyCareEmails, setDailyCareEmails] = useState(profile?.daily_care_emails ?? true);
+  const [carePushReminders, setCarePushReminders] = useState((profile as { care_push_reminders?: boolean } | null)?.care_push_reminders ?? false);
   const [socialLinks, setSocialLinks] = useState<Record<string, string>>(
     (profile?.social_links as Record<string, string> | null) ?? {}
   );
@@ -165,6 +166,7 @@ export default function AccountForm({
         announcement_expires_at: announcement.trim() && announcementExpiresAt ? announcementExpiresAt : null,
         email_marketing_opt_in: emailOptIn,
         daily_care_emails: dailyCareEmails,
+        care_push_reminders: carePushReminders,
         social_links: Object.fromEntries(
           Object.entries(socialLinks).filter(([, v]) => v.trim().length > 0)
         ),
@@ -736,8 +738,25 @@ export default function AccountForm({
               <span className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition-transform ${dailyCareEmails ? "translate-x-5" : "translate-x-0"}`} />
             </button>
           </div>
+          <div className="flex items-start justify-between gap-4 rounded-lg border px-4 py-4 mt-3">
+            <div>
+              <p className="text-sm font-medium">Daily care push reminders</p>
+              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                Get an app notification each morning when your plants have care due — no email. Requires notifications enabled on your device. Only sent on days you have tasks due.
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={carePushReminders}
+              onClick={() => setCarePushReminders((v) => !v)}
+              className={`mt-0.5 relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${carePushReminders ? "bg-leaf" : "bg-input"}`}
+            >
+              <span className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition-transform ${carePushReminders ? "translate-x-5" : "translate-x-0"}`} />
+            </button>
+          </div>
           <p className="text-xs text-muted-foreground mt-3">
-            Save your profile above to apply changes to email preferences.
+            Save your profile above to apply changes to notification preferences.
           </p>
         </CardContent>
       </Card>

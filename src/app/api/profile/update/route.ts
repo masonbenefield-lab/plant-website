@@ -9,7 +9,7 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { username, display_name, bio, avatar_url, location, banner_url, show_follower_count, shipping_days, shipping_days_max, return_policy_type, return_policy_notes, vacation_mode, vacation_until, offers_enabled, announcement, announcement_expires_at, email_marketing_opt_in, social_links } = await request.json() as {
+  const { username, display_name, bio, avatar_url, location, banner_url, show_follower_count, shipping_days, shipping_days_max, return_policy_type, return_policy_notes, vacation_mode, vacation_until, offers_enabled, announcement, announcement_expires_at, email_marketing_opt_in, daily_care_emails, care_push_reminders, social_links } = await request.json() as {
     username: string;
     display_name?: string | null;
     bio?: string;
@@ -27,6 +27,8 @@ export async function POST(request: Request) {
     announcement?: string | null;
     announcement_expires_at?: string | null;
     email_marketing_opt_in?: boolean;
+    daily_care_emails?: boolean;
+    care_push_reminders?: boolean;
     social_links?: Record<string, string> | null;
   };
 
@@ -67,6 +69,7 @@ export async function POST(request: Request) {
 
   const { error } = await supabase
     .from("profiles")
+    // care_push_reminders isn't in the generated types yet — cast to update.
     .update({
       username,
       display_name: display_name ?? null,
@@ -85,8 +88,10 @@ export async function POST(request: Request) {
       announcement: announcement ?? null,
       announcement_expires_at: announcement ? (announcement_expires_at ?? null) : null,
       email_marketing_opt_in: email_marketing_opt_in ?? false,
+      daily_care_emails: daily_care_emails ?? true,
+      care_push_reminders: care_push_reminders ?? false,
       social_links: social_links && Object.keys(social_links).length > 0 ? social_links : null,
-    })
+    } as never)
     .eq("id", user.id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

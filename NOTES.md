@@ -1699,3 +1699,16 @@ create table care_suggestions (
 alter table care_suggestions enable row level security;
 ```
 (No env changes. Drops the old care_suggestions cache from migration 022 — it's just a cache.)
+
+## 2026-06-24 — Care timezone fix, dormancy, and daily care PUSH reminders
+
+- Timezone (024): profiles.timezone captured via SessionTracker->track-auth; care "today" now computed per-user in their zone (page, sitter-guide) — fixes evening day-rollover for US users. Weekly cron unaffected (runs 1pm UTC = US morning). Vacation offset clamped to vacation_end; weekly-email user pagination; sitter NaN guard. care-date.ts has todayStrInTz/hourInTz/midnight.
+- Dormancy: plants with status 'dormant' or 'dead' are excluded from care-task generation (app, weekly email, sitter guide). They still show in Manage Schedules.
+- Daily care PUSH reminders (025): opt-in profiles.care_push_reminders. New hourly cron /api/cron/care-push sends ONE app push (no email) at the user's local 8am when they have care due that day (skips vacation, dormant/dead, snoozed). vercel.json schedule "0 * * * *". Toggle in Account > notifications. Also fixed a latent bug: /api/profile/update was silently dropping daily_care_emails (now persists it + care_push_reminders).
+
+### SQL migrations to run (Supabase SQL editor)
+```sql
+alter table profiles add column if not exists timezone text;
+alter table profiles add column if not exists care_push_reminders boolean not null default false;
+```
+(No env changes. Push uses existing Firebase infra. care-push cron needs CRON_SECRET, already set.)

@@ -7,6 +7,17 @@
 // marketplace is US-only; far better than UTC for the brief pre-capture window.
 export const DEFAULT_TZ = "America/Chicago";
 
+/** Current hour (0–23) in the given IANA timezone. */
+export function hourInTz(timezone: string | null | undefined): number {
+  const tz = timezone || DEFAULT_TZ;
+  try {
+    const h = new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "2-digit", hour12: false }).format(new Date());
+    return parseInt(h, 10) % 24;
+  } catch {
+    return new Date().getUTCHours();
+  }
+}
+
 /** Today's date as "YYYY-MM-DD" in the given IANA timezone. */
 export function todayStrInTz(timezone: string | null | undefined): string {
   const tz = timezone || DEFAULT_TZ;
