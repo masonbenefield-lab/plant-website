@@ -679,7 +679,9 @@ function WeekStrip({
 
   // Overdue task count (for the "missed tasks" chip when on current week — hidden during vacation)
   const overdueCount = isCurrentWeek && !overdueDismissed && !vacationActive
-    ? entries.filter((e) => e.daysUntilDue < 0 && !loggedKeys.has(`${e.plantId}-${e.careType}`)).length
+    ? entries.filter((e) => e.daysUntilDue < 0
+        && !loggedKeys.has(`${e.plantId}-${e.careType}`)
+        && !snoozedEntryKeys?.has(`${e.plantId}-${e.eventKey}`)).length
     : 0;
 
   // Strip days: actual offset from today = weekOffset + i

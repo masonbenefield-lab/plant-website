@@ -62,7 +62,7 @@ export async function GET(request: Request) {
 
   const [{ data: allPlants }, { data: customSchedules }] = await Promise.all([
     admin.from("garden_plants")
-      .select("id, user_id, name, variety, water_interval_days, fertilize_interval_days, repot_interval_days, prune_interval_days")
+      .select("id, user_id, name, variety, status, water_interval_days, fertilize_interval_days, repot_interval_days, prune_interval_days")
       .in("user_id", profileIds),
     admin.from("custom_care_schedules")
       .select("id, user_id, plant_id, label, interval_days")
@@ -70,8 +70,9 @@ export async function GET(request: Request) {
   ]);
 
   const plants = (allPlants ?? []).filter((p) =>
-    p.water_interval_days || p.fertilize_interval_days || p.repot_interval_days || p.prune_interval_days ||
-    (customSchedules ?? []).some((cs) => cs.plant_id === p.id)
+    (p.status !== "dormant" && p.status !== "dead") &&
+    (p.water_interval_days || p.fertilize_interval_days || p.repot_interval_days || p.prune_interval_days ||
+    (customSchedules ?? []).some((cs) => cs.plant_id === p.id))
   );
 
   if (!plants.length) return NextResponse.json({ sent: 0, reason: "No scheduled plants" });

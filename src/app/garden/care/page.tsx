@@ -28,7 +28,7 @@ export default async function CareSchedulePage() {
 
   const { data: plants } = await supabase
     .from("garden_plants")
-    .select("id, name, variety, images, location, water_interval_days, fertilize_interval_days, repot_interval_days, prune_interval_days")
+    .select("id, name, variety, images, location, status, water_interval_days, fertilize_interval_days, repot_interval_days, prune_interval_days")
     .eq("user_id", user.id)
     .order("name", { ascending: true });
 
@@ -139,6 +139,9 @@ export default async function CareSchedulePage() {
   const entries: CareEntry[] = [];
 
   for (const plant of allPlants) {
+    // Dormant or dead plants don't generate care tasks (they still appear in
+    // Manage Schedules, just no due/overdue nagging).
+    if (plant.status === "dormant" || plant.status === "dead") continue;
     const name = plant.variety ? `${plant.name} — ${plant.variety}` : plant.name;
     const image = (plant.images as string[] | null)?.[0] ?? null;
     const location = (plant as Record<string, unknown>).location as string | null ?? null;

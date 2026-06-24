@@ -40,7 +40,7 @@ export default async function SitterGuidePage({
 
   const [{ data: plants }, { data: customSchedules }] = await Promise.all([
     admin.from("garden_plants")
-      .select("id, name, variety, water_interval_days, fertilize_interval_days, repot_interval_days, prune_interval_days")
+      .select("id, name, variety, status, water_interval_days, fertilize_interval_days, repot_interval_days, prune_interval_days")
       .eq("user_id", profile.id).order("name"),
     admin.from("custom_care_schedules")
       .select("id, plant_id, label, interval_days")
@@ -48,8 +48,9 @@ export default async function SitterGuidePage({
   ]);
 
   const plantList = (plants ?? []).filter((p) =>
-    p.water_interval_days || p.fertilize_interval_days || p.repot_interval_days || p.prune_interval_days ||
-    (customSchedules ?? []).some((cs) => cs.plant_id === p.id)
+    ((p as { status?: string }).status !== "dormant" && (p as { status?: string }).status !== "dead") &&
+    (p.water_interval_days || p.fertilize_interval_days || p.repot_interval_days || p.prune_interval_days ||
+    (customSchedules ?? []).some((cs) => cs.plant_id === p.id))
   );
   const plantIds = plantList.map((p) => p.id);
 
