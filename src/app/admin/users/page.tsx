@@ -18,6 +18,7 @@ export default async function AdminUsersPage({
 }) {
   const { q, tab } = await searchParams;
   const showArchived = tab === "archived";
+  const showBanned = tab === "banned";
   const supabase = await createClient();
 
   let query = supabase
@@ -25,31 +26,34 @@ export default async function AdminUsersPage({
     .select("id, username, bio, stripe_onboarded, is_admin, deleted_at, created_at, plan")
     .order("created_at", { ascending: false });
 
-  query = showArchived
-    ? query.not("deleted_at", "is", null)
-    : query.is("deleted_at", null);
+  // banned_at isn't in the generated types yet, so apply those filters through an
+  // untyped cast to avoid poisoning the typed select above. Banned and Archived are
+  // mutually exclusive tabs: Active = not deleted & not banned.
+  if (showArchived) {
+    query = query.not("deleted_at", "is", null);
+  } else {
+    query = query.is("deleted_at", null);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    query = showBanned ? (query as any).not("banned_at", "is", null) : (query as any).is("banned_at", null);
+  }
 
   if (q) query = query.ilike("username", `%${q}%`);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const countBase = () => supabase.from("profiles").select("*", { count: "exact", head: true }) as any;
   const [
     { data: profiles },
     { count: activeCount },
+    { count: bannedCount },
     { count: archivedCount },
   ] = await Promise.all([
     query,
-    supabase.from("profiles").select("*", { count: "exact", head: true }).is("deleted_at", null),
+    countBase().is("deleted_at", null).is("banned_at", null),
+    countBase().is("deleted_at", null).not("banned_at", "is", null),
     supabase.from("profiles").select("*", { count: "exact", head: true }).not("deleted_at", "is", null),
   ]);
 
   const ids = (profiles ?? []).map(p => p.id);
-
-  // banned_at isn't in the generated types yet, so query it untyped to avoid
-  // poisoning the typed select above. Scoped to the users already on screen.
-  const { data: bannedRows } = ids.length
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ? await (supabase as any).from("profiles").select("id").in("id", ids).not("banned_at", "is", null)
-    : { data: [] as { id: string }[] };
-  const bannedSet = new Set<string>((bannedRows ?? []).map((r: { id: string }) => r.id));
 
   const [{ data: listingRows }, { data: auctionRows }, { data: gardenRows }, { data: wishlistRows }] = await Promise.all([
     ids.length ? supabase.from("listings").select("seller_id").in("seller_id", ids) : { data: [] },
@@ -70,9 +74,11 @@ export default async function AdminUsersPage({
   const wishlistMap: Record<string, number> = {};
   (wishlistRows ?? []).forEach(r => { wishlistMap[r.user_id] = (wishlistMap[r.user_id] ?? 0) + 1; });
 
-  function tabHref(t: "active" | "archived") {
+  const currentTab: "active" | "banned" | "archived" = showArchived ? "archived" : showBanned ? "banned" : "active";
+
+  function tabHref(t: "active" | "banned" | "archived") {
     const params = new URLSearchParams();
-    if (t === "archived") params.set("tab", "archived");
+    if (t !== "active") params.set("tab", t);
     if (q) params.set("q", q);
     const qs = params.toString();
     return `/admin/users${qs ? `?${qs}` : ""}`;
@@ -83,7 +89,7 @@ export default async function AdminUsersPage({
       <div className="mb-6">
         <h1 className="text-2xl font-bold">Users</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          {activeCount ?? 0} active · {archivedCount ?? 0} archived
+          {activeCount ?? 0} active · {bannedCount ?? 0} banned · {archivedCount ?? 0} archived
         </p>
       </div>
 
@@ -95,9 +101,9 @@ export default async function AdminUsersPage({
 
       {/* Tabs */}
       <div className="flex gap-1 border-b mb-6">
-        {(["active", "archived"] as const).map((t) => {
-          const isActive = t === "archived" ? showArchived : !showArchived;
-          const count = t === "archived" ? archivedCount : activeCount;
+        {(["active", "banned", "archived"] as const).map((t) => {
+          const isActive = t === currentTab;
+          const count = t === "archived" ? archivedCount : t === "banned" ? bannedCount : activeCount;
           return (
             <Link
               key={t}
@@ -112,7 +118,9 @@ export default async function AdminUsersPage({
               {t}
               <span className={cn(
                 "rounded-full px-2 py-0.5 text-xs",
-                t === "archived" && (archivedCount ?? 0) > 0
+                t === "banned" && (bannedCount ?? 0) > 0
+                  ? "bg-red-100 text-red-600"
+                  : t === "archived" && (archivedCount ?? 0) > 0
                   ? "bg-orange-100 text-orange-600"
                   : "bg-muted text-muted-foreground"
               )}>
@@ -162,7 +170,7 @@ export default async function AdminUsersPage({
                         Admin
                       </span>
                     )}
-                    {bannedSet.has(p.id) && (
+                    {showBanned && (
                       <span className="text-xs bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 px-1.5 py-0.5 rounded-full font-medium">
                         Banned
                       </span>
@@ -216,7 +224,7 @@ export default async function AdminUsersPage({
                     ) : (
                       <>
                         <RenameUserButton userId={p.id} username={p.username} isAdmin={p.is_admin} />
-                        <BanUserButton userId={p.id} username={p.username} isAdmin={p.is_admin} banned={bannedSet.has(p.id)} />
+                        <BanUserButton userId={p.id} username={p.username} isAdmin={p.is_admin} banned={showBanned} />
                         <DeleteUserButton userId={p.id} username={p.username} isAdmin={p.is_admin} />
                       </>
                     )}
@@ -228,7 +236,7 @@ export default async function AdminUsersPage({
         </table>
         {!profiles?.length && (
           <p className="px-4 py-10 text-center text-muted-foreground text-sm">
-            {q ? `No ${showArchived ? "archived " : ""}users matching "${q}"` : showArchived ? "No archived users." : "No users found."}
+            {q ? `No ${showArchived ? "archived " : showBanned ? "banned " : ""}users matching "${q}"` : showArchived ? "No archived users." : showBanned ? "No banned users." : "No users found."}
           </p>
         )}
       </div>
