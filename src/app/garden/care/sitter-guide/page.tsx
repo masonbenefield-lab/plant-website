@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import Image from "next/image";
 import { PrintButton } from "./print-button";
 import { AutoPrint } from "./auto-print";
+import { todayStrInTz } from "@/lib/care-date";
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -31,7 +32,7 @@ export default async function SitterGuidePage({
 
   const { data: profile } = await admin
     .from("profiles")
-    .select("id, username")
+    .select("id, username, timezone")
     .eq("sitter_token", token)
     .single();
 
@@ -68,8 +69,9 @@ export default async function SitterGuidePage({
     }
   }
 
-  const daysAhead = Math.min(90, Math.max(7, parseInt(params.days ?? "30", 10)));
-  const today = new Date();
+  const parsedDays = parseInt(params.days ?? "30", 10);
+  const daysAhead = Number.isNaN(parsedDays) ? 30 : Math.min(90, Math.max(7, parsedDays));
+  const today = new Date(todayStrInTz(profile.timezone ?? null) + "T00:00:00");
   today.setHours(0, 0, 0, 0);
 
   const schedule = new Map<number, SitterTask[]>();

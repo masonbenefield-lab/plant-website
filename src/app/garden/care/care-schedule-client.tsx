@@ -133,12 +133,14 @@ function fmtShort(d: Date): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+// Local-date "YYYY-MM-DD" from a Date — uses local components, NOT toISOString
+// (which would convert to UTC and shift the date for users behind UTC).
+function localDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 function todayStr(): string {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+  return localDateStr(new Date());
 }
 
 function urgencyLabel(days: number): { label: string; color: string } {
@@ -2093,9 +2095,7 @@ export function CareScheduleClient({
     });
     setVacationLoading(false);
     if (res.ok) {
-      const today = new Date();
-      const todayStr = today.toISOString().split("T")[0];
-      setVacationStart(todayStr);
+      setVacationStart(todayStr());
       setVacationEnd(vacationDateInput);
       setVacationDialogOpen(false);
       setVacationDateInput("");
@@ -2434,7 +2434,7 @@ export function CareScheduleClient({
                 { label: "+2 weeks", days: 14 },
               ].map(({ label, days }) => {
                 const date = new Date(Date.now() + days * 86400000);
-                const dateStr = date.toISOString().split("T")[0];
+                const dateStr = localDateStr(date);
                 return (
                   <Button key={days} variant="outline" disabled={snoozeSaving}
                     onClick={() => snoozeDialogEntries && handleSnooze(snoozeDialogEntries, dateStr)}
@@ -2482,7 +2482,7 @@ export function CareScheduleClient({
                 type="date"
                 value={vacationDateInput}
                 onChange={(e) => setVacationDateInput(e.target.value)}
-                min={new Date(Date.now() + 86400000).toISOString().split("T")[0]}
+                min={localDateStr(new Date(Date.now() + 86400000))}
               />
             </div>
           </div>

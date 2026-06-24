@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { unstable_noStore as noStore } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { todayStrInTz } from "@/lib/care-date";
 import GardenTabs from "@/components/garden/garden-tabs";
 import { CareScheduleClient } from "./care-schedule-client";
 import type { PlantWithIntervals, ReminderEntry, CompletedCareEntry } from "./care-schedule-client";
@@ -18,6 +19,13 @@ export default async function CareSchedulePage() {
     .eq("id", user.id)
     .single();
 
+  // User's timezone (not in generated types yet) — fetch untyped so "today" is
+  // their local day, not the server's UTC day.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: tzRow } = await (supabase as any)
+    .from("profiles").select("timezone").eq("id", user.id).single();
+  const userTz: string | null = tzRow?.timezone ?? null;
+
   const { data: plants } = await supabase
     .from("garden_plants")
     .select("id, name, variety, images, location, water_interval_days, fertilize_interval_days, repot_interval_days, prune_interval_days")
@@ -27,9 +35,10 @@ export default async function CareSchedulePage() {
   const allPlants = plants ?? [];
   const plantIds = allPlants.map((p) => p.id);
 
-  const today = new Date();
+  // "Today" in the user's timezone (server runs in UTC).
+  const todayDateStr = todayStrInTz(userTz);
+  const today = new Date(todayDateStr + "T00:00:00");
   today.setHours(0, 0, 0, 0);
-  const todayDateStr = today.toISOString().split("T")[0];
 
   // Pause offset: cumulative days from past vacations + days elapsed in any active vacation
   const basePauseOffset = profile?.schedule_pause_offset ?? 0;

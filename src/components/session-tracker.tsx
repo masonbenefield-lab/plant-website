@@ -16,10 +16,12 @@ export default function SessionTracker() {
     } catch {
       // sessionStorage blocked (private mode, etc.) — still attempt the ping
     }
+    let tz: string | null = null;
+    try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone ?? null; } catch { /* unsupported */ }
     fetch("/api/track-auth", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ event: "session" }),
+      body: JSON.stringify({ event: "session", tz }),
       keepalive: true,
     }).catch(() => {});
   }, []);

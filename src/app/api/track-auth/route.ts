@@ -14,9 +14,11 @@ export async function POST(request: Request) {
   if (!user) return NextResponse.json({ ok: true });
 
   let event = "session";
+  let tz: string | null = null;
   try {
     const body = await request.json();
     if (body && typeof body.event === "string") event = body.event.slice(0, 20);
+    if (body && typeof body.tz === "string" && body.tz.length <= 64) tz = body.tz;
   } catch {
     // no/invalid body — keep the default
   }
@@ -39,6 +41,11 @@ export async function POST(request: Request) {
     country: country ?? null,
     user_agent: ua ? ua.slice(0, 300) : null,
   });
+
+  // Keep the user's timezone current so server-side "today" matches their zone.
+  if (tz) {
+    await admin.from("profiles").update({ timezone: tz }).eq("id", user.id);
+  }
 
   return NextResponse.json({ ok: true });
 }
