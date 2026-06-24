@@ -22,10 +22,25 @@ export async function POST(req: Request) {
   }
 
   const admin = adminClient();
+
+  // First time this user registers a token = first time they allowed
+  // notifications. Default them into daily care push reminders so they don't
+  // have to opt in twice. Later explicit opt-outs are respected (they'll have a
+  // token by then, so this won't re-enable it).
+  const { count } = await admin
+    .from('push_tokens')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', user.id);
+  const isFirstToken = (count ?? 0) === 0;
+
   await admin.from('push_tokens').upsert(
     { user_id: user.id, token, platform, updated_at: new Date().toISOString() },
     { onConflict: 'token' }
   );
+
+  if (isFirstToken) {
+    await admin.from('profiles').update({ care_push_reminders: true }).eq('id', user.id);
+  }
 
   return NextResponse.json({ ok: true });
 }
