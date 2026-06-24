@@ -64,9 +64,13 @@ export default function GardenPlantCard({
         </Link>
         <CardContent className="p-3 space-y-1">
           <Link href={`/garden/${plant.id}`} className="block">
-            <p className="font-semibold text-sm leading-tight">{plant.name}</p>
-            {plant.variety && (
-              <p className="text-xs text-muted-foreground leading-tight">{plant.variety}</p>
+            {plant.variety ? (
+              <>
+                <p className="font-semibold text-sm leading-tight">{plant.variety}</p>
+                <p className="text-xs text-muted-foreground leading-tight">{plant.name}</p>
+              </>
+            ) : (
+              <p className="font-semibold text-sm leading-tight">{plant.name}</p>
             )}
             <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
               <span className={cn("text-xs px-1.5 py-0.5 rounded-full font-medium", STATUS_COLOR[plant.status as GardenPlantStatus])}>
