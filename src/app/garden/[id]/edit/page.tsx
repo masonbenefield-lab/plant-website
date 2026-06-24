@@ -29,6 +29,11 @@ export default async function EditGardenPlantPage({
 
   if (!plant) notFound();
 
+  // potting/pot_size aren't in the generated types yet — fetch untyped.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: pottingRow } = await (supabase as any)
+    .from("garden_plants").select("potting, pot_size").eq("id", id).single();
+
   return (
     <div className="max-w-2xl mx-auto px-4 py-10 space-y-6">
       <div>
@@ -62,6 +67,8 @@ export default async function EditGardenPlantPage({
           fertilize_interval_days: plant.fertilize_interval_days ?? null,
           repot_interval_days: plant.repot_interval_days ?? null,
           prune_interval_days: plant.prune_interval_days ?? null,
+          potting: (pottingRow?.potting as string | null) ?? null,
+          pot_size: (pottingRow?.pot_size as string | null) ?? null,
           from_user_id: plant.from_user_id ?? null,
           origin_verified: plant.origin_verified ?? false,
         }}

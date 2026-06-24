@@ -70,6 +70,8 @@ export type PlantWithIntervals = {
   fertilizeInterval: number | null;
   repotInterval: number | null;
   pruneInterval: number | null;
+  potting: string | null;
+  potSize: string | null;
   customSchedules: CustomSchedule[];
 };
 
@@ -111,6 +113,8 @@ const INTERVAL_FIELDS = [
   { key: "repotInterval",     emoji: "🪴", label: "Repot every"     },
   { key: "pruneInterval",     emoji: "✂️", label: "Prune every"     },
 ] as const;
+
+const POT_SIZES = ['4"', '6"', '8"', '10"', '12"', '14"+', "1 gal", "3 gal", "5 gal", "7+ gal"];
 
 const INTERVAL_DISPLAY = [
   { key: "waterInterval",     emoji: "💧" },
@@ -1398,14 +1402,20 @@ function IntervalsModal({
   const [startDate, setStartDate] = useState(hasExistingSchedule ? "" : todayStr());
   const [saving, setSaving] = useState(false);
   const [suggesting, setSuggesting] = useState(false);
+  const [pottingChoice, setPottingChoice] = useState<string>(singlePlant?.potting ?? "");
+  const [potSizeChoice, setPotSizeChoice] = useState<string>(singlePlant?.potSize ?? "");
+  const [askPotting, setAskPotting] = useState(false);
+  const [pruneAdvice, setPruneAdvice] = useState<string | null>(null);
 
-  // Ask Claude for typical intervals and pre-fill the inputs (single plant only).
-  async function suggestIntervals() {
+  // Fetch suggested intervals and pre-fill the inputs. Repot is only filled for
+  // potted plants; pruning is returned as advice, not a fixed interval.
+  async function runSuggest(potting: string, potSize: string) {
     if (!singlePlant) return;
     setSuggesting(true);
     try {
-      const q = singlePlant.name.replace(/\s*—\s*/g, " ");
-      const res = await fetch(`/api/garden/suggest-care?q=${encodeURIComponent(q)}`);
+      const params = new URLSearchParams({ q: singlePlant.name.replace(/\s*—\s*/g, " "), potting });
+      if (potting === "pot" && potSize) params.set("potSize", potSize);
+      const res = await fetch(`/api/garden/suggest-care?${params.toString()}`);
       const data = await res.json();
       const s = data.suggestion;
       if (!s) { toast.error("No care suggestion found for this plant"); return; }
@@ -1413,9 +1423,9 @@ function IntervalsModal({
         ...p,
         waterInterval:     String(s.water),
         fertilizeInterval: String(s.fertilize),
-        repotInterval:     String(s.repot),
-        pruneInterval:     String(s.prune),
+        repotInterval:     s.repot != null ? String(s.repot) : "",
       }));
+      setPruneAdvice(s.pruneAdvice ?? null);
       toast.success(s.confidence === "low"
         ? "Suggested a general default — double-check it, then Save"
         : "Suggested ✨ — review and Save");
@@ -1424,6 +1434,23 @@ function IntervalsModal({
     } finally {
       setSuggesting(false);
     }
+  }
+
+  function onSuggestClick() {
+    if (!singlePlant) return;
+    if (!pottingChoice) { setAskPotting(true); return; } // need potting context first
+    runSuggest(pottingChoice, potSizeChoice);
+  }
+
+  // User filled in potting from the modal — save it to the plant, then suggest.
+  function confirmPottingAndSuggest() {
+    if (!singlePlant || !pottingChoice) return;
+    fetch("/api/garden/potting", {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plantId: singlePlant.id, potting: pottingChoice, potSize: pottingChoice === "pot" ? potSizeChoice : null }),
+    }).catch(() => {});
+    setAskPotting(false);
+    runSuggest(pottingChoice, potSizeChoice);
   }
 
   const [reminderType, setReminderType] = useState<string>("Water");
@@ -1517,14 +1544,50 @@ function IntervalsModal({
         <>
           {isBulk && <p className="text-xs text-muted-foreground -mt-1">Fill in a field to apply it to all {plants.length} plants. Leave blank to keep each plant&apos;s current value.</p>}
           {!isBulk && (
-            <button
-              onClick={suggestIntervals}
-              disabled={suggesting}
-              className="flex items-center gap-1.5 text-xs font-medium text-leaf hover:text-forest transition-colors disabled:opacity-50"
-            >
-              <Sparkles size={13} />
-              {suggesting ? "Suggesting…" : "Suggest a schedule with AI"}
-            </button>
+            <div className="space-y-2">
+              {!askPotting ? (
+                <button
+                  onClick={onSuggestClick}
+                  disabled={suggesting}
+                  className="flex items-center gap-1.5 text-xs font-medium text-leaf hover:text-forest transition-colors disabled:opacity-50"
+                >
+                  <Sparkles size={13} />
+                  {suggesting ? "Suggesting…" : "Suggest a schedule with AI"}
+                </button>
+              ) : (
+                <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
+                  <p className="text-xs font-medium">Is this plant in a pot or in the ground?</p>
+                  <div className="flex gap-2">
+                    {[["pot", "In a pot"], ["ground", "In the ground"]].map(([val, label]) => (
+                      <button key={val} onClick={() => setPottingChoice(val)}
+                        className={cn("px-2.5 py-1 rounded-full text-xs font-medium border transition-colors",
+                          pottingChoice === val ? "bg-leaf border-leaf text-white" : "bg-background hover:bg-muted")}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  {pottingChoice === "pot" && (
+                    <select value={potSizeChoice} onChange={(e) => setPotSizeChoice(e.target.value)}
+                      className="w-full h-8 text-sm rounded-md border bg-background px-2">
+                      <option value="">Pot size (optional)</option>
+                      {POT_SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  )}
+                  <p className="text-[11px] text-muted-foreground">Saved to this plant in My Garden so we only ask once.</p>
+                  <div className="flex gap-2 pt-0.5">
+                    <Button onClick={confirmPottingAndSuggest} disabled={!pottingChoice || suggesting} className="h-7 text-xs bg-leaf hover:bg-forest">
+                      {suggesting ? "Suggesting…" : "Suggest"}
+                    </Button>
+                    <Button variant="outline" onClick={() => setAskPotting(false)} className="h-7 text-xs">Cancel</Button>
+                  </div>
+                </div>
+              )}
+              {pruneAdvice && (
+                <div className="rounded-lg border border-purple-200 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-900/10 px-3 py-2 text-xs text-purple-800 dark:text-purple-300">
+                  <span className="font-medium">✂️ Pruning:</span> {pruneAdvice} Set a prune interval below if you&apos;d like.
+                </div>
+              )}
+            </div>
           )}
           <div className="grid gap-3 py-1">
             {fields.map(({ key, emoji, label, meta }) => (

@@ -37,6 +37,19 @@ const SOURCE_TYPE_OPTIONS = [
   { value: "gift", label: "Gift" },
 ];
 
+const POT_SIZE_OPTIONS = [
+  { value: '4"', label: "4 inch" },
+  { value: '6"', label: "6 inch" },
+  { value: '8"', label: "8 inch" },
+  { value: '10"', label: "10 inch" },
+  { value: '12"', label: "12 inch" },
+  { value: '14"+', label: "14 inch +" },
+  { value: "1 gal", label: "1 gallon" },
+  { value: "3 gal", label: "3 gallon" },
+  { value: "5 gal", label: "5 gallon" },
+  { value: "7+ gal", label: "7+ gallon" },
+];
+
 type PlantetUser = { id: string; username: string; display_name: string | null; avatar_url: string | null };
 
 interface GardenFormProps {
@@ -59,6 +72,8 @@ interface GardenFormProps {
     fertilize_interval_days: number | null;
     repot_interval_days: number | null;
     prune_interval_days: number | null;
+    potting?: string | null;
+    pot_size?: string | null;
     from_user_id: string | null;
     origin_verified: boolean;
   };
@@ -85,6 +100,8 @@ export function GardenForm({ mode, plant, initialValues, returnTo }: GardenFormP
   const [status, setStatus] = useState<GardenPlantStatus>(plant?.status ?? "growing");
   const [location, setLocation] = useState(plant?.location ?? "");
   const [plantedAt, setPlantedAt] = useState(plant?.planted_at?.slice(0, 10) ?? "");
+  const [potting, setPotting] = useState<string>(plant?.potting ?? "");
+  const [potSize, setPotSize] = useState<string>(plant?.pot_size ?? "");
   const [sourceName, setSourceName] = useState(plant?.source_name ?? initialValues?.sourceName ?? "");
   const [sourceType, setSourceType] = useState<string>(plant?.source_type ?? initialValues?.sourceType ?? "");
   const [notes, setNotes] = useState(plant?.notes ?? "");
@@ -234,6 +251,8 @@ export function GardenForm({ mode, plant, initialValues, returnTo }: GardenFormP
         status,
         location: location.trim() || null,
         planted_at: plantedAt || null,
+        potting: potting || null,
+        pot_size: potting === "pot" ? (potSize || null) : null,
         source_name: sourceName.trim() || null,
         source_type: (sourceType || null) as "nursery" | "purchase" | "trade" | "propagation" | "gift" | null,
         source_listing_id: plant?.source_listing_id ?? initialValues?.sourceListingId ?? null,
@@ -257,7 +276,8 @@ export function GardenForm({ mode, plant, initialValues, returnTo }: GardenFormP
 
         const { data, error } = await supabase
           .from("garden_plants")
-          .insert({ ...payload, user_id: user.id })
+          // potting/pot_size aren't in the generated types yet — cast to insert.
+          .insert({ ...payload, user_id: user.id } as never)
           .select("id")
           .single();
         if (error) { toast.error("Failed to add plant"); return; }
@@ -281,7 +301,7 @@ export function GardenForm({ mode, plant, initialValues, returnTo }: GardenFormP
       } else {
         const { error } = await supabase
           .from("garden_plants")
-          .update(payload)
+          .update(payload as never)
           .eq("id", plant!.id);
         if (error) { toast.error("Failed to save changes"); return; }
 
@@ -389,6 +409,38 @@ export function GardenForm({ mode, plant, initialValues, returnTo }: GardenFormP
             placeholder="e.g. Back porch, Living room, Raised bed 1"
           />
         </div>
+      </div>
+
+      {/* Potting — used to tailor care suggestions (repotting only applies to pots) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <Label>Planting</Label>
+          <Select value={potting} onValueChange={(v) => setPotting(v ?? "")}>
+            <SelectTrigger>
+              <SelectValue placeholder="Not specified" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Not specified</SelectItem>
+              <SelectItem value="pot">In a pot</SelectItem>
+              <SelectItem value="ground">In the ground</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {potting === "pot" && (
+          <div className="space-y-1.5">
+            <Label>Pot size</Label>
+            <Select value={potSize} onValueChange={(v) => setPotSize(v ?? "")}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a size" />
+              </SelectTrigger>
+              <SelectContent>
+                {POT_SIZE_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
 
       {/* Planted date */}

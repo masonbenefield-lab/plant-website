@@ -1668,3 +1668,34 @@ alter table care_suggestions enable row level security;
 
 - Moved the "Suggest a schedule with AI" action out of the standalone /setup page and into the IntervalsModal "Recurring" tab (opened by the pencil from Manage Schedules and the Week Ahead day panel). Single-plant only; reverted the /setup additions.
 - Button calls /api/garden/suggest-care and pre-fills the water/fertilize/repot/prune number inputs (em-dash stripped from the plant name for cache-key consistency). User reviews and hits Save. No backend changes — same route/table from the earlier commit.
+
+## 2026-06-24 — Potting context + smarter care suggestions (repot/prune fixes)
+
+- Repot only applies to potted plants; pruning is seasonal not a fixed timer. Fixed both by giving the suggester potting context and making prune advice-only.
+- Data model: garden_plants gains `potting` ('pot'|'ground') and `pot_size` (text). My Garden is the source of truth; the care schedule reads from it.
+- Add/Edit plant form (garden-form.tsx): new "Planting" select + conditional "Pot size" select. Edit page fetches potting/pot_size untyped and passes them in. Insert/update cast `as never` (columns not in generated types).
+- care_suggestions cache recreated: `repot` now nullable (null = in-ground), `prune` int replaced by `prune_advice` text. Cache key = "<name>|<potting>|<pot_size>".
+- suggest-care route: takes potting + potSize; in-ground => repot null + assume established-plant (less frequent) watering; potted => repot interval tailored to size. Pruning returned as a short text tip (no interval), since we don't know the user's climate/season.
+- New /api/garden/potting (PATCH): saves potting/pot_size onto the plant (RLS + user_id pin).
+- IntervalsModal: "Suggest a schedule with AI" now — if the plant has no potting set, shows an inline "in a pot / in the ground (+ size)" prompt, saves it to My Garden, then suggests. Fills water/fertilize always, repot only if potted, and shows pruning as a purple advice callout with the prune field left for manual entry.
+- care page passes potting/potSize into PlantWithIntervals (fetched untyped).
+
+### SQL migration to run (Supabase SQL editor)
+```sql
+alter table garden_plants add column if not exists potting text
+  check (potting in ('pot', 'ground'));
+alter table garden_plants add column if not exists pot_size text;
+
+drop table if exists care_suggestions;
+create table care_suggestions (
+  query text primary key,
+  water int not null,
+  fertilize int not null,
+  repot int,
+  prune_advice text,
+  confidence text not null default 'medium',
+  created_at timestamptz not null default now()
+);
+alter table care_suggestions enable row level security;
+```
+(No env changes. Drops the old care_suggestions cache from migration 022 — it's just a cache.)

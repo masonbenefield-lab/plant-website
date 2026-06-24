@@ -12,12 +12,10 @@ function adminClient() {
 
 const CACHE_DAYS = 365;
 
-// Sane bounds per care type. A value outside the range (or a non-number) falls
-// back to the conservative default — catches the occasional bad model answer.
+// Sane bounds per care type. Out-of-range / non-number falls back to the default.
 const BOUNDS = {
   water:     { min: 1,  max: 60,   fallback: 7   },
   fertilize: { min: 7,  max: 180,  fallback: 30  },
-  prune:     { min: 14, max: 730,  fallback: 90  },
   repot:     { min: 90, max: 1095, fallback: 365 },
 } as const;
 
@@ -31,15 +29,20 @@ function clampDays(key: keyof typeof BOUNDS, value: unknown): number {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const q = searchParams.get("q")?.trim().toLowerCase() ?? "";
+  const potting = searchParams.get("potting") === "ground" ? "ground" : "pot";
+  const potSize = (searchParams.get("potSize") ?? "").trim();
   if (q.length < 3) return NextResponse.json({ suggestion: null });
+
+  const isPotted = potting === "pot";
+  // Cache key bakes in potting + size, since the answer depends on them.
+  const cacheKey = `${q}|${potting}|${isPotted ? potSize : ""}`;
 
   const supabase = adminClient();
 
-  // Return a cached suggestion if fresh (same pattern as /api/plant-info).
   const { data: cached } = await supabase
     .from("care_suggestions")
-    .select("water, fertilize, prune, repot, confidence, created_at")
-    .eq("query", q)
+    .select("water, fertilize, repot, prune_advice, confidence, created_at")
+    .eq("query", cacheKey)
     .single();
 
   if (cached) {
@@ -48,21 +51,30 @@ export async function GET(request: Request) {
       return NextResponse.json({
         suggestion: {
           water: cached.water, fertilize: cached.fertilize,
-          prune: cached.prune, repot: cached.repot, confidence: cached.confidence,
+          repot: cached.repot, pruneAdvice: cached.prune_advice, confidence: cached.confidence,
         },
       });
     }
   }
 
-  // Cache miss — ask Claude (Haiku, same model the plant guide uses).
+  const potContext = isPotted
+    ? `It is grown IN A POT${potSize ? ` (about ${potSize})` : ""}, so include a repot interval.`
+    : `It is planted IN THE GROUND, so DO NOT suggest repotting (set "repot" to null) and assume established-plant watering, which is much less frequent than potted.`;
+
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const message = await anthropic.messages.create({
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 150,
+    max_tokens: 220,
     messages: [
       {
         role: "user",
-        content: `You are a horticulture assistant for a US plant marketplace. For the plant "${q}" kept indoors in a pot, give typical STARTING care intervals in whole days. Reply with ONLY compact JSON, no markdown, no extra text: {"water":N,"fertilize":N,"prune":N,"repot":N,"confidence":"high"|"medium"|"low"}. Set confidence to "low" if you are unsure the term is a real plant. If it is clearly not a plant, reply only with the word NULL.`,
+        content: `You are a horticulture assistant for a US plant marketplace. For the plant "${q}": ${potContext}
+
+Give typical STARTING care intervals in whole days for water and fertilize, a repot interval in days (or null if in the ground), and SHORT pruning guidance as text (we do not know the user's climate, so describe the typical season/timing and frequency, e.g. "Prune once a year while dormant in late winter").
+
+Reply with ONLY compact JSON, no markdown, no extra text:
+{"water":N,"fertilize":N,"repot":N_or_null,"prune_advice":"short sentence","confidence":"high"|"medium"|"low"}
+Set confidence to "low" if you are unsure the term is a real plant. If it is clearly not a plant, reply only with the word NULL.`,
       },
     ],
   });
@@ -81,15 +93,28 @@ export async function GET(request: Request) {
   const confidence = ["high", "medium", "low"].includes(parsed.confidence as string)
     ? (parsed.confidence as string)
     : "low";
+  const pruneAdvice = typeof parsed.prune_advice === "string"
+    ? parsed.prune_advice.slice(0, 280)
+    : null;
+  // Repot only applies to potted plants; otherwise null regardless of the model.
+  const repot = isPotted ? clampDays("repot", parsed.repot) : null;
+
   const suggestion = {
     water: clampDays("water", parsed.water),
     fertilize: clampDays("fertilize", parsed.fertilize),
-    prune: clampDays("prune", parsed.prune),
-    repot: clampDays("repot", parsed.repot),
+    repot,
+    pruneAdvice,
     confidence,
   };
 
-  await supabase.from("care_suggestions").upsert({ query: q, ...suggestion });
+  await supabase.from("care_suggestions").upsert({
+    query: cacheKey,
+    water: suggestion.water,
+    fertilize: suggestion.fertilize,
+    repot: suggestion.repot,
+    prune_advice: suggestion.pruneAdvice,
+    confidence: suggestion.confidence,
+  });
 
   return NextResponse.json({ suggestion });
 }

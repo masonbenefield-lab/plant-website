@@ -199,6 +199,17 @@ export default async function CareSchedulePage() {
     customByPlant[cs.plant_id].push({ id: cs.id, label: cs.label, interval_days: cs.interval_days, start_date: cs.start_date });
   }
 
+  // potting/pot_size aren't in the generated types yet — fetch untyped and map.
+  const pottingMap: Record<string, { potting: string | null; potSize: string | null }> = {};
+  if (plantIds.length) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: pottingRows } = await (supabase as any)
+      .from("garden_plants").select("id, potting, pot_size").in("id", plantIds);
+    for (const r of (pottingRows ?? []) as { id: string; potting: string | null; pot_size: string | null }[]) {
+      pottingMap[r.id] = { potting: r.potting, potSize: r.pot_size };
+    }
+  }
+
   const plantsWithSchedule = allPlants.filter((p) =>
     p.water_interval_days || p.fertilize_interval_days || p.repot_interval_days || p.prune_interval_days ||
     (customByPlant[p.id]?.length ?? 0) > 0
@@ -217,6 +228,8 @@ export default async function CareSchedulePage() {
     fertilizeInterval: p.fertilize_interval_days ?? null,
     repotInterval: p.repot_interval_days ?? null,
     pruneInterval: p.prune_interval_days ?? null,
+    potting: pottingMap[p.id]?.potting ?? null,
+    potSize: pottingMap[p.id]?.potSize ?? null,
     customSchedules: customByPlant[p.id] ?? [],
   }));
 
