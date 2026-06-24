@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import UserSearch from "./user-search";
@@ -54,6 +55,25 @@ export default async function AdminUsersPage({
   ]);
 
   const ids = (profiles ?? []).map(p => p.id);
+
+  // Last-seen country per user from auth_events (RLS-locked, so read it with a
+  // service-role client — this page is already admin-gated by the layout).
+  const countryMap: Record<string, string> = {};
+  if (ids.length) {
+    const adminDb = createSupabaseAdmin(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+    const { data: eventRows } = await adminDb
+      .from("auth_events")
+      .select("user_id, country, created_at")
+      .in("user_id", ids)
+      .not("country", "is", null)
+      .order("created_at", { ascending: false });
+    for (const r of (eventRows ?? []) as { user_id: string; country: string | null }[]) {
+      if (r.country && !countryMap[r.user_id]) countryMap[r.user_id] = r.country;
+    }
+  }
 
   const [{ data: listingRows }, { data: auctionRows }, { data: gardenRows }, { data: wishlistRows }] = await Promise.all([
     ids.length ? supabase.from("listings").select("seller_id").in("seller_id", ids) : { data: [] },
@@ -173,6 +193,16 @@ export default async function AdminUsersPage({
                     {showBanned && (
                       <span className="text-xs bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 px-1.5 py-0.5 rounded-full font-medium">
                         Banned
+                      </span>
+                    )}
+                    {countryMap[p.id] && (
+                      <span className={cn(
+                        "text-xs px-1.5 py-0.5 rounded-full font-medium",
+                        countryMap[p.id] === "US"
+                          ? "bg-muted text-muted-foreground"
+                          : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                      )} title="Last-seen country">
+                        {countryMap[p.id]}
                       </span>
                     )}
                   </div>

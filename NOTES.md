@@ -1575,3 +1575,46 @@ in `src/lib/push.ts` so iOS shows banners while the app is closed/backgrounded.
 alter table profiles add column banned_at timestamptz;
 ```
 (No env var changes. Optional: regenerate Supabase types to drop the `as any`/untyped query casts.)
+
+## 2026-06-24 — Hashed-IP auth tracking (fraud linkage)
+
+- Built to catch linked/multi-account fraud (the "honey" ring: honeydesign/shopra.org seller + samantha buyer, plus honey/honeystudios). Supabase auth audit log was pruned and we never stored IPs, so existing accounts' IPs are unrecoverable — this captures going forward.
+- New `auth_events` table: user_id, event, ip_hash, country, user_agent, created_at. RLS enabled with NO policies (service-role only).
+- IP is stored as an HMAC-SHA256 (keyed with IP_HASH_SECRET) — non-reversible, but same IP -> same hash so accounts sharing an IP can be matched. Never stores raw IP.
+- `src/lib/track-auth.ts` (clientIp + hashIp), `src/app/api/track-auth/route.ts` (Node runtime; no-op for anon; untyped admin client for the insert), `src/components/session-tracker.tsx` (one ping per browser session), mounted in RootLayout only when a user is present.
+- Admin users list now shows each user's last-seen country (non-US flagged red), read via service-role client since auth_events is RLS-locked.
+- Degrades gracefully: missing table -> admin page still loads, route 500s silently (client .catch); missing IP_HASH_SECRET -> events recorded with null ip_hash.
+
+### SQL migration to run (Supabase SQL editor)
+```sql
+create table if not exists auth_events (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  event text not null,
+  ip_hash text,
+  country text,
+  user_agent text,
+  created_at timestamptz not null default now()
+);
+create index if not exists auth_events_ip_hash_idx on auth_events(ip_hash);
+create index if not exists auth_events_user_id_idx on auth_events(user_id);
+alter table auth_events enable row level security;
+```
+
+### Env var to add (Vercel + .env.local)
+- `IP_HASH_SECRET` = long random string (e.g. `openssl rand -hex 32`). Without it, ip_hash is null (no linkage), everything else still works.
+
+### Ring-detection query (accounts sharing an IP)
+```sql
+select e.ip_hash, count(distinct e.user_id) as accounts,
+       array_agg(distinct p.username) as usernames
+from auth_events e
+join public.profiles p on p.id = e.user_id
+where e.ip_hash is not null
+group by e.ip_hash
+having count(distinct e.user_id) > 1
+order by accounts desc;
+```
+
+### TODO
+- Privacy policy: mention hashed-IP/country collection for fraud prevention.
