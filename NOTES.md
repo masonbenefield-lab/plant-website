@@ -1559,3 +1559,19 @@ in `src/lib/push.ts` so iOS shows banners while the app is closed/backgrounded.
 - Content bled behind the iOS status bar on scroll: added `viewportFit: "cover"` to the viewport
   export and `pt-[env(safe-area-inset-top)]` on the sticky `<header>` so its background covers
   the status-bar strip (commit cd98eb4).
+
+## 2026-06-24 — Admin: Ban/Unban users (login block)
+
+- Added a true **ban/unban** capability for sellers (distinct from Archive, which has a 30-day delete timer). Built after spotting a seller ("shopra.org" — a competitor scouting the seller flow) on the first live sale.
+- New server route `src/app/api/admin/ban-user/route.ts` (admin-gated, mirrors rename-user pattern):
+  - Bans at the **Supabase Auth layer** via `auth.admin.updateUserById(id, { ban_duration })` — a real login block (no token issued/refreshed; existing sessions rejected by getUser). 100yr duration = "876000h"; unban = "none".
+  - Mirrors state to new `profiles.banned_at` column (for display + audit). Rolls back the auth ban if the profile update fails so the two never drift.
+  - On ban: pauses active listings + cancels live auctions. On unban: leaves listings paused for manual re-review. No email/push sent — silent.
+  - Refuses to ban admins or self. Writes `admin_audit_logs` (`ban_user` / `unban_user`).
+- Admin UI: `BanUserButton`/Unban in `src/app/admin/users/user-actions.tsx` + "Banned" badge in `src/app/admin/users/page.tsx`. banned_at fetched via a separate untyped query (not in generated types yet — keep it out of the typed select or it poisons the query type).
+
+### SQL migration to run (Supabase SQL editor)
+```sql
+alter table profiles add column banned_at timestamptz;
+```
+(No env var changes. Optional: regenerate Supabase types to drop the `as any`/untyped query casts.)

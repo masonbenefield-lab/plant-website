@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import UserSearch from "./user-search";
-import { DeleteUserButton, RestoreUserButton, RenameUserButton } from "./user-actions";
+import { DeleteUserButton, RestoreUserButton, RenameUserButton, BanUserButton } from "./user-actions";
 
 function daysUntilPurge(deletedAt: string) {
   const purge = new Date(deletedAt).getTime() + 30 * 24 * 60 * 60 * 1000;
@@ -42,6 +42,15 @@ export default async function AdminUsersPage({
   ]);
 
   const ids = (profiles ?? []).map(p => p.id);
+
+  // banned_at isn't in the generated types yet, so query it untyped to avoid
+  // poisoning the typed select above. Scoped to the users already on screen.
+  const { data: bannedRows } = ids.length
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ? await (supabase as any).from("profiles").select("id").in("id", ids).not("banned_at", "is", null)
+    : { data: [] as { id: string }[] };
+  const bannedSet = new Set<string>((bannedRows ?? []).map((r: { id: string }) => r.id));
+
   const [{ data: listingRows }, { data: auctionRows }, { data: gardenRows }, { data: wishlistRows }] = await Promise.all([
     ids.length ? supabase.from("listings").select("seller_id").in("seller_id", ids) : { data: [] },
     ids.length ? supabase.from("auctions").select("seller_id").in("seller_id", ids) : { data: [] },
@@ -153,6 +162,11 @@ export default async function AdminUsersPage({
                         Admin
                       </span>
                     )}
+                    {bannedSet.has(p.id) && (
+                      <span className="text-xs bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 px-1.5 py-0.5 rounded-full font-medium">
+                        Banned
+                      </span>
+                    )}
                   </div>
                   {p.bio && <p className="text-xs text-muted-foreground truncate max-w-[200px]">{p.bio}</p>}
                 </td>
@@ -202,6 +216,7 @@ export default async function AdminUsersPage({
                     ) : (
                       <>
                         <RenameUserButton userId={p.id} username={p.username} isAdmin={p.is_admin} />
+                        <BanUserButton userId={p.id} username={p.username} isAdmin={p.is_admin} banned={bannedSet.has(p.id)} />
                         <DeleteUserButton userId={p.id} username={p.username} isAdmin={p.is_admin} />
                       </>
                     )}

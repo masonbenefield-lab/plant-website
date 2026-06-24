@@ -107,6 +107,69 @@ export function RestoreUserButton({ userId, username }: { userId: string; userna
   );
 }
 
+export function BanUserButton({ userId, username, isAdmin, banned }: { userId: string; username: string; isAdmin: boolean; banned: boolean }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  if (isAdmin) return null;
+
+  async function submit(action: "ban" | "unban") {
+    setLoading(true);
+    const res = await fetch("/api/admin/ban-user", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ targetUserId: userId, action }),
+    });
+    const data = await res.json();
+    setLoading(false);
+    if (data.error) {
+      toast.error(data.error);
+    } else {
+      toast.success(action === "ban" ? `${username} banned` : `${username} unbanned`);
+      setOpen(false);
+      router.refresh();
+    }
+  }
+
+  // Unban is a safe, reversible action — no confirmation dialog needed.
+  if (banned) {
+    return (
+      <button
+        onClick={() => submit("unban")}
+        disabled={loading}
+        className="text-xs text-leaf hover:underline font-medium disabled:opacity-50"
+      >
+        {loading ? "Unbanning…" : "Unban"}
+      </button>
+    );
+  }
+
+  return (
+    <>
+      <button onClick={() => setOpen(true)} className="text-xs text-red-600 hover:underline font-medium">
+        Ban
+      </button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Ban user?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            <strong>{username}</strong> will be <strong>blocked from logging in</strong> immediately. Their active listings will be paused and live auctions cancelled. No data is deleted and no email is sent — you can unban them at any time.
+          </p>
+          <div className="flex gap-2 mt-2">
+            <Button variant="outline" onClick={() => setOpen(false)} className="flex-1">Cancel</Button>
+            <Button variant="destructive" onClick={() => submit("ban")} disabled={loading} className="flex-1">
+              {loading ? "Banning…" : "Ban User"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
 export function RenameUserButton({ userId, username, isAdmin }: { userId: string; username: string; isAdmin: boolean }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
