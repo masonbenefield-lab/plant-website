@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -649,6 +649,7 @@ function WeekStrip({
   // weekOffset: 0 = this week, -7 = last week, -14 = two weeks ago …
   const [weekOffset, setWeekOffset]   = useState(0);
   const [selectedDay, setSelectedDay] = useState<number | null>(0); // index 0–6 within strip
+  const dayPanelRef = useRef<HTMLDivElement>(null);
   // Pre-seed with today's already-logged events so completed list survives navigation
   const [loggedKeys, setLoggedKeys]   = useState<Set<string>>(
     () => new Set(completedToday.map((c) => `${c.plantId}-${c.careType}`))
@@ -949,7 +950,11 @@ function WeekStrip({
       {overdueCount > 0 && (
         <div className="flex items-center gap-2 flex-wrap">
           <button
-            onClick={() => { setSelectedDay(0); setDayTab("overdue"); }}
+            onClick={() => {
+              setSelectedDay(0);
+              setDayTab("overdue");
+              requestAnimationFrame(() => dayPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+            }}
             className="flex items-center gap-1.5 text-xs font-medium text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-1.5 hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors"
           >
             <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
@@ -1083,7 +1088,7 @@ function WeekStrip({
 
       {/* Day panel */}
       {selectedDay !== null && actualSelectedOffset !== null && (
-        <div className="rounded-xl border bg-card p-4 space-y-3">
+        <div ref={dayPanelRef} className="rounded-xl border bg-card p-4 space-y-3">
           <div className="flex items-center justify-between gap-2">
             <div>
               <span className={cn("text-sm font-semibold", actualSelectedOffset < 0 && "text-amber-700 dark:text-amber-400")}>
