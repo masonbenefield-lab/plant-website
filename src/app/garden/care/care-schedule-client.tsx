@@ -1397,6 +1397,34 @@ function IntervalsModal({
   );
   const [startDate, setStartDate] = useState(hasExistingSchedule ? "" : todayStr());
   const [saving, setSaving] = useState(false);
+  const [suggesting, setSuggesting] = useState(false);
+
+  // Ask Claude for typical intervals and pre-fill the inputs (single plant only).
+  async function suggestIntervals() {
+    if (!singlePlant) return;
+    setSuggesting(true);
+    try {
+      const q = singlePlant.name.replace(/\s*—\s*/g, " ");
+      const res = await fetch(`/api/garden/suggest-care?q=${encodeURIComponent(q)}`);
+      const data = await res.json();
+      const s = data.suggestion;
+      if (!s) { toast.error("No care suggestion found for this plant"); return; }
+      setValues((p) => ({
+        ...p,
+        waterInterval:     String(s.water),
+        fertilizeInterval: String(s.fertilize),
+        repotInterval:     String(s.repot),
+        pruneInterval:     String(s.prune),
+      }));
+      toast.success(s.confidence === "low"
+        ? "Suggested a general default — double-check it, then Save"
+        : "Suggested ✨ — review and Save");
+    } catch {
+      toast.error("Couldn't get a suggestion — please try again");
+    } finally {
+      setSuggesting(false);
+    }
+  }
 
   const [reminderType, setReminderType] = useState<string>("Water");
   const [reminderDate, setReminderDate] = useState(todayStr());
@@ -1488,6 +1516,16 @@ function IntervalsModal({
       {modalTab === "intervals" && (
         <>
           {isBulk && <p className="text-xs text-muted-foreground -mt-1">Fill in a field to apply it to all {plants.length} plants. Leave blank to keep each plant&apos;s current value.</p>}
+          {!isBulk && (
+            <button
+              onClick={suggestIntervals}
+              disabled={suggesting}
+              className="flex items-center gap-1.5 text-xs font-medium text-leaf hover:text-forest transition-colors disabled:opacity-50"
+            >
+              <Sparkles size={13} />
+              {suggesting ? "Suggesting…" : "Suggest a schedule with AI"}
+            </button>
+          )}
           <div className="grid gap-3 py-1">
             {fields.map(({ key, emoji, label, meta }) => (
               <div key={key} className="flex items-center gap-2">

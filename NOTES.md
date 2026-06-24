@@ -1663,3 +1663,8 @@ create table if not exists care_suggestions (
 alter table care_suggestions enable row level security;
 ```
 (No env var changes — ANTHROPIC_API_KEY already set for the plant guide.)
+
+## 2026-06-24 — Move AI care suggestion into the edit modal (Manage Schedules)
+
+- Moved the "Suggest a schedule with AI" action out of the standalone /setup page and into the IntervalsModal "Recurring" tab (opened by the pencil from Manage Schedules and the Week Ahead day panel). Single-plant only; reverted the /setup additions.
+- Button calls /api/garden/suggest-care and pre-fills the water/fertilize/repot/prune number inputs (em-dash stripped from the plant name for cache-key consistency). User reviews and hits Save. No backend changes — same route/table from the earlier commit.
