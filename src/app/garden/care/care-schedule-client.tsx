@@ -949,12 +949,12 @@ function WeekStrip({
       {overdueCount > 0 && (
         <div className="flex items-center gap-2 flex-wrap">
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => { setSelectedDay(0); setDayTab("overdue"); }}
             className="flex items-center gap-1.5 text-xs font-medium text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-1.5 hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors"
           >
             <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-            {overdueCount} task{overdueCount !== 1 ? "s" : ""} missed — view past days
-            <ChevronLeft size={12} />
+            {overdueCount} task{overdueCount !== 1 ? "s" : ""} missed — review
+            <ChevronDown size={12} />
           </button>
           <button onClick={logAllOverdue} className="text-xs font-medium text-leaf hover:text-forest transition-colors">
             Log all
