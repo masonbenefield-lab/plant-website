@@ -170,10 +170,16 @@ export async function GET(request: Request) {
   const eligibleIds = Object.keys(userTasks);
   if (!eligibleIds.length) return NextResponse.json({ sent: 0, reason: "Nothing due this week" });
 
-  const { data: authData } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+  // Page through all auth users so we don't silently drop anyone past the first
+  // 1000 once the user base grows.
   const emailMap: Record<string, string> = {};
-  for (const u of authData?.users ?? []) {
-    if (u.email) emailMap[u.id] = u.email;
+  for (let page = 1; ; page++) {
+    const { data: authData } = await admin.auth.admin.listUsers({ page, perPage: 1000 });
+    const users = authData?.users ?? [];
+    for (const u of users) {
+      if (u.email) emailMap[u.id] = u.email;
+    }
+    if (users.length < 1000) break;
   }
   const profileMap = Object.fromEntries(activeProfiles.map((p) => [p.id, { username: p.username, displayName: (p as { display_name?: string | null }).display_name }]));
 

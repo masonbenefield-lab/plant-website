@@ -48,7 +48,15 @@ export default async function CareSchedulePage() {
   if (vacationStart) {
     const vStart = new Date(vacationStart + "T00:00:00");
     vStart.setHours(0, 0, 0, 0);
-    const elapsed = Math.floor((today.getTime() - vStart.getTime()) / 86400000);
+    // Clamp accrual to vacation_end so a vacation the user never dismissed
+    // ("I'm back") doesn't keep pushing due dates forward indefinitely.
+    let endPoint = today.getTime();
+    if (vacationEnd) {
+      const vEnd = new Date(vacationEnd + "T00:00:00");
+      vEnd.setHours(0, 0, 0, 0);
+      endPoint = Math.min(endPoint, vEnd.getTime());
+    }
+    const elapsed = Math.floor((endPoint - vStart.getTime()) / 86400000);
     if (elapsed > 0) totalPauseOffset += elapsed;
   }
 
