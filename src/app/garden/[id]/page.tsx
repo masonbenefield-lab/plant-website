@@ -12,6 +12,7 @@ import { PlantVisibilityToggle } from "@/components/garden/plant-visibility-togg
 import { SharePlantButton } from "@/components/garden/share-plant-button";
 import { PlantPhotoManager } from "@/components/garden/plant-photo-manager";
 import { PlantNotesEditor } from "@/components/garden/plant-notes-editor";
+import { PlantProgressTimeline } from "@/components/garden/plant-progress-timeline";
 
 const STATUS_LABEL: Record<GardenPlantStatus, string> = {
   thriving: "Thriving",
@@ -163,6 +164,11 @@ export default async function GardenPlantDetailPage({
               dashed
             />
           </div>
+
+          {/* Progress timeline — growth gallery from event photos */}
+          <PlantProgressTimeline
+            events={(events ?? []) as { event_date: string; photos: string[] | null; created_at: string }[]}
+          />
 
           {/* Event log */}
           <EventLog
