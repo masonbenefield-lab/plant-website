@@ -1633,3 +1633,10 @@ order by accounts desc;
 ### Migrations / env (no NEW migration for the geo gate)
 - Still required if not already done: run 021_auth_events.sql in Supabase, and set IP_HASH_SECRET in Vercel.
 - Territories note: only "US" is allowed; Puerto Rico (PR) etc. resolve to their own codes and would be blocked — expand ALLOWED_COUNTRIES in src/lib/geo.ts if desired.
+
+## 2026-06-24 — Fix: Care Schedule overdue tasks shown on a future day
+
+- Bug: a task overdue by more than one full interval (e.g. 19d overdue, 21d interval) was excluded from the Overdue/Today bucket by a `Math.abs(daysUntilDue) < interval` cap, then projected forward by getStripDays() onto its next theoretical due date — so it rendered on a FUTURE day labeled "Xd overdue", while Today and past days showed "nothing missed".
+- Fix (src/app/garden/care/care-schedule-client.tsx): overdue = `daysUntilDue < 0`, full stop — removed the one-interval cap everywhere (overdueCount, today strip count, today panel filter, overdue/dueToday split, bulk "log all overdue"). getStripDays() now returns empty for negative daysUntilDue so overdue tasks are never drawn on a future strip day. DayTaskRow shows the real overdue label.
+- Result: overdue tasks consolidate into Today's Overdue bucket with correct "Nd overdue" labels; future days show only genuine future recurrences.
+- No DB/schema/env changes.

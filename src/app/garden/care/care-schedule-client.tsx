@@ -157,8 +157,10 @@ function getFieldMeta(values: (number | null)[]): { defaultValue: string; placeh
 // Returns day offsets [0–6] where this recurring entry falls
 function getStripDays(daysUntilDue: number, interval: number): Set<number> {
   const days = new Set<number>();
+  // Overdue tasks (negative) belong in today's Overdue bucket — never project
+  // them forward onto a future day in the strip.
+  if (daysUntilDue < 0) return days;
   let d = daysUntilDue;
-  if (d < 0) d += Math.ceil(Math.abs(d) / interval) * interval;
   while (d <= 6) { days.add(d); d += interval; }
   return days;
 }
@@ -188,16 +190,13 @@ function SelectCheckbox({ checked, onToggle }: { checked: boolean; onToggle: () 
 
 // ─── Day panel rows ───────────────────────────────────────────────────────────
 
-function DayTaskRow({ entry, logDate, selected, isToday, onToggle, onLog, onEditSchedule, onViewHistory, compact }: {
+function DayTaskRow({ entry, logDate, selected, onToggle, onLog, onEditSchedule, onViewHistory, compact }: {
   entry: CareEntry; logDate: string; selected: boolean; isToday?: boolean; onToggle: () => void;
   onLog: (eventId: string, withNote: boolean) => void; onEditSchedule?: () => void; onViewHistory?: () => void;
   compact?: boolean;
 }) {
   const meta = getCareMeta(entry.careType);
-  // Overdue items at or past the cap boundary cycle back via getStripDays — show "Due today"
-  const effectiveDays = isToday && entry.daysUntilDue < 0 && Math.abs(entry.daysUntilDue) >= entry.interval
-    ? 0 : entry.daysUntilDue;
-  const { label, color } = urgencyLabel(effectiveDays);
+  const { label, color } = urgencyLabel(entry.daysUntilDue);
   const [loading, setLoading] = useState(false);
 
   async function handleLog(withNote: boolean) {
@@ -673,7 +672,7 @@ function WeekStrip({
 
   // Overdue task count (for the "missed tasks" chip when on current week — hidden during vacation)
   const overdueCount = isCurrentWeek && !overdueDismissed && !vacationActive
-    ? entries.filter((e) => e.daysUntilDue < 0 && Math.abs(e.daysUntilDue) < e.interval && !loggedKeys.has(`${e.plantId}-${e.careType}`)).length
+    ? entries.filter((e) => e.daysUntilDue < 0 && !loggedKeys.has(`${e.plantId}-${e.careType}`)).length
     : 0;
 
   // Strip days: actual offset from today = weekOffset + i
@@ -691,8 +690,8 @@ function WeekStrip({
       if (isPast) {
         return e.daysUntilDue === actualOffset ? sum + 1 : sum;
       }
-      // Count overdue tasks in today's total, but only within one interval (cap)
-      if (isToday && e.daysUntilDue < 0 && Math.abs(e.daysUntilDue) < e.interval) return sum + 1;
+      // Overdue tasks all count toward today's total, no matter how overdue.
+      if (isToday && e.daysUntilDue < 0) return sum + 1;
       return sum + (getStripDays(e.daysUntilDue, e.interval).has(actualOffset) ? 1 : 0);
     }, 0);
 
@@ -747,8 +746,8 @@ function WeekStrip({
         // Same rule as strip counts: only hide while daysUntilDue ≤ 0
         if (loggedKeys.has(`${e.plantId}-${e.careType}`) && e.daysUntilDue <= 0) return false;
         if (actualSelectedOffset < 0) return e.daysUntilDue === actualSelectedOffset;
-        // Show overdue tasks in today's panel only within one interval (cap prevents indefinite overdue)
-        if (actualSelectedOffset === 0 && e.daysUntilDue < 0 && Math.abs(e.daysUntilDue) < e.interval) return true;
+        // Overdue tasks show in today's panel regardless of how overdue they are.
+        if (actualSelectedOffset === 0 && e.daysUntilDue < 0) return true;
         return getStripDays(e.daysUntilDue, e.interval).has(actualSelectedOffset);
       })
     : [];
@@ -771,10 +770,10 @@ function WeekStrip({
   // Today-only tab split: genuine overdue vs due today
   const isSelectedToday = actualSelectedOffset === 0;
   const overdueEntries = isSelectedToday
-    ? dayEntries.filter((e) => e.daysUntilDue < 0 && Math.abs(e.daysUntilDue) < e.interval)
+    ? dayEntries.filter((e) => e.daysUntilDue < 0)
     : [];
   const dueTodayEntries = isSelectedToday
-    ? dayEntries.filter((e) => !(e.daysUntilDue < 0 && Math.abs(e.daysUntilDue) < e.interval))
+    ? dayEntries.filter((e) => e.daysUntilDue >= 0)
     : dayEntries;
   const showDayTabs = isSelectedToday && overdueEntries.length > 0 && dueTodayEntries.length > 0;
   const activeEntries = showDayTabs ? (dayTab === "overdue" ? overdueEntries : dueTodayEntries) : dayEntries;
@@ -852,7 +851,7 @@ function WeekStrip({
   }
 
   function logAllOverdue() {
-    const overdueEntries = entries.filter((e) => e.daysUntilDue < 0 && Math.abs(e.daysUntilDue) < e.interval && !loggedKeys.has(`${e.plantId}-${e.careType}`));
+    const overdueEntries = entries.filter((e) => e.daysUntilDue < 0 && !loggedKeys.has(`${e.plantId}-${e.careType}`));
     if (!overdueEntries.length) return;
     setBulkConfirmState({ careItems: overdueEntries, reminderItems: [], date: todayStr() });
   }
