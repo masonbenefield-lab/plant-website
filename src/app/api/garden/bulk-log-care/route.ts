@@ -15,7 +15,7 @@ export async function POST(request: Request) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { items, date } = await request.json() as {
-    items: { plantId: string; careType: string }[];
+    items: { plantId: string; careType: string; eventKey?: string }[];
     date?: string;
   };
   if (!Array.isArray(items) || items.length === 0) {
@@ -38,13 +38,18 @@ export async function POST(request: Request) {
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
   const eventDate = date ?? todayStr;
 
-  const validItems = items.filter((i) => validIds.has(i.plantId) && CARE_EVENT_MAP[i.careType]);
+  // eventKey (e.g. "custom:<uuid>" or "watered") takes precedence; fall back to
+  // the built-in map. This lets custom care types bulk-log too (previously they
+  // were silently dropped because the map only knows built-ins).
+  const resolveType = (i: { careType: string; eventKey?: string }): string | undefined =>
+    i.eventKey ?? CARE_EVENT_MAP[i.careType];
+  const validItems = items.filter((i) => validIds.has(i.plantId) && resolveType(i));
   if (validItems.length === 0) return NextResponse.json({ error: "No valid items" }, { status: 400 });
 
   const events = validItems.map((i) => ({
     plant_id:   i.plantId,
     user_id:    user.id,
-    event_type: CARE_EVENT_MAP[i.careType],
+    event_type: resolveType(i) as GardenEventType,
     event_date: eventDate,
     notes:      null as string | null,
   }));

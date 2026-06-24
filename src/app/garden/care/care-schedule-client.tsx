@@ -873,7 +873,7 @@ function WeekStrip({
     setBulkLogging(true);
     const snapshotOffset = actualSelectedOffset;
     const snapshotLogDate = date;
-    const toLog = careItems.map((e) => ({ plantId: e.plantId, careType: e.careType }));
+    const toLog = careItems.map((e) => ({ plantId: e.plantId, careType: e.careType, eventKey: e.eventKey }));
     let logged = 0;
 
     if (toLog.length > 0) {
@@ -1365,7 +1365,10 @@ function IntervalsModal({
       setAddingCustom(false);
       toast.success("Custom interval added");
       onSaved();
-    } else toast.error("Failed to add custom interval");
+    } else {
+      const { error } = await res.json().catch(() => ({ error: null }));
+      toast.error(error ?? "Failed to add custom interval");
+    }
   }
 
   async function deleteCustomSchedule(scheduleId: string) {

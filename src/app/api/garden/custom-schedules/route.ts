@@ -19,6 +19,19 @@ export async function POST(request: Request) {
     .from("garden_plants").select("id").eq("id", plantId).eq("user_id", user.id).single();
   if (!plant) return NextResponse.json({ error: "Plant not found" }, { status: 404 });
 
+  // Keep care labels unique per plant so the schedule's internal keys (plant +
+  // care label) never collide. Reject built-in names and duplicate labels.
+  const labelTrim = label.trim();
+  const labelLower = labelTrim.toLowerCase();
+  if (["water", "fertilize", "repot", "prune"].includes(labelLower)) {
+    return NextResponse.json({ error: "That name is reserved for a built-in care type — pick a different label." }, { status: 400 });
+  }
+  const { data: existingCustom } = await supabase
+    .from("custom_care_schedules").select("label").eq("plant_id", plantId);
+  if ((existingCustom ?? []).some((s) => s.label.trim().toLowerCase() === labelLower)) {
+    return NextResponse.json({ error: "This plant already has a custom schedule with that name." }, { status: 409 });
+  }
+
   // Insert the schedule
   const { data: schedule, error: schedErr } = await supabase
     .from("custom_care_schedules")
