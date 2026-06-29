@@ -37,22 +37,23 @@ export type DemoCareTask = {
   interval: number;
 };
 
-// A spread of care types so the demo shows the full feature, not just watering.
-// Today deliberately carries a mix (water, fertilize, repot, custom) so the
-// default view sells the variety; prune + another custom tag land later in the week.
+// Mirrors the real plants in the demo account (same names + locations) so the
+// Care Schedule and My Garden tabs read as one cohesive garden. A spread of care
+// types shows the full feature; Today carries a mix (water, fertilize, prune,
+// custom) with prune + repot + a second custom tag across the week.
 export const DEMO_CARE_TASKS: DemoCareTask[] = [
   // ── Today: overdue ──
-  { id: "d1", plantName: "Monstera Deliciosa", image: null, location: "Living room", careType: "Water",     daysUntilDue: -2, interval: 7   },
-  { id: "d2", plantName: "Pothos 'Golden'",    image: null, location: "Kitchen",     careType: "Fertilize", daysUntilDue: -1, interval: 30  },
+  { id: "d1", plantName: "Peters Honey Fig",   image: null, location: "Front Yard",   careType: "Water",     daysUntilDue: -2, interval: 7   },
+  { id: "d2", plantName: "Arctic Frost Satsuma", image: null, location: "Ranch Orchard", careType: "Fertilize", daysUntilDue: -1, interval: 30 },
   // ── Today: due today ──
-  { id: "d3", plantName: "Fiddle Leaf Fig",    image: null, location: "Office",      careType: "Water",     daysUntilDue: 0,  interval: 7   },
-  { id: "d4", plantName: "Calathea Orbifolia", image: null, location: "Bathroom",    careType: "Mist",      daysUntilDue: 0,  interval: 7, isCustom: true },
-  { id: "d5", plantName: "ZZ Plant",           image: null, location: "Entryway",    careType: "Repot",     daysUntilDue: 0,  interval: 365 },
+  { id: "d3", plantName: "Blue Java Banana",   image: null, location: "Ranch",        careType: "Water",     daysUntilDue: 0,  interval: 7   },
+  { id: "d4", plantName: "Variegated Pothos",  image: null, location: "Bathroom",     careType: "Mist",      daysUntilDue: 0,  interval: 7, isCustom: true },
+  { id: "d5", plantName: "Texas Peach",        image: null, location: "Backyard",     careType: "Prune",     daysUntilDue: 0,  interval: 90  },
   // ── Upcoming this week ──
-  { id: "d6", plantName: "Snake Plant",        image: null, location: "Bedroom",     careType: "Water",     daysUntilDue: 2,  interval: 14  },
-  { id: "d7", plantName: "Monstera Deliciosa", image: null, location: "Living room", careType: "Prune",     daysUntilDue: 3,  interval: 90  },
-  { id: "d8", plantName: "Rubber Plant",       image: null, location: "Hallway",     careType: "Rotate",    daysUntilDue: 4,  interval: 14, isCustom: true },
-  { id: "d9", plantName: "Bird's Nest Fern",   image: null, location: "Bathroom",    careType: "Fertilize", daysUntilDue: 5,  interval: 30  },
+  { id: "d6", plantName: "Variegated Pothos",  image: null, location: "Bathroom",     careType: "Repot",     daysUntilDue: 2,  interval: 365 },
+  { id: "d7", plantName: "Blue Java Banana",   image: null, location: "Ranch",        careType: "Fertilize", daysUntilDue: 3,  interval: 30  },
+  { id: "d8", plantName: "Arctic Frost Satsuma", image: null, location: "Ranch Orchard", careType: "Water",  daysUntilDue: 4,  interval: 7   },
+  { id: "d9", plantName: "Texas Peach",        image: null, location: "Backyard",     careType: "Pest check", daysUntilDue: 5, interval: 21, isCustom: true },
 ];
 
 /** Stat strip shown above the demo care schedule. */
