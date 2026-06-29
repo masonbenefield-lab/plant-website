@@ -38,6 +38,7 @@ export default async function DemoGardenPage() {
         username={profile?.username ?? DEMO_GARDEN_USERNAME}
         currentUserId={null}
         ownerId={profile?.id ?? null}
+        from="demo"
       />
       {/* name is used only for accessible context; keeps the demo honest about whose garden this is */}
       <span className="sr-only">Example garden by {name}</span>

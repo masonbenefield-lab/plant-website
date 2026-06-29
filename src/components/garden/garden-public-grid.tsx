@@ -52,12 +52,15 @@ export function GardenPublicGrid({
   currentUserId,
   ownerId,
   userWishlistItems,
+  from,
 }: {
   plants: Plant[];
   username: string;
   currentUserId?: string | null;
   ownerId?: string | null;
   userWishlistItems?: WishlistRef[];
+  /** Navigation context passed to plant detail pages (e.g. "demo") so their back link returns here. */
+  from?: string;
 }) {
   const showSave = !!(currentUserId && ownerId && currentUserId !== ownerId);
   const [q, setQ] = useState("");
@@ -109,7 +112,7 @@ export function GardenPublicGrid({
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
           {filtered.map((plant) => (
             <div key={plant.id} className="relative">
-              <Link href={`/gardens/${username}/${plant.id}`}>
+              <Link href={`/gardens/${username}/${plant.id}${from ? `?from=${from}` : ""}`}>
               <Card className="overflow-hidden h-full hover:shadow-md transition-shadow group">
                 <div className="aspect-square relative bg-muted">
                   {plant.images?.[0] ? (

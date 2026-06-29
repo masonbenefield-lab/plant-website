@@ -108,6 +108,7 @@ export default async function PublicPlantDetailPage({
   const { username, id } = await params;
   const { from } = await searchParams;
   const fromStorefront = from === "storefront";
+  const fromDemo = from === "demo";
   const supabase = await createClient();
 
   const { data: profile } = await supabase
@@ -153,11 +154,11 @@ export default async function PublicPlantDetailPage({
 
       {/* Back nav */}
       <Link
-        href={fromStorefront ? `/sellers/${username}?tab=garden` : `/gardens/${username}`}
+        href={fromStorefront ? `/sellers/${username}?tab=garden` : fromDemo ? "/demo" : `/gardens/${username}`}
         className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
       >
         <ChevronLeft size={16} />
-        {fromStorefront ? `${displayName} Storefront` : `${displayName} Garden`}
+        {fromStorefront ? `${displayName} Storefront` : fromDemo ? "Demo Garden" : `${displayName} Garden`}
       </Link>
 
       {/* Header */}
