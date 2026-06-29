@@ -164,6 +164,12 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
                 <Link href="/community" className="text-muted-foreground hover:text-foreground transition-colors">
                   Community
                 </Link>
+                <Link href="/giveaway" className="text-muted-foreground hover:text-foreground transition-colors">
+                  Giveaway
+                </Link>
+                <Link href="/pricing" className="text-muted-foreground hover:text-foreground transition-colors">
+                  Pricing
+                </Link>
               </>
             ) : (
               <>
