@@ -143,21 +143,51 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
             <span className="font-bold text-[21px] tracking-[-0.02em] text-forest dark:text-cream" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>Plantet</span>
           </Link>
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
-            <Link href="/shop" className="text-muted-foreground hover:text-foreground transition-colors">
-              Shop
-            </Link>
-            <Link href="/auctions" className="text-muted-foreground hover:text-foreground transition-colors">
-              Auctions
-            </Link>
-            <Link href="/community" className="text-muted-foreground hover:text-foreground transition-colors">
-              Community
-            </Link>
-            <Link href="/giveaway" className="text-muted-foreground hover:text-foreground transition-colors">
-              Giveaway
-            </Link>
-            <Link href="/pricing" className="text-muted-foreground hover:text-foreground transition-colors">
-              Pricing
-            </Link>
+            {user ? (
+              <>
+                {/* Logged in: lead with the daily-habit, owner-facing features */}
+                <Link href="/garden" className="text-foreground hover:text-leaf transition-colors">
+                  My Garden
+                </Link>
+                <Link href="/garden/care" className="text-muted-foreground hover:text-foreground transition-colors">
+                  Care
+                </Link>
+                <Link href="/wishlist" className="text-muted-foreground hover:text-foreground transition-colors">
+                  Saved
+                </Link>
+                <Link href="/shop" className="text-muted-foreground hover:text-foreground transition-colors">
+                  Shop
+                </Link>
+                <Link href="/auctions" className="text-muted-foreground hover:text-foreground transition-colors">
+                  Auctions
+                </Link>
+                <Link href="/community" className="text-muted-foreground hover:text-foreground transition-colors">
+                  Community
+                </Link>
+              </>
+            ) : (
+              <>
+                {/* Logged out: marketplace discovery + an interactive garden demo */}
+                <Link href="/shop" className="text-muted-foreground hover:text-foreground transition-colors">
+                  Shop
+                </Link>
+                <Link href="/auctions" className="text-muted-foreground hover:text-foreground transition-colors">
+                  Auctions
+                </Link>
+                <Link href="/demo" className="text-foreground hover:text-leaf transition-colors">
+                  My Garden
+                </Link>
+                <Link href="/community" className="text-muted-foreground hover:text-foreground transition-colors">
+                  Community
+                </Link>
+                <Link href="/giveaway" className="text-muted-foreground hover:text-foreground transition-colors">
+                  Giveaway
+                </Link>
+                <Link href="/pricing" className="text-muted-foreground hover:text-foreground transition-colors">
+                  Pricing
+                </Link>
+              </>
+            )}
           </nav>
         </div>
 
@@ -287,6 +317,7 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
         >
           <MobileLink href="/shop" onClick={closeMenu}>Shop</MobileLink>
           <MobileLink href="/auctions" onClick={closeMenu}>Auctions</MobileLink>
+          {!user && <MobileLink href="/demo" onClick={closeMenu}>My Garden</MobileLink>}
           <MobileLink href="/community" onClick={closeMenu}>Community</MobileLink>
           <MobileLink href="/giveaway" onClick={closeMenu}>Giveaway</MobileLink>
           <MobileLink href="/pricing" onClick={closeMenu}>Pricing</MobileLink>
@@ -321,6 +352,7 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
               <p className="px-3 pt-1 pb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Community</p>
               <MobileLink href="/feed" onClick={closeMenu}>Feed</MobileLink>
               <MobileLink href="/garden" onClick={closeMenu}>My Garden</MobileLink>
+              <MobileLink href="/garden/care" onClick={closeMenu}>Care Schedule</MobileLink>
               <MobileLink href="/dashboard/offers?tab=trades" onClick={closeMenu}>Trades{pendingTrades > 0 ? ` (${pendingTrades})` : ""}</MobileLink>
               <MobileLink href="/following" onClick={closeMenu}>Following</MobileLink>
               <MobileLink href="/giveaway" onClick={closeMenu}>Giveaway</MobileLink>

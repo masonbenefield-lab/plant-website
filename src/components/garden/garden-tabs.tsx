@@ -4,19 +4,19 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
-export default function GardenTabs() {
+export default function GardenTabs({ basePath = "/garden" }: { basePath?: string }) {
   const pathname = usePathname();
-  const isCommunity = pathname.startsWith("/garden/community");
-  const isWishlist = pathname.startsWith("/garden/wishlist");
-  const isCare = pathname.startsWith("/garden/care");
+  const isCommunity = pathname.startsWith(`${basePath}/community`);
+  const isWishlist = pathname.startsWith(`${basePath}/wishlist`);
+  const isCare = pathname.startsWith(`${basePath}/care`);
   const isMyGarden = !isCommunity && !isWishlist && !isCare;
 
   return (
     <div className="flex gap-1 border-b mb-6 overflow-x-auto [&::-webkit-scrollbar]:hidden scrollbar-none">
-      <TabLink href="/garden" active={isMyGarden}>My Garden</TabLink>
-      <TabLink href="/garden/care" active={isCare}><span className="sm:hidden">Care</span><span className="hidden sm:inline">Care Schedule</span></TabLink>
-      <TabLink href="/garden/community" active={isCommunity}><span className="sm:hidden">Community</span><span className="hidden sm:inline">Community Gardens</span></TabLink>
-      <TabLink href="/garden/wishlist" active={isWishlist}>Wishlist</TabLink>
+      <TabLink href={basePath} active={isMyGarden}>My Garden</TabLink>
+      <TabLink href={`${basePath}/care`} active={isCare}><span className="sm:hidden">Care</span><span className="hidden sm:inline">Care Schedule</span></TabLink>
+      <TabLink href={`${basePath}/community`} active={isCommunity}><span className="sm:hidden">Community</span><span className="hidden sm:inline">Community Gardens</span></TabLink>
+      <TabLink href={`${basePath}/wishlist`} active={isWishlist}>Wishlist</TabLink>
     </div>
   );
 }

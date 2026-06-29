@@ -1740,3 +1740,116 @@ alter table profiles add column if not exists frost_alerts boolean not null defa
 ```sql
 alter table garden_events add column if not exists is_baseline boolean not null default false;
 ```
+
+## 2026-06-26 — Suppress emails to banned users
+
+- **Goal:** banned users should receive no further emails from Plantet.
+- `src/lib/email.ts`: wrapped `getResend()` so every send routes through a single
+  ban check. Added `bannedRecipients()` which calls the new `filter_banned_emails`
+  RPC; banned recipient addresses are dropped before sending, and an all-banned
+  recipient list skips the send entirely. Covers all ~45 send* functions and any
+  future ones automatically (no call sites changed). Fails open on lookup error.
+- New migration `028_filter_banned_emails.sql`: `filter_banned_emails(text[])`
+  returns the addresses belonging to banned accounts (profiles.banned_at set OR
+  auth.users.banned_until in the future). SECURITY DEFINER, execute granted to
+  service_role only.
+- Note: auth-flow emails sent outside this module still construct Resend directly
+  and are NOT filtered — `src/app/api/auth/forgot-username/route.ts` and
+  `src/app/api/contact/route.ts`. Auth itself is already blocked for banned users,
+  so these are low-risk, but flagged for future consolidation.
+
+### SQL migration to run (Supabase SQL editor)
+```sql
+create or replace function filter_banned_emails(p_emails text[])
+returns text[]
+language sql
+security definer
+set search_path = public
+as $$
+  select coalesce(array_agg(lower(u.email)), '{}')
+  from auth.users u
+  join profiles p on p.id = u.id
+  where lower(u.email) = any (select lower(e) from unnest(p_emails) as e)
+    and (
+      p.banned_at is not null
+      or (u.banned_until is not null and u.banned_until > now())
+    );
+$$;
+
+revoke all on function filter_banned_emails(text[]) from public, anon, authenticated;
+grant execute on function filter_banned_emails(text[]) to service_role;
+```
+
+## 2026-06-29 — Logged-out interactive garden demo (/demo) + identity-aware navbar
+
+Goal: lift return-rate by showcasing the owner/hobbyist features (My Garden, Care
+Schedule, Community Gardens, Wishlist) to logged-out visitors as a working example,
+and by surfacing those features in the nav for logged-in users (they were buried in
+the avatar dropdown).
+
+Files added:
+- `src/lib/demo.ts` — demo config: `DEMO_GARDEN_USERNAME = "demo"`, fixed Care
+  dataset (`DEMO_CARE_TASKS`) with relative due offsets so the demo always shows
+  "2 due today · 1 overdue", plus demo streak/logged stats.
+- `src/lib/demo-data.ts` — server-only loaders (`getDemoProfile`, `getDemoPlants`,
+  `getDemoWishlist`) reading the curated public demo account via admin client.
+- `src/components/demo/demo-chrome.tsx` — `DemoBanner` (example-garden notice + signup
+  CTA) and `DemoHeaderActions` (Bulk Upload / + Add Plant buttons that route to /signup).
+- `src/components/demo/demo-care-view.tsx` — read-only Care Schedule replica (7-day
+  strip + due/overdue day panel); Log buttons fire a "sign up free" toast nudge.
+  Deliberately a separate component so the 2,559-line interactive CareScheduleClient
+  is untouched.
+- `src/app/demo/page.tsx`, `src/app/demo/care/page.tsx`,
+  `src/app/demo/community/page.tsx`, `src/app/demo/wishlist/page.tsx` — the four demo
+  tabs. Garden/Community/Wishlist reuse existing read-only components
+  (GardenPublicGrid, CommunityGardensGrid, PublicWishlistItems) with currentUserId=null
+  so no owner actions render. Care uses DemoCareView.
+
+Files changed:
+- `src/components/garden/garden-tabs.tsx` — added optional `basePath` prop (default
+  "/garden") so the same tabs work under "/demo".
+- `src/components/layout/navbar.tsx` — desktop nav is now identity-aware:
+  logged-in → My Garden · Care · Saved · Shop · Auctions · Community;
+  logged-out → Shop · Auctions · My Garden (→/demo) · Community · Giveaway · Pricing.
+  Mobile menu: logged-out gets a "My Garden" (→/demo) link; logged-in gets a new
+  "Care Schedule" link.
+
+SQL migrations: none.
+Env vars: none.
+
+MANUAL SETUP REQUIRED (demo data tabs are blank until done):
+1. Create a normal account; set its username to `demo` (= DEMO_GARDEN_USERNAME).
+2. Add ~10 plants with good photos to its garden.
+3. Turn ON "public garden" and "public wishlist" for that account; add a few
+   wishlist items.
+The Care tab works immediately (fixed dataset); Garden/Community/Wishlist tabs
+populate from this account. To use a different username, change DEMO_GARDEN_USERNAME
+in src/lib/demo.ts.
+
+Verification status: `next build` passes (all 4 /demo routes compile). Visual/live
+verification still pending — needs the demo account created and a running app.
+
+## 2026-06-29 — FIX: password reset links failing ("Link expired or invalid")
+
+Problem (affecting real users): password reset emails led to "Link expired or
+invalid" — nothing happened. Root cause: the app uses @supabase/ssr (PKCE flow), so
+resetPasswordForEmail produced a `?code=` link that can only be exchanged in the SAME
+browser that requested the reset (the PKCE code-verifier lives in that browser's local
+storage). Opening the link on another device, in an email app's in-app browser, or
+after an email scanner pre-opened it → AuthPKCECodeVerifierMissingError → invalid.
+
+Fix (code): `src/app/auth/reset-password/page.tsx` now handles the OTP **token_hash**
+flow via `verifyOtp({ token_hash, type: 'recovery' })` — verified with no PKCE verifier,
+so links work on any device. Kept the old `?code=` (PKCE) and hash/PASSWORD_RECOVERY
+paths as fallbacks for already-sent emails, and added fast-fail on explicit
+`?error=`/`#error=` params. Added EmailOtpType import.
+
+REQUIRED dashboard change (without this, emails stay broken):
+- Authentication → Email Templates → "Reset Password": set link href to
+  `{{ .SiteURL }}/auth/reset-password?token_hash={{ .TokenHash }}&type=recovery`
+- Authentication → URL Configuration: Site URL = https://www.plantet.shop;
+  Redirect URLs includes https://www.plantet.shop/auth/reset-password (or /**).
+Deploy the code FIRST, then change the template.
+
+SQL migrations: none. Env vars: none.
+Build: `next build` passes. Live verification pending (deploy + template change + phone test).
