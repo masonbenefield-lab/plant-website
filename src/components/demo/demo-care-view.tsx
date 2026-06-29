@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Droplets, Leaf, Flower2, Scissors, ChevronDown } from "lucide-react";
+import { Droplets, Leaf, Flower2, Scissors, Sparkles, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   DEMO_CARE_TASKS,
@@ -12,12 +12,27 @@ import {
   type DemoCareTask,
 } from "@/lib/demo";
 
-const CARE_META: Record<DemoCareTask["careType"], { icon: React.ReactNode; color: string; bg: string; border: string }> = {
+type CareMeta = { icon: React.ReactNode; color: string; bg: string; border: string };
+
+const CARE_META: Record<string, CareMeta> = {
   Water:     { icon: <Droplets size={13} />, color: "text-blue-700 dark:text-blue-400",     bg: "bg-blue-100 dark:bg-blue-900/30",     border: "border-blue-200 dark:border-blue-800"     },
   Fertilize: { icon: <Leaf size={13} />,     color: "text-leaf",                            bg: "bg-[#DFE7D4] dark:bg-forest/30",      border: "border-[#C5D4BC] dark:border-forest"      },
   Repot:     { icon: <Flower2 size={13} />,  color: "text-amber-700 dark:text-amber-400",   bg: "bg-amber-100 dark:bg-amber-900/30",   border: "border-amber-200 dark:border-amber-800"   },
   Prune:     { icon: <Scissors size={13} />, color: "text-purple-700 dark:text-purple-400", bg: "bg-purple-100 dark:bg-purple-900/30", border: "border-purple-200 dark:border-purple-800" },
 };
+
+// Custom care tags (e.g. Mist, Rotate) fall back to the violet "custom" style,
+// mirroring how the real care schedule renders user-defined schedules.
+const CUSTOM_META: CareMeta = {
+  icon: <Sparkles size={13} />,
+  color: "text-violet-700 dark:text-violet-400",
+  bg: "bg-violet-100 dark:bg-violet-900/30",
+  border: "border-violet-200 dark:border-violet-800",
+};
+
+function getMeta(careType: string): CareMeta {
+  return CARE_META[careType] ?? CUSTOM_META;
+}
 
 function urgencyLabel(days: number): { label: string; color: string } {
   if (days < 0) return { label: `${Math.abs(days)}d overdue`, color: "text-red-600 dark:text-red-400" };
@@ -42,7 +57,7 @@ function nudge() {
 }
 
 function TaskRow({ task }: { task: DemoCareTask }) {
-  const meta = CARE_META[task.careType];
+  const meta = getMeta(task.careType);
   const { label, color } = urgencyLabel(task.daysUntilDue);
   return (
     <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg border bg-background">

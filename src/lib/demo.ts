@@ -27,20 +27,32 @@ export type DemoCareTask = {
   /** Public plant image URL, or null to render the 🌿 emoji fallback. */
   image: string | null;
   location: string | null;
-  careType: "Water" | "Fertilize" | "Repot" | "Prune";
+  /** "Water" | "Fertilize" | "Repot" | "Prune", or any custom label (isCustom). */
+  careType: string;
+  /** True for user-defined care tags (e.g. Mist, Rotate) — rendered with the custom style. */
+  isCustom?: boolean;
   /** Days from today: <0 overdue, 0 due today, >0 upcoming. */
   daysUntilDue: number;
   /** How often this task recurs, in days (drives the week-strip projection). */
   interval: number;
 };
 
+// A spread of care types so the demo shows the full feature, not just watering.
+// Today deliberately carries a mix (water, fertilize, repot, custom) so the
+// default view sells the variety; prune + another custom tag land later in the week.
 export const DEMO_CARE_TASKS: DemoCareTask[] = [
-  { id: "d1", plantName: "Monstera Deliciosa", image: null, location: "Living room",  careType: "Water",     daysUntilDue: -2, interval: 7  },
-  { id: "d2", plantName: "Fiddle Leaf Fig",    image: null, location: "Office",       careType: "Water",     daysUntilDue: 0,  interval: 7  },
-  { id: "d3", plantName: "Snake Plant",        image: null, location: "Bedroom",      careType: "Water",     daysUntilDue: 0,  interval: 14 },
-  { id: "d4", plantName: "Pothos 'Golden'",    image: null, location: "Kitchen",      careType: "Fertilize", daysUntilDue: 2,  interval: 30 },
-  { id: "d5", plantName: "Calathea Orbifolia", image: null, location: "Bathroom",     careType: "Water",     daysUntilDue: 3,  interval: 5  },
-  { id: "d6", plantName: "ZZ Plant",           image: null, location: "Entryway",     careType: "Prune",     daysUntilDue: 5,  interval: 90 },
+  // ── Today: overdue ──
+  { id: "d1", plantName: "Monstera Deliciosa", image: null, location: "Living room", careType: "Water",     daysUntilDue: -2, interval: 7   },
+  { id: "d2", plantName: "Pothos 'Golden'",    image: null, location: "Kitchen",     careType: "Fertilize", daysUntilDue: -1, interval: 30  },
+  // ── Today: due today ──
+  { id: "d3", plantName: "Fiddle Leaf Fig",    image: null, location: "Office",      careType: "Water",     daysUntilDue: 0,  interval: 7   },
+  { id: "d4", plantName: "Calathea Orbifolia", image: null, location: "Bathroom",    careType: "Mist",      daysUntilDue: 0,  interval: 7, isCustom: true },
+  { id: "d5", plantName: "ZZ Plant",           image: null, location: "Entryway",    careType: "Repot",     daysUntilDue: 0,  interval: 365 },
+  // ── Upcoming this week ──
+  { id: "d6", plantName: "Snake Plant",        image: null, location: "Bedroom",     careType: "Water",     daysUntilDue: 2,  interval: 14  },
+  { id: "d7", plantName: "Monstera Deliciosa", image: null, location: "Living room", careType: "Prune",     daysUntilDue: 3,  interval: 90  },
+  { id: "d8", plantName: "Rubber Plant",       image: null, location: "Hallway",     careType: "Rotate",    daysUntilDue: 4,  interval: 14, isCustom: true },
+  { id: "d9", plantName: "Bird's Nest Fern",   image: null, location: "Bathroom",    careType: "Fertilize", daysUntilDue: 5,  interval: 30  },
 ];
 
 /** Stat strip shown above the demo care schedule. */

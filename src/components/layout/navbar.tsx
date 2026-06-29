@@ -146,7 +146,7 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
             {user ? (
               <>
                 {/* Logged in: lead with the daily-habit, owner-facing features */}
-                <Link href="/garden" className="text-foreground hover:text-leaf transition-colors">
+                <Link href="/garden" className="text-muted-foreground hover:text-foreground transition-colors">
                   My Garden
                 </Link>
                 <Link href="/garden/care" className="text-muted-foreground hover:text-foreground transition-colors">
@@ -174,7 +174,7 @@ export default function Navbar({ user, avatarUrl, username, isAdmin, unreadMessa
                 <Link href="/auctions" className="text-muted-foreground hover:text-foreground transition-colors">
                   Auctions
                 </Link>
-                <Link href="/demo" className="text-foreground hover:text-leaf transition-colors">
+                <Link href="/demo" className="text-muted-foreground hover:text-foreground transition-colors">
                   My Garden
                 </Link>
                 <Link href="/community" className="text-muted-foreground hover:text-foreground transition-colors">
