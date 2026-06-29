@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import type { EmailOtpType } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,33 +23,62 @@ function ResetForm() {
 
   useEffect(() => {
     const supabase = createClient();
+    let settled = false;
     let timerHandle: ReturnType<typeof setTimeout>;
 
-    // Only trust the PASSWORD_RECOVERY event — never an existing session.
-    // Using getSession() here would pick up any already-logged-in user and
-    // update the wrong account's password.
+    const markReady = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timerHandle);
+      setReady(true);
+    };
+    const markInvalid = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timerHandle);
+      setInvalid(true);
+    };
+
+    // verifyOtp (recovery) and hash-based recovery links both emit
+    // PASSWORD_RECOVERY. We never call getSession() here — readiness is only ever
+    // triggered by verifying the emailed token, so we can't update the wrong
+    // (already-logged-in) account's password.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") {
-        clearTimeout(timerHandle);
-        setReady(true);
-      }
+      if (event === "PASSWORD_RECOVERY") markReady();
     });
 
-    // PKCE flow: Supabase may put a code in the URL instead of a hash fragment.
-    // Exchange it so the PASSWORD_RECOVERY event fires via onAuthStateChange above.
-    const code = new URLSearchParams(window.location.search).get("code");
-    if (code) {
-      supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
-        if (error) {
-          clearTimeout(timerHandle);
-          setInvalid(true);
-        }
-      });
+    const url = new URL(window.location.href);
+    const hashParams = new URLSearchParams(url.hash.replace(/^#/, ""));
+
+    // Supabase can bounce back with an explicit error (token expired or already
+    // used — common when an email scanner pre-opens the link). Fail fast instead
+    // of waiting out the timeout.
+    if (url.searchParams.get("error") || hashParams.get("error")) {
+      markInvalid();
+    } else {
+      const tokenHash = url.searchParams.get("token_hash");
+      const type = url.searchParams.get("type");
+      const code = url.searchParams.get("code");
+
+      if (tokenHash && type) {
+        // Primary flow: OTP token hash. Verified here with no PKCE code verifier,
+        // so the link works on ANY device or email app — not just the browser
+        // that requested the reset.
+        supabase.auth
+          .verifyOtp({ token_hash: tokenHash, type: type as EmailOtpType })
+          .then(({ error }) => (error ? markInvalid() : markReady()));
+      } else if (code) {
+        // Back-compat: older PKCE links (only work in the same browser that
+        // requested the reset — kept so already-sent emails still function).
+        supabase.auth
+          .exchangeCodeForSession(code)
+          .then(({ error }) => (error ? markInvalid() : markReady()));
+      }
+      // Otherwise rely on a hash-based PASSWORD_RECOVERY event, or the timeout.
     }
 
     // Generous timeout for slow connections (Gmail on mobile is especially slow).
-    // PASSWORD_RECOVERY event clears this before it fires.
-    timerHandle = setTimeout(() => setInvalid(true), 10000);
+    timerHandle = setTimeout(markInvalid, 10000);
 
     return () => {
       subscription.unsubscribe();
