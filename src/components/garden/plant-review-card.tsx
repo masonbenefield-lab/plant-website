@@ -78,15 +78,16 @@ export function PlantReviewCard({ draft, onChange, onRemove }: Props) {
           className={cn("text-muted-foreground shrink-0 transition-transform", open && "rotate-180")}
         />
         <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
-          {draft.name.trim() ? (
-            <span className="text-sm font-semibold truncate">{draft.name}</span>
-          ) : draft.variety.trim() ? (
+          {/* Variety leads (bold); plant type follows. Whichever is missing is omitted. */}
+          {draft.variety.trim() ? (
             <span className="text-sm font-semibold truncate">{draft.variety}</span>
+          ) : draft.name.trim() ? (
+            <span className="text-sm font-semibold truncate">{draft.name}</span>
           ) : (
             <span className="text-sm text-muted-foreground italic">Unnamed plant</span>
           )}
-          {draft.variety && (
-            <span className="text-xs text-muted-foreground truncate">{draft.variety}</span>
+          {draft.variety.trim() && draft.name.trim() && (
+            <span className="text-xs text-muted-foreground truncate">{draft.name}</span>
           )}
           <span className={cn("text-xs px-1.5 py-0.5 rounded-full font-medium shrink-0", statusMeta.color)}>
             {statusMeta.label}
