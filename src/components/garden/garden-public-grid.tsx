@@ -53,6 +53,7 @@ export function GardenPublicGrid({
   ownerId,
   userWishlistItems,
   from,
+  showVerified,
 }: {
   plants: Plant[];
   username: string;
@@ -61,6 +62,8 @@ export function GardenPublicGrid({
   userWishlistItems?: WishlistRef[];
   /** Navigation context passed to plant detail pages (e.g. "demo") so their back link returns here. */
   from?: string;
+  /** Demo-only: show a sample "Verified" badge on each card to surface the origin-verification feature. */
+  showVerified?: boolean;
 }) {
   const showSave = !!(currentUserId && ownerId && currentUserId !== ownerId);
   const [q, setQ] = useState("");
@@ -135,6 +138,14 @@ export function GardenPublicGrid({
                     </>
                   ) : (
                     <p className="font-semibold leading-tight">{plant.name}</p>
+                  )}
+                  {showVerified && (
+                    <span className="inline-flex items-center gap-1 text-xs font-medium text-leaf">
+                      <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 shrink-0" aria-label="Verified">
+                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      Verified by Demo
+                    </span>
                   )}
                   <div className="flex items-center gap-2 flex-wrap pt-0.5">
                     <span className={cn("text-xs px-2 py-0.5 rounded-full font-medium", STATUS_COLOR[plant.status] ?? "bg-muted text-muted-foreground")}>

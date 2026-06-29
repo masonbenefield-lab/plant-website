@@ -229,6 +229,18 @@ export default async function PublicPlantDetailPage({
                   </Link>
                 </div>
               )}
+              {/* Demo-only sample verification, to surface the origin-verify feature */}
+              {fromDemo && !verifiedSourceUsername && (
+                <div className="flex justify-between gap-3 text-sm">
+                  <span className="text-muted-foreground shrink-0">Origin</span>
+                  <span className="font-medium text-leaf flex items-center gap-1">
+                    Verified by Demo
+                    <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 text-leaf" aria-label="Verified">
+                      <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </span>
+                </div>
+              )}
             </CardContent>
           </Card>
 
