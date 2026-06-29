@@ -265,10 +265,10 @@ export default async function PublicPlantDetailPage({
               <div className="flex-1 min-w-0">
                 <p className="text-xs text-muted-foreground">Grown by</p>
                 <Link
-                  href={fromStorefront ? `/sellers/${username}?tab=garden` : `/gardens/${username}`}
+                  href={fromStorefront ? `/sellers/${username}?tab=garden` : fromDemo ? "/demo" : `/gardens/${username}`}
                   className="text-sm font-medium hover:text-leaf transition-colors truncate block"
                 >
-                  {displayName}
+                  {rawName}
                 </Link>
               </div>
             </CardContent>
