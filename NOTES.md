@@ -1853,3 +1853,10 @@ Deploy the code FIRST, then change the template.
 
 SQL migrations: none. Env vars: none.
 Build: `next build` passes. Live verification pending (deploy + template change + phone test).
+
+## 2026-06-30 — Sign in with Apple (Apple rejection 4.8)
+
+- Added "Continue with Apple" / "Sign up with Apple" buttons to `src/app/login/page.tsx` and `src/app/signup/page.tsx`, mirroring the existing Google OAuth flow (`signInWithOAuth({ provider: "apple" })`). Apple-HIG black button styling.
+- No callback changes needed — `src/app/auth/callback/route.ts` already handles any OAuth provider generically.
+- REQUIRES backend config before it works: enable Apple provider in Supabase Auth + configure Sign in with Apple (Service ID, key) in Apple Developer portal.
+- Related Apple rejections (no code): 2.3.8 placeholder icon → needs finalized icon + rebuild; 5.1.2 → flip App Store Connect privacy labels "Used to Track You" → No (we don't track).
