@@ -1860,3 +1860,14 @@ Build: `next build` passes. Live verification pending (deploy + template change 
 - No callback changes needed — `src/app/auth/callback/route.ts` already handles any OAuth provider generically.
 - REQUIRES backend config before it works: enable Apple provider in Supabase Auth + configure Sign in with Apple (Service ID, key) in Apple Developer portal.
 - Related Apple rejections (no code): 2.3.8 placeholder icon → needs finalized icon + rebuild; 5.1.2 → flip App Store Connect privacy labels "Used to Track You" → No (we don't track).
+
+## 2026-07-01 — Admin Broadcast email tool (send to all opted-in users)
+
+New reusable admin tool to compose + preview + one-click send a branded email to every `email_marketing_opt_in = true` user. Built for the July giveaway announcement (Cravens Craving Fig winner @Mozart007 + new Felco Pruners giveaway) but general-purpose for any future announcement.
+
+- **`src/lib/email.ts`** — added `buildAnnouncementHtml()`, `sendAnnouncement()`, `AnnouncementEmail` type, and a tiny Markdown→HTML converter (`simpleMarkdownToHtml`: `**bold**`, `[label](url)`, `- bullet`, `## / ###` headings, `---` divider, blank line = paragraph). Includes an optional personalized referral-bonus block (per-user `referral_code` → `/signup?ref=CODE`). Reuses existing `emailBase`/`ctaBtn` + per-user signed `unsubUrl`. Ban filtering is inherited from `getResend()`.
+- **`src/app/api/admin/broadcast/route.ts`** — POST, admin-gated. Three modes: `preview` (returns HTML, no send), `test` (sends only to the signed-in admin), `send` (all opted-in, `deleted_at` null). Emails resolved from `auth.admin.listUsers` with pagination; sends in batches of 5 via `Promise.allSettled`; returns `{ sent, failed, total }`. `maxDuration = 300`.
+- **`src/app/admin/broadcast/page.tsx`** + **`broadcast-client.tsx`** — composer with live debounced preview, "Send test to me", and a type-"SEND"-to-confirm gate for the real send. Shows live opted-in count. Felco/July draft pre-filled.
+- **`src/app/admin/admin-nav.tsx`** — added "Broadcast" nav link.
+- No new migrations, no new env vars (uses existing `RESEND_API_KEY`, `CRON_SECRET` for unsub token, service role key).
+- Note: opt-in flag lives on `profiles.email_marketing_opt_in`; unsubscribe link flips it to false (existing `/api/unsubscribe`). tsc --noEmit passes clean.

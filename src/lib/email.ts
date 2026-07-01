@@ -1,11 +1,56 @@
 import { Resend } from "resend";
 import { createHmac } from "crypto";
+import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { centsToDisplay } from "./stripe";
+import type { Database } from "./supabase/types";
 
 const FROM = "Plantet <noreply@plantet.shop>";
 
+// Returns the subset of recipient addresses that belong to banned accounts, so
+// we never email a banned user. Banned state lives on auth.users / profiles, but
+// every mailer addresses people by email — filter_banned_emails (migration 028)
+// bridges the two. Fails open: if the lookup errors we send anyway, since
+// dropping legitimate transactional mail on a transient DB hiccup is worse than
+// a banned user occasionally slipping through.
+async function bannedRecipients(emails: string[]): Promise<Set<string>> {
+  const unique = [...new Set(emails.map((e) => e.toLowerCase().trim()).filter(Boolean))];
+  if (unique.length === 0) return new Set();
+  try {
+    const admin = createAdminClient<Database>(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data } = await (admin as any).rpc("filter_banned_emails", { p_emails: unique });
+    return new Set(((data as string[] | null) ?? []).map((e) => e.toLowerCase()));
+  } catch {
+    return new Set();
+  }
+}
+
+// Wraps the Resend client so every send across this module is filtered through
+// the ban check at a single choke point — banned recipients are dropped before
+// the email goes out, and a send to an all-banned recipient list is skipped
+// entirely. New senders get this for free without touching the call site.
 function getResend() {
-  return new Resend(process.env.RESEND_API_KEY!);
+  const client = new Resend(process.env.RESEND_API_KEY!);
+  return {
+    emails: {
+      send: async (opts: Parameters<typeof client.emails.send>[0]) => {
+        const toList = (Array.isArray(opts.to) ? opts.to : opts.to ? [opts.to] : []) as string[];
+        const banned = await bannedRecipients(toList);
+        if (banned.size > 0) {
+          const allowed = toList.filter((e) => !banned.has(e.toLowerCase().trim()));
+          if (allowed.length === 0) {
+            // Every recipient is banned — skip the send entirely.
+            return { data: null, error: null };
+          }
+          return client.emails.send({ ...opts, to: allowed });
+        }
+        return client.emails.send(opts);
+      },
+    },
+  };
 }
 
 function siteBase(): string {
@@ -1417,6 +1462,131 @@ export function makeUnsubToken(userId: string): string {
 function unsubUrl(userId: string): string {
   const base = siteBase();
   return `${base}/api/unsubscribe?uid=${userId}&sig=${makeUnsubToken(userId)}`;
+}
+
+// ─── Broadcast / announcement email (admin → all opted-in users) ──────────────
+// A reusable, admin-composed email. The body is written in a tiny subset of
+// Markdown so a non-technical admin can format it without touching HTML:
+//   **bold**              → bold
+//   [label](https://url)  → link
+//   - item                → bullet list
+//   ## Heading            → section heading
+//   ### Subheading        → smaller heading
+//   ---                   → divider
+//   blank line            → new paragraph
+
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function inlineMd(s: string): string {
+  let t = escapeHtml(s);
+  t = t.replace(
+    /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+    '<a href="$2" style="color:#2F7D54;text-decoration:underline;">$1</a>'
+  );
+  t = t.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  return t;
+}
+
+function simpleMarkdownToHtml(md: string): string {
+  const lines = md.replace(/\r\n/g, "\n").split("\n");
+  const out: string[] = [];
+  let listBuf: string[] = [];
+  const flushList = () => {
+    if (listBuf.length) {
+      out.push(
+        `<ul style="margin:0 0 16px;padding-left:20px;">${listBuf
+          .map((li) => `<li style="margin:0 0 6px;">${li}</li>`)
+          .join("")}</ul>`
+      );
+      listBuf = [];
+    }
+  };
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) { flushList(); continue; }
+    if (line.startsWith("- ")) { listBuf.push(inlineMd(line.slice(2))); continue; }
+    flushList();
+    if (line.startsWith("### ")) {
+      out.push(`<p style="margin:20px 0 8px;font-size:16px;font-weight:700;color:#16201B;">${inlineMd(line.slice(4))}</p>`);
+    } else if (line.startsWith("## ")) {
+      out.push(`<p style="margin:24px 0 10px;font-size:19px;font-weight:700;color:#1F4736;">${inlineMd(line.slice(3))}</p>`);
+    } else if (line === "---") {
+      out.push(`<div style="height:1px;background:#DED6C4;margin:20px 0;"></div>`);
+    } else {
+      out.push(`<p style="margin:0 0 16px;">${inlineMd(line)}</p>`);
+    }
+  }
+  flushList();
+  return out.join("\n");
+}
+
+function referralBlockHtml(referralLink?: string): string {
+  const linkPart = referralLink
+    ? `<p style="margin:12px 0 0;font-size:13px;color:#6B7E72;">Your personal referral link:</p>
+       <p style="margin:4px 0 0;"><a href="${referralLink}" style="color:#2F7D54;font-weight:600;text-decoration:underline;word-break:break-all;">${referralLink}</a></p>`
+    : `<p style="margin:12px 0 0;font-size:14px;">Grab your personal link on the <a href="${siteBase()}/giveaway" style="color:#2F7D54;text-decoration:underline;">giveaway page</a> and start sharing.</p>`;
+  return `<table width="100%" cellpadding="0" cellspacing="0" style="background:#EFE7D6;border:1px solid #DED6C4;border-radius:10px;margin:24px 0 8px;"><tr><td style="padding:18px 20px;">
+    <p style="margin:0 0 10px;font-size:15px;font-weight:700;color:#1F4736;">&#128640; Want better odds? Refer friends for bonus entries</p>
+    <p style="margin:0 0 8px;font-size:14px;">Earn extra giveaway entries for every friend you bring in:</p>
+    <ul style="margin:0;padding-left:20px;font-size:14px;">
+      <li style="margin:0 0 4px;"><strong>+1</strong> when they add their first plant to their garden</li>
+      <li style="margin:0 0 4px;"><strong>+1</strong> when they make their first community post</li>
+      <li style="margin:0 0 4px;"><strong>+2</strong> when they list an item or start an auction</li>
+      <li style="margin:0 0 4px;"><strong>+3</strong> when they make their first purchase</li>
+    </ul>
+    <p style="margin:10px 0 0;font-size:13px;color:#6B7E72;">No limit — the more you refer, the more entries you earn.</p>
+    ${linkPart}
+  </td></tr></table>`;
+}
+
+export interface AnnouncementEmail {
+  subject: string;
+  heading: string;
+  subheading?: string;
+  bodyMarkdown: string;
+  ctaLabel?: string;
+  ctaUrl?: string;
+  includeReferralBlock?: boolean;
+}
+
+export function buildAnnouncementHtml(
+  a: AnnouncementEmail,
+  ctx?: { referralLink?: string; unsubLink?: string }
+): string {
+  const bodyHtml = simpleMarkdownToHtml(a.bodyMarkdown);
+  const cta = a.ctaLabel && a.ctaUrl ? ctaBtn(a.ctaLabel, a.ctaUrl) : "";
+  const referral = a.includeReferralBlock ? referralBlockHtml(ctx?.referralLink) : "";
+  return emailBase({
+    title: a.heading,
+    heading: a.heading,
+    subheading: a.subheading,
+    body: `${bodyHtml}${cta}${referral}`,
+    footerNote: "You're receiving this because you opted in to updates from Plantet.",
+    unsubLink: ctx?.unsubLink,
+  });
+}
+
+export async function sendAnnouncement({
+  recipientEmail,
+  userId,
+  referralCode,
+  email,
+}: {
+  recipientEmail: string;
+  userId: string;
+  referralCode?: string | null;
+  email: AnnouncementEmail;
+}) {
+  const resend = getResend();
+  const referralLink = referralCode ? `${siteBase()}/signup?ref=${referralCode}` : undefined;
+  await resend.emails.send({
+    from: FROM,
+    to: recipientEmail,
+    subject: email.subject,
+    html: buildAnnouncementHtml(email, { referralLink, unsubLink: unsubUrl(userId) }),
+  });
 }
 
 function plantCardHtml(listing: DigestListing, siteUrl: string): string {
