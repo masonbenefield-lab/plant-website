@@ -36,6 +36,7 @@ export function BroadcastClient({
   const [sending, setSending] = useState(false);
   const [confirmText, setConfirmText] = useState("");
   const [testEmail, setTestEmail] = useState(adminEmail);
+  const [excludeEmails, setExcludeEmails] = useState("");
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) =>
@@ -92,14 +93,17 @@ export function BroadcastClient({
     setStatus(null);
     setSending(true);
     try {
-      const data = await post("send");
+      const data = await post("send", { excludeEmails });
       if (data.error) {
         setStatus({ kind: "err", msg: data.error });
       } else {
-        const failNote = data.failed ? ` (${data.failed} failed)` : "";
+        const parts = [`Sent ${data.sent} of ${data.total}`];
+        if (data.failed) parts.push(`${data.failed} failed`);
+        if (data.skippedBanned) parts.push(`${data.skippedBanned} banned skipped`);
+        if (data.excluded) parts.push(`${data.excluded} excluded`);
         setStatus({
-          kind: "ok",
-          msg: `Sent to ${data.sent} of ${data.total} opted-in users${failNote}.`,
+          kind: data.failed ? "err" : "ok",
+          msg: `${parts.join(" · ")}.`,
         });
         setConfirmText("");
       }
@@ -186,6 +190,20 @@ export function BroadcastClient({
                 {testing ? "Sending…" : "Send test"}
               </button>
             </div>
+          </div>
+
+          <div className="rounded-md border p-3 space-y-2">
+            <label className={labelCls}>Skip these addresses (optional)</label>
+            <textarea
+              className={`${field} min-h-[70px] font-mono text-xs`}
+              placeholder="Paste emails to skip — e.g. anyone already sent this. Commas, spaces, or new lines all work."
+              value={excludeEmails}
+              onChange={(e) => setExcludeEmails(e.target.value)}
+            />
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              Anyone listed here is skipped. Useful for re-sends: paste the addresses that already
+              got it (from the Resend log) so they don&apos;t receive a duplicate.
+            </p>
           </div>
 
           <div className="rounded-md border border-red-300 bg-red-50 dark:bg-red-950/20 p-3 space-y-2">

@@ -1581,12 +1581,76 @@ export async function sendAnnouncement({
 }) {
   const resend = getResend();
   const referralLink = referralCode ? `${siteBase()}/signup?ref=${referralCode}` : undefined;
-  await resend.emails.send({
+  // The Resend SDK returns API errors (e.g. 429 rate limit) in `error` rather
+  // than throwing — surface them so callers don't count a failed send as sent.
+  const { error } = await resend.emails.send({
     from: FROM,
     to: recipientEmail,
     subject: email.subject,
     html: buildAnnouncementHtml(email, { referralLink, unsubLink: unsubUrl(userId) }),
   });
+  if (error) throw new Error(error.message || "Resend send failed");
+}
+
+// Bulk send via Resend's Batch API — up to 100 personalized emails in a single
+// request. This is how the admin Broadcast tool reaches everyone at once:
+// looping per-recipient send() trips Resend's ~2 req/sec rate limit (most sends
+// come back 429), whereas one batch request delivers the whole chunk. Banned
+// recipients are filtered once up front. Returns real counts.
+export async function sendAnnouncementBatch({
+  recipients,
+  email,
+}: {
+  recipients: { email: string; userId: string; referralCode?: string | null }[];
+  email: AnnouncementEmail;
+}): Promise<{ sent: number; failed: number; skippedBanned: number }> {
+  const client = new Resend(process.env.RESEND_API_KEY!);
+
+  const banned = await bannedRecipients(recipients.map((r) => r.email));
+  const allowed = recipients.filter((r) => !banned.has(r.email.toLowerCase().trim()));
+  const skippedBanned = recipients.length - allowed.length;
+
+  let sent = 0;
+  let failed = 0;
+  const CHUNK = 50; // Resend batch allows up to 100; 50 keeps each request's payload modest
+
+  for (let i = 0; i < allowed.length; i += CHUNK) {
+    const chunk = allowed.slice(i, i + CHUNK);
+    const payload = chunk.map((r) => ({
+      from: FROM,
+      to: r.email,
+      subject: email.subject,
+      html: buildAnnouncementHtml(email, {
+        referralLink: r.referralCode ? `${siteBase()}/signup?ref=${r.referralCode}` : undefined,
+        unsubLink: unsubUrl(r.userId),
+      }),
+    }));
+
+    try {
+      // 'permissive' → a single bad address is reported in `errors` instead of
+      // failing the entire batch.
+      const { data, error } = await client.batch.send(payload, { batchValidation: "permissive" });
+      if (error) {
+        failed += chunk.length;
+      } else {
+        const d = data as { data?: { id: string }[]; errors?: { index: number; message: string }[] } | null;
+        const ok = d?.data?.length ?? 0;
+        const errs = d?.errors?.length ?? 0;
+        sent += ok;
+        failed += errs + Math.max(0, chunk.length - ok - errs);
+      }
+    } catch {
+      failed += chunk.length;
+    }
+
+    // Space multiple chunks apart so back-to-back batch requests stay under the
+    // per-second request limit. (No-op for lists of 100 or fewer.)
+    if (i + CHUNK < allowed.length) {
+      await new Promise((res) => setTimeout(res, 700));
+    }
+  }
+
+  return { sent, failed, skippedBanned };
 }
 
 function plantCardHtml(listing: DigestListing, siteUrl: string): string {

@@ -5,20 +5,19 @@ import type { Database } from "@/lib/supabase/types";
 import {
   buildAnnouncementHtml,
   sendAnnouncement,
+  sendAnnouncementBatch,
   type AnnouncementEmail,
 } from "@/lib/email";
 
 export const maxDuration = 300;
-
-// Sending to a large opted-in list can take a while — do it a few at a time to
-// stay clear of provider rate limits while keeping wall-clock reasonable.
-const BATCH_SIZE = 5;
 
 type Mode = "preview" | "test" | "send";
 
 interface BroadcastBody extends AnnouncementEmail {
   mode: Mode;
   testEmail?: string;
+  // Newline/comma-separated addresses to skip (e.g. people already emailed).
+  excludeEmails?: string;
 }
 
 function sampleReferralLink(): string {
@@ -43,7 +42,7 @@ export async function POST(req: Request) {
   }
 
   const body = (await req.json()) as BroadcastBody;
-  const { mode, subject, heading, subheading, bodyMarkdown, ctaLabel, ctaUrl, includeReferralBlock, testEmail } = body;
+  const { mode, subject, heading, subheading, bodyMarkdown, ctaLabel, ctaUrl, includeReferralBlock, testEmail, excludeEmails } = body;
 
   const email: AnnouncementEmail = {
     subject,
@@ -121,29 +120,25 @@ export async function POST(req: Request) {
     page++;
   }
 
-  const targets = recipients
+  // Addresses to skip (e.g. people who already received an earlier attempt).
+  const excludeSet = new Set(
+    (excludeEmails ?? "")
+      .split(/[\s,;]+/)
+      .map((e) => e.toLowerCase().trim())
+      .filter(Boolean)
+  );
+
+  const resolved = recipients
     .map((r) => ({ id: r.id, email: emailMap[r.id], referralCode: (r as { referral_code?: string | null }).referral_code }))
     .filter((t): t is { id: string; email: string; referralCode: string | null | undefined } => Boolean(t.email));
 
-  let sent = 0;
-  let failed = 0;
-  for (let i = 0; i < targets.length; i += BATCH_SIZE) {
-    const batch = targets.slice(i, i + BATCH_SIZE);
-    const results = await Promise.allSettled(
-      batch.map((t) =>
-        sendAnnouncement({
-          recipientEmail: t.email,
-          userId: t.id,
-          referralCode: t.referralCode,
-          email,
-        })
-      )
-    );
-    for (const r of results) {
-      if (r.status === "fulfilled") sent++;
-      else failed++;
-    }
-  }
+  const targets = resolved.filter((t) => !excludeSet.has(t.email.toLowerCase().trim()));
+  const excluded = resolved.length - targets.length;
 
-  return NextResponse.json({ sent, failed, total: targets.length });
+  const { sent, failed, skippedBanned } = await sendAnnouncementBatch({
+    recipients: targets.map((t) => ({ email: t.email, userId: t.id, referralCode: t.referralCode })),
+    email,
+  });
+
+  return NextResponse.json({ sent, failed, skippedBanned, excluded, total: targets.length });
 }
