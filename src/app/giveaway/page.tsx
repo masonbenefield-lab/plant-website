@@ -60,12 +60,23 @@ export default async function GiveawayPage() {
       .limit(3),
   ]);
 
-  // Fetch winner usernames
+  // Fetch winner usernames + link targets
   const winnerIds = (pastGiveaways ?? []).map((g) => g.winner_user_id).filter(Boolean) as string[];
   const { data: winnerProfiles } = winnerIds.length
-    ? await admin.from("profiles").select("id, username, display_name").in("id", winnerIds)
-    : { data: [] as { id: string; username: string; display_name: string | null }[] };
-  const winnerMap = Object.fromEntries((winnerProfiles ?? []).map((p) => [p.id, { username: p.username, name: p.display_name ?? p.username }]));
+    ? await admin.from("profiles").select("id, username, display_name, stripe_onboarded, garden_public").in("id", winnerIds)
+    : { data: [] as { id: string; username: string; display_name: string | null; stripe_onboarded: boolean | null; garden_public: boolean | null }[] };
+  const winnerMap = Object.fromEntries(
+    (winnerProfiles ?? []).map((p) => {
+      // Link a winner to their shop if they're a seller, otherwise their public
+      // garden. If they have neither, leave the name unlinked — nothing to show.
+      const href = p.stripe_onboarded
+        ? `/sellers/${encodeURIComponent(p.username)}`
+        : p.garden_public
+          ? `/gardens/${encodeURIComponent(p.username)}`
+          : null;
+      return [p.id, { username: p.username, name: p.display_name ?? p.username, href }];
+    })
+  );
 
   // Check if current user has already entered + has open sponsor request + referral data
   let alreadyEntered = false;
@@ -311,10 +322,20 @@ export default async function GiveawayPage() {
                   )}
                 </div>
                 {g.winner_user_id && winnerMap[g.winner_user_id] && (
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <Trophy size={13} className="text-amber-500" />
-                    <span className="text-xs font-medium">{winnerMap[g.winner_user_id].name}</span>
-                  </div>
+                  winnerMap[g.winner_user_id].href ? (
+                    <Link
+                      href={winnerMap[g.winner_user_id].href!}
+                      className="flex items-center gap-1.5 shrink-0 hover:text-leaf transition-colors"
+                    >
+                      <Trophy size={13} className="text-amber-500" />
+                      <span className="text-xs font-medium hover:underline">{winnerMap[g.winner_user_id].name}</span>
+                    </Link>
+                  ) : (
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <Trophy size={13} className="text-amber-500" />
+                      <span className="text-xs font-medium">{winnerMap[g.winner_user_id].name}</span>
+                    </div>
+                  )
                 )}
               </div>
             ))}
