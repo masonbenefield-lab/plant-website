@@ -178,8 +178,24 @@ export default async function GiveawayPage() {
           {/* Plant card */}
           <div className="rounded-2xl border overflow-hidden shadow-sm grid grid-cols-1 md:grid-cols-2">
             {giveaway.image_url && (
-              <div className="relative w-full aspect-square bg-muted">
-                <Image src={giveaway.image_url} alt={giveaway.plant_name} fill sizes="(max-width: 768px) 100vw, 400px" className="object-cover" />
+              <div className="relative w-full aspect-square md:aspect-auto bg-muted overflow-hidden">
+                {/* Blurred, zoomed copy fills the space so tall cards never show an empty gap */}
+                <Image
+                  src={giveaway.image_url}
+                  alt=""
+                  aria-hidden
+                  fill
+                  sizes="(max-width: 768px) 100vw, 400px"
+                  className="object-cover scale-125 blur-2xl opacity-60"
+                />
+                {/* Full, uncropped image centered on top */}
+                <Image
+                  src={giveaway.image_url}
+                  alt={giveaway.plant_name}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 400px"
+                  className="object-contain p-4 sm:p-6"
+                />
               </div>
             )}
             <div className="p-6 sm:p-8 space-y-4 flex flex-col justify-center">
