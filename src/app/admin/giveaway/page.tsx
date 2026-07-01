@@ -20,7 +20,7 @@ export default async function AdminGiveawayPage() {
   const [{ data: months }, { data: requests }] = await Promise.all([
     admin
       .from("giveaway_months")
-      .select("month, plant_name, description, image_url, sponsor_name, sponsor_username, sponsor_logo_url, sponsor_message")
+      .select("month, plant_name, description, image_url, sponsor_name, sponsor_username, sponsor_logo_url, sponsor_message, winner_user_id")
       .order("month", { ascending: false })
       .limit(12),
     admin
@@ -36,11 +36,28 @@ export default async function AdminGiveawayPage() {
     : { data: [] };
   const requesterMap = Object.fromEntries((requesters ?? []).map((p) => [p.id, p]));
 
+  // Resolve already-saved winners so the admin panel can show them (keyed by month).
+  const winnerIds = [...new Set((months ?? []).map((m) => m.winner_user_id).filter(Boolean))] as string[];
+  const { data: winnerProfiles } = winnerIds.length
+    ? await admin.from("profiles").select("id, username, display_name").in("id", winnerIds)
+    : { data: [] as { id: string; username: string; display_name: string | null }[] };
+  const winnerById = Object.fromEntries((winnerProfiles ?? []).map((p) => [p.id, p]));
+  const winners: Record<string, { username: string; display_name: string | null }> = {};
+  for (const m of months ?? []) {
+    if (m.winner_user_id && winnerById[m.winner_user_id]) {
+      winners[m.month] = {
+        username: winnerById[m.winner_user_id].username,
+        display_name: winnerById[m.winner_user_id].display_name,
+      };
+    }
+  }
+
   return (
     <GiveawayAdminTabs
       months={months ?? []}
       requests={requests ?? []}
       requesterMap={requesterMap}
+      winners={winners}
     />
   );
 }

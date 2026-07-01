@@ -24,7 +24,13 @@ function monthLabel(m: string) {
   return new Date(y, mo - 1, 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
 }
 
-export function GiveawayAdminClient({ months }: { months: GiveawayMonth[] }) {
+export function GiveawayAdminClient({
+  months,
+  winners,
+}: {
+  months: GiveawayMonth[];
+  winners: Record<string, { username: string; display_name: string | null }>;
+}) {
   const [expandedMonth, setExpandedMonth] = useState<string | null>(months[0]?.month ?? null);
   const [data, setData] = useState<Record<string, GiveawayMonth>>(
     Object.fromEntries(months.map((m) => [m.month, m]))
@@ -74,7 +80,7 @@ export function GiveawayAdminClient({ months }: { months: GiveawayMonth[] }) {
                   />
                 </div>
                 <div className="border-t pt-4">
-                  <WinnerPicker month={m.month} />
+                  <WinnerPicker month={m.month} savedWinner={winners[m.month] ?? null} />
                 </div>
               </div>
             )}
@@ -356,13 +362,21 @@ interface PickedUser {
   total_pool: number;
 }
 
-function WinnerPicker({ month }: { month: string }) {
+function WinnerPicker({
+  month,
+  savedWinner,
+}: {
+  month: string;
+  savedWinner: { username: string; display_name: string | null } | null;
+}) {
   const [picking, setPicking] = useState(false);
   const [results, setResults] = useState<PickedUser[] | null>(null);
   const [totalEntrants, setTotalEntrants] = useState(0);
   const [totalPool, setTotalPool] = useState(0);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const savedName = savedWinner ? savedWinner.display_name || savedWinner.username : null;
+  const alreadyPicked = Boolean(savedWinner);
 
   async function handlePick() {
     setPicking(true);
@@ -404,10 +418,19 @@ function WinnerPicker({ month }: { month: string }) {
           disabled={picking}
           className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-leaf text-white hover:bg-forest disabled:opacity-50 transition-colors"
         >
-          {picking ? <Loader2 size={12} className="animate-spin" /> : results ? <RefreshCw size={12} /> : <Trophy size={12} />}
-          {picking ? "Drawing…" : results ? "Re-roll" : "Draw winner"}
+          {picking ? <Loader2 size={12} className="animate-spin" /> : (results || alreadyPicked) ? <RefreshCw size={12} /> : <Trophy size={12} />}
+          {picking ? "Drawing…" : results ? "Re-roll" : alreadyPicked ? "Re-draw" : "Draw winner"}
         </button>
       </div>
+
+      {alreadyPicked && !results && (
+        <div className="flex items-center gap-2 rounded-lg border border-sage dark:border-leaf bg-[#EBF0E6] dark:bg-forest/20 p-3">
+          <Trophy size={14} className="text-amber-500 shrink-0" />
+          <p className="text-sm">
+            <span className="font-semibold">Winner already picked:</span> {savedName}
+          </p>
+        </div>
+      )}
 
       {results && (
         <div className="space-y-2">

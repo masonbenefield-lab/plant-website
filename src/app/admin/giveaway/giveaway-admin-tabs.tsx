@@ -39,10 +39,12 @@ export function GiveawayAdminTabs({
   months,
   requests,
   requesterMap,
+  winners,
 }: {
   months: Month[];
   requests: Request[];
   requesterMap: Record<string, Profile>;
+  winners: Record<string, { username: string; display_name: string | null }>;
 }) {
   const [tab, setTab] = useState<Tab>("Monthly Sponsors");
   const openCount = requests.filter((r) => r.status === "open").length;
@@ -80,7 +82,7 @@ export function GiveawayAdminTabs({
       {tab === "Monthly Sponsors" && (
         <div className="space-y-4">
           <p className="text-muted-foreground text-sm">Set the sponsor shown on the public giveaway page.</p>
-          <GiveawayAdminClient months={months} />
+          <GiveawayAdminClient months={months} winners={winners} />
         </div>
       )}
 
