@@ -31,7 +31,7 @@ export function BroadcastClient({
   });
   const [previewHtml, setPreviewHtml] = useState("");
   const [previewLoading, setPreviewLoading] = useState(false);
-  const [status, setStatus] = useState<{ kind: "ok" | "err"; msg: string } | null>(null);
+  const [status, setStatus] = useState<{ kind: "ok" | "err" | "info"; msg: string } | null>(null);
   const [testing, setTesting] = useState(false);
   const [sending, setSending] = useState(false);
   const [confirmText, setConfirmText] = useState("");
@@ -66,22 +66,42 @@ export function BroadcastClient({
     };
   }, [refreshPreview]);
 
+  // Always resolves to a parsed object. On any non-OK / non-JSON response it
+  // returns an { error } so the caller can always show a message.
   async function post(mode: "test" | "send", extra?: Record<string, unknown>) {
-    const res = await fetch("/api/admin/broadcast", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mode, ...draft, ...extra }),
-    });
-    return res.json();
+    let res: Response;
+    try {
+      res = await fetch("/api/admin/broadcast", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode, ...draft, ...extra }),
+      });
+    } catch {
+      return { error: "Couldn't reach the server. The send may not have started — check the Resend log before retrying." };
+    }
+    let data: Record<string, unknown> | null = null;
+    try {
+      data = await res.json();
+    } catch {
+      data = null;
+    }
+    if (!res.ok) {
+      return {
+        error:
+          (data && (data.error as string)) ||
+          `Server error (${res.status}). Some emails may have gone out — check the Resend log before resending.`,
+      };
+    }
+    return data ?? { error: "The server returned an empty response. Check the Resend log before resending." };
   }
 
   async function onTest() {
-    setStatus(null);
+    setStatus({ kind: "info", msg: `Sending test to ${testEmail}…` });
     setTesting(true);
     try {
       const data = await post("test", { testEmail });
-      if (data.error) setStatus({ kind: "err", msg: data.error });
-      else setStatus({ kind: "ok", msg: `Test sent to ${data.recipient ?? testEmail}. Check that inbox.` });
+      if (data.error) setStatus({ kind: "err", msg: data.error as string });
+      else setStatus({ kind: "ok", msg: `✓ Test sent to ${data.recipient ?? testEmail}. Check that inbox.` });
     } catch {
       setStatus({ kind: "err", msg: "Failed to send test." });
     } finally {
@@ -90,20 +110,24 @@ export function BroadcastClient({
   }
 
   async function onSend() {
-    setStatus(null);
+    setStatus({
+      kind: "info",
+      msg: "Sending now… this can take up to a minute. Keep this tab open and don't click send again.",
+    });
     setSending(true);
     try {
       const data = await post("send", { excludeEmails });
       if (data.error) {
-        setStatus({ kind: "err", msg: data.error });
+        setStatus({ kind: "err", msg: data.error as string });
       } else {
+        const failed = Number(data.failed ?? 0);
         const parts = [`Sent ${data.sent} of ${data.total}`];
-        if (data.failed) parts.push(`${data.failed} failed`);
+        if (failed) parts.push(`${failed} failed`);
         if (data.skippedBanned) parts.push(`${data.skippedBanned} banned skipped`);
         if (data.excluded) parts.push(`${data.excluded} excluded`);
         setStatus({
-          kind: data.failed ? "err" : "ok",
-          msg: `${parts.join(" · ")}.`,
+          kind: failed ? "err" : "ok",
+          msg: `${failed ? "⚠" : "✓"} ${parts.join(" · ")}.`,
         });
         setConfirmText("");
       }
@@ -227,10 +251,12 @@ export function BroadcastClient({
 
           {status && (
             <p
-              className={`text-sm rounded-md px-3 py-2 ${
+              className={`text-sm font-medium rounded-md px-3 py-3 border ${
                 status.kind === "ok"
-                  ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
-                  : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
+                  ? "bg-green-100 text-green-800 border-green-300 dark:bg-green-900/30 dark:text-green-300"
+                  : status.kind === "info"
+                    ? "bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/30 dark:text-blue-300"
+                    : "bg-red-100 text-red-800 border-red-300 dark:bg-red-900/30 dark:text-red-300"
               }`}
             >
               {status.msg}
