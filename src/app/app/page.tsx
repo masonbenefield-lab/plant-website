@@ -1,153 +1,124 @@
-"use client";
-
-import { useEffect, useState } from "react";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
+import type { Metadata } from "next";
 
-type Platform = "ios" | "android" | "other";
+// Native app store listings
+const APP_STORE_URL = "https://apps.apple.com/app/id6783417415";
+const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=shop.plantet.app";
 
-function detectPlatform(): Platform {
-  const ua = navigator.userAgent;
-  if (/iphone|ipad|ipod/i.test(ua)) return "ios";
-  if (/android/i.test(ua)) return "android";
-  return "other";
+export const metadata: Metadata = {
+  title: "Get the Plantet App",
+  description:
+    "Download Plantet for iPhone and Android — track your plants, connect with growers, and buy or sell in one app.",
+  openGraph: {
+    title: "Get the Plantet App",
+    description:
+      "Download Plantet for iPhone and Android — track your plants, connect with growers, and buy or sell in one app.",
+    images: ["/plantet-app-icon-1024.png"],
+  },
+};
+
+// The Plantet sprout mark (matches the homepage logo)
+function SproutMark({ size = 64 }: { size?: number }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" fill="none" width={size} height={size}>
+      <g transform="translate(8 4)">
+        <path d="M40 82 C 40 66 40 56 40 46" stroke="#F6F2E9" strokeWidth="6" strokeLinecap="round" />
+        <g transform="translate(40 58) rotate(38)">
+          <path d="M0 0 C -15 -8 -15 -30 0 -44 C 15 -30 15 -8 0 0 Z" fill="#A8C19A" />
+        </g>
+        <g transform="translate(40 50) rotate(-38)">
+          <path d="M0 0 C -15 -8 -15 -30 0 -44 C 15 -30 15 -8 0 0 Z" fill="#F6F2E9" />
+        </g>
+      </g>
+    </svg>
+  );
 }
 
-export default function AppInstallPage() {
-  const [platform, setPlatform] = useState<Platform>("other");
-  const [deferredPrompt, setDeferredPrompt] = useState<Event & { prompt: () => void } | null>(null);
-  const [installed, setInstalled] = useState(false);
+export default async function AppRedirectPage() {
+  // Server-side device detection — instant redirect for phones, no flicker.
+  const ua = (await headers()).get("user-agent") ?? "";
 
-  useEffect(() => {
-    setPlatform(detectPlatform());
+  if (/iphone|ipad|ipod/i.test(ua)) redirect(APP_STORE_URL);
+  if (/android/i.test(ua)) redirect(PLAY_STORE_URL);
 
-    const handler = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e as Event & { prompt: () => void });
-    };
-    window.addEventListener("beforeinstallprompt", handler);
-    window.addEventListener("appinstalled", () => setInstalled(true));
-
-    return () => window.removeEventListener("beforeinstallprompt", handler);
-  }, []);
-
-  const handleAndroidInstall = () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    setDeferredPrompt(null);
-  };
-
+  // Desktop (and anything else): bridge them to their phone with a QR code.
   return (
-    <div className="min-h-screen flex flex-col items-center justify-start px-6 py-16 max-w-md mx-auto">
+    <main
+      className="min-h-screen flex items-center justify-center px-4 py-16 text-white"
+      style={{ background: "linear-gradient(160deg, #235140, #19392B)" }}
+    >
+      <div className="w-full max-w-md text-center">
+        <div className="flex justify-center mb-5">
+          <SproutMark size={60} />
+        </div>
 
-      {/* Icon + heading */}
-      <div className="flex flex-col items-center text-center space-y-4 mb-10">
-        <Image
-          src="/plantet-app-icon.png"
-          alt="Plantet app icon"
-          width={96}
-          height={96}
-          className="rounded-2xl shadow-md"
-        />
-        <div>
-          <h1 className="text-2xl font-bold">Get the Plantet App</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Add Plantet to your home screen for the best experience.
+        <span className="inline-block bg-white/20 text-white text-[11px] font-semibold uppercase tracking-widest px-4 py-1.5 rounded-full mb-5">
+          Now on iOS &amp; Android
+        </span>
+
+        <h1
+          className="text-3xl sm:text-4xl font-bold mb-3 tracking-[-0.02em]"
+          style={{ fontFamily: "var(--font-bricolage), sans-serif" }}
+        >
+          Get the Plantet app
+        </h1>
+        <p className="text-cream/80 mb-7 text-base leading-relaxed">
+          Track your plants, connect with fellow growers, and buy or sell — right from your phone.
+        </p>
+
+        {/* QR code — the key desktop → mobile bridge */}
+        <div className="bg-white rounded-3xl p-6 inline-flex flex-col items-center gap-3 mb-7 shadow-xl">
+          <Image
+            src="/app-qr.png"
+            alt="Scan to download the Plantet app"
+            width={190}
+            height={190}
+            className="rounded-lg"
+          />
+          <p className="text-[#1F4736] text-sm font-semibold">
+            📱 Scan with your phone to download
           </p>
         </div>
+
+        {/* Store badges */}
+        <div className="flex flex-col sm:flex-row gap-3 justify-center mb-8">
+          <a
+            href={APP_STORE_URL}
+            className="flex items-center justify-center gap-2.5 bg-black text-white rounded-xl px-5 py-2.5 hover:bg-neutral-800 transition-colors"
+          >
+            <svg viewBox="0 0 384 512" width="22" height="22" fill="currentColor" aria-hidden="true">
+              <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C61.5 141.2 0 184.5 0 272.5c0 26 4.8 52.9 14.3 80.6 12.7 36.5 58.9 126 107.1 124.5 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82 102.5-118.6-65.2-30.7-61.7-90-61.7-91.8zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z" />
+            </svg>
+            <span className="text-left leading-none">
+              <span className="block text-[10px] text-white/70">Download on the</span>
+              <span className="block text-base font-semibold -mt-0.5">App Store</span>
+            </span>
+          </a>
+
+          <a
+            href={PLAY_STORE_URL}
+            className="flex items-center justify-center gap-2.5 bg-black text-white rounded-xl px-5 py-2.5 hover:bg-neutral-800 transition-colors"
+          >
+            <svg viewBox="0 0 512 512" width="20" height="20" aria-hidden="true">
+              <path fill="#34d399" d="M47 20 L296 256 L47 492 C39 490 33 483 33 473 V39 C33 29 39 22 47 20 Z" />
+              <path fill="#f6f2e9" d="M296 256 L47 20 L360 200 Z" />
+              <path fill="#a8c19a" d="M296 256 L360 312 L47 492 Z" />
+              <path fill="#235140" d="M360 200 L440 246 C452 253 452 259 440 266 L360 312 L296 256 Z" />
+            </svg>
+            <span className="text-left leading-none">
+              <span className="block text-[10px] text-white/70">Get it on</span>
+              <span className="block text-base font-semibold -mt-0.5">Google Play</span>
+            </span>
+          </a>
+        </div>
+
+        <Link href="/" className="text-sm text-cream/60 hover:text-cream transition-colors underline underline-offset-2">
+          Continue to plantet.shop →
+        </Link>
       </div>
-
-      {/* iOS instructions */}
-      {platform === "ios" && (
-        <div className="w-full space-y-4">
-          <p className="text-sm font-semibold text-center text-muted-foreground uppercase tracking-wide mb-2">
-            iPhone / iPad
-          </p>
-          {[
-            { step: "1", text: 'Open plantet.shop in Safari (not Chrome).' },
-            {
-              step: "2",
-              text: (
-                <>
-                  Tap the{" "}
-                  <span className="inline-flex items-center gap-1 font-medium">
-                    Share
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
-                      <polyline points="16 6 12 2 8 6" />
-                      <line x1="12" y1="2" x2="12" y2="15" />
-                    </svg>
-                  </span>{" "}
-                  button at the bottom of the screen.
-                </>
-              ),
-            },
-            { step: "3", text: 'Scroll down and tap "Add to Home Screen."' },
-            { step: "4", text: 'Tap "Add" in the top right. Done!' },
-          ].map(({ step, text }) => (
-            <div key={step} className="flex items-start gap-4 bg-muted/50 rounded-xl p-4">
-              <span className="flex-shrink-0 w-7 h-7 rounded-full bg-[#2F7D54] text-white text-sm font-bold flex items-center justify-center">
-                {step}
-              </span>
-              <p className="text-sm leading-relaxed">{text}</p>
-            </div>
-          ))}
-
-          <p className="text-xs text-muted-foreground text-center pt-2">
-            The Plantet icon will appear on your home screen just like any other app.
-          </p>
-        </div>
-      )}
-
-      {/* Android instructions */}
-      {platform === "android" && (
-        <div className="w-full space-y-6">
-          {installed ? (
-            <div className="text-center space-y-2">
-              <p className="text-lg font-semibold">You&apos;re all set!</p>
-              <p className="text-sm text-muted-foreground">Plantet has been added to your home screen.</p>
-            </div>
-          ) : deferredPrompt ? (
-            <button
-              onClick={handleAndroidInstall}
-              className="w-full py-3 rounded-full bg-[#2F7D54] text-white font-semibold text-sm hover:bg-[#1F4736] transition-colors"
-            >
-              Add Plantet to Home Screen
-            </button>
-          ) : (
-            <div className="w-full space-y-4">
-              <p className="text-sm font-semibold text-center text-muted-foreground uppercase tracking-wide mb-2">
-                Android
-              </p>
-              {[
-                { step: "1", text: "Open plantet.shop in Chrome." },
-                { step: "2", text: 'Tap the three-dot menu in the top right corner.' },
-                { step: "3", text: 'Tap "Add to Home screen."' },
-                { step: "4", text: 'Tap "Add." Done!' },
-              ].map(({ step, text }) => (
-                <div key={step} className="flex items-start gap-4 bg-muted/50 rounded-xl p-4">
-                  <span className="flex-shrink-0 w-7 h-7 rounded-full bg-[#2F7D54] text-white text-sm font-bold flex items-center justify-center">
-                    {step}
-                  </span>
-                  <p className="text-sm leading-relaxed">{text}</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Desktop fallback */}
-      {platform === "other" && (
-        <div className="w-full space-y-4 text-center">
-          <p className="text-sm text-muted-foreground">
-            Open this page on your iPhone or Android phone to install the app.
-          </p>
-          <div className="border rounded-xl p-5 text-sm space-y-1">
-            <p className="font-semibold">plantet.shop/app</p>
-            <p className="text-muted-foreground text-xs">Scan or type this into your phone&apos;s browser</p>
-          </div>
-        </div>
-      )}
-    </div>
+    </main>
   );
 }
