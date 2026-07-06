@@ -26,6 +26,10 @@ import { OpenToTradesToggle } from "@/components/garden/open-to-trades-toggle";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 
+// Temporary: hide the seller upgrade pricing ($9/$29 tiers) while we roll out the
+// new pricing model (week of 2026-07-06). Set back to false to restore.
+const HIDE_SELLER_PRICING: boolean = true;
+
 export default function AccountForm({
   profile,
   userId,
@@ -70,7 +74,9 @@ export default function AccountForm({
     return () => clearTimeout(t);
   }, []);
 
-  const canUseBanner = profile?.is_admin || (profile?.plan && profile.plan !== "seedling");
+  // While pricing is being reworked, the custom banner is free for everyone
+  // (it's expected to be free under the new model). Reverts with the flag.
+  const canUseBanner = HIDE_SELLER_PRICING || profile?.is_admin || (profile?.plan && profile.plan !== "seedling");
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
@@ -301,7 +307,17 @@ export default function AccountForm({
               </p>
             </div>
           ) : plan === "seedling" ? (
-            <BillingToggleSection subscribing={subscribing} startSubscription={startSubscription} />
+            HIDE_SELLER_PRICING ? (
+              <div className="rounded-lg border bg-muted/40 p-4 space-y-1">
+                <p className="text-sm font-semibold">New seller pricing coming this week</p>
+                <p className="text-sm text-muted-foreground">
+                  We&apos;re updating our plans and commission. Nothing changes for you right now —
+                  keep selling as usual and we&apos;ll share the new details soon.
+                </p>
+              </div>
+            ) : (
+              <BillingToggleSection subscribing={subscribing} startSubscription={startSubscription} />
+            )
           ) : (
             <div className="space-y-3">
               {hasSubscription ? (

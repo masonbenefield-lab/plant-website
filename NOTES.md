@@ -1879,3 +1879,16 @@ New reusable admin tool to compose + preview + one-click send a branded email to
 - **Admin giveaway panel always showed "Draw winner"** even after a winner was saved, because `admin/giveaway/page.tsx` didn't select `winner_user_id` and `WinnerPicker` had no saved-winner state. Now the page resolves winners by month (`winner_user_id` → profile) and passes `winners` through `giveaway-admin-tabs` → `giveaway-admin-client`; `WinnerPicker` shows "Winner already picked: <name>" and the button becomes "Re-draw".
 - Data note: June 2026 winner is legit (real entrant among 68, id `154572e1…`, username `junewaycao@gmail.com`, display_name `mozart007`). May winner is the owner's own test account (`mark` / Mark's Shop). No new migrations/env vars. Build + tsc clean.
 - **Superseded the plain-text change:** winners now smart-link — `stripe_onboarded` → `/sellers/{username}`, else `garden_public` → `/gardens/{username}`, else plain text (no dead link). Usernames `encodeURIComponent`-wrapped for email-style usernames. `/sellers/[username]` renders for any existing profile (only 404s if missing); `/gardens/[username]` shows a "private" notice if `garden_public` is false. For the current winners: mozart007 (not seller, garden private) → plain text; Mark's Shop (seller) → shop link.
+
+---
+
+## 2026-07-06 — Temporarily hide seller pricing (pricing revamp in progress)
+
+Ahead of moving to a flat 5.5% commission + free seller tools + a "Garden Pro" buyer tier, hid all current/old seller pricing so nobody signs up under soon-to-change terms.
+
+### Changes
+- `src/app/pricing/page.tsx` — added `const HIDE_PRICING: boolean = true` + a `PricingUpdating` placeholder ("Pricing is getting an update"). Early-returns the placeholder; existing `PricingClient` render preserved for one-line restore. Note: this also intentionally pauses new Groundbreaker signups while hidden.
+- `src/app/account/account-form.tsx` — added `const HIDE_SELLER_PRICING: boolean = true`; in `PlanBillingCard`, Seedling sellers now see a "New seller pricing coming this week" note instead of the `$9/$29` `BillingToggleSection` upgrade cards. Groundbreaker "free forever" note and existing-subscriber "Manage subscription" portal link are unchanged.
+- `src/app/account/account-form.tsx` — `canUseBanner` now also true when `HIDE_SELLER_PRICING`, so the custom storefront banner is free for ALL sellers during the transition (was Grower+ only). This removes the "Custom banner is a Grower+ feature / Upgrade to unlock" lock. Verified no server-side plan gate on `banner_url` in `api/profile/update` or `api/profile/update-photo`, so UI unlock is sufficient. Expected to stay free under new pricing.
+- Both flags typed as `boolean` (not literal `true`) so unused branches stay type-reachable — restore = flip each flag to `false`.
+- No DB migrations. No env var changes. `tsc --noEmit` clean.
