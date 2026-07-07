@@ -73,17 +73,9 @@ export default async function AnalyticsPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  // Two separate queries so a missing `plan` column (pre-migration) never
-  // breaks the is_admin check.
-  const [{ data: adminProfile }, { data: planProfile }] = await Promise.all([
-    supabase.from("profiles").select("is_admin").eq("id", user.id).single(),
-    supabase.from("profiles").select("plan").eq("id", user.id).single(),
-  ]);
-
-  const plan: "seedling" | "grower" | "nursery" =
-    adminProfile?.is_admin
-      ? "nursery"
-      : ((planProfile?.plan as "seedling" | "grower" | "nursery") ?? "seedling");
+  // Flat model: every seller gets the full analytics suite — no plan gating.
+  // Cast keeps the union type so the (now always-true) section guards below stay valid.
+  const plan = "nursery" as "seedling" | "grower" | "nursery";
 
   // --- Fetch all completed orders + off-platform sales ---
   const [{ data: rawOrders }, { data: rawManualSales }] = await Promise.all([
@@ -313,7 +305,7 @@ export default async function AnalyticsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Analytics</h1>
-          <p className="text-sm text-muted-foreground mt-0.5 capitalize">{plan} plan</p>
+          <p className="text-sm text-muted-foreground mt-0.5">Your full store performance</p>
         </div>
         <Link href="/dashboard" className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
           ← Dashboard
@@ -584,36 +576,6 @@ export default async function AnalyticsPage() {
           </div>
         )}
       </div>
-
-      {/* Seedling upgrade teaser */}
-      {plan === "seedling" && (
-        <Card className="border-dashed">
-          <CardContent className="py-8 text-center space-y-3">
-            <p className="font-semibold">Unlock deeper insights</p>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Upgrade to <strong>Grower</strong> for a monthly revenue chart. Upgrade to <strong>Nursery</strong> for per-listing breakdowns, auction performance, buyer geography, and category revenue.
-            </p>
-            <Link href="/pricing" className={cn(buttonVariants({ size: "sm" }), "bg-leaf hover:bg-forest text-white")}>
-              View pricing
-            </Link>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Grower upgrade teaser */}
-      {plan === "grower" && (
-        <Card className="border-dashed">
-          <CardContent className="py-8 text-center space-y-3">
-            <p className="font-semibold">Want more depth?</p>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Upgrade to <strong>Nursery</strong> to unlock a full per-listing breakdown, auction performance stats, buyer geography, and category revenue.
-            </p>
-            <Link href="/pricing" className={cn(buttonVariants({ size: "sm" }), "bg-leaf hover:bg-forest text-white")}>
-              See Nursery plan
-            </Link>
-          </CardContent>
-        </Card>
-      )}
 
     </div>
   );

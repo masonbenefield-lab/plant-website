@@ -116,7 +116,7 @@ export default async function LandingPage() {
       {groundbreakersLeft > 0 && (
         <div className="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800 py-2.5 px-4 text-center text-sm text-amber-900 dark:text-amber-200">
           <span className="font-semibold">⛏️ Groundbreaker program:</span>{" "}
-          {groundbreakersLeft} of {GROUNDBREAKER_CAP} spots remaining — the first {GROUNDBREAKER_CAP} sellers get the Nursery plan free forever + a permanent <strong>2% commission rate</strong>.{" "}
+          {groundbreakersLeft} of {GROUNDBREAKER_CAP} spots remaining — the first {GROUNDBREAKER_CAP} sellers lock in a permanent <strong>2% commission rate</strong>, well below the standard 5.5%, plus every feature free.{" "}
           <Link href="/signup" className="underline font-semibold hover:text-amber-700 dark:hover:text-amber-100">
             Claim your spot →
           </Link>
@@ -393,12 +393,12 @@ export default async function LandingPage() {
             <div className="bg-card rounded-2xl border p-6 flex flex-col items-center">
               <p className="text-4xl font-bold text-leaf mb-2">$0</p>
               <p className="font-semibold mb-2">To list</p>
-              <p className="text-sm text-muted-foreground leading-relaxed">No listing fees — ever. Free plan includes 10 listings and 5 auctions. Unlimited on paid plans.</p>
+              <p className="text-sm text-muted-foreground leading-relaxed">No listing fees — ever. Every seller gets unlimited listings and auctions, free.</p>
             </div>
             <div className="bg-card rounded-2xl border-2 border-leaf p-6 flex flex-col items-center shadow-md">
-              <p className="text-4xl font-bold text-leaf mb-2">3–6.5%</p>
+              <p className="text-4xl font-bold text-leaf mb-2">5.5%</p>
               <p className="font-semibold mb-2">Per sale</p>
-              <p className="text-sm text-muted-foreground leading-relaxed">A small fee taken only when a sale completes. Rate depends on your plan.</p>
+              <p className="text-sm text-muted-foreground leading-relaxed">One flat commission, taken only when a sale completes. No tiers, no monthly fee.</p>
             </div>
             <div className="bg-card rounded-2xl border p-6 flex flex-col items-center">
               <p className="text-4xl font-bold text-leaf mb-2">$0</p>

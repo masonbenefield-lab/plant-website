@@ -26,10 +26,6 @@ import { OpenToTradesToggle } from "@/components/garden/open-to-trades-toggle";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 
-// Temporary: hide the seller upgrade pricing ($9/$29 tiers) while we roll out the
-// new pricing model (week of 2026-07-06). Set back to false to restore.
-const HIDE_SELLER_PRICING: boolean = true;
-
 export default function AccountForm({
   profile,
   userId,
@@ -87,7 +83,6 @@ export default function AccountForm({
   const [sendingReset, setSendingReset] = useState(false);
   const [connectingStripe, setConnectingStripe] = useState(false);
   const [openingStripeDashboard, setOpeningStripeDashboard] = useState(false);
-  const [subscribing, setSubscribing] = useState(false);
   const [openingPortal, setOpeningPortal] = useState(false);
 
   async function uploadBanner(file: File) {
@@ -241,20 +236,6 @@ export default function AccountForm({
     }
   }
 
-  async function startSubscription(plan: "grower" | "nursery", billing: "monthly" | "annual") {
-    setSubscribing(true);
-    try {
-      const res = await fetch("/api/stripe/subscribe", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ plan, billing }) });
-      const { url, error } = await res.json();
-      if (error) { toast.error(error); return; }
-      window.location.href = url;
-    } catch {
-      toast.error("Something went wrong. Please try again.");
-    } finally {
-      setSubscribing(false);
-    }
-  }
-
   async function openBillingPortal() {
     setOpeningPortal(true);
     try {
@@ -306,16 +287,12 @@ export default function AccountForm({
               </p>
             </div>
           ) : plan === "seedling" ? (
-            HIDE_SELLER_PRICING ? (
-              <div className="rounded-lg border bg-muted/40 p-4 space-y-1">
-                <p className="text-sm font-semibold">You&apos;re on the flat plan</p>
-                <p className="text-sm text-muted-foreground">
-                  A simple 5.5% commission per sale (plus Stripe&apos;s processing fee) — no monthly fee, no tiers, and every seller feature included. We only earn when you sell.
-                </p>
-              </div>
-            ) : (
-              <BillingToggleSection subscribing={subscribing} startSubscription={startSubscription} />
-            )
+            <div className="rounded-lg border bg-muted/40 p-4 space-y-1">
+              <p className="text-sm font-semibold">You&apos;re on the flat plan</p>
+              <p className="text-sm text-muted-foreground">
+                A simple 5.5% commission per sale (plus Stripe&apos;s processing fee) — no monthly fee, no tiers, and every seller feature included. We only earn when you sell.
+              </p>
+            </div>
           ) : (
             <div className="space-y-3">
               {hasSubscription ? (
@@ -938,76 +915,3 @@ function PlantGuidePreference() {
   );
 }
 
-function BillingToggleSection({
-  subscribing,
-  startSubscription,
-}: {
-  subscribing: boolean;
-  startSubscription: (plan: "grower" | "nursery", billing: "monthly" | "annual") => void;
-}) {
-  const [billing, setBilling] = useState<"monthly" | "annual">("monthly");
-
-  return (
-    <div className="space-y-3">
-      <p className="text-sm text-muted-foreground">Upgrade to unlock lower commissions, more listings, and buyer digest exposure.</p>
-
-      {/* Billing toggle */}
-      <div className="flex items-center gap-2">
-        <div className="flex rounded-full border border-border p-0.5 text-xs font-medium">
-          <button
-            type="button"
-            onClick={() => setBilling("monthly")}
-            className={cn(
-              "px-3 py-1 rounded-full transition-colors",
-              billing === "monthly" ? "bg-leaf text-white" : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            Monthly
-          </button>
-          <button
-            type="button"
-            onClick={() => setBilling("annual")}
-            className={cn(
-              "px-3 py-1 rounded-full transition-colors",
-              billing === "annual" ? "bg-leaf text-white" : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            Annual
-          </button>
-        </div>
-        {billing === "annual" && (
-          <span className="text-xs font-medium text-leaf bg-[#DFE7D4] dark:bg-forest/40 dark:text-sage px-2 py-0.5 rounded-full">
-            Save 2 months
-          </span>
-        )}
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-lg border p-3 space-y-2">
-          <p className="text-sm font-semibold">
-            Grower — {billing === "annual" ? "$86/yr" : "$9/mo"}
-          </p>
-          {billing === "annual" && (
-            <p className="text-xs text-leaf dark:text-sage font-medium">$7.17/mo · 2 months free</p>
-          )}
-          <p className="text-xs text-muted-foreground">50 listings · 4.5% commission · digest exposure</p>
-          <Button size="sm" className="w-full bg-leaf hover:bg-forest" disabled={subscribing} onClick={() => startSubscription("grower", billing)}>
-            {subscribing ? "Redirecting…" : "Upgrade"}
-          </Button>
-        </div>
-        <div className="rounded-lg border p-3 space-y-2">
-          <p className="text-sm font-semibold">
-            Nursery — {billing === "annual" ? "$278/yr" : "$29/mo"}
-          </p>
-          {billing === "annual" && (
-            <p className="text-xs text-leaf dark:text-sage font-medium">$23.17/mo · 2 months free</p>
-          )}
-          <p className="text-xs text-muted-foreground">Unlimited listings · 20 photos · 3% commission · full digest + homepage</p>
-          <Button size="sm" className="w-full bg-leaf hover:bg-forest" disabled={subscribing} onClick={() => startSubscription("nursery", billing)}>
-            {subscribing ? "Redirecting…" : "Upgrade"}
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-}

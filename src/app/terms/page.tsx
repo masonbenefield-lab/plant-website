@@ -89,8 +89,8 @@ export default function TermsPage() {
           <h2 className="text-xl font-semibold mb-3">5. Fees and Payments</h2>
           <div className="space-y-3 text-muted-foreground leading-relaxed">
             <p>
-              Plantet charges a platform fee on each completed sale. The fee percentage depends on your
-              subscription plan and is displayed on the{" "}
+              Plantet charges a flat 5.5% platform fee on each completed sale (Groundbreaker sellers pay 2%),
+              as shown on the{" "}
               <Link href="/pricing" className="underline hover:text-foreground">Pricing page</Link>.
               Fees are deducted automatically at the time of payout.
             </p>

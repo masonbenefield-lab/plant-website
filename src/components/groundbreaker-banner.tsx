@@ -17,7 +17,7 @@ export function GroundbreakerBanner({ spotsLeft }: { spotsLeft: number }) {
     const data = await res.json();
     setClaiming(false);
     if (data.ok) {
-      toast.success("⛏️ You're a Groundbreaker! Nursery plan activated — free forever.");
+      toast.success("⛏️ You're a Groundbreaker! You've locked in 2% commission forever.");
       router.refresh();
     } else {
       toast.error("Something went wrong — please try again.");
@@ -31,7 +31,7 @@ export function GroundbreakerBanner({ spotsLeft }: { spotsLeft: number }) {
           ⛏️ Groundbreaker Early Access — {spotsLeft} of 150 spots left
         </p>
         <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
-          Claim your free Nursery plan forever + permanent 2% commission rate — lower than any paid tier.
+          Lock in a permanent 2% commission — well below the standard 5.5% — with every feature free forever.
         </p>
       </div>
       <div className="flex items-center gap-2 shrink-0">

@@ -1913,3 +1913,24 @@ Committed to the new seller model: flat 5.5% commission for everyone (+ Stripe f
 
 ### Verification
 - `tsc --noEmit` clean. `npm run build` succeeded (exit 0). No DB migrations. No env var changes.
+
+---
+
+## 2026-07-07 (part 2) — Propagate flat 5.5% pricing across all site copy + unlock analytics
+
+Swept the whole site so every seller-facing mention of cost/plans reflects the flat model. Un-hid the pricing page (now correct).
+
+### Changes
+- `src/app/pricing/pricing-client.tsx` — **full rewrite** to the flat model: single "5.5% per sale" card, Groundbreaker callout (2% while spots remain), $25 commission example ($22.59 net), "everything included free" feature grid, "no pay-to-win" section, updated FAQ. Removed the old $9/$29 tier cards, breakeven calculator, and priority/featured/banner tier-demo sections.
+- `src/app/pricing/page.tsx` — removed `HIDE_PRICING` gate + placeholder; **pricing page is live again** with correct flat pricing (restores the Groundbreaker draw as a real page, not just the homepage banner).
+- `src/app/account/account-form.tsx` — removed the dead `BillingToggleSection` ($9/$29 upgrade cards), `startSubscription`, `subscribing` state, and `HIDE_SELLER_PRICING` flag. Seedling sellers now always see the "flat plan" note.
+- `src/components/groundbreaker-banner.tsx` + homepage banner (`src/app/page.tsx`) — reframed Groundbreaker copy from "free Nursery plan / lower than any paid tier" → "2% forever, well below the standard 5.5%, every feature free."
+- `src/app/page.tsx` — homepage fee stat "3–6.5% / rate depends on plan" → "5.5% / one flat commission"; "free plan includes 10 listings…" → "unlimited listings and auctions, free."
+- `src/app/terms/page.tsx` — fee clause "depends on your subscription plan" → "flat 5.5% (Groundbreakers 2%)."
+- `src/app/signup/page.tsx` — emptied `PLAN_LABELS` so `?plan=grower/nursery` links no longer show "$9/$29" badges.
+- `src/app/dashboard/inventory/inventory-client.tsx` — photo-limit toast dropped "Upgrade to add more."
+- `src/app/dashboard/analytics/page.tsx` — **feature unlock**: removed plan gating so every seller gets the full (former Nursery-tier) analytics — repeat-buyer rate, per-listing breakdown, auction performance, buyer geography, category revenue. Removed the Seedling/Grower "upgrade" teasers. `plan` hardcoded to `"nursery"` (cast to union to keep guards valid).
+- Note: `src/app/api/stripe/subscribe/route.ts` is now an unused (dead) endpoint — harmless, left in place. `page.tsx.orig` is a stale backup, not routed.
+
+### Verification
+- `tsc --noEmit` clean. `npm run build` succeeded (exit 0). No DB migrations. No env var changes.

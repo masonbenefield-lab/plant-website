@@ -30,10 +30,8 @@ function AppleIcon() {
   );
 }
 
-const PLAN_LABELS: Record<string, { name: string; price: string }> = {
-  grower:  { name: "Grower",  price: "$9/mo" },
-  nursery: { name: "Nursery", price: "$29/mo" },
-};
+// No paid plans under the flat model — signups never carry a plan/price badge.
+const PLAN_LABELS: Record<string, { name: string; price: string }> = {};
 
 export default function SignupPage() {
   const router = useRouter();

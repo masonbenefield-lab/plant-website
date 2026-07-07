@@ -456,7 +456,7 @@ export default function InventoryClient({
     if (!file) return;
     e.target.value = "";
     if (planLimits.photos !== null && editImages.length >= planLimits.photos) {
-      toast.error(`Your plan allows up to ${planLimits.photos} photos per listing. Upgrade to add more.`);
+      toast.error(`You can add up to ${planLimits.photos} photos per listing.`);
       return;
     }
     setImageUploading(true);
