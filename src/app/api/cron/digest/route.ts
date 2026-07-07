@@ -43,8 +43,26 @@ export async function GET(request: Request) {
     if (u.email) emailMap[u.id] = u.email;
   }
 
-  // 4 — global: fresh listings from ANY seller (past 7 days, with images).
-  // Level playing field — no plan gating. Fetch extra so the 1-per-seller cap fills 6 slots.
+  // Digest eligibility: only sellers with an established track record (10+ reviews)
+  // appear anywhere in the digest — keeps brand-new, unvetted sellers out of buyers'
+  // inboxes before we've had a chance to catch a bad listing. Reputation-based, not
+  // pay-based, so it stays consistent with the level-playing-field model.
+  const MIN_REVIEWS_FOR_DIGEST = 10;
+  const { data: allRatings } = await admin.from("ratings").select("seller_id");
+  const reviewCounts: Record<string, number> = {};
+  for (const r of allRatings ?? []) {
+    const sid = r.seller_id as string;
+    reviewCounts[sid] = (reviewCounts[sid] ?? 0) + 1;
+  }
+  const eligibleSellers = new Set(
+    Object.entries(reviewCounts)
+      .filter(([, count]) => count >= MIN_REVIEWS_FOR_DIGEST)
+      .map(([id]) => id)
+  );
+
+  // 4 — global: fresh listings from established sellers (past 7 days, with images).
+  // Level playing field — no plan gating, only a 10+ review reputation gate.
+  // Fetch extra so the 1-per-seller cap fills 6 slots.
   const { data: freshRaw } = await admin
     .from("listings")
     .select("id, plant_name, variety, price_cents, images, seller_id")
@@ -59,6 +77,7 @@ export async function GET(request: Request) {
   const seenFreshSellers = new Set<string>();
   const freshPool = (freshRaw ?? [])
     .filter((l) => (l.images as string[])?.[0])
+    .filter((l) => eligibleSellers.has(l.seller_id))
     .filter((l) => {
       if (seenFreshSellers.has(l.seller_id)) return false;
       seenFreshSellers.add(l.seller_id);
@@ -82,6 +101,7 @@ export async function GET(request: Request) {
       .limit(120);
     const extras = (fb ?? [])
       .filter((l) => !existingIds.has(l.id) && (l.images as string[])?.[0])
+      .filter((l) => eligibleSellers.has(l.seller_id))
       .filter((l) => {
         if (seenFallbackSellers.has(l.seller_id)) return false;
         seenFallbackSellers.add(l.seller_id);
@@ -92,14 +112,15 @@ export async function GET(request: Request) {
     freshPool.push(...extras);
   }
 
-  // 5 — global: hot auctions (most bids, still active)
+  // 5 — global: hot auctions (most bids, still active) from established sellers.
+  // Fetch extra so the 10+ review filter below still leaves enough to show.
   const { data: auctionsRaw } = await admin
     .from("auctions")
     .select("id, plant_name, variety, current_bid_cents, ends_at, images, seller_id")
     .eq("status", "active")
     .gt("ends_at", new Date().toISOString())
     .order("current_bid_cents", { ascending: false })
-    .limit(5);
+    .limit(15);
 
   // 6 — seller usernames for all fresh + auction sellers
   const sellerIds = [
@@ -137,6 +158,7 @@ export async function GET(request: Request) {
   }
 
   const hotAuctions: DigestAuction[] = (auctionsRaw ?? [])
+    .filter((a) => eligibleSellers.has(a.seller_id))
     .sort((a, b) => (bidCount[b.id] ?? 0) - (bidCount[a.id] ?? 0))
     .slice(0, 3)
     .map((a) => ({
@@ -158,8 +180,9 @@ export async function GET(request: Request) {
 
   const followedSellerIds = [...new Set((allFollows ?? []).map((f) => f.seller_id))];
 
-  // Every followed seller appears in the "from shops you follow" section — no plan gating.
-  const followedIdSet = new Set(followedSellerIds);
+  // Followed sellers appear in the "from shops you follow" section only if they meet
+  // the same 10+ review reputation gate — no unvetted sellers in the digest.
+  const followedIdSet = new Set(followedSellerIds.filter((id) => eligibleSellers.has(id)));
 
   const { data: followedListingsRaw } = followedIdSet.size
     ? await admin

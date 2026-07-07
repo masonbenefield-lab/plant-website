@@ -1934,3 +1934,18 @@ Swept the whole site so every seller-facing mention of cost/plans reflects the f
 
 ### Verification
 - `tsc --noEmit` clean. `npm run build` succeeded (exit 0). No DB migrations. No env var changes.
+
+---
+
+## 2026-07-07 (part 3) — Gate weekly digest to sellers with 10+ reviews
+
+Trust/safety: keep brand-new, unvetted sellers out of the weekly buyer digest so a bad listing can't get broadcast exposure before we catch it. Reputation-based (not pay-based), so still consistent with the level-playing-field model.
+
+### Changes (`src/app/api/cron/digest/route.ts`)
+- Added `MIN_REVIEWS_FOR_DIGEST = 10`. Compute `eligibleSellers` = sellers with ≥10 rows in `ratings`, tallied in JS from `ratings.select("seller_id")`.
+- Applied the gate to **every** digest surface: Fresh Picks (+ its fallback fill), hot auctions, and the "from shops you follow" section (followed sellers must also meet the gate).
+- Bumped the hot-auctions fetch from `limit(5)` → `limit(15)` so the eligibility filter still leaves enough to show 3.
+- Note: gate is pure review count (≥10), not avg score. Followed section is also gated — flagged to Mason as adjustable if he wants followers exempt.
+
+### Verification
+- `tsc --noEmit` clean. `npm run build` succeeded (exit 0). No DB migrations. No env var changes.
