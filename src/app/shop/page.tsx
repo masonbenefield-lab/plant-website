@@ -157,15 +157,9 @@ export default async function ShopPage({
 
   const sellerMap = Object.fromEntries((sellers ?? []).map((s) => [s.id, s]));
 
-  // Priority placement: on default sort (newest), Nursery > Grower > Seedling within page
-  const planOrder = (plan: string | undefined) => plan === "nursery" ? 0 : plan === "grower" ? 1 : 2;
+  // Level playing field: no plan-based priority. Default sort is purely newest-first.
   const sortedListings = (!sort || sort === "newest")
-    ? [...(listings ?? [])].sort((a, b) => {
-        const pa = planOrder(sellerMap[a.seller_id]?.plan);
-        const pb = planOrder(sellerMap[b.seller_id]?.plan);
-        if (pa !== pb) return pa - pb;
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-      })
+    ? [...(listings ?? [])].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     : (listings ?? []);
 
   // Top seller: 10+ reviews with avg ≥ 4.5

@@ -74,9 +74,8 @@ export default function AccountForm({
     return () => clearTimeout(t);
   }, []);
 
-  // While pricing is being reworked, the custom banner is free for everyone
-  // (it's expected to be free under the new model). Reverts with the flag.
-  const canUseBanner = HIDE_SELLER_PRICING || profile?.is_admin || (profile?.plan && profile.plan !== "seedling");
+  // Flat model: the custom storefront banner is free for every seller.
+  const canUseBanner = true;
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
@@ -301,18 +300,17 @@ export default function AccountForm({
 
           {isGroundbreaker ? (
             <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 p-4 space-y-1">
-              <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">Nursery plan — free forever</p>
+              <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">Groundbreaker — 2% commission forever</p>
               <p className="text-sm text-amber-800 dark:text-amber-300">
-                You joined as one of Plantet&apos;s first 150 Groundbreakers. You have full Nursery plan access with no subscription — ever. Thank you for being here from the start.
+                You joined as one of Plantet&apos;s first 150 Groundbreakers. You keep a permanent 2% commission rate — lower than every other seller — with no monthly fee and every feature included. Thank you for being here from the start.
               </p>
             </div>
           ) : plan === "seedling" ? (
             HIDE_SELLER_PRICING ? (
               <div className="rounded-lg border bg-muted/40 p-4 space-y-1">
-                <p className="text-sm font-semibold">New seller pricing coming this week</p>
+                <p className="text-sm font-semibold">You&apos;re on the flat plan</p>
                 <p className="text-sm text-muted-foreground">
-                  We&apos;re updating our plans and commission. Nothing changes for you right now —
-                  keep selling as usual and we&apos;ll share the new details soon.
+                  A simple 5.5% commission per sale (plus Stripe&apos;s processing fee) — no monthly fee, no tiers, and every seller feature included. We only earn when you sell.
                 </p>
               </div>
             ) : (
@@ -322,13 +320,13 @@ export default function AccountForm({
             <div className="space-y-3">
               {hasSubscription ? (
                 <>
-                  <p className="text-sm text-muted-foreground">Manage your subscription, change plans, update payment method, or cancel through the Stripe billing portal.</p>
+                  <p className="text-sm text-muted-foreground">Good news — paid plans are gone. Every feature is now free for all sellers at a flat 5.5% commission. You can cancel your old subscription through the Stripe portal and keep everything; Groundbreakers keep their 2% rate.</p>
                   <Button variant="outline" disabled={openingPortal} onClick={openBillingPortal}>
-                    {openingPortal ? "Redirecting…" : "Manage subscription →"}
+                    {openingPortal ? "Redirecting…" : "Cancel subscription →"}
                   </Button>
                 </>
               ) : (
-                <p className="text-sm text-muted-foreground">Your plan was set during signup. To manage billing, contact support.</p>
+                <p className="text-sm text-muted-foreground">You&apos;re on the flat plan — a 5.5% commission per sale, no monthly fee, every feature included.</p>
               )}
             </div>
           )}

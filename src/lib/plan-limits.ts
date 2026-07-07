@@ -8,23 +8,19 @@ export interface PlanLimits {
   photos: number | null;
 }
 
+// Flat model: every seller gets the same tools — unlimited listings & auctions,
+// 8 photos per listing. No pay-to-win feature gating between plans.
 export function getPlanLimits(plan: Plan | null | undefined, isAdmin: boolean): PlanLimits {
   if (isAdmin) return { listings: null, auctions: null, photos: null };
-  switch (plan) {
-    case "nursery": return { listings: null, auctions: null, photos: 20  };
-    case "grower":  return { listings: null, auctions: null, photos: 10  };
-    default:        return { listings: null, auctions: 5,    photos: 5   };
-  }
+  return { listings: null, auctions: null, photos: 8 };
 }
 
+// Flat 5.5% commission for everyone. Groundbreakers keep their promised 2%
+// forever; admins pay nothing.
 export function planFeePercent(plan: Plan | null | undefined, isAdmin: boolean, isGroundbreaker?: boolean): number {
   if (isAdmin) return 0;
   if (isGroundbreaker) return 2;
-  switch (plan) {
-    case "nursery": return 3;
-    case "grower":  return 4.5;
-    default:        return 6.5;
-  }
+  return 5.5;
 }
 
 export function planLabel(plan: Plan | null | undefined): string {

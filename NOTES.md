@@ -1892,3 +1892,24 @@ Ahead of moving to a flat 5.5% commission + free seller tools + a "Garden Pro" b
 - `src/app/account/account-form.tsx` — `canUseBanner` now also true when `HIDE_SELLER_PRICING`, so the custom storefront banner is free for ALL sellers during the transition (was Grower+ only). This removes the "Custom banner is a Grower+ feature / Upgrade to unlock" lock. Verified no server-side plan gate on `banner_url` in `api/profile/update` or `api/profile/update-photo`, so UI unlock is sufficient. Expected to stay free under new pricing.
 - Both flags typed as `boolean` (not literal `true`) so unused branches stay type-reachable — restore = flip each flag to `false`.
 - No DB migrations. No env var changes. `tsc --noEmit` clean.
+
+---
+
+## 2026-07-07 — Flat 5.5% commission + remove all seller pay-to-win gating
+
+Committed to the new seller model: flat 5.5% commission for everyone (+ Stripe fee on top, seller absorbs), every seller feature free, and no plan-based priority anywhere. Groundbreakers keep their promised 2% forever and the program stays open until 150 spots fill (auto-assigned on signup via `api/auth/claim-groundbreaker`, unaffected by these changes).
+
+### Changes
+- `src/lib/plan-limits.ts` — `planFeePercent` now returns **5.5%** for all (Groundbreaker 2%, admin 0%; removed 6.5/4.5/3 tiers). `getPlanLimits` now returns **8 photos**, unlimited listings + auctions for every plan (admin still unlimited photos). Was 5/10/20 photos and a 5-auction cap on Seedling.
+- `src/app/shop/page.tsx` — removed `planOrder` priority sort. Default sort is now purely newest-first; no Nursery>Grower>Seedling boost.
+- `src/app/page.tsx` — removed the Nursery-only "From top nurseries / Featured" homepage section; replaced with egalitarian **"Fresh arrivals"** (newest active listings from any seller, "New" badge instead of "⭐ Featured"). Dropped the `nurseryProfiles` query.
+- `src/app/api/cron/digest/route.ts` — removed plan gating from the weekly buyer digest. Fresh Picks now pull from ALL sellers (was Grower+ only); "from shops you follow" now includes every followed seller (was Nursery-only). Renamed `nurseryFollowedIds`→`followedIdSet`, `myNurserySellerIds`→`myFollowedSellerIds`.
+- `src/app/account/account-form.tsx` — `canUseBanner` now `true` for everyone (custom storefront banner is free; no server-side gate). Plan & Billing card copy updated to the flat model: Groundbreaker card → "2% commission forever"; Seedling → "You're on the flat plan" (5.5%); existing subscribers → "paid plans are gone… Cancel subscription" (they keep all features at 5.5%).
+- `/pricing` stays hidden behind `HIDE_PRICING` for now — the Groundbreaker draw remains visible via the homepage amber banner. A dedicated Groundbreaker-forward pricing page rewrite is the pending follow-up.
+
+### Still TODO (operational)
+- **Cancel existing Grower/Nursery Stripe subscriptions** so those sellers stop being billed (they keep every feature at 5.5%). Check how many paid subs exist first; send a heads-up email re: the commission change (3%/4.5% → 5.5%).
+- Rewrite `/pricing` into the Groundbreaker early-access page (2% forever + "every feature free, no pay-to-win"); delete the old $9/$29 tier marketing.
+
+### Verification
+- `tsc --noEmit` clean. `npm run build` succeeded (exit 0). No DB migrations. No env var changes.

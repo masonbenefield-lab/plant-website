@@ -41,11 +41,7 @@ export default async function LandingPage() {
 
   const currentMonth = new Date().toISOString().slice(0, 7);
 
-  const [{ data: nurseryProfiles }, { count: groundbreakerCount }, { data: recentCommunityPosts }] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("id")
-      .eq("plan", "nursery"),
+  const [{ count: groundbreakerCount }, { data: recentCommunityPosts }] = await Promise.all([
     supabase
       .from("profiles")
       .select("*", { count: "exact", head: true })
@@ -98,15 +94,14 @@ export default async function LandingPage() {
       }));
   }
 
-  const nurserySellerIds = (nurseryProfiles ?? []).map((p) => p.id);
+  // Fresh arrivals — the most recent active listings from any seller (no plan priority).
   let featuredListings: { id: string; plant_name: string; variety: string | null; price_cents: number; sale_price_cents: number | null; sale_ends_at: string | null; images: string[] }[] = [];
-  if (nurserySellerIds.length > 0) {
+  {
     const { data } = await supabase
       .from("listings")
       .select("id, plant_name, variety, price_cents, sale_price_cents, sale_ends_at, images")
       .eq("status", "active")
       .or("category.neq.Hidden,category.is.null")
-      .in("seller_id", nurserySellerIds)
       .order("created_at", { ascending: false })
       .limit(4);
     featuredListings = data ?? [];
@@ -231,17 +226,17 @@ export default async function LandingPage() {
       )}
 
 
-      {/* ── Featured sellers (Nursery plan) ──────────────────────── */}
+      {/* ── Fresh arrivals (newest listings, any seller) ──────────── */}
       {featuredListings.length > 0 && (
         <section className="py-14 sm:py-16 px-4 bg-[#DDD3BE] dark:bg-muted">
           <div className="max-w-5xl mx-auto">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-bold uppercase tracking-widest text-leaf bg-[#DFE7D4] dark:bg-forest/40 dark:text-sage px-2 py-0.5 rounded-full">Featured</span>
+                  <span className="text-xs font-bold uppercase tracking-widest text-leaf bg-[#DFE7D4] dark:bg-forest/40 dark:text-sage px-2 py-0.5 rounded-full">Fresh</span>
                 </div>
-                <h2 className="text-2xl sm:text-3xl font-bold">From top nurseries</h2>
-                <p className="text-muted-foreground mt-1 text-sm">Hand-picked from our highest-rated professional sellers.</p>
+                <h2 className="text-2xl sm:text-3xl font-bold">Fresh arrivals</h2>
+                <p className="text-muted-foreground mt-1 text-sm">The newest plants just listed across the marketplace.</p>
               </div>
               <Link href="/shop" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
                 Browse all →
@@ -273,7 +268,7 @@ export default async function LandingPage() {
                             <span className="text-muted-foreground text-xs line-through">{centsToDisplay(l.price_cents)}</span>
                           )}
                         </div>
-                        <span className="shrink-0 text-xs px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">⭐ Featured</span>
+                        <span className="shrink-0 text-xs px-2 py-0.5 rounded-full font-medium bg-[#DFE7D4] text-leaf dark:bg-forest/40 dark:text-sage">New</span>
                       </div>
                     </div>
                   </Link>

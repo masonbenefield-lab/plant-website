@@ -43,27 +43,17 @@ export async function GET(request: Request) {
     if (u.email) emailMap[u.id] = u.email;
   }
 
-  // 3 — get Grower+ seller IDs (only these appear in fresh picks)
-  const { data: growerPlusSellers } = await admin
-    .from("profiles")
-    .select("id")
-    .in("plan", ["grower", "nursery"]);
-  const growerPlusIds = (growerPlusSellers ?? []).map((s) => s.id);
-
-  // 4 — global: fresh listings from Grower+ sellers only (past 7 days, with images)
-  // Fetch more than needed so the 1-per-seller cap still fills 6 slots
-  const { data: freshRaw } = growerPlusIds.length
-    ? await admin
-        .from("listings")
-        .select("id, plant_name, variety, price_cents, images, seller_id")
-        .eq("status", "active")
-        .in("seller_id", growerPlusIds)
-        .gte("created_at", sevenDaysAgo)
-        .not("images", "eq", "{}")
-        .not("images", "is", null)
-        .order("created_at", { ascending: false })
-        .limit(120)
-    : { data: [] };
+  // 4 — global: fresh listings from ANY seller (past 7 days, with images).
+  // Level playing field — no plan gating. Fetch extra so the 1-per-seller cap fills 6 slots.
+  const { data: freshRaw } = await admin
+    .from("listings")
+    .select("id, plant_name, variety, price_cents, images, seller_id")
+    .eq("status", "active")
+    .gte("created_at", sevenDaysAgo)
+    .not("images", "eq", "{}")
+    .not("images", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(120);
 
   // One listing per seller, up to 6 slots
   const seenFreshSellers = new Set<string>();
@@ -76,9 +66,9 @@ export async function GET(request: Request) {
     })
     .slice(0, 6);
 
-  // Fallback: if fewer than 6 slots, fill with any active Grower+ listings (no age restriction)
+  // Fallback: if fewer than 6 slots, fill with any active listings (no age restriction)
   const extraSellerIds: string[] = [];
-  if (freshPool.length < 6 && growerPlusIds.length) {
+  if (freshPool.length < 6) {
     const existingIds = new Set(freshPool.map((l) => l.id));
     const seenFallbackSellers = new Set(freshPool.map((l) => l.seller_id));
     const needed = 6 - freshPool.length;
@@ -86,7 +76,6 @@ export async function GET(request: Request) {
       .from("listings")
       .select("id, plant_name, variety, price_cents, images, seller_id")
       .eq("status", "active")
-      .in("seller_id", growerPlusIds)
       .not("images", "eq", "{}")
       .not("images", "is", null)
       .order("created_at", { ascending: false })
@@ -169,22 +158,15 @@ export async function GET(request: Request) {
 
   const followedSellerIds = [...new Set((allFollows ?? []).map((f) => f.seller_id))];
 
-  // Only Nursery sellers appear in the "from shops you follow" section
-  const { data: nurseryFollowed } = followedSellerIds.length
-    ? await admin
-        .from("profiles")
-        .select("id")
-        .eq("plan", "nursery")
-        .in("id", followedSellerIds)
-    : { data: [] };
-  const nurseryFollowedIds = new Set((nurseryFollowed ?? []).map((p) => p.id));
+  // Every followed seller appears in the "from shops you follow" section — no plan gating.
+  const followedIdSet = new Set(followedSellerIds);
 
-  const { data: followedListingsRaw } = nurseryFollowedIds.size
+  const { data: followedListingsRaw } = followedIdSet.size
     ? await admin
         .from("listings")
         .select("id, plant_name, variety, price_cents, images, seller_id")
         .eq("status", "active")
-        .in("seller_id", [...nurseryFollowedIds])
+        .in("seller_id", [...followedIdSet])
         .or(`created_at.gte.${thirtyDaysAgo},last_activated_at.gte.${thirtyDaysAgo}`)
         .not("images", "eq", "{}")
         .not("images", "is", null)
@@ -218,11 +200,11 @@ export async function GET(request: Request) {
 
     // listings from Nursery followed sellers for this user — up to 4 per seller, 12 total
     const mySellerIds = followerToSellers[profile.id] ?? new Set();
-    const myNurserySellerIds = new Set([...mySellerIds].filter((id) => nurseryFollowedIds.has(id)));
+    const myFollowedSellerIds = new Set([...mySellerIds].filter((id) => followedIdSet.has(id)));
     const followedSellerCount: Record<string, number> = {};
     const followedForUser: DigestListing[] = (followedListingsRaw ?? [])
       .filter((l) => {
-        if (!myNurserySellerIds.has(l.seller_id)) return false;
+        if (!myFollowedSellerIds.has(l.seller_id)) return false;
         const count = followedSellerCount[l.seller_id] ?? 0;
         if (count >= 4) return false;
         followedSellerCount[l.seller_id] = count + 1;
