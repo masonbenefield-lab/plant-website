@@ -1949,3 +1949,8 @@ Trust/safety: keep brand-new, unvetted sellers out of the weekly buyer digest so
 
 ### Verification
 - `tsc --noEmit` clean. `npm run build` succeeded (exit 0). No DB migrations. No env var changes.
+
+### Follow-up (same day) — refined the gate per Mason's call
+- **Added a 4.0 avg-rating floor** to the broadcast gate: `eligibleSellers` now requires 10+ reviews AND `sum/count >= 4.0` (now selects `seller_id, score`). Makes it a quality gate, not just longevity. (Can tighten to 4.5 later to match the "Top Seller" badge once the seller base is bigger.)
+- **Ungated the "shops you follow" section** — it's opt-in, low-reach, buyer-chosen content, and gating it hurt the new-seller flywheel. Only Fresh Picks + hot auctions carry the 10-reviews-&-4.0-avg gate now.
+- tsc + build clean.

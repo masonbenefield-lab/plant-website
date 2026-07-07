@@ -43,20 +43,26 @@ export async function GET(request: Request) {
     if (u.email) emailMap[u.id] = u.email;
   }
 
-  // Digest eligibility: only sellers with an established track record (10+ reviews)
-  // appear anywhere in the digest — keeps brand-new, unvetted sellers out of buyers'
-  // inboxes before we've had a chance to catch a bad listing. Reputation-based, not
-  // pay-based, so it stays consistent with the level-playing-field model.
+  // Digest eligibility for the BROADCAST surfaces (Fresh Picks + hot auctions):
+  // only sellers with an established, well-rated track record — 10+ reviews AND a
+  // 4.0+ average — get featured to the whole buyer base. Keeps unvetted or poorly
+  // rated sellers out of buyers' inboxes. Reputation-based, not pay-based, so it stays
+  // consistent with the level-playing-field model. (The "shops you follow" section is
+  // intentionally NOT gated — that's opt-in, low-reach content the buyer chose.)
   const MIN_REVIEWS_FOR_DIGEST = 10;
-  const { data: allRatings } = await admin.from("ratings").select("seller_id");
-  const reviewCounts: Record<string, number> = {};
+  const MIN_AVG_RATING_FOR_DIGEST = 4.0;
+  const { data: allRatings } = await admin.from("ratings").select("seller_id, score");
+  const reviewStats: Record<string, { count: number; sum: number }> = {};
   for (const r of allRatings ?? []) {
     const sid = r.seller_id as string;
-    reviewCounts[sid] = (reviewCounts[sid] ?? 0) + 1;
+    const stat = reviewStats[sid] ?? { count: 0, sum: 0 };
+    stat.count += 1;
+    stat.sum += (r.score as number) ?? 0;
+    reviewStats[sid] = stat;
   }
   const eligibleSellers = new Set(
-    Object.entries(reviewCounts)
-      .filter(([, count]) => count >= MIN_REVIEWS_FOR_DIGEST)
+    Object.entries(reviewStats)
+      .filter(([, { count, sum }]) => count >= MIN_REVIEWS_FOR_DIGEST && sum / count >= MIN_AVG_RATING_FOR_DIGEST)
       .map(([id]) => id)
   );
 
@@ -180,9 +186,9 @@ export async function GET(request: Request) {
 
   const followedSellerIds = [...new Set((allFollows ?? []).map((f) => f.seller_id))];
 
-  // Followed sellers appear in the "from shops you follow" section only if they meet
-  // the same 10+ review reputation gate — no unvetted sellers in the digest.
-  const followedIdSet = new Set(followedSellerIds.filter((id) => eligibleSellers.has(id)));
+  // The "from shops you follow" section is NOT reputation-gated — it's opt-in, low-reach
+  // content sent only to buyers who deliberately chose to follow that seller.
+  const followedIdSet = new Set(followedSellerIds);
 
   const { data: followedListingsRaw } = followedIdSet.size
     ? await admin
