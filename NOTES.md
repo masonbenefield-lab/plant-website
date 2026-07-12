@@ -1954,3 +1954,30 @@ Trust/safety: keep brand-new, unvetted sellers out of the weekly buyer digest so
 - **Added a 4.0 avg-rating floor** to the broadcast gate: `eligibleSellers` now requires 10+ reviews AND `sum/count >= 4.0` (now selects `seller_id, score`). Makes it a quality gate, not just longevity. (Can tighten to 4.5 later to match the "Top Seller" badge once the seller base is bigger.)
 - **Ungated the "shops you follow" section** — it's opt-in, low-reach, buyer-chosen content, and gating it hurt the new-seller flywheel. Only Fresh Picks + hot auctions carry the 10-reviews-&-4.0-avg gate now.
 - tsc + build clean.
+
+## 2026-07-12 — Reduce seller-activation friction on the create/list flow
+
+Goal: fewer sign-ups drop off before their first listing. Two changes to the path from `/dashboard/create` → published listing.
+
+### Feature 1 — Inline shipping timeline + return policy (no more detour to /account)
+- Previously `/dashboard/create` showed amber banners telling sellers to go set shipping timeline + return policy over in `/account` before listing (a context-switch that shed people). Those banners are gone.
+- `dashboard/create/page.tsx` now passes the seller's existing `shipping_days`, `shipping_days_max`, `return_policy_type`, `return_policy_notes` to `CreateForm` as `sellerDefaults`.
+- `create-form.tsx`: when a seller toggles "List in Shop" **and** hasn't set these before (`needsSellerDefaults = !shipping_days || !return_policy_type`), an inline **Shipping & returns** card appears, pre-filled with sensible defaults (ship in **3 days**, **DOA guarantee**). On submit these save to the profile.
+- New endpoint **`/api/profile/shipping-return/route.ts`** does a *partial* profile update (only those 4 fields). Deliberately separate from `/api/profile/update`, which overwrites the entire profile row (requires username, nulls anything not sent) — reusing it here would have clobbered bio/avatar/etc.
+
+### Feature 2 — Softened the seller-agreement gate (no more legal wall)
+- Previously `/dashboard/create` hard-redirected first-time sellers to the full multi-section legal agreement at `/seller-agreement`. Replaced with an inline condensed gate rendered inside `CreateForm`.
+- `create/page.tsx` no longer redirects; it passes `needsAgreement` and the form shows a short plain-English 6-bullet summary + checkbox + "Agree & start listing" (links to the full `/seller-agreement` in a new tab for anyone who wants it).
+- Acceptance still recorded the same way: posts to the existing `/api/seller-agreement/accept` (sets `seller_terms_accepted_at`). The standalone `/seller-agreement` page is untouched and still works for the dashboard checklist link.
+
+### Files
+- `src/app/dashboard/create/page.tsx` (rewritten — removed redirect + banners, passes props)
+- `src/app/dashboard/create/create-form.tsx` (props, inline agreement gate, inline shipping/returns card, submit-time save)
+- `src/app/api/profile/shipping-return/route.ts` (new)
+
+### Verification
+- `tsc --noEmit` clean (exit 0). ESLint on changed files: new code is clean; 4 pre-existing errors remain in untouched code in create-form.tsx (a `set-state-in-effect` in the existing `existingGroup` effect, the `listings as any` cast + its now-unused disable directive, and a `Can't` / `no-unescaped-entities` at the stock-qty warning). Left as-is — they predate this work.
+- No DB migrations (all columns already exist). No env var changes.
+
+### Not done (optionally next)
+- Feature 3 from the plan (collapse the inventory→listing two-step into one guided action) — not started.

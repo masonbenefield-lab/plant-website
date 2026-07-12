@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { PLANT_CATEGORIES, SUPPLY_CATEGORIES } from "@/lib/categories";
 import { compressImage } from "@/lib/compress-image";
-import { AlertTriangle, Plus, X, Store, Leaf, Package, HelpCircle } from "lucide-react";
+import { AlertTriangle, Plus, X, Store, Leaf, Package, HelpCircle, ScrollText, Truck } from "lucide-react";
 import { dollarsToCents } from "@/lib/stripe";
 import PotSizePicker from "@/components/pot-size-picker";
 import { findProhibitedWord, censorWord, logViolation } from "@/lib/profanity";
@@ -26,7 +26,17 @@ type SizeEntry = { id: number; potSize: string; quantity: string; listInShop: bo
 
 let nextId = 1;
 
-export default function CreateInventoryPage() {
+const DEFAULT_SHIPPING_DAYS = 3;
+const DEFAULT_RETURN_POLICY = "doa_guarantee";
+
+type SellerDefaults = {
+  shippingDays: number | null;
+  shippingDaysMax: number | null;
+  returnPolicyType: string | null;
+  returnPolicyNotes: string | null;
+};
+
+export default function CreateInventoryPage({ needsAgreement, sellerDefaults }: { needsAgreement: boolean; sellerDefaults: SellerDefaults }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -44,6 +54,29 @@ export default function CreateInventoryPage() {
 
   const [sizes, setSizes] = useState<SizeEntry[]>([{ id: 0, potSize: "", quantity: "1", listInShop: false, shopPrice: "", shopQuantity: "", shippingMode: "" as ShippingMode, shippingCost: "", sizeImages: [], buyerNoteEnabled: false, buyerNotePrompt: "", buyerNoteRequired: false }]);
   const [uploadingForSize, setUploadingForSize] = useState<number | null>(null);
+
+  // Inline seller-agreement gate (replaces the old hard redirect to /seller-agreement)
+  const [agreementAccepted, setAgreementAccepted] = useState(!needsAgreement);
+  const [agreementChecked, setAgreementChecked] = useState(false);
+  const [acceptingAgreement, setAcceptingAgreement] = useState(false);
+
+  // Inline shipping-timeline + return-policy (replaces the amber banners linking to /account)
+  const needsSellerDefaults = !sellerDefaults.shippingDays || !sellerDefaults.returnPolicyType;
+  const [shippingDays, setShippingDays] = useState<number | "">(sellerDefaults.shippingDays ?? DEFAULT_SHIPPING_DAYS);
+  const [shippingDaysMax, setShippingDaysMax] = useState<number | "">(sellerDefaults.shippingDaysMax ?? "");
+  const [returnPolicyType, setReturnPolicyType] = useState<string>(sellerDefaults.returnPolicyType ?? DEFAULT_RETURN_POLICY);
+  const [returnPolicyNotes, setReturnPolicyNotes] = useState<string>(sellerDefaults.returnPolicyNotes ?? "");
+
+  async function handleAcceptAgreement() {
+    setAcceptingAgreement(true);
+    const res = await fetch("/api/seller-agreement/accept", { method: "POST" });
+    const data = await res.json().catch(() => ({}));
+    setAcceptingAgreement(false);
+    if (data?.error) { toast.error(data.error); return; }
+    setAgreementAccepted(true);
+    toast.success("Welcome to selling on Plantet!");
+  }
+
   function switchType(type: ItemType) {
     setItemType(type);
     setCategory("Other");
@@ -192,6 +225,24 @@ export default function CreateInventoryPage() {
       }
     }
 
+    // Persist the inline shipping-timeline + return-policy to the seller's profile
+    // (only when they're actually listing and haven't set these before). Non-blocking:
+    // a hiccup here shouldn't stop the item itself from saving.
+    if (anyListing && needsSellerDefaults) {
+      const res = await fetch("/api/profile/shipping-return", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          shipping_days: shippingDays === "" ? null : shippingDays,
+          shipping_days_max: shippingDaysMax === "" ? null : shippingDaysMax,
+          return_policy_type: returnPolicyType || null,
+          return_policy_notes: returnPolicyNotes.trim() || null,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data?.error) toast.error(`Couldn't save your shipping/return settings: ${data.error}`);
+    }
+
     const rows = sizes.map(s => ({
       seller_id: user.id,
       plant_name: plantName.trim(),
@@ -277,12 +328,59 @@ export default function CreateInventoryPage() {
   }
 
   const anyListing = sizes.some(s => s.listInShop && s.shopPrice);
+  const anyListingIntent = sizes.some(s => s.listInShop);
   const hasIncompleteListings = sizes.some(s => s.listInShop && (!s.shopPrice || !s.shippingMode));
   const hasOverQty = sizes.some(s => s.listInShop && s.shopQuantity !== "" && Number(s.shopQuantity) > (Number(s.quantity) || 1));
   const canSubmit = !!plantName.trim() && sizes.every(s => Number(s.quantity) >= 1) && !hasIncompleteListings && !hasOverQty;
   const isSupply = itemType === "supply";
   const categories = isSupply ? SUPPLY_CATEGORIES : PLANT_CATEGORIES;
   const unitWord = isSupply ? "option" : "size";
+
+  if (!agreementAccepted) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-10">
+        <div className="flex items-center gap-3 mb-2">
+          <ScrollText className="text-leaf h-6 w-6 shrink-0" />
+          <h1 className="text-2xl font-bold">Quick seller agreement</h1>
+        </div>
+        <p className="text-muted-foreground mb-6">A one-time step before your first listing. Here&apos;s the short version:</p>
+        <Card className="mb-6">
+          <CardContent className="pt-6">
+            <ul className="space-y-2 list-disc pl-5 text-sm">
+              <li>Describe plants honestly — real photos, correct species, accurate condition.</li>
+              <li>Follow plant laws (USDA/state rules on shipping, prohibited and invasive species). You&apos;re responsible for compliance.</li>
+              <li>Ship within 3 business days, package plants carefully, and add tracking.</li>
+              <li>If a plant arrives dead or not as described, work with the buyer in good faith on a fair resolution.</li>
+              <li>Plantet takes a small platform fee per sale (shown in your dashboard). Keep sales on Plantet.</li>
+              <li>No fake reviews, off-platform deals, or misleading listings — violations can lead to suspension.</li>
+            </ul>
+          </CardContent>
+        </Card>
+        <label className="flex items-start gap-3 cursor-pointer mb-4">
+          <input
+            type="checkbox"
+            checked={agreementChecked}
+            onChange={(e) => setAgreementChecked(e.target.checked)}
+            className="mt-0.5 h-4 w-4 accent-leaf"
+          />
+          <span className="text-sm">
+            I have read and agree to the{" "}
+            <Link href="/seller-agreement" target="_blank" className="underline font-medium hover:opacity-80">full Plantet Seller Agreement</Link>, confirm I&apos;m at least 18, and will follow all applicable laws for selling and shipping plants.
+          </span>
+        </label>
+        <div className="flex items-center gap-4">
+          <Button
+            onClick={handleAcceptAgreement}
+            disabled={!agreementChecked || acceptingAgreement}
+            className="bg-leaf hover:bg-forest"
+          >
+            {acceptingAgreement ? "Saving…" : "Agree & start listing"}
+          </Button>
+          <Link href="/dashboard" className="text-sm text-muted-foreground hover:underline">Not now</Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-10">
@@ -722,6 +820,85 @@ export default function CreateInventoryPage() {
             </Button>
           </CardContent>
         </Card>
+
+        {anyListingIntent && needsSellerDefaults && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2"><Truck size={16} /> Shipping & returns</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-xs text-muted-foreground">
+                Buyers see these on every listing. We&apos;ve filled in sensible defaults — adjust if you like. Saved to your seller profile so you only set them once.
+              </p>
+              <div className="space-y-1">
+                <Label htmlFor="ship-days">How soon do you ship?</Label>
+                <div className="flex items-center gap-2">
+                  <select
+                    id="ship-days"
+                    value={shippingDays}
+                    onChange={(e) => {
+                      const val = e.target.value === "" ? "" : Number(e.target.value);
+                      setShippingDays(val);
+                      if (val === "" || (shippingDaysMax !== "" && Number(val) >= Number(shippingDaysMax))) setShippingDaysMax("");
+                    }}
+                    className="flex h-10 flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <option value="1">1 day</option>
+                    <option value="2">2 days</option>
+                    <option value="3">3 days</option>
+                    <option value="5">5 days</option>
+                    <option value="7">1 week</option>
+                    <option value="14">2 weeks</option>
+                  </select>
+                  <span className="text-sm text-muted-foreground shrink-0">to</span>
+                  <select
+                    value={shippingDaysMax}
+                    disabled={shippingDays === ""}
+                    onChange={(e) => setShippingDaysMax(e.target.value === "" ? "" : Number(e.target.value))}
+                    className="flex h-10 flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                  >
+                    <option value="">No max</option>
+                    {shippingDays !== "" && Number(shippingDays) < 2  && <option value="2">2 days</option>}
+                    {shippingDays !== "" && Number(shippingDays) < 3  && <option value="3">3 days</option>}
+                    {shippingDays !== "" && Number(shippingDays) < 5  && <option value="5">5 days</option>}
+                    {shippingDays !== "" && Number(shippingDays) < 7  && <option value="7">1 week</option>}
+                    {shippingDays !== "" && Number(shippingDays) < 14 && <option value="14">2 weeks</option>}
+                    {shippingDays !== "" && Number(shippingDays) < 21 && <option value="21">3 weeks</option>}
+                    {shippingDays !== "" && Number(shippingDays) < 30 && <option value="30">1 month</option>}
+                  </select>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="return-policy-inline">Return policy</Label>
+                <select
+                  id="return-policy-inline"
+                  value={returnPolicyType}
+                  onChange={(e) => { setReturnPolicyType(e.target.value); if (!e.target.value) setReturnPolicyNotes(""); }}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <option value="">Not specified</option>
+                  <option value="all_sales_final">🚫 All sales final</option>
+                  <option value="doa_guarantee">🌱 DOA guarantee</option>
+                  <option value="case_by_case">💬 Contact me first</option>
+                </select>
+                {returnPolicyType && (
+                  <Textarea
+                    value={returnPolicyNotes}
+                    onChange={(e) => setReturnPolicyNotes(e.target.value)}
+                    placeholder={
+                      returnPolicyType === "all_sales_final" ? "e.g. All sales are final. Please ask questions before purchasing." :
+                      returnPolicyType === "doa_guarantee"   ? "e.g. Contact me within 3 days of delivery with photos and I'll make it right." :
+                      "e.g. Message me before opening a dispute and I'll do my best to help."
+                    }
+                    rows={2}
+                    maxLength={300}
+                    className="resize-none text-sm"
+                  />
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="flex items-center gap-3">
           <Button type="submit" disabled={saving || !canSubmit} className="bg-leaf hover:bg-forest">
