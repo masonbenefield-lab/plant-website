@@ -1986,3 +1986,4 @@ Goal: fewer sign-ups drop off before their first listing. Two changes to the pat
 - Fixed My Garden plant photo lightbox opening as a tiny box. Root cause: base DialogContent's `sm:max-w-sm` (384px) overrode the lightbox's `max-w-4xl` (no `sm:` variant), capping it small; forced 16/9 aspect ratio further shrank portrait photos.
 - `src/components/garden/plant-photo-manager.tsx`: added `sm:max-w-4xl`, replaced forced 16/9 box with `h-[80vh]` so photos fill the viewer, set `showCloseButton={false}` to avoid a duplicate close button.
 - No SQL migrations, no env var changes.
+- Applied the same lightbox fix to the PUBLIC plant page (shared links): `src/components/garden/photo-gallery.tsx` — same `sm:max-w-4xl` + `h-[80vh]` + `showCloseButton={false}` changes. Audited all other galleries: `image-gallery.tsx` (shop/listings) and `auction-card-gallery.tsx` use custom full-screen overlays and were already correct.
