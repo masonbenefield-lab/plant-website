@@ -152,7 +152,7 @@ export function PlantPhotoManager({ plantId, initialImages, alt }: Props) {
 
       {/* Lightbox */}
       <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
-        <DialogContent className="max-w-4xl w-full p-0 bg-black border-0 overflow-hidden">
+        <DialogContent showCloseButton={false} className="max-w-[calc(100%-2rem)] sm:max-w-4xl w-full p-0 bg-black border-0 overflow-hidden">
           <button
             onClick={() => setLightboxOpen(false)}
             className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors"
@@ -160,7 +160,7 @@ export function PlantPhotoManager({ plantId, initialImages, alt }: Props) {
           >
             <X size={16} />
           </button>
-          <div className="relative w-full" style={{ aspectRatio: "16/9" }}>
+          <div className="relative w-full h-[80vh]">
             <Image src={images[lightboxIndex]} alt={`${alt} photo ${lightboxIndex + 1}`} fill className="object-contain" />
           </div>
           {images.length > 1 && (

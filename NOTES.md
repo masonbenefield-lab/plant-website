@@ -1981,3 +1981,8 @@ Goal: fewer sign-ups drop off before their first listing. Two changes to the pat
 
 ### Not done (optionally next)
 - Feature 3 from the plan (collapse the inventory→listing two-step into one guided action) — not started.
+
+## 2026-07-14
+- Fixed My Garden plant photo lightbox opening as a tiny box. Root cause: base DialogContent's `sm:max-w-sm` (384px) overrode the lightbox's `max-w-4xl` (no `sm:` variant), capping it small; forced 16/9 aspect ratio further shrank portrait photos.
+- `src/components/garden/plant-photo-manager.tsx`: added `sm:max-w-4xl`, replaced forced 16/9 box with `h-[80vh]` so photos fill the viewer, set `showCloseButton={false}` to avoid a duplicate close button.
+- No SQL migrations, no env var changes.
