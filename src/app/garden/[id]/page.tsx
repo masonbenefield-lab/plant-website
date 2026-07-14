@@ -110,6 +110,7 @@ export default async function GardenPlantDetailPage({
           <SharePlantButton
             plantId={plant.id}
             plantName={plant.name}
+            username={username}
             isPublic={plant.is_public ?? true}
             gardenPublic={gardenPublic}
             lastSharedAt={plant.shared_at ?? null}

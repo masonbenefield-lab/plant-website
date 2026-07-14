@@ -6,21 +6,24 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { Share2, Loader2, CheckCheck } from "lucide-react";
+import { Share2, Loader2, Rss, Link as LinkIcon } from "lucide-react";
 
 const WARN_HOURS = 24;
 
 interface Props {
   plantId: string;
   plantName: string;
+  username: string | null;
   isPublic: boolean;
   gardenPublic: boolean;
   lastSharedAt?: string | null;
 }
 
-export function SharePlantButton({ plantId, plantName, isPublic, gardenPublic, lastSharedAt }: Props) {
-  const [shared, setShared] = useState(false);
+export function SharePlantButton({ plantId, plantName, username, isPublic, gardenPublic, lastSharedAt }: Props) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -35,7 +38,7 @@ export function SharePlantButton({ plantId, plantName, isPublic, gardenPublic, l
     return `${Math.floor(h)} hours ago`;
   }
 
-  function handleClick() {
+  function handleFeedShare() {
     if (lastSharedAt && hoursAgo(lastSharedAt) < WARN_HOURS) {
       setConfirmOpen(true);
     } else {
@@ -54,8 +57,6 @@ export function SharePlantButton({ plantId, plantName, isPublic, gardenPublic, l
 
       if (error) { toast.error("Failed to share plant"); return; }
 
-      setShared(true);
-
       if (!gardenPublic || !isPublic) {
         toast.success(`${plantName} shared to your followers' feeds`, {
           description: "Note: your garden or this plant is set to private, so the link won't work for visitors until you make it public.",
@@ -67,21 +68,55 @@ export function SharePlantButton({ plantId, plantName, isPublic, gardenPublic, l
     });
   }
 
-  if (shared) {
-    return (
-      <div className="flex items-center gap-1.5 text-sm text-leaf font-medium px-3 py-1.5">
-        <CheckCheck size={14} />
-        Shared to feed
-      </div>
-    );
+  async function copyLink() {
+    if (!username) {
+      toast.error("Set a username in your profile to share a link");
+      return;
+    }
+    const url = `${window.location.origin}/gardens/${username}/${plantId}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      if (!gardenPublic || !isPublic) {
+        toast.success("Link copied", {
+          description: "Your garden or this plant is set to private, so the link won't work for visitors until you make it public.",
+          duration: 8000,
+        });
+      } else {
+        toast.success("Link copied — share it anywhere");
+      }
+    } catch {
+      toast.error("Couldn't copy link");
+    }
   }
 
   return (
     <>
-      <Button variant="outline" size="sm" onClick={handleClick} disabled={isPending} className="gap-1.5">
-        {isPending ? <Loader2 size={14} className="animate-spin" /> : <Share2 size={14} />}
-        Share to feed
-      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button variant="outline" size="sm" disabled={isPending} className="gap-1.5" />
+          }
+        >
+          {isPending ? <Loader2 size={14} className="animate-spin" /> : <Share2 size={14} />}
+          Share
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-52">
+          <DropdownMenuItem onClick={handleFeedShare} className="gap-2">
+            <Rss size={15} />
+            <div className="flex flex-col">
+              <span>Share to feed</span>
+              <span className="text-xs text-muted-foreground">Post to your followers</span>
+            </div>
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={copyLink} className="gap-2">
+            <LinkIcon size={15} />
+            <div className="flex flex-col">
+              <span>Copy link</span>
+              <span className="text-xs text-muted-foreground">Share anywhere</span>
+            </div>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent className="max-w-sm">
