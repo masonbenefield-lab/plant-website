@@ -6,27 +6,37 @@ import { BroadcastClient } from "./broadcast-client";
 
 export const dynamic = "force-dynamic";
 
-// Pre-filled with the July 2026 giveaway announcement. Editable before sending.
+// Pre-filled with the July 2026 giveaway deadline reminder + native app launch.
+// Editable before sending.
 const FELCO_DRAFT = {
-  subject: "🎉 We have a winner! Plus July's giveaway is live — Felco Pruners",
-  heading: "We Have a Winner!",
-  subheading: "Congrats to our Cravens Craving Fig winner",
-  bodyMarkdown: `Our **Cravens Craving Fig tree** giveaway officially closed, and we're thrilled to announce the winner:
+  subject: "9 days left to win a pair of FELCO 2 pruners",
+  heading: "The July Giveaway Closes July 31",
+  subheading: "Only 8 people have entered so far",
+  bodyMarkdown: `Quick heads up — our **July giveaway closes Friday, July 31**, and so far only **8 people have entered**. Those are very good odds for a tool most gardeners keep for life.
 
-## 🌿 Congratulations, @Mozart007!
+### This month's prize: FELCO 2 Pruning Shears
 
-Thank you to everyone who entered. We loved watching this community grow (pun fully intended 🌱).
+The benchmark for hand pruners since 1945. Swiss-made, forged aluminum handles, hardened steel blade, clean cuts up to a full inch. We'll reach out to you directly before we buy and ship them.
 
-## July's Giveaway Is Live 🎁
+Entering takes one click, and it's free.
 
-Didn't win this time? Your next chance is already here.
+---
 
-### This month's prize: Felco Pruners (FELCO 2)
+### One more thing: Plantet is now an app
 
-The gold standard in hand pruners — Swiss-made, forged aluminum handles, hardened steel blade, and clean cuts up to 1 inch. Trusted by pros and home gardeners since 1945.
+We're officially live on the **App Store** and **Google Play**. Same Plantet, quicker to open, plus push notifications so you never miss a bid, an order, or a watering reminder.
 
-**Entries close July 31, 2026.** Entries reset each month, so you'll need to **enter again** to be eligible — last month's entries don't carry over.`,
-  ctaLabel: "Enter the July Giveaway",
+[Get the Plantet app](https://plantet.shop/app)
+
+One link for both — it figures out your phone for you.
+
+---
+
+Thanks for being here early. It means a lot.
+
+Happy growing,
+The Plantet Team`,
+  ctaLabel: "Enter the Giveaway",
   ctaUrl: "https://www.plantet.shop/giveaway",
   includeReferralBlock: true,
 };
