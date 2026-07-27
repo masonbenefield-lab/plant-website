@@ -4,6 +4,7 @@ import { createClient as createAdmin } from "@supabase/supabase-js";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { GROUNDBREAKER_CAP } from "@/lib/plan-limits";
 import { geoCountry, isGeoAllowed } from "@/lib/geo";
+import { classifyAuthError } from "@/lib/auth-errors";
 
 async function handleSession(
   user: { id: string; email?: string; created_at: string },
@@ -67,6 +68,19 @@ export async function GET(request: Request) {
   const next = searchParams.get("next") ?? "/dashboard";
   const country = geoCountry(request.headers);
 
+  // An OAuth provider (Apple/Google) or Supabase can bounce back here with an
+  // error and NO `code` — most commonly when the sign-in email already belongs
+  // to another account. Handle it first so we show an accurate message instead
+  // of the generic "link expired" one.
+  const providerError = searchParams.get("error");
+  if (providerError) {
+    const reason = classifyAuthError(
+      searchParams.get("error_code"),
+      searchParams.get("error_description")
+    );
+    return NextResponse.redirect(`${origin}/login?error=${reason}`);
+  }
+
   const supabase = await createClient();
 
   // PKCE flow — email confirmation, OAuth
@@ -79,6 +93,13 @@ export async function GET(request: Request) {
     const { data: { session: existing } } = await supabase.auth.getSession();
     if (existing?.user) {
       return handleSession(existing.user, origin, next, country);
+    }
+    // Exchange genuinely failed and there's no session — classify why (e.g. an
+    // Apple/Google account whose email collides with an existing account).
+    if (error) {
+      return NextResponse.redirect(
+        `${origin}/login?error=${classifyAuthError(error.code, error.message)}`
+      );
     }
   }
 

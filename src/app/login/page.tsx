@@ -102,6 +102,20 @@ export default function LoginPage() {
                 </Link>
               </div>
             )}
+            {authError === "account_exists" && (
+              <div className="text-sm bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md px-3 py-3 space-y-1">
+                <p className="font-semibold text-amber-800 dark:text-amber-400">You already have a Plantet account with this email.</p>
+                <p className="text-xs text-muted-foreground">
+                  Sign in with the method you first used — Google, Apple, or your email and password below. They all lead to the same account, so there&apos;s no need to sign up again.
+                </p>
+              </div>
+            )}
+            {authError === "oauth_failed" && (
+              <div className="text-sm bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md px-3 py-3 space-y-1">
+                <p className="font-semibold text-amber-800 dark:text-amber-400">That sign-in didn&apos;t go through.</p>
+                <p className="text-xs text-muted-foreground">No account was created. Please try again with Google, Apple, or your email and password below.</p>
+              </div>
+            )}
             {error === "unconfirmed" && (
               <div className="text-sm bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md px-3 py-3 space-y-2">
                 <p className="font-semibold text-amber-800 dark:text-amber-400">Email not confirmed yet.</p>

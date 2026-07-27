@@ -1988,3 +1988,22 @@ Goal: fewer sign-ups drop off before their first listing. Two changes to the pat
 - No SQL migrations, no env var changes.
 - Applied the same lightbox fix to the PUBLIC plant page (shared links): `src/components/garden/photo-gallery.tsx` — same `sm:max-w-4xl` + `h-[80vh]` + `showCloseButton={false}` changes. Audited all other galleries: `image-gallery.tsx` (shop/listings) and `auction-card-gallery.tsx` use custom full-screen overlays and were already correct.
 - Consolidated the plant Share button in My Garden into a single dropdown with two options: "Share to feed" (existing follower-feed post + 24h re-share confirm) and "Copy link" (copies the public plant URL `${origin}/gardens/{username}/{plantId}` to clipboard). Both warn via toast if the garden/plant is private. `src/components/garden/share-plant-button.tsx` rewritten as a DropdownMenu; `src/app/garden/[id]/page.tsx` now passes `username` to it. No SQL / env changes.
+
+## 2026-07-27 — Apple/OAuth sign-up "you already have an account" fix
+- Reported: a new user signing up via Apple login (iOS app) saw an error implying they already had an account after accepting Apple's consent, scaring off signups.
+- Root cause in code: `src/app/auth/callback/route.ts` only handled `?code=`/`?token_hash=`. When Apple/Supabase bounced back with `?error=...` and no code (most commonly an email/identity collision), the route fell through to the generic `/login?error=auth_callback_failed`, which renders "Confirmation link expired or already used." — a misleading catch-all for a fresh OAuth signup.
+- Changes:
+  - NEW `src/lib/auth-errors.ts`: `classifyAuthError(code, description)` → `account_exists` | `auth_callback_failed` | `oauth_failed`.
+  - `src/app/auth/callback/route.ts`: reads `error`/`error_code`/`error_description` params up front and redirects to `/login?error=<classified>`; also classifies a failed `exchangeCodeForSession` (when there's no existing session) instead of always showing the generic message.
+  - `src/app/login/page.tsx`: added friendly amber messages for `account_exists` ("You already have a Plantet account with this email…") and `oauth_failed` ("That sign-in didn't go through. No account was created…").
+- Tested: `tsc --noEmit` clean, eslint clean on changed files, 13/13 unit cases for classifyAuthError pass, `next build` exits 0 (all routes compiled).
+- No SQL migrations, no env var changes.
+- LIKELY ROOT CAUSE STILL IN SUPABASE DASHBOARD (needs Mason): Auth → Logs will show the exact rejection for the affected user; Auth → account linking ("link accounts with same email") likely needs enabling so Apple attaches to an existing account instead of erroring. Note both email signup and OAuth create an auth.users row up front, so an abandoned partial signup can cause a later Apple collision.
+
+## 2026-07-27 — Structural fix: auto-delete abandoned unconfirmed signups (prevents Apple collision at the source)
+- Follow-up to the Apple "you already have an account" fix. Root cause of the collision: `supabase.auth.signUp` creates an `auth.users` row immediately (unconfirmed). Supabase auto-links same-email identities ONLY when the existing email is confirmed, so an abandoned/unconfirmed email signup blocks a later Apple/Google sign-in with the same email. (There is no "account linking" toggle in the Supabase dashboard — auto-linking is default behavior gated on email confirmation.)
+- NEW cron `src/app/api/cron/cleanup-unconfirmed/route.ts` — deletes abandoned unconfirmed accounts. Guards (ALL must hold): email_confirmed_at null, phone_confirmed_at null, identities are email-only (never OAuth), older than 3 days (past link expiry), and no profiles row. Paginates listUsers (1000/page, 50-page cap), CRON_SECRET auth + service-role client, matches existing cron pattern.
+- `vercel.json`: added schedule `30 3 * * *` (daily 3:30am). Now 13 crons.
+- Tested: tsc clean, eslint clean, `next build` exit 0 (route compiled), + 7/7 guard-simulation cases (keeps confirmed/OAuth/recent/phone-confirmed; deletes only old unconfirmed email-only orphans).
+- No SQL migrations. No new env vars (CRON_SECRET already exists). Deploy to Vercel registers the new cron automatically.
+- Note: existing orphan(s) that already caused a report will be cleared on the next daily run (or delete manually in Authentication → Users now). TTL constant is UNCONFIRMED_TTL_DAYS = 3 in the route if tuning is wanted.
