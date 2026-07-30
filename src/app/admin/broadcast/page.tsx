@@ -6,37 +6,27 @@ import { BroadcastClient } from "./broadcast-client";
 
 export const dynamic = "force-dynamic";
 
-// Pre-filled with the July 2026 giveaway deadline reminder + native app launch.
+// Pre-filled with the July 2026 giveaway LAST-CALL reminder (ends 7/31 11:59pm CT).
 // Editable before sending.
 const FELCO_DRAFT = {
-  subject: "9 days left to win a pair of FELCO 2 pruners",
-  heading: "The July Giveaway Closes July 31",
-  subheading: "Only 8 people have entered so far",
-  bodyMarkdown: `Quick heads up — our **July giveaway closes Friday, July 31**, and so far only **8 people have entered**. Those are very good odds for a tool most gardeners keep for life.
+  subject: "Last day to win a pair of FELCO 2 pruners",
+  heading: "The Giveaway Ends Tomorrow at 11:59pm CT",
+  subheading: "Free to enter — this is the last call",
+  bodyMarkdown: `Quick heads-up before it's gone — our **FELCO 2 pruner giveaway ends tomorrow at 11:59pm CT.**
 
-### This month's prize: FELCO 2 Pruning Shears
+These are the red-handled Swiss pruners gardeners have trusted since 1945 — the pair you keep for decades. Entering is free and takes about ten seconds: just sign in and hit the button below.
 
-The benchmark for hand pruners since 1945. Swiss-made, forged aluminum handles, hardened steel blade, clean cuts up to a full inch. We'll reach out to you directly before we buy and ship them.
+We draw one winner tomorrow night and ship the prize to their door.
 
-Entering takes one click, and it's free.
-
----
-
-### One more thing: Plantet is now an app
-
-We're officially live on the **App Store** and **Google Play**. Same Plantet, quicker to open, plus push notifications so you never miss a bid, an order, or a watering reminder.
-
-[Get the Plantet app](https://plantet.shop/app)
-
-One link for both — it figures out your phone for you.
-
----
-
-Thanks for being here early. It means a lot.
+It's real, by the way — you can see last month's winner right on the giveaway page. 🌿
 
 Happy growing,
-The Plantet Team`,
-  ctaLabel: "Enter the Giveaway",
+The Plantet Team
+
+---
+
+No purchase necessary. US, 18+. Not affiliated with FELCO or Meta.`,
+  ctaLabel: "Enter to Win",
   ctaUrl: "https://www.plantet.shop/giveaway",
   includeReferralBlock: true,
 };

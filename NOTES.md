@@ -2007,3 +2007,7 @@ Goal: fewer sign-ups drop off before their first listing. Two changes to the pat
 - Tested: tsc clean, eslint clean, `next build` exit 0 (route compiled), + 7/7 guard-simulation cases (keeps confirmed/OAuth/recent/phone-confirmed; deletes only old unconfirmed email-only orphans).
 - No SQL migrations. No new env vars (CRON_SECRET already exists). Deploy to Vercel registers the new cron automatically.
 - Note: existing orphan(s) that already caused a report will be cleared on the next daily run (or delete manually in Authentication → Users now). TTL constant is UNCONFIRMED_TTL_DAYS = 3 in the route if tuning is wanted.
+
+## 2026-07-30
+- `src/app/admin/broadcast/page.tsx`: replaced pre-filled `FELCO_DRAFT` with the July giveaway LAST-CALL email (ends 7/31 11:59pm CT). New subject/heading/subheading/body, CTA "Enter to Win" → /giveaway, referral block still on. Body uses only supported markdown (**bold**, ---); dropped italics/### to render cleanly.
+- No SQL migrations. No env var changes.
