@@ -6,26 +6,26 @@ import { BroadcastClient } from "./broadcast-client";
 
 export const dynamic = "force-dynamic";
 
-// Pre-filled with the July 2026 giveaway LAST-CALL reminder (ends 7/31 11:59pm CT).
+// Pre-filled with the August 2026 giveaway announcement (ends 8/31 11:59pm CT).
 // Editable before sending.
 const FELCO_DRAFT = {
-  subject: "Last day to win a pair of FELCO 2 pruners",
-  heading: "The Giveaway Ends Tomorrow at 11:59pm CT",
-  subheading: "Free to enter — this is the last call",
-  bodyMarkdown: `Quick heads-up before it's gone — our **FELCO 2 pruner giveaway ends tomorrow at 11:59pm CT.**
+  subject: "Win a Panache Tiger Fig Tree this month 🌿",
+  heading: "This Month's Giveaway: A Panache Tiger Fig Tree",
+  subheading: "Free to enter — closes August 31st",
+  bodyMarkdown: `Our August giveaway is live, and it's a beauty — a **Panache Tiger Fig Tree**, yours to grow.
 
-These are the red-handled Swiss pruners gardeners have trusted since 1945 — the pair you keep for decades. Entering is free and takes about ten seconds: just sign in and hit the button below.
+Nicknamed the "Tiger" fig for its green-and-yellow striped fruit, Panache is prized for a sweet, honeyed, berry-like flavor that's hard to find anywhere but your own backyard. It's the kind of tree you plant once and enjoy for years.
 
-We draw one winner tomorrow night and ship the prize to their door.
+Entering is free and takes about ten seconds: just sign in and hit the button below. **The giveaway closes August 31st at 11:59pm CT**, and we'll draw one winner and ship the tree right to their door.
 
-It's real, by the way — you can see last month's winner right on the giveaway page. 🌿
+It's real, by the way — you can see our past winners right on the giveaway page. 🌿
 
 Happy growing,
 The Plantet Team
 
 ---
 
-No purchase necessary. US, 18+. Not affiliated with FELCO or Meta.`,
+No purchase necessary. US, 18+.`,
   ctaLabel: "Enter to Win",
   ctaUrl: "https://www.plantet.shop/giveaway",
   includeReferralBlock: true,
