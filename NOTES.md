@@ -2011,3 +2011,12 @@ Goal: fewer sign-ups drop off before their first listing. Two changes to the pat
 ## 2026-07-30
 - `src/app/admin/broadcast/page.tsx`: replaced pre-filled `FELCO_DRAFT` with the July giveaway LAST-CALL email (ends 7/31 11:59pm CT). New subject/heading/subheading/body, CTA "Enter to Win" → /giveaway, referral block still on. Body uses only supported markdown (**bold**, ---); dropped italics/### to render cleanly.
 - No SQL migrations. No env var changes.
+
+## 2026-08-05 — Apple Hide-My-Email bounce backfill
+
+- **Root cause found:** every email to `@privaterelay.appleid.com` (Apple "Hide My Email" / Sign in with Apple) was bouncing in Resend because the `plantet.shop` sending domain + `noreply@plantet.shop` were never registered in Apple Developer → "Sign in with Apple for Email Communication". Registered both (SPF-verified, green) on 2026-08-05 — new relay sends now deliver.
+- **Backfill tool (new):** admin-only page `/admin/resend-apple-bounces` + route `/api/admin/resend-apple-bounces` (GET = preview/no-send, POST = send) to re-send the welcome + giveaway-entry emails the 6 affected relay users missed. Skips the owner's `@appletest` account, skips users who never completed onboarding, and only includes users created before the fix (`FIX_LIVE_AT = 2026-08-05`) so re-clicks / new signups can't double-send.
+- **email.ts:** `sendWelcomeEmail` and `sendGiveawayEntryEmail` now `return` the Resend `{data,error}` result (was `await` + discard) so the backfill can report real per-email success/failure. Backward-compatible — existing fire-and-forget callers ignore the return value.
+- Files: `src/app/admin/resend-apple-bounces/{page.tsx,resend-apple-client.tsx}`, `src/app/api/admin/resend-apple-bounces/route.ts`, `src/lib/email.ts`.
+- No SQL migrations. No new env vars.
+- **Manual step after deploy:** owner opens `/admin/resend-apple-bounces`, clicks Preview then Send now (sends ~5 emails), verifies delivery in Resend.

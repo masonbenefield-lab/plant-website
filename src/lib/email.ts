@@ -1421,7 +1421,10 @@ export async function sendWelcomeEmail({
   displayName?: string | null;
 }) {
   const resend = getResend();
-  await resend.emails.send({
+  // Returns the Resend { data, error } result so callers that need delivery
+  // confirmation (e.g. the Apple-relay backfill) can detect failures. Existing
+  // fire-and-forget callers ignore the return value, so this is backward-compatible.
+  return resend.emails.send({
     from: FROM,
     to: recipientEmail,
     subject: "Welcome to Plantet",
@@ -2999,7 +3002,8 @@ export async function sendGiveawayEntryEmail({
     ? `${siteUrl}/signup?ref=${referralCode}`
     : `${siteUrl}/giveaway`;
   const resend = getResend();
-  await resend.emails.send({
+  // Returns the Resend { data, error } result (see sendWelcomeEmail note).
+  return resend.emails.send({
     from: FROM,
     to: recipientEmail,
     subject: `🌿 You're entered for ${monthLabel}!`,
