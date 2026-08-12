@@ -1656,6 +1656,38 @@ export async function sendAnnouncementBatch({
   return { sent, failed, skippedBanned };
 }
 
+// ─── Admin security alert (owner notification) ───────────────────────────────
+// Sent to the owner's inbox when a high-blast-radius admin action occurs (e.g. a
+// broadcast goes out). Deliberately hard-coded to the owner address rather than
+// the acting admin, so that if a site-admin account is compromised the owner is
+// still notified through a channel the attacker doesn't control.
+export const OWNER_ALERT_EMAIL = "masonbenefield@gmail.com";
+
+export async function sendAdminSecurityAlert({
+  subject,
+  heading,
+  lines,
+}: {
+  subject: string;
+  heading: string;
+  lines: string[];
+}) {
+  const resend = getResend();
+  const body = lines.map((l) => `<p style="margin:0 0 8px;">${l}</p>`).join("");
+  return resend.emails.send({
+    from: FROM,
+    to: OWNER_ALERT_EMAIL,
+    subject,
+    html: emailBase({
+      title: subject,
+      heading,
+      subheading: "Plantet admin security alert",
+      body,
+      footerNote: "You're receiving this because you're a Plantet administrator. If this wasn't you, secure your admin account immediately.",
+    }),
+  });
+}
+
 function plantCardHtml(listing: DigestListing, siteUrl: string): string {
   const img = listing.images?.[0];
   const name = listing.variety ? `${listing.plant_name} — ${listing.variety}` : listing.plant_name;
@@ -1890,15 +1922,12 @@ export function buildReengagementHtml({
   username,
   displayName,
   userId,
-  freshListings,
 }: {
   username: string;
   displayName?: string | null;
   userId: string;
-  freshListings: DigestListing[];
 }): string {
   const siteUrl = siteBase();
-  const listingsHtml = freshListings.length ? listingSection("What's new on Plantet", freshListings, siteUrl) : "";
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -1932,22 +1961,35 @@ export function buildReengagementHtml({
                 </tr>
               </table>
               <h1 style="margin:0 0 8px;color:#F6F2E9;font-size:26px;font-weight:700;line-height:1.25;">We've missed you!</h1>
-              <p style="margin:0;color:#A8C19A;font-size:14px;font-weight:500;">It's been a while — come see what's growing</p>
+              <p style="margin:0;color:#A8C19A;font-size:14px;font-weight:500;">Your garden's still here — and it's easier than you remember</p>
             </td>
           </tr>
 
           <tr>
-            <td style="padding:32px 32px 24px;">
-              <p style="margin:0 0 8px;font-size:18px;font-weight:600;color:#16201B;">Hey ${displayName ?? username} &#128075;</p>
-              <p style="margin:0;font-size:14px;color:#6B7E72;line-height:1.65;">We noticed you haven't stopped by in a while. The shop has been growing — here are some fresh finds we think you'll love.</p>
+            <td style="padding:32px 32px 4px;">
+              <p style="margin:0 0 12px;font-size:18px;font-weight:600;color:#16201B;">Hey ${displayName ?? username} &#128075;</p>
+              <p style="margin:0 0 16px;font-size:14px;color:#6B7E72;line-height:1.65;">It's been a while. Here's the part of Plantet most people stick around for: add your plants to your garden and we become your care assistant — reminders when it's time to water, mist, or fertilize, a journal of how each one's doing, and a care streak so a plant never slips through the cracks again.</p>
             </td>
           </tr>
 
-          ${listingsHtml}
+          <tr>
+            <td style="padding:4px 32px 8px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#F4F0E6;border:2px solid #2F7D54;border-radius:10px;overflow:hidden;">
+                <tr>
+                  <td style="padding:22px 24px;">
+                    <p style="margin:0 0 4px;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#2F7D54;">30 seconds</p>
+                    <p style="margin:4px 0 6px;font-size:15px;font-weight:700;color:#1F4736;">🪴 Add your first plant</p>
+                    <p style="margin:0 0 16px;font-size:13px;color:#4A5E51;line-height:1.6;">Name it, snap a photo, set how often it needs water. That's it — the reminders start automatically.</p>
+                    <a href="${siteUrl}/garden" style="display:inline-block;background:#2F7D54;color:#F6F2E9;font-size:13px;font-weight:600;text-decoration:none;padding:11px 24px;border-radius:7px;">Start my garden &#8594;</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
 
           <tr>
-            <td style="padding:8px 32px 40px;text-align:center;">
-              <a href="${siteUrl}/shop" style="display:inline-block;background:#2F7D54;color:#F6F2E9;font-size:15px;font-weight:600;text-decoration:none;padding:14px 36px;border-radius:8px;">See what's new &#8594;</a>
+            <td style="padding:16px 32px 32px;text-align:center;">
+              <p style="margin:0;font-size:13px;color:#8A9A8F;line-height:1.6;">Looking to grow your collection? <a href="${siteUrl}/shop" style="color:#2F7D54;text-decoration:underline;">The shop's open too</a> — new listings added all the time.</p>
             </td>
           </tr>
 
@@ -1983,20 +2025,18 @@ export async function sendReengagementEmail({
   username,
   displayName,
   userId,
-  freshListings,
 }: {
   recipientEmail: string;
   username: string;
   displayName?: string | null;
   userId: string;
-  freshListings: DigestListing[];
 }) {
   const resend = getResend();
   await resend.emails.send({
     from: FROM,
     to: recipientEmail,
-    subject: "We've missed you on Plantet",
-    html: buildReengagementHtml({ username, displayName, userId, freshListings }),
+    subject: "Your Plantet garden is waiting 🌱",
+    html: buildReengagementHtml({ username, displayName, userId }),
   });
 }
 
@@ -3230,6 +3270,66 @@ export async function sendOnboardingEmail({
     to: recipientEmail,
     subject: "5 things Plantet members do (besides the giveaway)",
     html: buildOnboardingEmailHtml({ username, displayName, referralCode }),
+  });
+}
+
+// ─── First-plant nudge (day ~10, still 0 garden plants) ──────────────────────
+// Second onboarding touch that fills the gap between the day-3 onboarding email and
+// the 45-day re-engagement email. Sent only to members who joined ~10 days ago and
+// STILL haven't logged a garden plant — the one action that starts the care-reminder
+// retention loop (cron/care-push). Single-minded: one ask, one button.
+
+export function buildFirstPlantNudgeHtml({
+  username,
+  displayName,
+  userId,
+}: {
+  username: string;
+  displayName?: string | null;
+  userId: string;
+}): string {
+  const siteUrl = siteBase();
+  const name = displayName ?? username;
+  return emailBase({
+    title: "Your Plantet garden is still empty",
+    heading: `Add one plant, ${name} 🌱`,
+    subheading: "It takes 30 seconds — then Plantet remembers for you",
+    body: `
+      <p style="margin:0 0 16px;">You joined Plantet a little while back but haven't added a plant to your garden yet — so you're missing the part most members stick around for.</p>
+      <p style="margin:0 0 16px;">Add just one and Plantet becomes your care assistant: we'll remind you when it's time to water, mist, or fertilize, keep a journal of how it's doing, and track your care streak so a plant never slips through the cracks again.</p>
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#F4F0E6;border:2px solid #2F7D54;border-radius:10px;margin:20px 0 4px;overflow:hidden;">
+        <tr>
+          <td style="padding:22px 24px;">
+            <p style="margin:0 0 4px;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#2F7D54;">30 seconds</p>
+            <p style="margin:4px 0 6px;font-size:15px;font-weight:700;color:#1F4736;">🪴 Add your first plant</p>
+            <p style="margin:0 0 16px;font-size:13px;color:#4A5E51;line-height:1.6;">Name it, snap a photo, set how often it needs water. That's it — the reminders start automatically.</p>
+            <a href="${siteUrl}/garden" style="display:inline-block;background:#2F7D54;color:#F6F2E9;font-size:13px;font-weight:600;text-decoration:none;padding:11px 24px;border-radius:7px;">Start my garden &#8594;</a>
+          </td>
+        </tr>
+      </table>
+    `,
+    footerNote: "You're receiving this because you recently joined Plantet.",
+    unsubLink: unsubUrl(userId),
+  });
+}
+
+export async function sendFirstPlantNudge({
+  recipientEmail,
+  username,
+  displayName,
+  userId,
+}: {
+  recipientEmail: string;
+  username: string;
+  displayName?: string | null;
+  userId: string;
+}) {
+  const resend = getResend();
+  await resend.emails.send({
+    from: FROM,
+    to: recipientEmail,
+    subject: "Your Plantet garden is still empty 🌱",
+    html: buildFirstPlantNudgeHtml({ username, displayName, userId }),
   });
 }
 

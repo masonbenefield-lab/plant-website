@@ -31,6 +31,7 @@ import {
   buildWeeklyCareSummaryHtml,
   buildGiveawayEntryHtml,
   buildOnboardingEmailHtml,
+  buildFirstPlantNudgeHtml,
   buildCommunityReplyNotificationHtml,
   buildTradeProposedHtml,
   buildTradeAcceptedHtml,
@@ -315,7 +316,6 @@ export default async function EmailPreviewPage() {
       html: buildReengagementHtml({
         username: "plantlover",
         userId: "preview-user-id",
-        freshListings: sampleListings,
       }),
     },
     {
@@ -381,6 +381,16 @@ export default async function EmailPreviewPage() {
         username: "plantlover",
         displayName: "Jane",
         referralCode: "abc123",
+      }),
+    },
+    {
+      id: "first-plant-nudge",
+      label: "Day-10 First-Plant Nudge",
+      category: "Account",
+      html: buildFirstPlantNudgeHtml({
+        username: "plantlover",
+        displayName: "Jane",
+        userId: "preview-user-id",
       }),
     },
     {

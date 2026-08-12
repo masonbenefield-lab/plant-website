@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { sendReengagementEmail, type DigestListing } from "@/lib/email";
+import { sendReengagementEmail } from "@/lib/email";
 
 export const maxDuration = 300;
 
@@ -55,56 +55,12 @@ export async function GET(request: Request) {
     return NextResponse.json({ sent: 0, total: profiles.length, reason: "No inactive users" });
   }
 
-  // 4 — get Grower+ seller IDs for email content
-  const { data: growerPlusSellers } = await admin
-    .from("profiles")
-    .select("id")
-    .in("plan", ["grower", "nursery"]);
-  const growerPlusIds = (growerPlusSellers ?? []).map((s) => s.id);
-
-  // 5 — get fresh Grower+ listings (1 per seller, up to 6)
-  const { data: listingsRaw } = growerPlusIds.length
-    ? await admin
-        .from("listings")
-        .select("id, plant_name, variety, price_cents, images, seller_id")
-        .eq("status", "active")
-        .in("seller_id", growerPlusIds)
-        .not("images", "eq", "{}")
-        .not("images", "is", null)
-        .order("created_at", { ascending: false })
-        .limit(120)
-    : { data: [] };
-
-  const seenSellers = new Set<string>();
-  const listingPool = (listingsRaw ?? [])
-    .filter((l) => (l.images as string[])?.[0])
-    .filter((l) => {
-      if (seenSellers.has(l.seller_id)) return false;
-      seenSellers.add(l.seller_id);
-      return true;
-    })
-    .slice(0, 6);
-
-  // 6 — resolve seller usernames
-  const sellerIds = [...new Set(listingPool.map((l) => l.seller_id))];
-  const { data: sellers } = sellerIds.length
-    ? await admin.from("profiles").select("id, username").in("id", sellerIds)
-    : { data: [] };
-  const sellerMap: Record<string, string> = Object.fromEntries(
-    (sellers ?? []).map((s) => [s.id, s.username])
-  );
-
-  const freshListings: DigestListing[] = listingPool.map((l) => ({
-    id: l.id,
-    seller_id: l.seller_id,
-    plant_name: l.plant_name,
-    variety: l.variety,
-    price_cents: l.price_cents,
-    images: l.images as string[],
-    seller_username: sellerMap[l.seller_id] ?? "",
-  }));
-
-  // 7 — send emails
+  // 4 — send emails. The email leads with the garden/care value prop (log a plant →
+  // get watering reminders), not the marketplace: with inventory still thin, a win-back
+  // email opening on a near-empty shop confirms "nothing here." Garden/care works at any
+  // seller count and is the only feature with a recurring reason to return. The shop gets
+  // a single soft footer line inside the template. Revisit showing live listings here once
+  // inventory is deep enough that the shop reads as alive.
   let sent = 0;
   const sentIds: string[] = [];
 
@@ -118,7 +74,6 @@ export async function GET(request: Request) {
         username: profile.username,
         displayName: (profile as { display_name?: string | null }).display_name,
         userId: profile.id,
-        freshListings,
       });
       sentIds.push(profile.id);
       sent++;
@@ -127,7 +82,7 @@ export async function GET(request: Request) {
     }
   }
 
-  // 8 — mark re-engagement sent
+  // 5 — mark re-engagement sent
   if (sentIds.length) {
     await admin
       .from("profiles")

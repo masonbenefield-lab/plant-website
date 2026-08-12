@@ -2020,3 +2020,82 @@ Goal: fewer sign-ups drop off before their first listing. Two changes to the pat
 - Files: `src/app/admin/resend-apple-bounces/{page.tsx,resend-apple-client.tsx}`, `src/app/api/admin/resend-apple-bounces/route.ts`, `src/lib/email.ts`.
 - No SQL migrations. No new env vars.
 - **Manual step after deploy:** owner opens `/admin/resend-apple-bounces`, clicks Preview then Send now (sends ~5 emails), verifies delivery in Resend.
+
+---
+
+## 2026-08-05 — Admin panel security hardening (MFA + broadcast guardrails)
+
+Goal: reduce blast radius if an admin account is compromised. Root worry was the Broadcast tool — a stolen admin session could mass-email all opted-in users. Added defense-in-depth across every high-blast-radius admin action, plus MFA for admins.
+
+### Phase A — Broadcast/mass-send guardrails
+- **New shared auth choke point** `src/lib/admin-auth.ts`:
+  - `requireAdmin({requireAAL2?})` — validates `getUser()` + `is_admin`, optionally requires a fully MFA-verified (AAL2) session. Returns a ready NextResponse on failure. Every admin API route should gate through this.
+  - `logAdminAction(service, {...})` — best-effort insert into `admin_audit_logs` (never breaks the underlying action; logs failures to server console).
+  - `verifyPassword(email, password)` — server-side step-up re-auth using a throwaway non-persistent client (doesn't disturb the admin's real session).
+  - `ADMIN_REQUIRE_AAL2` — env-flag gate (see env vars below) so MFA can be enrolled and confirmed BEFORE enforcement flips on (prevents lockout).
+- **Broadcast route** `src/app/api/admin/broadcast/route.ts` (send mode) now:
+  1. Requires the admin to re-enter their password, **verified server-side** (replaces the old bypassable client-side "type SEND" box).
+  2. Enforces rate caps — max 3 mass sends per rolling 24h, min 5 minutes apart (read from the audit log).
+  3. Audit-logs every send + emails an out-of-band security alert to the owner.
+- **Broadcast UI** `src/app/admin/broadcast/broadcast-client.tsx` — password confirm field (was "type SEND"); notes the caps.
+- **email.ts** — added `sendAdminSecurityAlert({subject,heading,lines})`, hardcoded to owner (`masonbenefield@gmail.com`) as an out-of-band channel an attacker can't redirect.
+- **Backfill tool** `src/app/api/admin/resend-apple-bounces/route.ts` refactored onto `requireAdmin()` + now audit-logs and owner-alerts on send (it's a mass-send tool too).
+
+### Phase B — MFA (TOTP) for admins
+- **New page** `/admin/security` (`src/app/admin/security/{page.tsx,security-client.tsx}`): enroll an authenticator (QR + manual key), verify a 6-digit code, replace/remove, and a **step-up** challenge for an already-enrolled admin whose session is only AAL1 (e.g. signed in with Google/Apple). Added "Security" to admin nav.
+- **Login flow** `src/app/login/page.tsx`: after a correct password, if the account has 2FA it shows a second step to enter the TOTP code before finishing.
+- **Enforcement** (gated behind `ADMIN_REQUIRE_AAL2`, currently OFF):
+  - `src/app/admin/layout.tsx` — when the flag is on, any admin whose session isn't AAL2 is redirected to `/admin/security` (that page is exempted to avoid a loop). UX layer.
+  - `src/lib/supabase/middleware.ts` — proxy now sets an `x-pathname` request header so the layout can read the current path.
+  - Authoritative enforcement is in the API routes via `requireAdmin()` (honors the same flag) — not proxy-only, per the modified-Next proxy docs warning.
+- **Recovery escape hatch** `scripts/reset-admin-mfa.mjs`: `node scripts/reset-admin-mfa.mjs <email>` uses the service-role key to remove all MFA factors from an account (for a lost/replaced phone), so the admin can sign in with just their password and re-enroll. Auto-loads `.env.local`.
+
+### Files changed/added
+- Added: `src/lib/admin-auth.ts`, `src/app/admin/security/page.tsx`, `src/app/admin/security/security-client.tsx`, `scripts/reset-admin-mfa.mjs`
+- Changed: `src/lib/email.ts`, `src/app/api/admin/broadcast/route.ts`, `src/app/admin/broadcast/broadcast-client.tsx`, `src/app/api/admin/resend-apple-bounces/route.ts`, `src/app/login/page.tsx`, `src/app/admin/layout.tsx`, `src/app/admin/admin-nav.tsx`, `src/lib/supabase/middleware.ts`
+
+### SQL migrations
+- `supabase/migrations/002_admin_audit_logs.sql` (the `admin_audit_logs` table) **must be applied** if not already — the broadcast caps/audit depend on it. Insert/select RLS for admins only; no deletes.
+
+### Env vars
+- **New:** `ADMIN_REQUIRE_AAL2` (Vercel). Default/absent = `false` = MFA enrollment available but NOT enforced. Set to `true` ONLY after admins have enrolled at `/admin/security`, to flip enforcement on. Flipping it before enrolling would lock admins out of the panel (they'd be bounced to /admin/security to enroll, which is exempt — so recoverable, but enroll first).
+
+### Rollout order (IMPORTANT)
+1. Deploy (flag off). 2. Owner enrolls at `/admin/security`, confirms 2FA works by re-logging in. 3. Any other admins enroll. 4. Set `ADMIN_REQUIRE_AAL2=true` in Vercel + redeploy to enforce.
+
+## 2026-08-12 — Retention automation: fix empty re-engagement email + add day-10 first-plant nudge
+
+Goal: convert giveaway signups (who log in, enter, and never return) into first-plant-loggers, which starts the existing care-push retention loop. Email is the channel (dormant web signups have no app → no push token → cannot be pushed).
+
+Changed files:
+- `src/app/api/cron/reengagement/route.ts` — BUG FIX. The re-engagement email sourced its "fresh finds" listings from `plan in (grower, nursery)`, but those tiers were removed in the July pricing overhaul, so the query resolved to 0 sellers and the email shipped with an empty listings section + dead-end shop button. Replaced with fresh active listings from ALL sellers with photos (1 per seller, up to 6), most-recent-first. Deliberately NO reputation gate (unlike the weekly digest) since re-engagement is a 1:1 win-back.
+- `src/lib/email.ts` — NEW `buildFirstPlantNudgeHtml()` + `sendFirstPlantNudge()`. Single-ask lifecycle email ("Your Plantet garden is still empty 🌱" → Add your first plant → /garden). Uses shared `emailBase`, brand palette, includes unsubscribe link.
+- `src/app/api/cron/onboarding/route.ts` — added a 2nd cohort to the existing daily cron. Cohort 1 (unchanged): day-3 onboarding. Cohort 2 (new): signed up 11–10 days ago AND still has 0 `garden_plants` → send first-plant nudge. Fills the day-3→day-45 dead zone. Restructured so both cohorts run independently (no early return); response now returns `{onboarding, firstPlantNudge, onboardingTotal, nudgeEligible}`. Idempotency via the 24h signup-window tiling (same pattern as the existing onboarding cohort; no new DB column).
+
+Discovery (no change needed): the day-3 onboarding email already leads with "🪴 Add your first plant" and is subject-lined "5 things Plantet members do (besides the giveaway)" — the first-plant ask was already well-built there.
+
+No new migrations. No new env vars. No vercel.json change (reused the existing daily onboarding cron).
+
+Verification: `npx tsc --noEmit` → 0 errors. `eslint` on the 3 files → 0 errors (14 pre-existing warnings, none in new code).
+
+Not yet done (deferred): (a) manual one-time re-engagement broadcast to the EXISTING dormant backlog via the admin broadcast tool; (b) weekly-care-summary / digest reputation-gate emptiness is a separate known issue, untouched here. Deploy path: push to main → Vercel auto-deploys → crons pick up. Test a cron manually with `Authorization: Bearer $CRON_SECRET` against /api/cron/onboarding and /api/cron/reengagement.
+
+## 2026-08-12 — Re-engagement email pivoted from shop to garden/care
+
+- **Why:** Inventory is still thin, so a win-back email opening on a near-empty shop
+  confirms "nothing here." Garden/care works at any seller count and is the only feature
+  with a recurring reason to return (watering reminders). Aligns the 45-day email with
+  the day-3 onboarding and day-10 first-plant nudge — every touchpoint drives "log a plant."
+- **src/lib/email.ts** — `buildReengagementHtml` / `sendReengagementEmail`: dropped the
+  `freshListings` param and the live-listings grid. Body now leads with the garden/care
+  value prop + a "🪴 Add your first plant" card (CTA → /garden). Shop kept as a single soft
+  footer line (link to /shop, no fabricated seller/growth stat). Subject changed
+  "We've missed you on Plantet" → "Your Plantet garden is waiting 🌱".
+- **src/app/api/cron/reengagement/route.ts** — removed the now-unneeded listings query,
+  seller-username resolve, and `DigestListing` import/mapping. Cron just sends the email.
+  Left a comment to revisit showing live listings once inventory reads as alive.
+- **src/app/admin/email-preview/page.tsx** — removed `freshListings` from the re-engagement
+  preview call to match the new signature.
+- Verified: `npx tsc --noEmit` 0 errors. eslint on touched files: no new errors/warnings
+  (2 pre-existing Date.now purity errors + 14 pre-existing warnings, none in changed code).
+- No SQL migrations. No env var changes. Not yet deployed.
