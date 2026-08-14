@@ -44,3 +44,28 @@ export function classifyAuthError(
 
   return "oauth_failed";
 }
+
+/**
+ * Turns a raw GoTrue signUp error into something the person can act on.
+ *
+ * The case that matters is "Database error saving new user". That is what a
+ * duplicate username looked like before migration 029 fixed the profile trigger,
+ * and it's what any future trigger failure will look like too. Rendering it
+ * verbatim (which the signup form used to do) told people nothing about the
+ * actual problem, so they had no way to get past it.
+ */
+export function friendlySignupError(message: string | null | undefined): string {
+  const text = (message ?? "").toLowerCase();
+
+  if (text.includes("database error")) {
+    return "We couldn't create your account with that username — it may already be taken. Try a different one.";
+  }
+  if (text.includes("already registered") || text.includes("already exists")) {
+    return "An account with this email already exists. Sign in instead.";
+  }
+  if (text.includes("rate limit") || text.includes("too many")) {
+    return "Too many signup attempts — wait a minute and try again.";
+  }
+
+  return message || "Something went wrong creating your account. Please try again.";
+}

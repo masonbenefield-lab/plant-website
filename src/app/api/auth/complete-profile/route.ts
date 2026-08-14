@@ -5,6 +5,7 @@ import { sendWelcomeEmail } from "@/lib/email";
 import { containsSlur } from "@/lib/profanity";
 import { GROUNDBREAKER_CAP } from "@/lib/plan-limits";
 import { geoCountry, isGeoAllowed } from "@/lib/geo";
+import { validateUsernameFormat } from "@/lib/username";
 
 export async function POST(req: Request) {
   const supabase = await createClient();
@@ -25,13 +26,11 @@ export async function POST(req: Request) {
 
   const { username, displayName, emailOptIn } = await req.json();
 
-  if (
-    !username ||
-    username.length < 3 ||
-    username.length > 30 ||
-    !/^[a-z0-9._-]+$/.test(username)
-  ) {
-    return NextResponse.json({ error: "Invalid username format." }, { status: 400 });
+  const formatError = validateUsernameFormat(
+    typeof username === "string" ? username : ""
+  );
+  if (formatError) {
+    return NextResponse.json({ error: formatError }, { status: 400 });
   }
 
   if (containsSlur(username)) {

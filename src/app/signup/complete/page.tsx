@@ -1,17 +1,22 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { containsSlur } from "@/lib/profanity";
+import { normalizeUsername, validateUsernameFormat, USERNAME_MIN, USERNAME_MAX } from "@/lib/username";
+import { useUsernameAvailability } from "@/lib/use-username-availability";
 
-export default function CompleteSignupPage() {
+function CompleteSignupContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  // Set by /auth/callback when an email signup's chosen username didn't stick.
+  const retriedUsername = searchParams.get("retry");
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [ageConfirmed, setAgeConfirmed] = useState(false);
@@ -20,6 +25,7 @@ export default function CompleteSignupPage() {
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
   const [geoBlocked, setGeoBlocked] = useState(false);
+  const usernameStatus = useUsernameAvailability(username);
 
   useEffect(() => {
     const supabase = createClient();
@@ -29,8 +35,13 @@ export default function CompleteSignupPage() {
     ]).then(([{ data: { user } }, geo]) => {
       if (!user) { router.push("/login"); return; }
       if (geo.country && geo.country !== "US") { setGeoBlocked(true); }
-      // Pre-fill display name from Google metadata if available
-      const fullName = user.user_metadata?.full_name ?? user.user_metadata?.name ?? "";
+      // Pre-fill the display name they already gave us — Google/Apple send
+      // full_name/name, an email signup sends display_name.
+      const fullName =
+        user.user_metadata?.full_name ??
+        user.user_metadata?.name ??
+        user.user_metadata?.display_name ??
+        "";
       if (fullName) setDisplayName(fullName);
       setChecking(false);
     });
@@ -40,8 +51,19 @@ export default function CompleteSignupPage() {
     e.preventDefault();
     setError("");
 
+    const formatError = validateUsernameFormat(username);
+    if (formatError) {
+      setError(formatError);
+      return;
+    }
+
     if (containsSlur(username)) {
       setError("Username contains a prohibited word. Please choose a different name.");
+      return;
+    }
+
+    if (usernameStatus.state === "unavailable") {
+      setError(usernameStatus.message);
       return;
     }
 
@@ -95,7 +117,11 @@ export default function CompleteSignupPage() {
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle>Finish setting up your account</CardTitle>
-          <CardDescription>Just a couple more details and you&apos;re in.</CardDescription>
+          <CardDescription>
+            {retriedUsername
+              ? `"${retriedUsername}" wasn't available, so pick another username to finish up. Your email is confirmed.`
+              : "Just a couple more details and you're in."}
+          </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4 pb-6">
@@ -105,14 +131,21 @@ export default function CompleteSignupPage() {
               <Input
                 id="username"
                 value={username}
-                onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s+/g, ""))}
+                onChange={(e) => setUsername(normalizeUsername(e.target.value))}
                 required
-                minLength={3}
-                maxLength={30}
+                minLength={USERNAME_MIN}
+                maxLength={USERNAME_MAX}
                 pattern="[a-z0-9._-]+"
+                aria-invalid={usernameStatus.state === "unavailable"}
                 placeholder="your-shop-name"
               />
-              <p className="text-xs text-muted-foreground">Lowercase letters, numbers, periods, hyphens, and underscores only. Used in your storefront URL.</p>
+              {usernameStatus.state === "unavailable" ? (
+                <p className="text-xs text-destructive">{usernameStatus.message}</p>
+              ) : usernameStatus.state === "available" ? (
+                <p className="text-xs text-leaf font-medium">{username} is available.</p>
+              ) : (
+                <p className="text-xs text-muted-foreground">Lowercase letters, numbers, periods, hyphens, and underscores only. Used in your storefront URL.</p>
+              )}
             </div>
             <div className="space-y-1">
               <Label htmlFor="display_name">Display Name</Label>
@@ -154,12 +187,20 @@ export default function CompleteSignupPage() {
                 Send me the weekly plant digest — new arrivals, hot auctions, and picks from shops I follow. Delivered every Sunday. Unsubscribe anytime.
               </span>
             </label>
-            <Button type="submit" className="w-full bg-leaf hover:bg-forest" disabled={loading || !ageConfirmed}>
+            <Button type="submit" className="w-full bg-leaf hover:bg-forest" disabled={loading || !ageConfirmed || usernameStatus.state === "unavailable"}>
               {loading ? "Saving…" : "Finish setup"}
             </Button>
           </CardFooter>
         </form>
       </Card>
     </div>
+  );
+}
+
+export default function CompleteSignupPage() {
+  return (
+    <Suspense>
+      <CompleteSignupContent />
+    </Suspense>
   );
 }

@@ -2099,3 +2099,75 @@ Not yet done (deferred): (a) manual one-time re-engagement broadcast to the EXIS
 - Verified: `npx tsc --noEmit` 0 errors. eslint on touched files: no new errors/warnings
   (2 pre-existing Date.now purity errors + 14 pre-existing warnings, none in changed code).
 - No SQL migrations. No env var changes. Not yet deployed.
+
+## 2026-08-14 — Signup / verify-email audit + fixes
+
+### Why
+Vercel showed 7 `/signup` views vs 5 `/verify-email` in 24h and the counts didn't
+obviously match real signups. Audited the whole flow against the live DB.
+
+Funnel itself was healthy (last 24h: 4 accounts created, 4 got profiles, 3 confirmed
+email, 1 pending). But the audit turned up real bugs.
+
+### Bug 1 — a taken username hard-failed signup (fixed)
+The original `handle_new_user` trigger (applied by hand in the SQL editor on day
+one, never in this repo) was STILL LIVE — the comment in `auth/callback/route.ts`
+claiming there was no trigger was wrong. It inserted
+`raw_user_meta_data->>'username'` straight into `profiles.username`
+(`unique not null`) with no conflict handling.
+
+Verified against production with a throwaway user (created + deleted):
+- duplicate username  -> 500 "Database error creating new user", NO account created
+- no username (OAuth) -> no profile row, trigger skipped it (this part was fine)
+- fresh username      -> profile created
+
+So anyone picking a taken username got a raw "Database error saving new user" on
+the signup form and could not proceed — and since no auth row was created, the
+failure was invisible in Supabase afterwards.
+
+### Bug 2 — Google/Apple accounts that never got in (NOT fixed, needs investigation)
+25 auth users have no profile row. 7 of them (5 in the last 10 days) are
+`confirmed=Y, last_sign_in_at=null` — the code->session exchange at
+`/auth/callback` never completed, so they were bounced to `/login`. The rest got a
+session but abandoned `/signup/complete`. Suspect a PKCE code-verifier mismatch,
+possibly from the Capacitor webview OAuth round trip landing in a different cookie
+jar than it started in. Not addressed in this pass.
+
+### Bug 3 — username format rules didn't apply to email signup (fixed)
+The regex in `complete-profile/route.ts` only ever guarded the OAuth path; email
+signups went through the trigger, which validated nothing. The HTML `pattern`
+attribute was the only guard and was clearly getting bypassed. 18 existing profiles
+fail the validator, e.g. `tmom'sshop` (2026-08-14) and `helenmyork@yahoo.com`.
+These become storefront URLs. Existing rows left alone — not renamed.
+
+### Files changed
+- `supabase/migrations/029_fix_profile_trigger.sql` (NEW) — rewrites the trigger:
+  skips null/malformed usernames, and `on conflict do nothing` so a collision can
+  never abort the `auth.users` insert. Failure mode is now "pick another username"
+  instead of "500, no account".
+- `src/lib/username.ts` (NEW) — shared `USERNAME_RE` / `validateUsernameFormat` /
+  `normalizeUsername`. Mirrored inside the trigger; keep the two in sync.
+- `src/lib/use-username-availability.ts` (NEW) — debounced availability hook.
+  Fails open: on error/rate-limit it goes idle and leaves submit enabled.
+- `src/app/api/auth/check-username/route.ts` (NEW) — availability endpoint,
+  rate limited 30/min per IP.
+- `src/app/signup/page.tsx` — live username feedback, JS format validation, submit
+  blocked while a name is known-taken, raw errors mapped via `friendlySignupError`.
+- `src/app/signup/complete/page.tsx` — same live check; prefills display name from
+  `display_name` metadata (email signups) as well as `full_name`/`name` (OAuth);
+  shows why they're there when arriving with `?retry=`; wrapped in `<Suspense>`
+  since it now uses `useSearchParams`.
+- `src/app/auth/callback/route.ts` — passes `?retry=<username>` to
+  `/signup/complete` when an email signup's username didn't stick; corrected the
+  stale "there's no DB trigger" comment.
+- `src/app/api/auth/complete-profile/route.ts` — uses the shared validator.
+- `src/lib/auth-errors.ts` — added `friendlySignupError()`.
+- Deleted empty `src/app/api/auth/resend-confirmation/` directory.
+
+### SQL to run in Supabase
+Run `supabase/migrations/029_fix_profile_trigger.sql` in the SQL editor.
+Until it runs, the duplicate-username 500 still happens in production — the
+app-side changes prevent most of them but the DB is the actual fix.
+
+### Env vars
+None added or changed.

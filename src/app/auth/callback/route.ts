@@ -7,7 +7,12 @@ import { geoCountry, isGeoAllowed } from "@/lib/geo";
 import { classifyAuthError } from "@/lib/auth-errors";
 
 async function handleSession(
-  user: { id: string; email?: string; created_at: string },
+  user: {
+    id: string;
+    email?: string;
+    created_at: string;
+    user_metadata?: { username?: unknown };
+  },
   origin: string,
   next: string,
   country: string | null
@@ -23,7 +28,10 @@ async function handleSession(
     .eq("id", user.id)
     .single();
 
-  // No profile yet = brand-new signup (there's no DB trigger that creates one).
+  // No profile yet. Either an OAuth signup (Google/Apple send no username, so
+  // the `handle_new_user` trigger has nothing to insert), or an email signup
+  // whose chosen username the trigger rejected as taken/malformed. Both finish
+  // at /signup/complete.
   if (!profile?.username) {
     // US-only gate: drop the just-created account and bounce non-US signups.
     // Deleting (vs banning) keeps auth clean and lets a false-positive US user
@@ -32,8 +40,14 @@ async function handleSession(
       await admin.auth.admin.deleteUser(user.id).catch(() => {});
       return NextResponse.redirect(`${origin}/us-only`);
     }
-    // Google OAuth users who haven't picked a username yet — send to complete setup
-    return NextResponse.redirect(`${origin}/signup/complete`);
+    // An email signup carries the chosen username in metadata. If it still isn't
+    // on a profile by the time they confirm, the trigger skipped it — so flag
+    // that on the setup page rather than silently asking again with a blank box.
+    const attempted =
+      typeof user.user_metadata?.username === "string" ? user.user_metadata.username : null;
+    return NextResponse.redirect(
+      `${origin}/signup/complete${attempted ? `?retry=${encodeURIComponent(attempted)}` : ""}`
+    );
   }
 
   const isNewUser = Date.now() - new Date(user.created_at).getTime() < 10 * 60 * 1000;

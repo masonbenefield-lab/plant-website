@@ -10,6 +10,9 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Eye, EyeOff } from "lucide-react";
 import { containsSlur } from "@/lib/profanity";
+import { normalizeUsername, validateUsernameFormat, USERNAME_MIN, USERNAME_MAX } from "@/lib/username";
+import { useUsernameAvailability } from "@/lib/use-username-availability";
+import { friendlySignupError } from "@/lib/auth-errors";
 
 function GoogleIcon() {
   return (
@@ -51,6 +54,7 @@ export default function SignupPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [geoBlocked, setGeoBlocked] = useState(false);
+  const usernameStatus = useUsernameAvailability(username);
 
   async function handleGoogleSignIn() {
     const supabase = createClient();
@@ -83,8 +87,22 @@ export default function SignupPage() {
     e.preventDefault();
     setError("");
 
+    // The username rules used to be enforced only by the HTML `pattern`
+    // attribute on this path, which let odd names through into the profiles
+    // table. Check in JS too, matching what the DB trigger will accept.
+    const formatError = validateUsernameFormat(username);
+    if (formatError) {
+      setError(formatError);
+      return;
+    }
+
     if (containsSlur(username)) {
       setError("Username contains a prohibited word. Please choose a different name.");
+      return;
+    }
+
+    if (usernameStatus.state === "unavailable") {
+      setError(usernameStatus.message);
       return;
     }
 
@@ -106,7 +124,7 @@ export default function SignupPage() {
     });
 
     if (signUpError) {
-      setError(signUpError.message);
+      setError(friendlySignupError(signUpError.message));
       setLoading(false);
       return;
     }
@@ -212,14 +230,21 @@ export default function SignupPage() {
               <Input
                 id="username"
                 value={username}
-                onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s+/g, ""))}
+                onChange={(e) => setUsername(normalizeUsername(e.target.value))}
                 required
-                minLength={3}
-                maxLength={30}
+                minLength={USERNAME_MIN}
+                maxLength={USERNAME_MAX}
                 pattern="[a-z0-9._-]+"
+                aria-invalid={usernameStatus.state === "unavailable"}
                 placeholder="your-shop-name"
               />
-              <p className="text-xs text-muted-foreground">Lowercase letters, numbers, periods, hyphens, and underscores only. Used in your storefront URL.</p>
+              {usernameStatus.state === "unavailable" ? (
+                <p className="text-xs text-destructive">{usernameStatus.message}</p>
+              ) : usernameStatus.state === "available" ? (
+                <p className="text-xs text-leaf font-medium">{username} is available.</p>
+              ) : (
+                <p className="text-xs text-muted-foreground">Lowercase letters, numbers, periods, hyphens, and underscores only. Used in your storefront URL.</p>
+              )}
             </div>
             <div className="space-y-1">
               <Label htmlFor="display_name">Display Name</Label>
@@ -296,7 +321,7 @@ export default function SignupPage() {
                 Send me the weekly plant digest — new arrivals, hot auctions, and picks from shops I follow. Delivered every Sunday. Unsubscribe anytime.
               </span>
             </label>
-            <Button type="submit" className="w-full bg-leaf hover:bg-forest" disabled={loading || !ageConfirmed || !usConfirmed}>
+            <Button type="submit" className="w-full bg-leaf hover:bg-forest" disabled={loading || !ageConfirmed || !usConfirmed || usernameStatus.state === "unavailable"}>
               {loading ? "Creating account…" : "Create account"}
             </Button>
             {planInfo && (
