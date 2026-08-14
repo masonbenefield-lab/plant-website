@@ -2171,3 +2171,38 @@ app-side changes prevent most of them but the DB is the actual fix.
 
 ### Env vars
 None added or changed.
+
+## 2026-08-14 — Native app opens on the login screen
+
+The Capacitor shell loads the site at `/`, so launching the iOS/Android app
+dropped people on the marketing home page with no obvious next step. Signed-out
+native launches now go to `/login` instead.
+
+**Files changed**
+- `src/lib/use-native-app.ts` (new) — `useIsNativeApp()` hook, plus the
+  `GUEST_BROWSE_KEY` session-storage key. Starts `false` and flips after mount,
+  so nothing gated on it can cause a hydration mismatch.
+- `src/components/app-launch-redirect.tsx` (new) — mounted in the root layout.
+  Redirects to `/login` only when *all* of: pathname is `/`, Capacitor reports a
+  native platform, no guest-browse flag, and no Supabase session. Push-notification
+  taps and shared listing links are unaffected because they don't land on `/`.
+- `src/app/layout.tsx` — mount `<AppLaunchRedirect />`.
+- `src/app/login/page.tsx` — app-only "Browse without signing in" link in the
+  footer. Sets the guest flag (in try/catch, for private mode) then goes home, so
+  backing out of login doesn't bounce straight back to login. Also keeps the app
+  from being a hard registration wall, which App Review guideline 5.1.1(v) cares
+  about.
+
+**Web is unchanged.** No native rebuild or store resubmit — the shell points at
+the live site, so this ships with the normal Vercel deploy.
+
+**SQL to run:** none.
+**Env vars added/changed:** none.
+
+**Still open:** the OAuth "account created but never signed in" bug — 7 Google/Apple
+users with `email_confirmed_at` set, `last_sign_in_at` null, and no profile row.
+Leading theory is that `capacitor.config.ts` has no `allowNavigation` list, so the
+shell hands `accounts.google.com` to the system browser; the PKCE code_verifier
+stays in the app webview while the callback lands in Safari/Chrome, and the
+exchange fails. Needs device reproduction, and any fix is a native change
+(rebuild + store resubmit, and a Mac for iOS).
