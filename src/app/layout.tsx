@@ -9,6 +9,7 @@ import { CartProvider } from "@/lib/cart";
 import { CartDrawer } from "@/components/cart-drawer";
 import { Analytics } from "@vercel/analytics/next";
 import { PushNotificationProvider } from "@/components/push-notification-provider";
+import { AppLaunchRedirect } from "@/components/app-launch-redirect";
 import SessionTracker from "@/components/session-tracker";
 import { createClient } from "@/lib/supabase/server";
 import { unstable_noStore as noStore } from "next/cache";
@@ -140,6 +141,7 @@ export default async function RootLayout({
             <Toaster richColors />
             <Analytics />
             <PushNotificationProvider />
+            <AppLaunchRedirect />
             {user && <SessionTracker />}
           </CartProvider>
         </ThemeProvider>

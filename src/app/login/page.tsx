@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Eye, EyeOff } from "lucide-react";
+import { useIsNativeApp, GUEST_BROWSE_KEY } from "@/lib/use-native-app";
 
 function GoogleIcon() {
   return (
@@ -40,6 +41,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const isNativeApp = useIsNativeApp();
 
   async function handleGoogleSignIn() {
     const supabase = createClient();
@@ -198,6 +200,25 @@ export default function LoginPage() {
             <p className="text-sm text-muted-foreground text-center">
               <Link href="/forgot-password" className="underline">Forgot your password?</Link>
             </p>
+            {/* App only. The shell now opens on this screen, so there has to be a
+                way past it — both so people can look around before committing,
+                and so the app isn't a hard registration wall at review time. */}
+            {isNativeApp && (
+              <button
+                type="button"
+                onClick={() => {
+                  try {
+                    sessionStorage.setItem(GUEST_BROWSE_KEY, "1");
+                  } catch {
+                    // Private mode / storage blocked — still let them through.
+                  }
+                  router.push("/");
+                }}
+                className="text-sm text-muted-foreground text-center underline"
+              >
+                Browse without signing in
+              </button>
+            )}
           </CardFooter>
         </form>
       </Card>
