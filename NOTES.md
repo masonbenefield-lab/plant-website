@@ -2206,3 +2206,40 @@ shell hands `accounts.google.com` to the system browser; the PKCE code_verifier
 stays in the app webview while the callback lands in Safari/Chrome, and the
 exchange fails. Needs device reproduction, and any fix is a native change
 (rebuild + store resubmit, and a Mac for iOS).
+
+## 2026-08-17 — Apple touch icon 404s + manifest icon size mismatch
+
+Vercel logs showed paired 404s for `/apple-touch-icon.png` and
+`/apple-touch-icon-precomposed.png`. Not a real-user problem — the site already
+declared `<link rel="apple-touch-icon">`, so anything that parses the HTML got the
+right icon. The requests come from clients that don't read HTML (link-preview bots,
+favicon scrapers) and blindly probe the two legacy root paths. Fixed anyway to kill
+the log noise, and fixed a real manifest bug found alongside it.
+
+- `public/apple-touch-icon.png` (new) — 180x180, generated from
+  `plantet-app-icon-1024.png` via sharp. Serving the actual file at the probed path
+  is simpler than a `next.config.ts` rewrite and gives iOS the correct size instead
+  of an oversized 540x540.
+- `public/apple-touch-icon-precomposed.png` (new) — 180x180, same source.
+- `public/plantet-app-icon-192.png` (new) — 192x192.
+- `public/plantet-app-icon-512.png` (new) — 512x512.
+- `src/app/manifest.ts` — the two icon entries both pointed at
+  `plantet-app-icon.png`, which is **540x540**, while declaring `192x192` and
+  `512x512`. Both declarations were wrong. Now points at the correctly sized files
+  and adds a `purpose: "any"` 512 entry alongside the maskable one.
+- `src/app/layout.tsx` — `icons.apple` now `/apple-touch-icon.png` (was
+  `/plantet-app-icon.png`, 540x540).
+
+`public/plantet-app-icon.png` (540x540) is left in place — no longer referenced from
+`src/`, but native/Capacitor config may still use it.
+
+Verified: `npx tsc --noEmit` clean.
+
+**SQL to run:** none.
+**Env vars added/changed:** none.
+
+**Known, not fixed:** the maskable 512 icon has no safe-zone padding. Android crops
+maskable icons to a circle/squircle at ~80% of the canvas, and the sprout's stem runs
+to about 92% of the height, so the bottom of the stem gets clipped on Android home
+screens. Fixing it means generating a padded variant (logo scaled to ~66% on the
+green background) rather than reusing the full-bleed app icon.

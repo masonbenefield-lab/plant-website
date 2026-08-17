@@ -44,7 +44,7 @@ export const metadata: Metadata = {
     "Track your plants, connect with fellow growers, and buy or sell — all in one place built for the plant-obsessed.",
   icons: {
     icon: "/plantet-mark-color.svg",
-    apple: "/plantet-app-icon.png",
+    apple: "/apple-touch-icon.png",
   },
   appleWebApp: {
     capable: true,
