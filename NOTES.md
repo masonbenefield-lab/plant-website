@@ -2243,3 +2243,34 @@ maskable icons to a circle/squircle at ~80% of the canvas, and the sprout's stem
 to about 92% of the height, so the bottom of the stem gets clipped on Android home
 screens. Fixing it means generating a padded variant (logo scaled to ~66% on the
 green background) rather than reusing the full-bleed app icon.
+
+---
+
+## 2026-08-20 — Community post "More like this" moved to a sidebar
+
+**Problem:** on a community post page, the "More like this" list was rendered
+between the post card and the reply thread, interrupting the flow of the
+conversation.
+
+**Changed:** `src/app/community/[id]/page.tsx`
+- Page container went from `max-w-3xl` single column to `max-w-5xl` with a
+  `lg:grid lg:grid-cols-[minmax(0,1fr)_16rem]` two-column layout.
+- Post + `<CommunityReplies>` now live in the left column; "More like this" moved
+  into an `<aside>` that is `lg:sticky lg:top-24` in the right margin.
+- Below the `lg` breakpoint the grid collapses to one column and, because the
+  aside follows the thread in the markup, it lands at the bottom under the reply
+  box. No duplicate render, no JS breakpoint logic.
+- Related-post query limit raised 4 → 5.
+- The four separate full-width cards became one bordered card with `divide-y`;
+  titles `line-clamp-2` with the post date beneath so long titles don't blow out
+  the 16rem column.
+
+Verified: `npx tsc --noEmit` clean, `npx next build` passes.
+
+**SQL to run:** none.
+**Env vars added/changed:** none.
+
+**Known, not fixed:** "More like this" is not actually related — the query just
+pulls the 5 newest posts sharing the same `post_type` (`discussion`, `help`,
+`show_and_tell`). A fig thread will surface under a currant thread. Real
+relevance would need title/tag keyword matching.

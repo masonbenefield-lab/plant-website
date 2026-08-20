@@ -82,122 +82,132 @@ export default async function CommunityPostPage({
       .eq("post_type", post.post_type)
       .neq("id", id)
       .order("created_at", { ascending: false })
-      .limit(4),
+      .limit(5),
   ]);
   const replyAuthorMap = Object.fromEntries((replyAuthors ?? []).map((a) => [a.id, a]));
 
   const isOwner = user?.id === post.user_id;
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-10">
+    <div className="max-w-5xl mx-auto px-4 py-10">
       <Link href="/community" className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-6">
         <ChevronLeft size={16} />
         Community
       </Link>
 
-      {/* Post */}
-      <div className="rounded-xl border bg-card p-5 mb-8">
-        <div className="flex items-start justify-between gap-2 mb-3">
-          <div className="flex items-center gap-2 flex-wrap">
-            <Badge className={cn("text-xs px-1.5 py-0 border-0", TYPE_COLOR[post.post_type as PostType])}>
-              {TYPE_LABEL[post.post_type as PostType]}
-            </Badge>
-            {post.solved && (
-              <span className="flex items-center gap-1 text-xs text-leaf font-medium">
-                <CheckCircle2 size={12} /> Solved
-              </span>
+      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_16rem] lg:gap-8 lg:items-start">
+        <div className="min-w-0">
+          {/* Post */}
+          <div className="rounded-xl border bg-card p-5 mb-8">
+            <div className="flex items-start justify-between gap-2 mb-3">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge className={cn("text-xs px-1.5 py-0 border-0", TYPE_COLOR[post.post_type as PostType])}>
+                  {TYPE_LABEL[post.post_type as PostType]}
+                </Badge>
+                {post.solved && (
+                  <span className="flex items-center gap-1 text-xs text-leaf font-medium">
+                    <CheckCircle2 size={12} /> Solved
+                  </span>
+                )}
+              </div>
+              <PostFollowButton postId={post.id} initialFollowing={!!followRow} size="md" />
+            </div>
+            <h1 className="text-xl font-bold mb-3">{post.title}</h1>
+            {post.body && (
+              <p className="text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground mb-4">{post.body}</p>
             )}
-          </div>
-          <PostFollowButton postId={post.id} initialFollowing={!!followRow} size="md" />
-        </div>
-        <h1 className="text-xl font-bold mb-3">{post.title}</h1>
-        {post.body && (
-          <p className="text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground mb-4">{post.body}</p>
-        )}
-        {(post.photos as string[]).length > 0 && (
-          <div className="flex gap-2 flex-wrap mb-4">
-            {(post.photos as string[]).map((url, i) => (
-              <a key={i} href={url} target="_blank" rel="noopener noreferrer">
-                <div className="relative w-32 h-32 rounded-lg overflow-hidden border hover:opacity-80 transition-opacity">
-                  <Image src={url} alt={`Post photo ${i + 1}`} fill className="object-cover" />
-                </div>
-              </a>
-            ))}
-          </div>
-        )}
-        <div className="flex items-center gap-2 pt-3 border-t">
-          <Avatar className="h-7 w-7">
-            <AvatarImage src={author?.avatar_url ?? undefined} />
-            <AvatarFallback className="bg-[#DFE7D4] text-leaf text-xs font-semibold">
-              {author?.username?.slice(0, 2).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
-          <Link href={`/sellers/${author?.username}`} className="text-sm font-medium hover:underline">
-            {author?.display_name || author?.username}
-          </Link>
-          <span className="text-xs text-muted-foreground">
-            {new Date(post.created_at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
-          </span>
-          <span className="ml-auto flex items-center gap-3">
-            <ShareButton postId={post.id} />
-            <PostLikeButton postId={post.id} initialLiked={postLiked} initialCount={postLikeCount} currentUserId={user?.id ?? null} />
-            {isOwner ? (
-              <>
-                <Link href={`/community/${post.id}/edit`} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-                  Edit
-                </Link>
-                <DeletePostButton postId={post.id} />
-              </>
-            ) : (
-              <ReportButton
-                userId={user?.id ?? null}
-                communityPostId={post.id}
-                targetName={post.title}
-                initialReported={!!reportRow}
-              />
+            {(post.photos as string[]).length > 0 && (
+              <div className="flex gap-2 flex-wrap mb-4">
+                {(post.photos as string[]).map((url, i) => (
+                  <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                    <div className="relative w-32 h-32 rounded-lg overflow-hidden border hover:opacity-80 transition-opacity">
+                      <Image src={url} alt={`Post photo ${i + 1}`} fill className="object-cover" />
+                    </div>
+                  </a>
+                ))}
+              </div>
             )}
-          </span>
-        </div>
-      </div>
-
-      {/* Replies */}
-      {(relatedPosts ?? []).length > 0 && (
-        <div className="mt-10">
-          <h2 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide mb-3">More like this</h2>
-          <div className="space-y-2">
-            {(relatedPosts ?? []).map((rp) => (
-              <Link
-                key={rp.id}
-                href={`/community/${rp.id}`}
-                className="block rounded-xl border bg-card px-4 py-3 hover:shadow-sm transition-shadow text-sm font-medium hover:text-leaf"
-              >
-                {rp.title}
+            <div className="flex items-center gap-2 pt-3 border-t">
+              <Avatar className="h-7 w-7">
+                <AvatarImage src={author?.avatar_url ?? undefined} />
+                <AvatarFallback className="bg-[#DFE7D4] text-leaf text-xs font-semibold">
+                  {author?.username?.slice(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <Link href={`/sellers/${author?.username}`} className="text-sm font-medium hover:underline">
+                {author?.display_name || author?.username}
               </Link>
-            ))}
+              <span className="text-xs text-muted-foreground">
+                {new Date(post.created_at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+              </span>
+              <span className="ml-auto flex items-center gap-3">
+                <ShareButton postId={post.id} />
+                <PostLikeButton postId={post.id} initialLiked={postLiked} initialCount={postLikeCount} currentUserId={user?.id ?? null} />
+                {isOwner ? (
+                  <>
+                    <Link href={`/community/${post.id}/edit`} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+                      Edit
+                    </Link>
+                    <DeletePostButton postId={post.id} />
+                  </>
+                ) : (
+                  <ReportButton
+                    userId={user?.id ?? null}
+                    communityPostId={post.id}
+                    targetName={post.title}
+                    initialReported={!!reportRow}
+                  />
+                )}
+              </span>
+            </div>
           </div>
-        </div>
-      )}
 
-      <CommunityReplies
-        postId={post.id}
-        postType={post.post_type as PostType}
-        postOwnerId={post.user_id}
-        currentUserId={user?.id ?? null}
-        solved={post.solved}
-        initialReplies={(replies ?? []).map((r) => ({
-          id: r.id,
-          user_id: r.user_id,
-          body: r.body,
-          photos: r.photos as string[],
-          is_solution: r.is_solution,
-          created_at: r.created_at,
-          username: replyAuthorMap[r.user_id]?.username ?? "unknown",
-          display_name: (replyAuthorMap[r.user_id] as { display_name?: string | null } | undefined)?.display_name ?? null,
-          avatar_url: replyAuthorMap[r.user_id]?.avatar_url ?? null,
-          likeCount: replyLikeCountMap[r.id] ?? 0,
-          liked: replyLikedSet.has(r.id),
-        }))}
-      />
+          {/* Replies */}
+          <CommunityReplies
+            postId={post.id}
+            postType={post.post_type as PostType}
+            postOwnerId={post.user_id}
+            currentUserId={user?.id ?? null}
+            solved={post.solved}
+            initialReplies={(replies ?? []).map((r) => ({
+              id: r.id,
+              user_id: r.user_id,
+              body: r.body,
+              photos: r.photos as string[],
+              is_solution: r.is_solution,
+              created_at: r.created_at,
+              username: replyAuthorMap[r.user_id]?.username ?? "unknown",
+              display_name: (replyAuthorMap[r.user_id] as { display_name?: string | null } | undefined)?.display_name ?? null,
+              avatar_url: replyAuthorMap[r.user_id]?.avatar_url ?? null,
+              likeCount: replyLikeCountMap[r.id] ?? 0,
+              liked: replyLikedSet.has(r.id),
+            }))}
+          />
+        </div>
+
+        {/* More like this — sidebar on desktop, below the thread on mobile */}
+        {(relatedPosts ?? []).length > 0 && (
+          <aside className="mt-10 lg:mt-0 lg:sticky lg:top-24">
+            <h2 className="font-semibold text-xs text-muted-foreground uppercase tracking-wide mb-3">
+              More like this
+            </h2>
+            <div className="rounded-xl border bg-card divide-y overflow-hidden">
+              {(relatedPosts ?? []).map((rp) => (
+                <Link
+                  key={rp.id}
+                  href={`/community/${rp.id}`}
+                  className="block px-4 py-3 text-sm font-medium hover:bg-muted/50 hover:text-leaf transition-colors"
+                >
+                  <span className="line-clamp-2">{rp.title}</span>
+                  <span className="block mt-1 text-xs font-normal text-muted-foreground">
+                    {new Date(rp.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </aside>
+        )}
+      </div>
     </div>
   );
 }
